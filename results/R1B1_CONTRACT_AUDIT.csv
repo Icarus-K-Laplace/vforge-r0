@@ -1,0 +1,4 @@
+contract_id,audit_label,counted_in_CIA,paper_supported,principle_valid,notes
+RDML_C1_SEED_GROUP_AGGREGATION,SUPPORTED_BY_PAPER,True,True,True,"group: True, mean: True"
+VB_C1_TABLE6_SEED_AGGREGATION,VALID_GENERAL_SCIENTIFIC_PRINCIPLE,True,False,True,"3x: False, mean: True"
+VB_C2_TASK_SUBGROUP_SCOPE,SUPPORTED_BY_PAPER,True,True,True,"tasks: True, all/consistent: True"

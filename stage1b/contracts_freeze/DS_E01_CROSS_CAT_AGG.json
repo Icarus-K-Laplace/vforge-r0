@@ -1,0 +1,27 @@
+{
+  "contract_id": "DS_E01_CROSS_CAT_AGG",
+  "source_paper": "diffusing_synth_2411.10164",
+  "family": "E01",
+  "claim_text": "Per-category results in Table II are single-run evaluations on (method, category) pairs; any cross-category 'mean' reported in the paper must use ALL declared categories. Selecting only the category where the method outperforms the baseline is a selective-aggregation violation.",
+  "paper_text_hash": "fb9776a7817afe0cce0e79588f35275df51c81f2a9fad78b8fbaee650d056f29",
+  "predicates": [
+    {
+      "predicate_id": "E01_ALL_CATEGORIES",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "When the paper reports a cross-category mean or comparison, ALL declared categories (mugs, shoes, T-shirts) must contribute equally; no category may be selectively omitted.",
+      "trace_fields": [
+        "protocol.declared_categories",
+        "protocol.reported_categories",
+        "outputs.category_values"
+      ],
+      "condition": "set(protocol.reported_categories) == set(protocol.declared_categories)",
+      "source_span": "Table II",
+      "confidence": 0.85
+    }
+  ],
+  "universal_principles": [
+    "P6_AGGREGATION_FIDELITY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "1a62fe0b3bb9f2c75627bac28274d5765768c04a4d21c261765eb70f26d24b13"
+}

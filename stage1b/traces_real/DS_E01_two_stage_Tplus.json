@@ -1,0 +1,35 @@
+{
+  "trace_id": "DS_E01_two_stage_Tplus",
+  "paper": "diffusing_synth_2411.10164",
+  "repository": "tlpss/diffusing-synthetic-data",
+  "family": "E01",
+  "experiment": "two-stage",
+  "protocol": {
+    "declared_categories": [
+      "mug",
+      "shoe",
+      "tshirt"
+    ],
+    "reported_categories": [
+      "mug",
+      "shoe",
+      "tshirt"
+    ],
+    "aggregation_rule": "mean",
+    "metric": "AKD"
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 30.2637,
+      "aggregation_rule": "mean",
+      "upstream_categories": [
+        "mug",
+        "shoe",
+        "tshirt"
+      ]
+    }
+  },
+  "is_counterfactual": false,
+  "contract_id": "DS_E01_CROSS_CAT_AGG",
+  "self_hash": "aced5fb4e786c56fb0a5e40ed80feff81f3eb50da873c68b7b61ff2b0cffe9a5"
+}

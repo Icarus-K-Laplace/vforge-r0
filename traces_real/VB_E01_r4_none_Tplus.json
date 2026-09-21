@@ -1,0 +1,40 @@
+{
+  "trace_id": "VB_E01_r4_none_Tplus",
+  "paper": "viewbatchmodel_2503.18371",
+  "repository": "hankyul2/ViewBatchModel",
+  "source_runs": [
+    "icarl_r4_s1993",
+    "icarl_r4_1996",
+    "icarl_r4_1997"
+  ],
+  "protocol": {
+    "declared_seeds": [
+      1993,
+      1996,
+      1997
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "VB_s1993",
+      "VB_s1996",
+      "VB_s1997"
+    ],
+    "aug_repeat": 4,
+    "flag": "none"
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 67.2133,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "VB_s1993",
+        "VB_s1996",
+        "VB_s1997"
+      ]
+    }
+  },
+  "is_counterfactual": false,
+  "family": "E01",
+  "contract_id": "VB_C1_TABLE6_SEED_AGGREGATION",
+  "self_hash": "a24754e6afe08d2f6ed28d5737df32d6d62a122bb1189abc2e513f9bbbf788c2"
+}

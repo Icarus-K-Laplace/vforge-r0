@@ -1,0 +1,31 @@
+{
+  "contract_id": "CONTRACT_E01-05",
+  "source_paper": "E01-05",
+  "family": "E01",
+  "paper_text_hash": "c34b042ec807926cbe5937d2e9b64706f403a59e15f049d3775262a2ff248052",
+  "source_span": "We report the mean AUC across five seeds on the medical imaging set; seeds are fixed and disclosed.",
+  "predicates": [
+    {
+      "predicate_id": "P6_AGGREGATION",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Reported value must equal the declared mean aggregation over all N declared seeds.",
+      "trace_fields": [
+        "protocol",
+        "aggregation_rule",
+        "protocol",
+        "aggregation_inputs",
+        "protocol",
+        "declared_seeds"
+      ],
+      "condition": "protocol.aggregation_rule == 'mean' AND len(protocol.aggregation_inputs) == len(protocol.declared_seeds)",
+      "source_span": "We report the mean AUC across five seeds on the medical imaging set; seeds are fixed and disclosed.",
+      "confidence": 0.9
+    }
+  ],
+  "universal_principles": [
+    "P5_DETERMINISM_OR_SEEDS",
+    "P6_AGGREGATION_FIDELITY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "acea37d9ee8606cad86e4c766fdcea8c2c28b790f972632a65b639522a7df807"
+}

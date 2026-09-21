@@ -1,0 +1,112 @@
+{
+  "experiment_id": "VForge-R0-A-001",
+  "status": "GO",
+  "headroom": "YES",
+  "issues": [
+    "V1 MKR improvement over B1: 0.5000 (>= 0.15 \u2713)",
+    "BAR(V1) = 1.0000 (>= 0.90 \u2713)",
+    "V1 vs V0 improvement: 0.5000 (>= 0.10 \u2713)",
+    "Improvement from 2 mutation families (>= 2 \u2713)"
+  ],
+  "results": {
+    "B0": {
+      "MKR": 0.4167,
+      "BAR": 1.0,
+      "VA": 0.4167,
+      "per_family_MKR": {
+        "M01_DATA_LEAK": 0.0,
+        "M02_BASELINE_HANDICAP": 1.0,
+        "M03_SEED_CHERRY_PICK": 0.0,
+        "M07_TEST_SET_SELECTION": 1.0,
+        "M08_PREPROCESS_ASYMMETRY": 0.0,
+        "M04_SUBGROUP_DROP": 1.0,
+        "M06_AGGREGATION_FAULT": 1.0
+      },
+      "abstention_rate": 0.0,
+      "execution_errors": 0,
+      "timeouts": 0,
+      "total_tokens": 0,
+      "total_verdicts": 157
+    },
+    "B1": {
+      "MKR": 0.5,
+      "BAR": 1.0,
+      "VA": 0.5,
+      "per_family_MKR": {
+        "M01_DATA_LEAK": 1.0,
+        "M02_BASELINE_HANDICAP": 1.0,
+        "M03_SEED_CHERRY_PICK": 0.0,
+        "M07_TEST_SET_SELECTION": 1.0,
+        "M08_PREPROCESS_ASYMMETRY": 1.0,
+        "M04_SUBGROUP_DROP": 1.0,
+        "M06_AGGREGATION_FAULT": 0.5
+      },
+      "abstention_rate": 0.6241,
+      "execution_errors": 0,
+      "timeouts": 0,
+      "total_tokens": 0,
+      "total_verdicts": 157
+    },
+    "B2": {
+      "MKR": 0.0,
+      "BAR": 1.0,
+      "VA": 0.0,
+      "per_family_MKR": {
+        "M01_DATA_LEAK": 0.0,
+        "M02_BASELINE_HANDICAP": 0.0,
+        "M03_SEED_CHERRY_PICK": 0.0,
+        "M07_TEST_SET_SELECTION": 0.0,
+        "M08_PREPROCESS_ASYMMETRY": 0.0,
+        "M04_SUBGROUP_DROP": 0.0,
+        "M06_AGGREGATION_FAULT": 0.0
+      },
+      "abstention_rate": 0.0,
+      "execution_errors": 136,
+      "timeouts": 0,
+      "total_tokens": 0,
+      "total_verdicts": 157
+    },
+    "V0": {
+      "MKR": 0.5,
+      "BAR": 1.0,
+      "VA": 0.5,
+      "per_family_MKR": {
+        "M01_DATA_LEAK": 1.0,
+        "M02_BASELINE_HANDICAP": 1.0,
+        "M03_SEED_CHERRY_PICK": 0.0,
+        "M07_TEST_SET_SELECTION": 1.0,
+        "M08_PREPROCESS_ASYMMETRY": 1.0,
+        "M04_SUBGROUP_DROP": 1.0,
+        "M06_AGGREGATION_FAULT": 0.5
+      },
+      "abstention_rate": 0.6241,
+      "execution_errors": 0,
+      "timeouts": 0,
+      "total_tokens": 0,
+      "total_verdicts": 157
+    },
+    "V1": {
+      "MKR": 1.0,
+      "BAR": 1.0,
+      "VA": 1.0,
+      "per_family_MKR": {
+        "M01_DATA_LEAK": 1.0,
+        "M02_BASELINE_HANDICAP": 1.0,
+        "M03_SEED_CHERRY_PICK": 1.0,
+        "M07_TEST_SET_SELECTION": 1.0,
+        "M08_PREPROCESS_ASYMMETRY": 1.0,
+        "M04_SUBGROUP_DROP": 1.0,
+        "M06_AGGREGATION_FAULT": 1.0
+      },
+      "abstention_rate": 0.2837,
+      "execution_errors": 0,
+      "timeouts": 0,
+      "total_tokens": 0,
+      "total_verdicts": 157
+    }
+  },
+  "n_valid_mutants": 96,
+  "n_benign_controls": 16,
+  "n_survivors": 0,
+  "timestamp": "2026-09-20"
+}

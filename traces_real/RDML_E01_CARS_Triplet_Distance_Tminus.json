@@ -1,0 +1,40 @@
+{
+  "trace_id": "RDML_E01_CARS_Triplet_Distance_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CARS_Triplet_Distance_s4",
+    "CARS_Triplet_Distance_s2"
+  ],
+  "protocol": {
+    "dataset": "CARS",
+    "method": "Triplet_Distance",
+    "declared_seeds": [
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CARS_Triplet_Distance_s4",
+      "RDML_E01_CARS_Triplet_Distance_s2"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.7864,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CARS_Triplet_Distance_s4",
+        "RDML_E01_CARS_Triplet_Distance_s2"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "4cebd80cb4741d3306fa8f03cbbfd7328c3352d393be8f9c3acc4164c9e03f91",
+  "vps": 0.3956,
+  "value_preserving": false,
+  "abs_diff": 0.004
+}

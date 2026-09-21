@@ -1,0 +1,21 @@
+query,title,url,state
+"test set" "checkpoint selection" "issue" machine learning,[Re] MedMNIST v2: Replicating the ResNet baselines and auditing what macro-AUC hides on DermaMNIST,https://github.com/ReScience/submissions/issues/121,open
+"test set" "checkpoint selection" "issue" machine learning,[SWARM TASK][P0][DATA][ACTIVE] Put participant/opponent memory on the live learning path,https://github.com/Oleksii-debug/Autosport/issues/669,open
+"test set" "checkpoint selection" "issue" machine learning,AUTOSPORT — GLOBAL WHOLE FINISHED PRODUCT COMPLETION,https://github.com/Oleksii-debug/Autosport/issues/1,open
+"test set" "checkpoint selection" "issue" machine learning,[TASK: Chemistry] Cross-protein deployment audit of a data-efficient coarse-grained force field,https://github.com/harbor-framework/terminal-bench-science/pull/1741,open
+"test set" "checkpoint selection" "issue" machine learning,[CAMPAIGN][THROUGHPUT] p10 > 80,000 applied decoder-target tok/s on one RTX 4090 without worse learning,https://github.com/wordingone/ember/issues/1945,open
+"test leakage" "early stopping" github issue,[METHODOLOGY FLAW] Dataset C (Elliptic Bitcoin) evaluation lacks a validation set,https://github.com/SIH-2026-RRAKSS/sihmodel/issues/27,open
+"test leakage" "early stopping" github issue,[DOCUMENTATION & REPUTATION RISK] Public README and UI advertise leaky 77.70% F1 instead of clean 73.57%,https://github.com/SIH-2026-RRAKSS/sihmodel/issues/26,open
+"test leakage" "early stopping" github issue,Import v2 benchmark code and SWAN repair v1 infrastructure,https://github.com/fetchcast/Coastal-Wave-Emulator/pull/1,open
+"test leakage" "early stopping" github issue,Add shared DNABERT2 and iPro-MP benchmark baselines,https://github.com/Gonza10V/SeqTrainer/pull/20,open
+"test leakage" "early stopping" github issue,Real estate tabular baseline pipeline & Colab notebook (HYPE-12),https://github.com/vuongbinh/uit-labs/pull/5,open
+"validation set" "test set" "checkpoint" "selection" "leakage" issue,Separate GRU hyperparameter tuning users from the reported evaluation population,https://github.com/open-spaced-repetition/srs-benchmark/issues/351,open
+"validation set" "test set" "checkpoint" "selection" "leakage" issue,segmenter: restore a genuinely locked final evaluation after test-set reuse,https://github.com/franklinbaldo/causaganha/issues/884,open
+"validation set" "test set" "checkpoint" "selection" "leakage" issue,P0 architecture: feature engineering, labels, datasets, leakage governance and causal signal fusion,https://github.com/leon36000/MarketOS-/issues/46,open
+"validation set" "test set" "checkpoint" "selection" "leakage" issue,[FEAT-027] Leakage-aware link and edge prediction contracts,https://github.com/thekaveh/NNx/issues/247,open
+"validation set" "test set" "checkpoint" "selection" "leakage" issue,Quant Research Cohort 01 — regime-robust, leakage-safe benchmark sprint,https://github.com/build-the-future-11/FinanceMeta-Global/issues/35,open
+"early stopping" "test set" "evaluation" "leakage" issue,[METHODOLOGY FLAW] Dataset C (Elliptic Bitcoin) evaluation lacks a validation set,https://github.com/SIH-2026-RRAKSS/sihmodel/issues/27,open
+"early stopping" "test set" "evaluation" "leakage" issue,Phase 3: Tier 1 Baseline Model (LogReg + XGBoost),https://github.com/myles4321/LineupEdge/pull/3,open
+"early stopping" "test set" "evaluation" "leakage" issue,Import v2 benchmark code and SWAN repair v1 infrastructure,https://github.com/fetchcast/Coastal-Wave-Emulator/pull/1,open
+"early stopping" "test set" "evaluation" "leakage" issue,Issue 1: Fix Preprocessing Data Leakage & Enforce T/V/T 3-Way Split Discipline (DAT1),https://github.com/AI-Security-Internships-2026/09-edge-iot-security-monitoring/issues/20,open
+"early stopping" "test set" "evaluation" "leakage" issue,[Bug Report] Potential data leakage and test set overlap in the `Dataset_PV` class,https://github.com/AI4SClab/SEEDTrans/issues/3,open

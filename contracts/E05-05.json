@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E05-05",
+  "source_paper": "E05-05",
+  "family": "E05",
+  "paper_text_hash": "859697d8914a720bfec8be8285a756d53589c54ec358cbf3a9015abb5f7a78f9",
+  "source_span": "Audio is resampled to 16 kHz and amplitude-normalised.",
+  "predicates": [
+    {
+      "predicate_id": "P5_PREPROCESS",
+      "principle": "P5_DETERMINISM_OR_SEEDS",
+      "natural_language": "Executed preprocessing must match the paper-declared preprocessing.",
+      "trace_fields": [
+        "protocol",
+        "declared_preprocess",
+        "protocol",
+        "executed_preprocess"
+      ],
+      "condition": "protocol.executed_preprocess == protocol.declared_preprocess",
+      "source_span": "Audio is resampled to 16 kHz and amplitude-normalised.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P5_DETERMINISM_OR_SEEDS"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "a9effd25548bd2f575d728b1ec390be3237bc79b735d9923df31aea7a5fb3ad1"
+}

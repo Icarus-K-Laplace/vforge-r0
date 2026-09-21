@@ -1,0 +1,27 @@
+{
+  "claim_id": "string, unique identifier",
+  "study_id": "string, references which study this belongs to",
+  "natural_language_claim": "string, human-readable statement",
+  "claim_type": "enum: [comparative_superiority, ood_generalization, calibration, subgroup_robustness, statistical_evidence]",
+  "population": "string, target population description",
+  "method": "string, methodology used",
+  "comparator": "string, baseline or comparison method",
+  "outcome_metric": "string, primary evaluation metric",
+  "direction": "enum: [improves, degrades, no_change]",
+  "reported_value": "number, the claimed metric value",
+  "uncertainty_requirement": {
+    "type": "enum: [confidence_interval, standard_error, p_value, none]",
+    "value": "number or null",
+    "level": "number, e.g. 0.95"
+  },
+  "protocol_constraints": ["string", "list of required protocol conditions"],
+  "required_artifacts": ["string", "list of required data/model files"],
+  "evidence_targets": ["string", "what evidence must support the claim"],
+  "validity_conditions": ["string", "conditions that must hold for claim to be valid"],
+  "abstention_conditions": ["string", "conditions triggering ABSTAIN verdict"],
+  "oracle_definition": {
+    "description": "string, how to independently verify truth",
+    "input_artifacts": ["string"],
+    "output_format": "enum: [boolean, numerical, categorical]"
+  }
+}

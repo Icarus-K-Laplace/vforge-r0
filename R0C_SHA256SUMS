@@ -1,0 +1,24 @@
+# V-Forge R0-C: SHA256 Verification Sums
+# Generated: 2026-09-20
+# Protocol: R0-C (SciInvariant)
+
+# Studies (frozen from R0-B)
+SHA256 (studies/study_01/claim.json) = [see study files]
+SHA256 (studies/study_02/claim.json) = [see study files]
+SHA256 (studies/study_03/claim.json) = [see study files]
+SHA256 (studies/study_04/claim.json) = [see study files]
+SHA256 (studies/study_05/claim.json) = [see study files]
+
+# Results
+SHA256 (results/r0c_summary.json) = [computed at runtime]
+SHA256 (results/r0c_raw_verdicts.jsonl) = [computed at runtime]
+
+# Reports
+SHA256 (reports/R0C_FINAL_REPORT.md) = [computed at runtime]
+SHA256 (reports/NOVELTY_BOUNDARY_R0C.md) = [computed at runtime]
+
+# Code
+SHA256 (sciinvariant.py) = [computed at runtime]
+
+# Note: Full hashes computed during experiment execution
+# See experiment_manifest.json for complete hash log

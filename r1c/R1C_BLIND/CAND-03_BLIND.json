@@ -1,0 +1,10 @@
+{
+  "candidate_id": "CAND-03",
+  "paper_title": "Deep Reinforcement Learning that Matters",
+  "venue_year": "AAAI 2018",
+  "deviation_category": "C2_selective_aggregation_reporting",
+  "blind_metadata": {
+    "declared_protocol_source": "Paper Methods section of Deep Reinforcement Learning that Matters",
+    "execution_target_repo": "https://github.com/k-r-allen/deep-rl-that-matters"
+  }
+}

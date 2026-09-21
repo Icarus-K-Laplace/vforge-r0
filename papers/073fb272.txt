@@ -1,0 +1,1087 @@
+OmniGen: Unified Image Generation
+ShitaoXiao*,YuezeWang∗,JunjieZhou∗,HuayingYuan∗,
+XingrunXing,RuiranYan,ChaofanLi,ShutingWang,TiejunHuang,ZhengLiu†
+BeijingAcademyofArtificialIntelligence
+{stxiao,yzwang}@baai.ac.cn,zhengliu1026@gmail.com
+Abstract A young woman sits on a sofa,
+holding a book and facing the Remove the Following the pose
+camera. She wears delicate silver woman's earrings. of this image,
+hoop earringsadorned with tiny, Replace the coffee generate a new
+TheemergenceofLargeLanguageModels(LLMs)hasuni- s th p e a r l k ig li h n t g . S d h ia e m is o d n r d e s s t s h e a d t i c n a a tc c h o zy c g u la p s s w f i i t ll h e a d c w le it a h r p is h s o it t t o in : g A o y n o u a n s g o f b a o i y n
+cream sweater. Behind her, sparkling iced cola. the library, holding a
+fiedlanguagegenerationtasksandrevolutionizedhuman- there is a table with a cup of |image_1| book.|image_1|
+water in a sleek...
+machineinteraction. However,intherealmofimagegen-
+eration,aunifiedmodelcapableofhandlingvarioustasks A professor and a boy are reading
+books together. The
+withinasingleframeworkremainslargelyunexplored. In professor is the
+middle man in
+this work, we introduce OmniGen, a new diffusion model |image_1|. The boy
+is the boy holding a for unified image generation. OmniGen is characterized book in |image_2|.
+by the following features: 1) Unification: OmniGen not
+Figure1. OmniGencanflexiblyfollowinstructionstocomplete
+onlydemonstratestext-to-imagegenerationcapabilitiesbut
+various tasks, without the need for any additional plugins. For
+also inherently supports various downstream tasks, such
+complextasks(e.g.,examplesinthesecondline),itcanalsobe
+as image editing, subject-driven generation, and visual-
+completedend-to-endwithoutcumbersomeintermediatesteps.
+conditionalgeneration. 2)Simplicity: Thearchitectureof
+OmniGenishighlysimplified,eliminatingtheneedforad-
+hasyettorevealacounterpartthatmatchestheuniversality
+ditionalplugins. Moreover,comparedtoexistingdiffusion
+of LLMs. Current image generation models have demon-
+models,itismoreuser-friendlyandcancompletecomplex
+strated proficiency in specialized tasks. For instance, in
+tasksend-to-endthroughinstructionswithouttheneedfor
+thetext-to-imagegenerationfiled, modelssuchastheSD
+extraintermediatesteps,greatlysimplifyingtheimagegen-
+series [12, 51, 55], DALL-E [54], and Imagen [25] have
+eration workflow. 3) Knowledge Transfer: Benefit from
+made significant strides. Meanwhile, lots of efforts have
+learninginaunifiedformat,OmniGeneffectivelytransfers
+beenmadetoextendthecapabilitiesofdiffusionmodelsfor
+knowledgeacrossdifferenttasks,managesunseentasksand
+specifictasks,suchasControlNet[75],InstandID[64],and
+domains, andexhibitsnovelcapabilities. Wealsoexplore
+InstructPix2Pix[3]. Currently,foreachnewtask,designing
+the model’s reasoning capabilities and potential applica-
+aspecificmoduleandfine-tuningitisnecessary,whichhin-
+tionsofthechain-of-thoughtmechanism. Thisworkrepre-
+dersthedevelopmentofimagegeneration. What’sworse,
+sentsthefirstattemptatageneral-purposeimagegenera-
+these task-specific models lead to a significant issue: we
+tion model, and we will release our resources at https:
+cannotaccomplishtaskssimplythroughinputinstructions
+//github.com/VectorSpaceLab/OmniGentofos-
+butrequireacomplexandcumbersomeworkflowinvolving
+terfutureadvancements.
+multiple models and numerous steps. For example, Con-
+1.Introduction trolNetneedstouseadetectortoextractconditions(such
+asposeestimationmaps)andthenloadsthecorresponding
+ThepursuitofArtificialGeneralIntelligence(AGI)hasinten- conditionmodule. InstantIDcanonlyprocesssingle-person
+sifiedthedemandforgenerativefoundationmodelscapable imagesandrequiresafacedetectionmodeltodetectfaces
+ofhandlingvarioustaskswithinasingleframework. Inthe beforehand,followedbyusingafaceencodertoencodethe
+field of Natural Language Processing (NLP), Large Lan- face. Ifuserswanttoeditthegeneratedimages,additional
+guageModels(LLMs)havebecomeexemplaryinachieving modelslikeInstructPix2Pixneedtobeloaded.
+thisgoal,demonstratingremarkableversatilityacrossnumer-
+Canasinglemodelcompletevarioustasksend-to-end
+ouslanguagetasks. However,therealmofvisualgeneration
+throughuserinstructions,similartohowChatGPThan-
+dles language tasks? We envision a future where image
+*Co-firstauthors
+†Correspondingauthors generationismadesimpleandflexible: thatanytaskscanbe
+1
+4202
+voN
+12
+]VC.sc[
+2v04311.9042:viXra
+Final Latent Embedding
+Attention Mechanism Generated
+VAE
+Text Image Image
+Tokens Patch Timestep Noise × 𝐷𝑖𝑓𝑓𝑢𝑠𝑖𝑜𝑛 𝑠𝑡𝑒𝑝𝑠
+Text Transformer
+Tokens
+Image
+Patch
+Timestep
+Visual Embeddings Timestep Noise
+Token
+Text Tokenizer VAE
+Noise
+Replace the fruit in the middle with a cat <img> </img>
+Figure2. TheframeworkofOmniGen. Textsaretokenizedintotokens,whileinputimagesaretransformedintoembeddingviaVAE.
+OmniGencanacceptfree-formmulti-modalpromptsandgenerateimagesthroughtherectifiedflowapproach.
+accomplisheddirectlythroughuserinstructions. Motivated weexplorethemodel’sreasoningcapabilitiesandchain-
+bythisgoal,weproposeaunifiedframework: OmniGen. As of-thoughtmechanism.
+showninFigure1,thisframeworkallowsforconvenientand • OmniGentakesaninitialsteptowardafoundationalmodel
+flexibleimagegenerationforanypurposes,wherenoaddi- for general image generation. We will open-source the
+tionalpluginsoroperationsareneeded. Giventheflexibility relevantresources(model,code,anddata)andhopethis
+infollowingarbitraryinstructions,thenewframeworkalso workcanprovidesomeinsightsforfutureimagegenera-
+helptoinspiremoreinterestingimagegenerationtasks. tionmodels.
+Unlike popular diffusion models, OmniGen features a
+2.OmniGen
+very concise structure, comprising only two main compo-
+nents: aVAEandatransformermodel. OmniGensupports
+In this section, we present the details of OmniGen frame-
+arbitrarilyinterleavedtextandimageinputsasconditionsto
+work,includingthemodelarchitectureandtrainingmethod.
+guideimagegeneration,insteadofonlyacceptingpuretext
+orimage. Totrainthisarchitectureasaunifiedmodel,we 2.1.ModelDesign
+constructalarge-scalemulti-taskimagegenerationdataset
+NetworkArchitecture. ThedesignprinciplesofOmniGen
+X2I,whichunifiesdifferenttaskswithoneuniformformat.
+areuniversalityandconciseness. AsillustratedinFigure2,
+Weevaluatethewell-trainedmodelbasedonmultiplebench-
+OmniGenadoptsanarchitecturecomprisedofaVariational
+marks,demonstratingitssuperiorgenerationcapabilitycom-
+Autoencoder(VAE)[27]andapre-trainedlargetransformer
+paredtoexistingmodels. Remarkably, OmniGenenables
+model. Specifically, we use the VAE from SDXL [51] to
+effectiveknowledgetransferacrossdifferentscenarios,al-
+extractcontinuousvisualfeaturesfromimages. Thetrans-
+lowing it to handle unseen tasks and domains while also
+formermodelinitializedbyPhi-3[1]generatesimagesbased
+fosteringtheemergenceofnewabilities.
+oninstructionsthatserveasconditions. OnlyVAEisfrozen
+Ourcontributionsaresummarizedasfollows:
+duringtraining. Unlikestate-of-the-artdiffusionmodelsthat
+• WeintroduceOmniGen,aunifiedimagegenerationmodel require additional encoders to pre-process conditional in-
+thatexcelsinmultipledomains. Themodeldemonstrates formation(suchasCLIPtextencoderandimageencoder),
+competitivetext-to-imagegenerationcapabilitiesandin- OmniGeninherentlyencodesconditionalinputsbyitself,sig-
+herently supports a variety of downstream tasks, such nificantlysimplifyingthepipeline. Furthermore,OmniGen
+as controllable image generation and classic computer jointlymodelstextandimageswithinasinglemodel,rather
+vision tasks. Furthermore, it can handle complex tasks thanindependentlymodelingdifferentinputconditionswith
+end-to-endwithoutanylengthyintermediatesteps. Toour separate encoders as in existing works [8, 64, 68, 70, 72]
+knowledge,OmniGenisthefirstimagegenerationmodel which lacks interaction between different modality condi-
+toachievesuchcomprehensivefunctionality. tions.
+• We construct the first comprehensive image generation InputRepresentation. Theinputtothemodelcanbe
+datasetnamedX2I,whichstandsfor”anythingtoimage”. multi-modalinterleavedtextandimagesinfreeform. We
+Thisdatasetcoversawiderangeofimagegenerationtasks, utilize the tokenizer of Phi-3 to process text. For images,
+allofwhicharestandardizedintoaunifiedformat. we firstly employ a VAE with a simple linear layer to ex-
+• By unified training on the multi-task dataset, OmniGen tractlatentrepresentations. Then,theyareflattenedintoa
+canapplylearnedknowledgetotackleunseentasksand sequenceofvisualtokensbylinearlyembeddingeachpatch
+domains,aswellasexhibitnewcapabilities. Additionally, inthelatentspace. Following[49],thepatchsizeissetto2.
+2
+Weapplystandardfrequency-basedpositionalembeddings Stage Resolution Steps(K) BatchSize LearningRate
+to visual tokens, and process images with varying aspect
+1 256×256 500 1040 1e-4
+ratiosasSD3[12]. Inaddition,weencapsulateeachimage 2 512×512 300 520 1e-4
+sequencewithtwospecialtokens: “<img>”and“</img>” 3 1024×1024 100 208 4e-5
+beforeinsertingitintothesequenceoftexttokens. Wealso 4 2240×2240 30 104 2e-5
+appendthetimestepembedding[49]attheendoftheinput 5 Multiple 80 104 2e-5
+sequence. Wedonotneedanytask-specificspecialtokens Table1.DetailsabouteachtrainingstageofOmniGen.
+toindicatethetasktype.
+imagex:
+AttentionMechanism. Differentfromtext,whichcan
+be decomposed into discrete tokens to model, we argue (cid:40)
+1 ifx =x′
+thattheimageshouldbemodeledasawholebasedonits w = i,j i,j (2)
+nature. Therefore,wemodifythecommoncausalattention
+i,j
+||x−
+1
+x′||2
+ifx
+i,j
+̸=x′
+i,j
+mechanisminLLMbyintegratingitwiththebidirectional
+attentionasillustratedinFigure2. Specifically, weapply Consequently,regionswithalterationsareassignedsignifi-
+causalattentiontoeachelementinthesequence,butapply cantlyhigherweightsthanthosewithoutchanges,guiding
+bidirectional attention within each image sequence. This themodeltofocusontheareastobemodified.
+allowseachpatchtopayattentiontootherpatcheswithin TrainingPipeline. Followingpreviouswork[5,12,16],
+the same image, while ensuring that each image can only wegraduallyincreasetheimageresolutionduringthetrain-
+attendtootherimagesortextsequencesthathaveappeared ing process. Low resolution is data-efficient, while high
+previously. resolution can enhance the aesthetic quality of the gener-
+Inference. During inference, we randomly sample a atedimages. Detailedinformationforeachtraining stage
+Gaussiannoiseandthenapplytheflowmatchingmethodto is presented in Table 1. We adopt the AdamW [40] with
+predictthetargetvelocity,iteratingmultiplestepstoobtain β =(0.9,0.999)astheoptimizer. Allexperimentsarecon-
+thefinallatentrepresentation.Finally,weuseaVAEdecoder ductedon104A800GPUs.
+todecodethelatentrepresentationintothepredictedimage.
+Thankstotheattentionmechanism,OmniGencanaccelerate 3.X2IDataset
+inferencelikeLLMsbyusingkv-cache:storingpreviousand
+currentkeyandvaluestatesoftheinputconditionsonthe Toachieverobustmulti-taskprocessingcapabilities,itises-
+GPUtocomputeattentionwithoutredundantcomputations. sentialtotrainthemodelonlarge-scaleanddiversedatasets.
+However,inthefieldofimagegeneration,areadilyavailable
+2.2.TrainingStrategy
+large-scale and diverse dataset has yet to emerge. In this
+Train objective. In this work, we use rectified flow [39] work,wehaveconstructedalarge-scaleunifiedimagegener-
+to optimize the parameters of model. Different from the ationdatasetforthefirsttime,whichwerefertoastheX2I
+DDPM[24],flowmatchingconductstheforwardprocessby dataset,meaning”anythingtoimage”. Wehaveconverted
+linearlyinterpolatingbetweennoiseanddatainastraight alldataintoaunifiedformat, andFigure3presentssome
+line. At the step t, x is defined as: x = tx+(1−t)ϵ, examplesoftheX2Idataset. Theentiredatasetcomprises
+t t
+wherexistheoriginaldata,andϵ∼N(0,1)istheGaussian approximately0.1billionimages. Adetaileddescriptionof
+noise. The model is trained to directly regress the target thecompositionwillbeprovidedinthefollowingsections.
+velocitygiventhenoiseddatax ,timestept,andcondition
+t
+informationc. Specifically,theobjectiveistominimizethe 3.1.TexttoImage
+meansquarederrorloss:
+The input for this subset of data is plain text. We collect
+L=E(cid:2) ||(x−ϵ)−v (cid:0) x , t, c (cid:1) ||2(cid:3) . (1) multipleopen-sourcedatasetsfromvarioussources: Recap-
+θ t
+DataComp[33](asubsetof56Mimages),SAM-LLaVA[5],
+Forimageeditingtasks,theobjectiveistomodifyspe- ShareGPT4V[6],LAION-Aesthetic[57](asubsetof4Mim-
+cificregionsoftheinputimagewhilekeepingotherareas ages),ALLaVA-4V[4],DOCCI[45],DenseFusion[34]and
+unchanged. Therefore,thedifferencebetweentheinputim- JourneyDB[59]. Whilethesedatasetsarelargeinquantity,
+age and the target image is often small, which allows the theirimagequalityisnotalwayshighenough. Intheearly
+modeltolearnanunexpectedshortcut: simplycopyingthe stages of training, we use them to learn a broad range of
+inputimageastheoutputtomaketherelatedtrainingloss image-textmatchingrelationshipsanddiverseknowledge.
+very low. To mitigate this phenomenon, we amplify the Afterstage3,weutilizeaninternalcollectionof16Mhigh-
+lossintheregionsoftheimagewherechangesoccur. More qualityimagestoenhancetheaestheticqualityofthegener-
+specifically, wecalculatethelossweightsforeachregion atedimages. WeusetheInternVL2[10]tocreatesynthetic
+basedonlatentrepresentationsofinputimagex′andtarget annotationsforinternaldataandLAION-Aesthetic.
+3
+(a) Textto ImageGeneration 3.2.2.Subject-drivenImageGeneration
+T R T h h u e e ss c i i m a a n t a i B g s e l u l y d e in e c p g a i t o c . t n s . a .. T v a a h i p n c e p i t t e a y i a m g s r e s t a r c g . e a . e . e r t s d . h r T o i h v w e in s c g a a o r n T b d d h r o o e e m R a i u t i m n h iv a t a o a t g e k . e d T i n s h b g h e y o v s t w i c e o e c w w n a e e s o e r f i i s s P n a g ic . o .. W En e ti c t o y n d s a tr t u a c s t et b ) o a th nd a a lar h g i e g - h s - c q a u le al f i o ty un a d d a v t a io n n c a e l d d d a a ta ta se s t et (G (W RI e T b -
+(b) Common Mixed-modal Prompts Images dataset) for subject-driven image generation. For
+|image_1| T th h e e g c e a n n e n r y a t e e d d g e of theGRIT-Entitydataset,weleveragetheGRITdataset[50],
+Put a smile face on picture should look
+the note. like the one below: whichannotatesobjectnameswithinimages.Usingthesean-
+|image_1|
+notations,weapplyGroundingDINO[38]foropen-settext-
+to-bounding-boxdetection.Basedonthegroundedbounding
+boxes,weemploySAM[28]tosegmentobjectmasksfrom
+croppedimages. WefurtherusetheMS-Diffusion[66]to
+|image_1| Reveal the person’s Make this image |image_1| has
+appearance in this suit |image_2| the same style of |image_2| repaint the object images for higher quality and diversity
+(c) Subject-Driven Image Generation ofdata. Theprocess ofdataconstructionandthefinalin-
+MAN-1 is positioned on the left side of the image,
+leaning forward as he engages in conversation... On struction format are illustrated in supplementary material.
+the right, MAN-2 is animatedly gesturing with his
+hand... The background is filled with... Throughthesemethods,weacquire6Mdatapairs.
+MAN-1is |image_1|, and MAN-2is |image_2|.
+AlthoughtheGRIT-basedapproachprovidesasubstan-
+(d) Computer Vision Tasks
+tial amount of samples, the input data extracted directly
+Deblur the Brighten from original images will tend to lead the model to fall
+image the image
+|image_1| |image_1| intoasimplecopy-and-pastepattern. Tofullyunleashthe
+subject-drivenimagegenerationcapabilityofOmniGen,we
+|image_1| constructahigh-qualitynaturalimagesdatasetfromtheweb.
+Detect the Find all
+skeleton of windowpanes Weusethesearchenginetocollectmultipledifferentimages
+human in in the photo
+|image_1| a th n e d m o u in tl i b n l e u e. ofthesameperson,usingoneastheinputandanotherasthe
+output. AnexampleisshowninFigure3-(c). Moredetails
+(e) Few-shot to Image
+abouttheconstructionprocessaregiveninthesupplemen-
+According to the
+following examples:
+input |image_1|, output tarymaterial.
+|image_2|. Generate an
+output for the input
+|image_3|.
+3.2.3.ComputerVisionTasks
+We introduce classic computer vision tasks to expand the
+Figure 3. Examples of X2I dataset. We standardized the input
+boundariesofthemodel’sgenerativecapabilities. Forlow-
+ofalltasksintoaninterleavedimage-textsequenceformat. The
+levelvisiontasks(low-lightimageenhancement[67],derain-
+placeholder|image i|representsthepositionofthei-thinputimage.
+ing[73],deblurring[44],inpainting[52],outpainting[52]
+3.2.Multi-modaltoImage
+andcolorization[57]),wheretheannotationitselfisanim-
+age,weonlyaddtextinstructions,whicharerandomlysam-
+Differentfromexistingdiffusionmodels,OmniGencanac-
+pledfrominstructionsgeneratedbyGPT-4o. Forhigh-level
+ceptmoreflexiblemulti-modalinstruction,thusadaptingto
+visiontasks,wechoosetorepresentallannotationsasim-
+avarietyofdataandtasktypes.
+ages. WeuseimagesfromLAION[57]assourceimages
+3.2.1.CommonMixed-modalPrompts andannotationsfrom[52]astargetstoconstructimagepairs
+(suchassourceimageanditshumanposemapping). The
+The input of this portion of data is arbitrarily inter-
+annotationsincludehumanpose,depthmapping,canny,Hed
+leaved text and images. We collect the data from multi-
+edge,andsegmentation. Additionally,wealsouseseveral
+ple tasks and sources: image editing (MagicBrush [74],
+datasets for referring image segmentation, including Ref-
+InstructPix2Pix [3] and SEED-edit [17], ), human mo-
+COCO[26],ADE20k[78],andReasonSeg[29]. Asshown
+tion (Something-Something [21]), virtual try-on (HR-
+in Figure 3-(d), the input is the source image and a natu-
+VITON [30] and FashionTryon [77]), and style transfer
+ral language expression, the output is an image with the
+(StyleBooth[23]). Theissueofutilizingadditionalvisual
+correspondingobjecthighlightedinblue.
+conditions for finer-grained spatial control has garnered
+widespreadattention[31,75]. WeemploytheMultiGen[52]
+3.3.Few-shottoImage
+datasettolearnthisfunction,andselectsixrepresentative
+visual conditions: Canny, HED, Depth, Skeleton, Bound- We build a few-shot to image dataset to stimulate the in-
+ingBox,andSegmentation. Thesetypesoftaskstaketext contextlearningabilityofthemodel. Specifically,foreach
+promptswithspecificvisualconditions(suchassegmenta- task described in the preceding sections, we randomly se-
+tion maps, and human pose maps) as multi-modal inputs. lectedafewexamplesandcombinedtheoriginalinputwith
+Westandardizealltasksintotheinput-outputpairformatas theseexamplestoformnewinputs. Thespecificdatafor-
+showninFigure3-(b). matisshowninFigure3-(e). Duetolimitationsintraining
+4
+noitidnoClausiV
+A cute cat, hanging a A young woman stands on the platform of a railway
+card that only says station in spring. She wore a long blue–gray 'OmniGen', quality windbreaker and white shirt. Her darkbrownhair
+details, hyper was tied in a low ponytail, a few strands flying in the realistic, high wind. Her eyes were full of expectation, and the sun
+definition, 8K, photo. shone on her warm face.
+|image_1| Add a sunglasses to the man's face Add the word 'apple' below the apple logo. |image_1||image_1|: Remove the butter on the cake.
+White stallion horse galloping furiously kicking A woman in a white turtleneck. The results of A bedroom with a large bed. The Segmentation
+up the dust behind it. Depth map: |image_1| Holistically-nested Edge is |image_1| map of image is: |image_1|
+egamI
+ot txeT
+gnitidE
+egamI
+Single Two Attribute
+Model Params Overall object object Counting Colors Position binding
+SDv1.5 0.9B+0.1B∗ 0.43 0.97 0.38 0.35 0.76 0.04 0.06
+SDv2.1 0.9B+0.4B∗ 0.50 0.98 0.51 0.44 0.85 0.07 0.17
+SD-XL 2.6B+0.8B∗ 0.55 0.98 0.74 0.39 0.85 0.15 0.23
+DALLE-2 3.5B+1.0B∗ 0.52 0.94 0.66 0.49 0.77 0.10 0.19
+DALLE-3 – 0.67 0.96 0.87 0.47 0.83 0.43 0.45
+IF-XL 5.5B+4.7B∗ 0.61 0.97 0.74 0.66 0.81 0.13 0.35
+SD3 8.0B+4.7B∗ 0.68 0.98 0.84 0.66 0.74 0.40 0.43
+OmniGen 3.8B 0.70 0.99 0.86 0.64 0.85 0.31 0.55
+Table2. ResultsofGenEvalBenchmark. ∗meanstheparameter
+ofthefrozentextencoder.Ourmodelachievescomparableperfor-
+mancewitharelativelysmallparameterscale.
+Figure4.Theresultsofdifferentimagegenerationtasks. cordingly. Furthermore,whenthereferenceimagecontains
+multipleobjects,themodelcandirectlyselecttheneededob-
+T i | n i h m e a w g o e_ m 1 a | n A s s w t t u u o m b d rl a b y d n , l e o i w m f i s i b m t i h o n e o l r h i k s g i s e h s . d t h T o i h n m e t e h e j d e a c r t k s r b e a d se s d hi o rt n in tex im tu a a g l e i ) ns w tr i u th c o ti u o t n r s eq (e u . i g r . i , n t g he ad o d n i e tio w n e a a l r p in r g ep t r h o e -
+waves her man is the one wearing
+h cr a o n w d d in . the t | h im e a d g a e r _ k 1 r | e . d shirt in cessingsteps. Incontrast,existingmodels[22,64]require
+manually cropping the target person from a multi-person
+A man and a woman are
+sitting at a classroom desk. image,detectingfaceswithafacedetector,encodingfaces
+The man is theman with
+yellow hairin|image_1|. withafaceencoder, andinputtingthemintothediffusion
+The woman is the woman on
+the leftof|image_2|. modelthroughacross-attentionmodule. Withoutthesecom-
+plexprocesses,OmniGencancompletethetaskinasingle
+A man and a short-haired woman
+with a wrinkled face are standing end-to-endstep.
+in front of a bookshelf in a library;
+Morequalitativeresultsareprovidedinsupplementary
+the man is the man in the middle
+of |image_1|, and the woman is materials.
+the oldest in |image_2|
+4.1.2.TexttoImage
+The flower is placed in a vase on a
+metal table in a factory. The flower is Following[12],weevaluatetext-to-imagegenerationcapa-
+in |image_1|. The vase is in the
+middle of |image_2|. bility on the GenEval [20] benchmark. We compare the
+performanceofOmniGenwiththereportedresultsofother
+Figure5. Subject-drivengeneration. Whenthereferenceimage
+popularimagegenerationmodels,assummarizedinTable2.
+containsmultipleobjects,OmniGencanautomaticallyidentifythe
+Surprisingly,OmniGenachievessimilarperformancecom-
+required objects based on textual instructions without the need
+paredtothecurrentdiffusionmodels,suchasSD3,which
+for additional preprocessing steps like image cropping or face
+underscores the effectiveness of our framework. Notably,
+recognition.
+OmniGenhasonly3.8billionparameters,whereastheSD3
+resources, we opted to use only one example to improve
+modelhasatotalof12.7billionparameters. Thearchitec-
+trainingefficiency.
+tureofOmniGenissignificantlysimplified,eliminatingthe
+costofanadditionalencoder,therebygreatlyenhancingthe
+4.ExperimentalResults
+efficiencyofparameterutilization.
+Thedefaultinferencestepissetto50. Weusetheclassifier- 4.1.3.Multi-modaltoImage
+freeguidanceforbothtextconditionandimagecondition
+following [3]. Thedefaultguidancescaleissetto2.5,and
+CLIPSimi -T↑ -I↑ CLIPSimi -T↑ -I↑
+the image guidance scale is set to 1.6. For image editing
+task,weincreasetheimageguidancescaleto2. I-Pix2Pix[3] 0.2190.834 Tex-Inv[13] 0.2550.780
+MagicBrush[74]0.2220.838 DreamBooth[56]0.3050.803
+4.1.ImageGeneration PnP[63] 0.0890.521 ReImagen[7] 0.2700.740
+Null-Text[42] 0.2360.761 SuTI[9] 0.3040.819
+4.1.1.QualitativeResults
+EMU-Edit[58] 0.2310.859 Kosmos-G[47] 0.2870.847
+Figure4summarizestheresultsofdifferentimagegenera- OmniGen 0.2310.829 OmniGen 0.3150.801
+tiontasks,includingtext-to-image,imageediting,andvisual
+Table 3. Left: Results on EMU-Edit test data. Right: Results
+conditional. TheseresultsdemonstratethatOmniGencan onDreamBench. Asauniversalmodel,OmniGendemonstrates
+handlevariousdownstreamtasksbasedonmulti-modalin- performancecomparabletothatofthebestproprietarymodels.
+structions. We evaluate the image editing on EMU-Edit [58]
+Figure5presentstheoutcomesofthesubject-drivengen- datasetandsubject-drivengenerationcapabilityonDream-
+erationtask. OmniGencanextracttherequiredobjectsfrom Bench[56]. WeuseCLIP-Ttomeasurehowwellthemodel
+the given reference images and generate new images ac- followed the instructions, while CLIP-I similarity scores
+5
+Seg.Mask CannyEdge HedEdge DepthMap
+(mIoU↑) (F1Score↑) (SSIM↑) (RMSE↓)
+T2I-Adapter[43] 12.61 23.65 - 48.40
+Gligen[35] 23.78 26.94 0.5634 38.83 Step 1: Step 2:
+Uni-ControlNet[76] 19.39 27.32 0.6910 40.65 Pose Controlnet
+Detector for pose
+UniControl[52] 25.44 30.82 0.7969 39.18
+ControlNet[75] 32.55 34.65 0.7621 35.90 OmniGen OmniGen
+ControlNet++[31] 43.64 37.04 0.8097 28.32
+OmniGen 40.06 38.96 0.8332 31.71 Step 2: Step 1:
+Controlnet Depth
+Table4. ComparisonwithSOTAmethodsoncontrollableimage for depth Detector
+generation.↑indicateshigherresultisbetter,while↓meanslower
+isbetter.
+Instruction for OmniGen: Following the (human pose)/(depth mapping) of this image
+|image_1|, generate a new photo: An old man is walking in the park
+Figure7. ControlNetinvolvesmultiplestepsandplugins: firstly
+usingthecorrespondingdetectortoextractinformationfromtheref-
+delete the rain in this image |image_1|. Image inpainting: |image_1|. erenceimage,andthenloadingtheappropriateControlNetmodule
+toprocessthevisualconditions.Incontrast,OmniGencompletes
+theentiretaskinasinglestepwithinasinglemodel.
+Figure 7. The existing workflow for ControlNet involves
+Deblur this image |image_1| Identify all person in the image |image_1 usingadetectortoextractspatialconditioninformationfrom
+thereferenceimage,andthenloadingthecorrespondingcon-
+Human skeleton detection
+Edge detection trolmoduletomodelthespatialconditioninformationfor
+Segmentation map
+imagegeneration. CanwedirectlyuseOmniGentogenerate
+for |image_1|
+newimagesbasedonareferenceimageinonlyonestep?
+Surprisingly,evenwithouthavingencounteredsuchatask
+Figure 6. The results of OmniGen in various traditional vision before,OmniGenhandlesitadmirablywithoutexplicitex-
+tasks. tractionofadditionalconditionalimages. Morespecifically,
+wecandirectlyinputthereferenceimageandtextinstruction
+measurethemodel’sabilitytopreserveelementsfromthe (e.g.,Followthehumanposeofthisimagetogeneratenew
+sourceimage. AsshowninTable3,OmniGenexhibitscom- image.) togeneratethetargetimageinonlyonestepwithout
+parableperformancetothecurrentstate-of-the-artmodels. anyexplicitadditionalintermediateprocedures.
+Notedforsubject-drivengenerationtask,weselectoneim-
+ageofthespecificobjectasinputinsteadoffine-tuningthe 5.FurtherAnalysis
+modellikeDreamBooth.
+In Table 4, we use the dataset and script from [31] to LLMsdemonstrateremarkablegeneralizationcapabilities,
+evaluate the generation capability based on visual condi- and can boost performance through mechanisms such as
+tions. Foreachcondition,thecontrollabilityisevaluatedby in-contextlearningandchainofthought. Weobservesimilar
+measuringthesimilaritybetweentheinputconditionsand functionalitiesinOmniGenaswell,andpresentourfindings
+theextractedconditionsfromgeneratedimagesofdiffusion inthissection.
+models. We can find that OmniGen achieves competitive
+5.1.EmgergingCapabilities
+resultsforallconditions.
+Bystandardizingalltasksintoaunifiedformatandtraining
+4.2.ComputerVisionTasks
+onX2Idataset,OmniGencanacquireuniversalknowledge
+We present several qualitative results of computer vision andallowknowledgetransferacrossdifferentscenariosand
+tasksinFigure6. OmniGencanhandlevariouslow-level tasks, thus enabling the generation capabilities on unseen
+vision tasks such as deraining, deblurring, and inpainting. tasksanddomains.
+AtthebottomofFigure6,wecanseethatOmniGenisalso TaskComposition. Inreal-worldapplications,userre-
+abletohandlehigh-levelvisiontasks,suchashumanpose quirementsofteninvolvecombinationsoftasks.Asshownin
+recognition. Figure8-(a),ourmodeliscapableofsimultaneouslyprocess-
+Note that OmniGen’s capabilities in CV tasks are not ingmultipleinstructions,includingthosefordifferenttasks
+intendedtosurpassexistingstate-of-the-artmodelsthatde- as well as multiple instructions for the same task. These
+veloped for specific tasks over a long period. We hope it results highlight our model’s versatility and potential for
+can transfer the knowledge gained from these traditional widespreadadoptioninthewild.
+computer vision tasks to image generation tasks, thereby End-to-endWorkflow. Userstypicallyneedtoloadmul-
+unlockinggreaterpotential. Someexamplesareshownin tiplemodelsandperformmulti-stepprocessingtoultimately
+6
+Image Add a
+inpainting sunglasses,
+and change
+and change the color of
+the color of clothes to
+hair to white. blue.
+(a) Task Composition Where can I wash my hands? Please help me find the |image_1| What can be used to hold
+right place.|image_1| water? remove it
+According to the following examples, generate an output for the input. Identify all pencil sharpener
+Input: |image_1| Output: |image_2| in the image |image_1| and
+Input: |image_3| Output: highlight them in blue.
+(b) Few-shot Learning on Unseen Domains I need an appliance that can help me cook food on heat. Can you |image_1| What can be used to hold
+identify what I use from the image and highlight it for me?|image_1| water? remove it
+Figure8.ExamplesofEmgergingCapabilitiesofOmniGen. Figure9.ReasoningabilityofOmniGen.
+generate a satisfactory image, making the workflow very
+singlestep step-by-step
+cumbersomeandcostly. OmniGenpossessesbothexcellent
+multi-modalunderstandingandimagegenerationcapabili-
+ties, enablingittocompletealotoftaskswithoutrelying
+Prompt:A young girl in a red dress, sitting on the ground next to an enormous dragon with huge teeth and eyes. She is
+on external models, thereby significantly simplifying the facing it head-on, as if they were friends or good policeman. The scene takes place inside snowy rocks in the mountains.
+workflow and saving cost. As demonstrated in Figure 7,
+OmniGencanextracttherelevantconditionalinformation
+fromthereferenceimageandgenerateanewimagebased
+Prompt:dramatic angle, girl, blond hair, long hair, hair ornament, blue eyes, black bodysuit, blue sleeves, armor, gold-
+onthecapturedconditionwithinonestep. Thisprocessis trimmed, raindrops, in ruins, wet, sweat, depth of field, stranding, looking back at viewer, turning head, blue skirt
+Figure10.Simulatetheprocessofhumandrawingviastep-by-step
+implicit,withallprocessingcompletedinternallywithinthe
+generation.
+model,onlyrequiringtheusertoinputasimplecommand.
+an accurate final answer. We consider whether a similar
+In-contextLearningforUnseenDomains. Weusethe
+alternativecanbeappliedtoimagegeneration. Inspiredby
+datafromFSS[32]whichcontainsobjectsthathavenever
+thebasicwayofhumandrawing,wehopetomimicthestep-
+beenseeninpreviousdatasetstoevaluatethegeneralized
+by-stepdrawingprocess,iterativelyrefiningtheimagefrom
+ability.IntherightofFigure8-(b),wecanseethatOmniGen
+ablankcanvas. Weconstructananimeimagedatasetand
+isnotfamiliarwiththeconceptsof“pencilsharpeners”,and
+usethePAINTS-UNDO1 modeltosimulateeachstageof
+itcannotidentifyitfromimages. However,whenprovided
+artworkcreation. Weselect8representativeframestodepict
+withanexample,themodeliscapableofmakingaccurate
+thegradualdevelopmentofthefinalimage. Afterfiltering
+predictions. Byprovidinganexample,themodeliscapable
+outinconsistentsequences,wefine-tunedthemodelonthis
+ofsuccessfullycompletingthisunseensegmentationtask.
+datasetfor16,000steps.
+5.2.ReasoningAbility The results are visualized in Figure 10, alongside the
+outputsgeneratedbytheoriginalmodel. Forstep-by-step
+We have explored the reasoning capabilities of the model
+generation,theinputdataconsistsofthecurrentstep’simage
+andpresentedtheresultsinFigure9. Asshownintheleft
+andtext,andthenthemodelpredictstheimageforthenext
+halfofFigure9,whengivenaninstructionwithoutexplicitly
+step. Itcanbeobservedthatthefine-tunedmodelsuccess-
+specifyingtheobject,suchas“WherecanIwashmyhands?
+fullysimulatesthebehaviorofahumanartist: drawingthe
+Pleasehelpmefindtherightplaceinimage 1”,themodel
+basicoutline,incrementallyaddingdetails,makingcareful
+canrecognizeimagecontentsandinferthatasinkisneeded.
+modifications, and applying colors to the image. In this
+Consequently,themodelidentifiesandindicatestheareaof
+manner, users can modify the previous results to control
+thesinkintheimage. Thisfunctionalitycreatespotential
+the current output, thereby participating more actively in
+applicationsinthefieldofembodiedintelligence,assisting
+theimagegenerationprocess,ratherthanpassivelywaiting
+intelligent agents in comprehending multi-modal instruc-
+forthefinalimagewithablack-boxdiffusionmodel. Un-
+tions, locatingnecessaryobjectsandplanningsubsequent
+fortunately,thequalityofthefinalgeneratedimagesdoes
+actions. Moreover,therighthalfofFigure9demonstrates
+notsurpassthatoftheoriginalmodel. Inthestep-by-step
+thatafterinferringthetargetobject,themodelcanalsoper-
+generationapproach,themodelmayincorporateerroneous
+form editing operations on it. If no object matches, the
+modifications,leadingtosomedisarrayinthefinalimage.
+modelwillrefrainfromeditinganyunrelatedobjects(seethe
+Thisdoesnotimplythattheapproachisunfeasible;currently,
+exampleinthebottomrightcornerofFigure9).
+weonlyconductapreliminaryexploration,leavingfurther
+5.3.ChainofThought optimizationsforfutureresearch. Basedonthefindingsof
+previouswork[36]onLLMs,whichindicatethatprocess
+TheChain-of-Thought(CoT)methodcansignificantlyboost
+supervisionsignificantlyoutperformsoutcomesupervision,
+the performance of LLMs by decomposing the task into
+multiplestepsandsequentiallysolvingeachsteptoobtain 1https://github.com/lllyasviel/Paints-UNDO
+7
+A cute cat, hanging a A young woman stands on the platform of a railway
+card that only says station in spring. She wore a long blue–gray
+'OmniGen', quality windbreaker and white shirt. Her darkbrownhair details, hyper was tied in a low ponytail, a few strands flying in
+realistic, high the wind. Her eyes were full of expectation, and
+definition, 8K, photo. the sun shone on her warm face.
+egamI
+ot
+txeT
+|image_1| Add a sunglasses to the man's faceAdd the word 'apple' below the apple logo. |image_1| |image_1|: Remove the butter on the cake.
+gnitidE
+egamI
+tasksviatrainingonalarge-scaledataset. Beyondlanguage,
+multi-modallargelanguagemodels[11,37]havebeenpro-
+posedtointegratevisionandlanguagecapabilities.However,
+theylackthecapabilitytogenerateimages. Someworkspro-
+poseintegratingLLMswithdiffusionmodelstoequipLLMs
+withimagegenerationcapability[18,60,61,69].Othersuse
+discrete tokens to support both image and text generation
+Figure11.Top:resultsofcausalattention;Bottom:resultswithout
+simultaneously [41, 62, 71]. They focus on multi-modal
+lossweights.
+generationwithlimitedimage-generationcapability. Con-
+InputImage EMU-Edit DreamBench currentworkssuchasTransFusion[79]andShow-O[71]
+Representation CLIP-T CLIP-I CLIP-T CLIP-I unify diffusion and autoregressive methods into a single
+CLIP 0.232 0.820 0.312 0.789 model,generatingtextautoregressivelyandimagesthrough
+VAE 0.231 0.829 0.315 0.801 diffusion. Nonetheless,likeexistingdiffusionmodels,these
+worksfocusonalimitedrangeofimagegenerationtasks,
+Table5.Comparisonofdifferentmethodstoobtainvisualembed- primarilytext-to-imagegeneration,andcannotcovermore
+dingforinputimages.
+complexandvariousvisualgenerationtasks. Theconstruc-
+wepositthatsupervisingthedrawingprocessofimagesis tionofauniversalfoundationmodelforimagegeneration
+apromisingdirectionthatmayassistthemodelinhandling remainsunclearandhasnotbeenfullyexplored.
+morecomplexanddiversescenes. DiffusionModel.Recentadvancementsindiffusionmod-
+elshavebeenremarkable,withnotablecontributionsfrom
+6.AblationStudy theStableDiffusion(SD)series[12,51,55],DALL-E[54],
+andImagen[25]. Thesemodelsarepredominantlydesigned
+Inthissection,weassessthenecessityofcertainmodulesin
+fortext-to-imagegenerationtasks. Manyeffortshavebeen
+OmniGen
+madetoextendthecapabilitiesofdiffusionmodels,suchas
+Attention Mask. Figure 11-Top shows the generated
+ControlNet[75],T2I-Adapter[43],StyleShot[15]. Instruct-
+imageswithoutthemodifiedattentioninSection2.1. Aswe
+Pix2Pix [3], InstructSD [48] and EMU-edit [58] explore
+cansee,thereisalotofnoiseintheimages. Comparedto
+performinggeneralimageeditingtasksthroughinstructions.
+Figure4,thegeneratedimagesinFigure11-Tophavemany
+However,thesemethodsaretask-specific,extendingtheca-
+distortedareas,confirmingthattheunidirectionalattention
+pabilities of SD by modifying the model architecture. In
+mechanisminLLMsisnotsuitablefortherectifiedflow.
+contrast, OmniGen is a model that natively supports var-
+Weighted Loss. Figure 11-Bottom shows the results
+ious image-generation tasks, and no longer requires any
+when the weighted loss from Section 2.2 is not used for
+preprocessingstepsorassistancefromothermodels. There
+training. For image editing tasks, since the edited area is
+issomeworkexploringtheunificationofcomputervision
+usually small, the model tends to learn to copy the input
+(CV) tasks [2, 14, 19, 65]. However, these efforts primar-
+imagedirectlyastheoutput. ComparingFigure11-Bottom
+ily focus on classic vision tasks instead of general image
+andFigure4,it’sevidentthatusingweightedlosscanprevent
+generationtasks,andoftenunderperformcomparedtothose
+themodelfromlearningthisshortcut.
+specifically designed and trained for corresponding tasks.
+InputImageRepresentation.TheCLIPmodeliswidely
+Inourwork,theintroductionofCVtasksdoesnotaimto
+used in multi-modal understanding models [37]. We also
+obtainaSOTAperformanceonCVtasks,whichisdesigned
+exploredthedifferencebetweenusingCLIP2andusingVAE
+toenablethemodeltolearngeneralknowledge.
+toprocessinputimages. TheresultsareshowninTable5.
+There is not much difference between the two strategies.
+8.LimitationsandConclusion
+UsingVAEhasaslightadvantageinimagesimilarity,which
+mightberelatedtothefactthattheoutputimagesalsorequire Inthiswork,weintroduceOmniGen,thefirstunifiedimage
+VAEprocessing. AnotheradvantageofusingVAEisthat generationmodel. Itisdesignedtobesimple,flexible,and
+itavoidsadditionalmodules,maintainingthesimplicityof easytouse. Wealsoconstructthefirstlarge-scaleunified
+themodel. Directlyinputtingtheoriginalimageisanother imagegenerationdataset,X2I,toactivatethegeneralcapa-
+simplerapproachthatweleaveforfutureexploration. bilitiesoftheOmniGenmodel. OmniGenhasdemonstrated
+excellentimage-generationabilitiesacrossvarioustasks.
+7.RelatedWork However, the current model still has some issues. The
+text rendering capability is limited, and long text can not
+GenerativeFoundationModels. TheGPTseries[46,53]
+be accurately generated. The output images may contain
+havedemonstratedthatlanguagemodelscanlearnnumerous
+undesireddetails(e.g. abnormalhand). Besides,previously
+2https://huggingface.co/openai/clip-vit-large-patch14-336 unseenimagetypes(e.g.,surfacenormalmap)canhardlybe
+8
+processedasexpected. Morefailurecasesareprovidedin tocommercialmultimodalmodelswithopen-sourcesuites.
+supplementarymaterials. arXivpreprintarXiv:2404.16821,2024. 3,2
+Webelievethatthefutureparadigmofimagegeneration [11] ZheChen,JiannanWu,WenhaiWang,WeijieSu,GuoChen,
+shouldbesimpleandflexible,allowingforthedirectgenera- Sen Xing, Muyan Zhong, Qinglong Zhang, Xizhou Zhu,
+tionofvariousimagesthroughanymultimodalinstructions LeweiLu,etal.Internvl:Scalingupvisionfoundationmodels
+withoutcomplexworkflows. OmniGenrepresentsanimpor- andaligningforgenericvisual-linguistictasks. InProceed-
+tantsteptowardsafoundationalmodelforuniversalimage ingsoftheIEEE/CVFConferenceonComputerVisionand
+generation. We will open-source the relevant resources, PatternRecognition,pages24185–24198,2024. 8
+hopingtoprovideinsightsforthefutureofimagegeneration. [12] PatrickEsser,SumithKulal,AndreasBlattmann,RahimEn-
+tezari,JonasMu¨ller,HarrySaini,YamLevi,DominikLorenz,
+AxelSauer,FredericBoesel,etal.Scalingrectifiedflowtrans-
+References formersforhigh-resolutionimagesynthesis. InForty-first
+InternationalConferenceonMachineLearning,2024. 1,3,
+[1] MarahAbdin,SamAdeJacobs,AmmarAhmadAwan,Jyoti 5,8
+Aneja, Ahmed Awadallah, Hany Awadalla, Nguyen Bach, [13] Rinon Gal, Yuval Alaluf, Yuval Atzmon, Or Patashnik,
+AmitBahree, ArashBakhtiari, HarkiratBehl, etal. Phi-3 AmitHBermano,GalChechik,andDanielCohen-Or. An
+technicalreport:Ahighlycapablelanguagemodellocallyon imageisworthoneword:Personalizingtext-to-imagegenera-
+yourphone. arXivpreprintarXiv:2404.14219,2024. 2 tionusingtextualinversion.arXivpreprintarXiv:2208.01618,
+[2] RomanBachmann,Og˘uzhanFatihKar,DavidMizrahi,Ali 2022. 5
+Garjani,MingfeiGao,DavidGriffiths,JiamingHu,Afshin [14] Yulu Gan, Sungwoo Park, Alexander Schubert, Anthony
+Dehghan, andAmirZamir. 4m-21: Anany-to-anyvision Philippakis, and Ahmed M Alaa. Instructcv: Instruction-
+model for tens of tasks and modalities. arXiv preprint tunedtext-to-imagediffusionmodelsasvisiongeneralists.
+arXiv:2406.09406,2024. 8 arXivpreprintarXiv:2310.00390,2023. 8
+[3] TimBrooks,AleksanderHolynski,andAlexeiAEfros. In- [15] JunyaoGao,YanchenLiu,YananSun,YinhaoTang,Yanhong
+structpix2pix:Learningtofollowimageeditinginstructions. Zeng,KaiChen,andCairongZhao. Styleshot: Asnapshot
+InProceedingsoftheIEEE/CVFConferenceonComputer onanystyle. arXivpreprintarXiv:2407.01414,2024. 8
+VisionandPatternRecognition,pages18392–18402,2023.
+[16] PengGao,LeZhuo,ZiyiLin,ChrisLiu,JunsongChen,Ruoyi
+1,4,5,8
+Du,EnzeXie,XuLuo,LongtianQiu,YuhangZhang,etal.
+[4] GuimingHardyChen,ShunianChen,RuifeiZhang,Junying Lumina-t2x: Transforming text into any modality, resolu-
+Chen,XiangboWu,ZhiyiZhang,ZhihongChen,Jianquan tion,anddurationviaflow-basedlargediffusiontransformers.
+Li,XiangWan,andBenyouWang.Allava:Harnessinggpt4v- arXivpreprintarXiv:2405.05945,2024. 3
+synthesizeddataforalitevision-languagemodel,2024. 3 [17] YuyingGe,SijieZhao,ChenLi,YixiaoGe,andYingShan.
+[5] JunsongChen,JinchengYu,ChongjianGe,LeweiYao,Enze Seed-data-edittechnicalreport:Ahybriddatasetforinstruc-
+Xie, Yue Wu, Zhongdao Wang, James Kwok, Ping Luo, tionalimageediting. arXivpreprintarXiv:2405.04007,2024.
+HuchuanLu,etal. Pixart-alpha: Fasttrainingofdiffusion 4
+transformerforphotorealistictext-to-imagesynthesis. arXiv [18] YuyingGe,SijieZhao,JinguoZhu,YixiaoGe,KunYi,Lin
+preprintarXiv:2310.00426,2023. 3 Song,ChenLi,XiaohanDing,andYingShan.Seed-x:Multi-
+[6] LinChen,JisongLi,XiaoyiDong,PanZhang,ConghuiHe, modalmodelswithunifiedmulti-granularitycomprehension
+Jiaqi Wang, Feng Zhao, and Dahua Lin. Sharegpt4v: Im- andgeneration. arXivpreprintarXiv:2404.14396,2024. 8
+provinglargemulti-modalmodelswithbettercaptions. arXiv [19] ZigangGeng,BinxinYang,TiankaiHang,ChenLi,Shuyang
+preprintarXiv:2311.12793,2023. 3 Gu,TingZhang,JianminBao,ZhengZhang,HouqiangLi,
+[7] WenhuChen,HexiangHu,ChitwanSaharia,andWilliamW HanHu,etal. Instructdiffusion: Ageneralistmodelingin-
+Cohen. Re-imagen:Retrieval-augmentedtext-to-imagegen- terface for vision tasks. In Proceedings of the IEEE/CVF
+erator. arXivpreprintarXiv:2209.14491,2022. 5 Conference on Computer Vision and Pattern Recognition,
+[8] WenhuChen,HexiangHu,YandongLi,NatanielRuiz,Xuhui pages12709–12720,2024. 8
+Jia,Ming-WeiChang,andWilliamWCohen. Subject-driven [20] DhrubaGhosh,HannanehHajishirzi,andLudwigSchmidt.
+text-to-image generation via apprenticeship learning. Ad- Geneval:Anobject-focusedframeworkforevaluatingtext-to-
+vancesinNeuralInformationProcessingSystems,36,2024. imagealignment.AdvancesinNeuralInformationProcessing
+2 Systems,36,2024. 5
+[9] WenhuChen,HexiangHu,YandongLi,NatanielRuiz,Xuhui [21] Raghav Goyal, Samira Ebrahimi Kahou, Vincent Michal-
+Jia,Ming-WeiChang,andWilliamWCohen. Subject-driven ski, Joanna Materzynska, Susanne Westphal, Heuna Kim,
+text-to-image generation via apprenticeship learning. Ad- ValentinHaenel,IngoFruend,PeterYianilos,MoritzMueller-
+vancesinNeuralInformationProcessingSystems,36,2024. Freitag,etal. The”somethingsomething”videodatabasefor
+5 learningandevaluatingvisualcommonsense. InProceed-
+[10] ZheChen,WeiyunWang,HaoTian,ShenglongYe,Zhangwei ingsoftheIEEEinternationalconferenceoncomputervision,
+Gao, ErfeiCui, WenwenTong, KongzhiHu, JiapengLuo, pages5842–5850,2017. 4
+ZhengMa,etal. Howfararewetogpt-4v?closingthegap [22] ZinanGuo,YanzeWu,ZhuoweiChen,LangChen,andQian
+9
+He.Pulid:Pureandlightningidcustomizationviacontrastive [37] HaotianLiu,ChunyuanLi,QingyangWu,andYongJaeLee.
+alignment. arXivpreprintarXiv:2404.16022,2024. 5 Visualinstructiontuning. Advancesinneuralinformation
+[23] Zhen Han, Chaojie Mao, Zeyinzi Jiang, Yulin Pan, and processingsystems,36,2024. 8
+JingfengZhang. Stylebooth:Imagestyleeditingwithmulti- [38] Shilong Liu, Zhaoyang Zeng, Tianhe Ren, Feng Li, Hao
+modalinstruction. arXivpreprintarXiv:2404.12154,2024. Zhang,JieYang,ChunyuanLi,JianweiYang,HangSu,Jun
+4 Zhu,etal. Groundingdino: Marryingdinowithgrounded
+[24] JonathanHo,AjayJain,andPieterAbbeel. Denoisingdiffu- pre-training for open-set object detection. arXiv preprint
+sionprobabilisticmodels. Advancesinneuralinformation arXiv:2303.05499,2023. 4
+processingsystems,33:6840–6851,2020. 3 [39] XingchaoLiu,ChengyueGong,andQiangLiu.Flowstraight
+[25] Imagen-Team-Google. Imagen3,2024. 1,8 andfast:Learningtogenerateandtransferdatawithrectified
+[26] Sahar Kazemzadeh, Vicente Ordonez, Mark Matten, and flow. arXivpreprintarXiv:2209.03003,2022. 3
+Tamara Berg. Referitgame: Referring to objects in pho- [40] ILoshchilov. Decoupledweightdecayregularization. arXiv
+tographsofnaturalscenes. InProceedingsofthe2014con- preprintarXiv:1711.05101,2017. 3
+ferenceonempiricalmethodsinnaturallanguageprocessing [41] Jiasen Lu, Christopher Clark, Sangho Lee, Zichen Zhang,
+(EMNLP),pages787–798,2014. 4 SavyaKhosla,RyanMarten,DerekHoiem,andAniruddha
+[27] DiederikPKingma. Auto-encodingvariationalbayes. arXiv Kembhavi. Unified-io2:Scalingautoregressivemultimodal
+preprintarXiv:1312.6114,2013. 2 modelswithvisionlanguageaudioandaction.InProceedings
+[28] AlexanderKirillov,EricMintun,NikhilaRavi,HanziMao, oftheIEEE/CVFConferenceonComputerVisionandPattern
+ChloeRolland,LauraGustafson,TeteXiao,SpencerWhite- Recognition,pages26439–26455,2024. 8
+head,AlexanderCBerg,Wan-YenLo,etal. Segmentany- [42] RonMokady,AmirHertz,KfirAberman,YaelPritch,and
+thing. InProceedingsoftheIEEE/CVFInternationalConfer- Daniel Cohen-Or. Null-text inversion for editing real im-
+enceonComputerVision,pages4015–4026,2023. 4 ages using guided diffusion models. In Proceedings of
+[29] Xin Lai, Zhuotao Tian, Yukang Chen, Yanwei Li, Yuhui theIEEE/CVFConferenceonComputerVisionandPattern
+Yuan,ShuLiu,andJiayaJia. Lisa:Reasoningsegmentation Recognition,pages6038–6047,2023. 5
+vialargelanguagemodel. arXivpreprintarXiv:2308.00692, [43] ChongMou,XintaoWang,LiangbinXie,YanzeWu,Jian
+2023. 4 Zhang, Zhongang Qi, Ying Shan, and Xiaohu Qie. T2i-
+[30] SangyunLee,GyojungGu,SunghyunPark,SeunghwanChoi, adapter:Learningadapterstodigoutmorecontrollableability
+andJaegulChoo. High-resolutionvirtualtry-onwithmis- fortext-to-imagediffusionmodels,2023. 6,8
+alignmentandocclusion-handledconditions. arXivpreprint [44] SeungjunNah,TaeHyunKim,andKyoungMuLee. Deep
+arXiv:2206.14180,2022. 4 multi-scaleconvolutionalneuralnetworkfordynamicscene
+[31] MingLi,TaojiannanYang,HuafengKuang,JieWu,Zhaoning deblurring. InProceedingsoftheIEEEconferenceoncom-
+Wang,XuefengXiao,andChenChen.Controlnet++:Improv- putervisionandpatternrecognition,pages3883–3891,2017.
+ingconditionalcontrolswithefficientconsistencyfeedback, 4
+2024. 4,6 [45] YasumasaOnoe,SunayanaRane,ZacharyBerger,Yonatan
+[32] XiangLi, TianhanWei, YauPunChen, Yu-WingTai, and Bitton, Jaemin Cho, Roopal Garg, Alexander Ku, Zarana
+Chi-KeungTang.Fss-1000:A1000-classdatasetforfew-shot Parekh,JordiPont-Tuset,GarrettTanzer,etal. Docci: De-
+segmentation.InProceedingsoftheIEEE/CVFconferenceon scriptionsofconnectedandcontrastingimages.arXivpreprint
+computervisionandpatternrecognition,pages2869–2878, arXiv:2404.19753,2024. 3
+2020. 7 [46] OpenAI. Gpt-4technicalreport,2024. 8
+[33] XianhangLi,HaoqinTu,MudeHui,ZeyuWang,Bingchen [47] XichenPan,LiDong,ShaohanHuang,ZhiliangPeng,Wenhu
+Zhao, Junfei Xiao, Sucheng Ren, Jieru Mei, Qing Liu, Chen,andFuruWei. Kosmos-g:Generatingimagesincon-
+Huangjie Zheng, Yuyin Zhou, and Cihang Xie. What if textwithmultimodallargelanguagemodels. arXivpreprint
+werecaptionbillionsofwebimageswithllama-3? arXiv arXiv:2310.02992,2023. 5
+preprintarXiv:2406.08478,2024. 3 [48] Sayak Paul. Instruction-tuning stable diffusion
+[34] XiaotongLi,FanZhang,HaiwenDiao,YuezeWang,Xin- with instructpix2pix. Hugging Face Blog, 2023.
+long Wang, and Ling-Yu Duan. Densefusion-1m: Merg- https://huggingface.co/blog/instruction-tuning-sd. 8
+ingvisionexpertsforcomprehensivemultimodalperception. [49] WilliamPeeblesandSainingXie. Scalablediffusionmodels
+2407.08303,2024. 3 withtransformers. InProceedingsoftheIEEE/CVFInter-
+[35] YuhengLi,HaotianLiu,QingyangWu,FangzhouMu,Jian- nationalConferenceonComputerVision,pages4195–4205,
+weiYang, JianfengGao, ChunyuanLi, andYongJaeLee. 2023. 2,3
+Gligen:Open-setgroundedtext-to-imagegeneration. InPro- [50] ZhiliangPeng,WenhuiWang,LiDong,YaruHao,Shaohan
+ceedingsoftheIEEE/CVFConferenceonComputerVision Huang, Shuming Ma, and Furu Wei. Kosmos-2: Ground-
+andPatternRecognition,pages22511–22521,2023. 6 ingmultimodallargelanguagemodelstotheworld. arXiv
+[36] HunterLightman, VineetKosaraju, YuraBurda, HarriEd- preprintarXiv:2306.14824,2023. 4
+wards,BowenBaker,TeddyLee,JanLeike,JohnSchulman, [51] DustinPodell,ZionEnglish,KyleLacey,AndreasBlattmann,
+IlyaSutskever, andKarlCobbe. Let’sverifystepbystep. TimDockhorn,JonasMu¨ller,JoePenna,andRobinRombach.
+arXivpreprintarXiv:2305.20050,2023. 7 Sdxl:Improvinglatentdiffusionmodelsforhigh-resolution
+10
+imagesynthesis. arXivpreprintarXiv:2307.01952,2023. 1, image translation. In Proceedings of the IEEE/CVF Con-
+2,8 ferenceonComputerVisionandPatternRecognition,pages
+[52] Can Qin, Shu Zhang, Ning Yu, Yihao Feng, Xinyi Yang, 1921–1930,2023. 5
+Yingbo Zhou, Huan Wang, Juan Carlos Niebles, Caiming [64] QixunWang,XuBai,HaofanWang,ZekuiQin,andAnthony
+Xiong,SilvioSavarese,etal. Unicontrol:Aunifieddiffusion Chen. Instantid:Zero-shotidentity-preservinggenerationin
+modelforcontrollablevisualgenerationinthewild. arXiv seconds. arXivpreprintarXiv:2401.07519,2024. 1,2,5
+preprintarXiv:2305.11147,2023. 4,6 [65] Xinlong Wang, Wen Wang, Yue Cao, Chunhua Shen, and
+[53] AlecRadford,JeffreyWu,RewonChild,DavidLuan,Dario Tiejun Huang. Images speak in images: A generalist
+Amodei,IlyaSutskever,etal. Languagemodelsareunsuper- painter for in-context visual learning. In Proceedings of
+visedmultitasklearners. OpenAIblog,1(8):9,2019. 8 theIEEE/CVFConferenceonComputerVisionandPattern
+[54] AdityaRamesh,PrafullaDhariwal,AlexNichol,CaseyChu, Recognition,pages6830–6839,2023. 8
+andMarkChen. Hierarchicaltext-conditionalimagegenera- [66] X Wang, Siming Fu, Qihan Huang, Wanggui He, and
+tionwithcliplatents. arXivpreprintarXiv:2204.06125,1(2): Hao Jiang. Ms-diffusion: Multi-subject zero-shot im-
+3,2022. 1,8 age personalization with layout guidance. arXiv preprint
+[55] Robin Rombach, Andreas Blattmann, Dominik Lorenz, arXiv:2406.07209,2024. 4
+Patrick Esser, and Bjo¨rn Ommer. High-resolution image [67] ChenWei,WenjingWang,WenhanYang,andJiayingLiu.
+synthesis with latent diffusion models. In Proceedings of Deepretinexdecompositionforlow-lightenhancement.arXiv
+theIEEE/CVFconferenceoncomputervisionandpattern preprintarXiv:1808.04560,2018. 4
+recognition,pages10684–10695,2022. 1,8 [68] YuxiangWei,YaboZhang,ZhilongJi,JinfengBai,LeiZhang,
+[56] Nataniel Ruiz, Yuanzhen Li, Varun Jampani, Yael Pritch, andWangmengZuo. Elite: Encodingvisualconceptsinto
+MichaelRubinstein,andKfirAberman. Dreambooth:Fine textualembeddingsforcustomizedtext-to-imagegeneration.
+tuningtext-to-imagediffusionmodelsforsubject-drivengen- InProceedingsoftheIEEE/CVFInternationalConference
+eration. InProceedingsoftheIEEE/CVFconferenceoncom- onComputerVision,pages15943–15953,2023. 2
+puter vision and pattern recognition, pages 22500–22510, [69] ShengqiongWu,HaoFei,LeigangQu,WeiJi,andTat-Seng
+2023. 5 Chua.NExT-GPT:Any-to-anymultimodalLLM.InProceed-
+[57] ChristophSchuhmann,RomainBeaumont,RichardVencu, ingsoftheInternationalConferenceonMachineLearning,
+CadeGordon,RossWightman,MehdiCherti,TheoCoombes, pages53366–53397,2024. 8
+Aarush Katta, Clayton Mullis, Mitchell Wortsman, et al. [70] GuangxuanXiao,TianweiYin,WilliamTFreeman,Fre´do
+Laion-5b:Anopenlarge-scaledatasetfortrainingnextgen- Durand,andSongHan. Fastcomposer: Tuning-freemulti-
+erationimage-textmodels. AdvancesinNeuralInformation subject image generation with localized attention. arXiv
+ProcessingSystems,35:25278–25294,2022. 3,4 preprintarXiv:2305.10431,2023. 2
+[58] ShellySheynin,AdamPolyak,UrielSinger,YuvalKirstain, [71] JinhengXie,WeijiaMao,ZechenBai,DavidJunhaoZhang,
+AmitZohar,OronAshual,DeviParikh,andYanivTaigman. WeihaoWang,KevinQinghongLin,YuchaoGu,ZhijieChen,
+Emuedit:Preciseimageeditingviarecognitionandgenera- ZhenhengYang,andMikeZhengShou. Show-o:Onesingle
+tiontasks. InProceedingsoftheIEEE/CVFConferenceon transformertounifymultimodalunderstandingandgenera-
+ComputerVisionandPatternRecognition,pages8871–8879, tion. arXivpreprintarXiv:2408.12528,2024. 8
+2024. 5,8 [72] HuYe,JunZhang,SiboLiu,XiaoHan,andWeiYang. Ip-
+[59] Keqiang Sun, Junting Pan, Yuying Ge, Hao Li, Haodong adapter: Textcompatibleimagepromptadapterfortext-to-
+Duan,XiaoshiWu,RenruiZhang,AojunZhou,ZipengQin, imagediffusionmodels. arXivpreprintarXiv:2308.06721,
+YiWang,etal.Journeydb:Abenchmarkforgenerativeimage 2023. 2
+understanding. AdvancesinNeuralInformationProcessing [73] SyedWaqasZamir,AdityaArora,SalmanKhan,Munawar
+Systems,36,2024. 3 Hayat,FahadShahbazKhan,Ming-HsuanYang,andLing
+[60] QuanSun,YufengCui,XiaosongZhang,FanZhang,Qiying Shao. Learningenrichedfeaturesforfastimagerestoration
+Yu,YuezeWang,YongmingRao,JingjingLiu,TiejunHuang, andenhancement. IEEEtransactionsonpatternanalysisand
+andXinlongWang. Generativemultimodalmodelsarein- machineintelligence,45(2):1934–1948,2022. 4
+contextlearners.InProceedingsoftheIEEE/CVFConference [74] KaiZhang,LingboMo,WenhuChen,HuanSun,andYuSu.
+onComputerVisionandPatternRecognition,pages14398– Magicbrush: Amanuallyannotateddatasetforinstruction-
+14409,2024. 8 guidedimageediting. AdvancesinNeuralInformationPro-
+[61] Zineng Tang, Ziyi Yang, Mahmoud Khademi, Yang Liu, cessingSystems,36,2024. 4,5
+ChenguangZhu,andMohitBansal. Codi-2:In-contextinter- [75] LvminZhang,AnyiRao,andManeeshAgrawala. Adding
+leavedandinteractiveany-to-anygeneration. InProceedings conditional control to text-to-image diffusion models. In
+oftheIEEE/CVFConferenceonComputerVisionandPattern ProceedingsoftheIEEE/CVFInternationalConferenceon
+Recognition,pages27425–27434,2024. 8 ComputerVision(ICCV),pages3836–3847,2023. 1,4,6,8
+[62] ChameleonTeam. Chameleon: Mixed-modalearly-fusion [76] Shihao Zhao, Dongdong Chen, Yen-Chun Chen, Jianmin
+foundationmodels. arXivpreprintarXiv:2405.09818,2024. Bao,ShaozheHao,LuYuan,andKwan-YeeKWong. Uni-
+8 controlnet:All-in-onecontroltotext-to-imagediffusionmod-
+[63] NarekTumanyan,MichalGeyer,ShaiBagon,andTaliDekel. els. AdvancesinNeuralInformationProcessingSystems,36,
+Plug-and-play diffusion features for text-driven image-to- 2024. 6
+11
+[77] NaZheng,XuemengSong,ZhaozhengChen,LinmeiHu,Da
+Cao,andLiqiangNie. Virtuallytryingonnewclothingwith
+arbitraryposes.InProceedingsofthe27thACMinternational
+conferenceonmultimedia,pages266–274,2019. 4
+[78] BoleiZhou,HangZhao,XavierPuig,TeteXiao,SanjaFi-
+dler,AdelaBarriuso,andAntonioTorralba. Semanticunder-
+standingofscenesthroughtheade20kdataset. International
+JournalofComputerVision,127:302–321,2019. 4
+[79] ChuntingZhou,LiliYu,ArunBabu,KushalTirumala,Michi-
+hiro Yasunaga, Leonid Shamis, Jacob Kahn, Xuezhe Ma,
+LukeZettlemoyer,andOmerLevy. Transfusion:Predictthe
+nexttokenanddiffuseimageswithonemulti-modalmodel.
+arXivpreprintarXiv:2408.11039,2024. 8
+12
+OmniGen: Unified Image Generation
+Supplementary Material
+9.MoreQualitativeResults CLIP-Isimilarity(seeTable3inthemainpaper). Addition-
+ally,Kosmos-GusesSD1.5astheimagemodel,resultingin
+Inthissection,weprovidemorequalitativeresultsofOm-
+lowerimagequalitycomparedtoOmniGen.
+niGen. Overall, OmniGen achieves competitive or even
+superiorresultscomparedtotask-specificopen-sourcemod- 9.4.Identity-PreservingGeneration
+els. It’simportanttonotethatOmniGenisageneral-purpose
+Figure15showstheresultsofIdentity-Preservinggeneration
+modelandisnotspecificallytrainedforanyparticulartask.
+task. OmniGenachievesbetterqualitythaninstandIDand
+Additionally,OmniGenhascapabilitiesthatmanyothermod-
+comparableresultstothelatestmodelPULID-FLUX3.It
+els lack, allowing it to follow multimodal instructions to
+shouldbenotedthatasageneralmodel,OmniGen’sfacial
+complete complex tasks. To the best of our knowledge,
+similarityisnotyetonparwiththelatestspecializedmodel,
+OmniGenisthefirstmodelcapableofsuchflexiblecon-
+PULID-FLUX, which is an area for future improvement.
+trolinimagegeneration.
+Unlikethesemodels,whichrequireafacedetectortodetect
+9.1.TexttoImage faces and a face encoder to extract facial features, Omni-
+Gen does not need task preprocessing steps or additional
+Figure12showsmoreexamplesoftext-to-imagetask. Om-
+plugins. Itautomaticallycompletestaskswithinputimages
+niGencangenerateimageswitharbitraryaspectratios.
+andinstructions. Moreover,OmniGendoesnotonlyfocus
+onfaces;itcancaptureotherusefulreferenceinformation
+9.2.ImageEditing
+intheinputimage, suchasclothing. Forexample, inFig-
+InFigure13,weprovidequalitativeresultsofOmniGencom- ure15-(a)and-(b),OmniGentendstopreservetheclothing
+paredtosomeotheropen-sourcemodels. Asshown,Omni- ofthepersonintheinputimage. Ofcourse,whenclothing
+Genachievesbetterresultsthanexistingopen-sourcemodels, isspecifiedintheinstructions,OmniGencanalsofollowthe
+accuratelymodifyingspecifiedtargetswithoutalteringother instructionstousenewclothing(seeFigure15-(c)and-(d)).
+content. Emu-edit is not open-source, so further evalua- Incontrast,othermodelscanonlyusetheextractedfaceand
+tionwasnotpossible. Additionally,OmniGendemonstrates cannotutilizetheoriginalclothingfromtheinputimage.
+stronginstructioncomprehensioncapabilities,handlingcom-
+Figure16showcasessomeuniquefeaturesofOmniGen.
+plextaskssuchasexecutingtwoeditinginstructionsinone
+Existingmodelscannothandleinputimageswithmultiple
+step,asseeninFigure13-(e),andreasoningeditingtasks
+objects or multiple input images. OmniGen can extract
+inthe(f). InFigure13-(f),wedon’tnotexplicitlyspecify
+desiredindividualsfromagroupphotobasedoninstructions,
+the target to be modified; the model infers the target (bal-
+anditcanalsoprocessmultipleimagessimultaneously,as
+loon)fromthedescriptionandmakesprecisemodifications.
+shownintheFigure16-(a). Besides,OmniGencanhandle
+OmniGeninputsimagesandtextintoaunifiedtransformer,
+morethanjustpeople;asdemonstratedinFigure16-(b),it
+allowingforextensiveinteractionbetweendifferentmodali-
+canidentifyspecificclothingitemsinanimageandusethem
+ties,resultinginpowerfulmultimodalinstructionfollowing
+togeneratenewimages.
+capabilities, which other frameworks like InstructPix2Pix
+cannotachieve. 9.5.Failurecases
+9.3.Subject-driven Figure17illustratesseveraltypicalfailurecasesofthecur-
+rent model. We summarize the limitations of the current
+Figure14showsmoreexamplesofsubject-drivengeneration
+modelasfollows:
+on DreamBench. Similar to Kosmos-G, we use an image
+• Similartoexistingdiffusionmodels,OmniGenissensitive
+ofanobjectasareferenceandgenerateanewimagebased
+totextprompts. Typically,detailedtextdescriptionsresult
+onthetextdescription,withoutfine-tuningonthespecific
+inhigher-qualityimages.
+object. Asillustrated,OmniGenachievesbettersubjectfi-
+• Thecurrentmodel’stextrenderingcapabilitiesarelimited;
+delityandtextfidelity,meaningitpreservestheobjectfrom
+it can handle short text segments but fails to accurately
+thereferenceimagewhilefollowingnewtextualinstructions.
+generatelongertexts. Additionally,duetoresourcecon-
+Kosmos-Gstrugglestomaintaintheobjectfromtherefer-
+straints, the number of input images during training is
+ence image. Notably, Kosmos-G does not always adhere
+limitedtoamaximumofthree,preventingthemodelfrom
+to the text instructions; as shown inFigure 14-(d), itfails
+handlinglongimagesequences.
+todepictthedescribedcontent. Instead,Kosmos-Gnearly
+replicatesthereferenceimage,whichiswhyithasahigher 3https://huggingface.co/spaces/yanze/PuLID-FLUX
+1
+• Thegeneratedimagesmaycontainerroneousdetails,es-
+peciallysmallanddelicateparts. Insubject-drivengenera-
+tiontasks,facialfeaturesoccasionallydonotfullyalign.
+OmniGenalsosometimesgeneratesincorrectdepictions
+ofhands.
+• OmniGencannotprocessunseenimagetypes(e.g.,image
+forsurfacenormalestimation).
+We believe that most limitations can be addressed by
+training the model on more related data. Moreover, com-
+paredtomostmodels,fine-tuningOmniGenfordownstream
+tasks is simpler. Due to OmniGen’s inherent support for
+multimodal inputs, users do not need to spend significant
+effortondesigningnetworksforspecifictasks(forexample,
+thereisnoneedtoaddControlNetforconditionalgenera-
+tion,nortodesignadditionalstyleencodersforimagestyles).
+Wewillopen-sourcethetrainingcode,anduserswillonly
+need to prepare their data to fine-tune it for various tasks,
+includingnewtasksthathaveneverbeensupportedbyany
+modelbefore. Webelievethisapproachcaninspireawide
+rangeofinterestingdownstreamapplications.
+Duetoalackofhigh-qualityimagedataandinsufficient
+modelsize,OmniGen’simagequalityisn’tasgoodasthe
+latestFLUXmodel. Ononehand,expandingthedataand
+modelsizeiscrucial;ontheotherhand,enablingexisting
+modelslikeFLUXtohavesimilarmultimodalinstruction-
+followingcapabilitiesisalsoapotentialresearchdirection.
+10.Subject-drivendataset
+Figure18-LeftshowstheprocessofconstructingtheGRIT-
+Entitydataset. AlthoughtheGRIT-basedapproachprovides
+asubstantialamountofdata,theinputdataextracteddirectly
+from original images can lead the model to fall into sim-
+plecopy-pastepatterns. Tofullyunleashthesubject-driven
+image generation capability of OmniGen, we constructed
+a high-quality web images training dataset using natural
+images of well-known individuals. First, we sampled 20
+millionAlt-textentriesfromtheDatacompdataset4andused
+spaCy5fornamedentityrecognition. Weselectedthemost
+frequently occurring names and employed GPT-4o to fil-
+ter outreal, notableindividuals, resulting in 2,000names.
+Furthermore,weexpandedtheinitial2,000namesbyinclud-
+ingcloselyrelatedindividuals, resultinginapproximately
+10,000namepairs. Wethenscrapedimagesoftheseindivid-
+ualsandpairsfromsearchengines. Duetothenoiseinweb
+images,wherescrapedimagesmaynotcontainthespecified
+individuals,wedesignedacross-verificationstrategyusing
+InternVL[10]tofiltersingleandgroupimages,asdetailed
+inFigure18-Right. Theretainedsingleandgroupimages
+werethencaptionedwithdetailssuchasattireandactions.
+Wesuccessfullybuildadatasetof533Kimagepairs.
+4https://huggingface.co/datasets/UCSC-VLAA/Recap-DataComp-1B
+5https://github.com/explosion/spaCy
+2
+Figure12.Examplesfortext-to-imagetask.OmniGencangenerateimageswitharbitraryaspectratios.
+3
+InputImage OmniGen InstructPix2Pix MagicBrush HQ-Edit UltraEdit
+(a) Put a red scarf on the man
+(b) Remove the glasses from the man
+(c) Remove the red check mark
+(d) Replace the item in the middle of the plate in the picture with a cake
+(e) Remove the round sign, and change the girl's pants to a skirt
+(f) Change the color of object that might burst with more air to blue
+Figure13.Qualitativeresultsofimageeditingtask.OmniGenachievesbetterresultsthanotheropen-sourcemodels.Thankstomodeling
+bothtextandimageswithinaunifiedtransformer,OmniGendemonstratesstrongmultimodalinstructionunderstandingandiscapableof
+handlingcomplextasks,asshownin(f).
+4
+Reference OmniGen Kosmos-G OmniGen Kosmos-G
+(a) a dog in a purple wizard outfit a dog wearing a rainbow scarf
+(b) a dogin a firefighter outfit a dogin the snow
+(c) a cat on a cobblestone street a cat on top of a purple rug in a forest
+(d) a candle with a blue house in the background a candle on top of the sidewalk in a crowded street
+(e) a vase with the Eiffel Tower in the background a vase on top of a dirt road
+(f) a cartoon on the beach a cartoon in the jungle
+Figure14.QualitativeresultsonDreamBench.OmniGenachievesbettersubjectfidelityandtextfidelity,preservingtheobjectfromthe
+referenceimagewhilefollowingnewtextualinstructions.Incontrast,Kosmos-Gdoesnotalwaysfollowtextinstructions,resultingina
+higherCLIP-Isimilarity.
+5
+ID Image Prompt OmniGen PuLID-Flux InstantID
+(a) Awomaniswalkingalonga
+mountaintrail,facingthecamera
+withasmile.
+(b) A woman stands facing the
+camera in the kitchen, cooking
+with a focused expression. She
+chops vegetables on a wooden
+board, surrounded by various
+spicesandingredients,withapot
+simmering nearby, releasing a
+delightfularoma.
+(c)AmanwearingawhiteT-shirt
+standsuprightonhisskateboard,
+skillfully weaving through the
+streetswithaconfidentsmileon
+hisface.
+(d) Awoman in an elegant blue
+gowniswalkingontheredcarpet
+ofthefilmfestival.
+Figure15.ResultsofIdentity-PreservingGeneration.OmniGendoesn’trequireadditionalfacedetectorsandencoders.OmniGencanutilize
+clothinginformationfrominputimages,asshowninexamples(a)and(b),andcanalsofollowtextinstructionstogeneratenewclothing,as
+seeninexamples(c)and(d),demonstratingahigherdegreeofflexiblecontrol.
+ID Images Prompt OmniGen
+(a) Twomensat ina quiet, dimly lit room
+playing cards. A single yellowed lamp on
+thetableilluminatedtheirfaces.Cardsanda
+few chips were scattered across the table.
+Oneofthemenisthepersonontherightin
+|image_1|,andtheotheris|image_2|.
+(b) A woman is walking down the street,
+wearing a white long-sleeve blouse with
+lace details on the sleeves, paired with a
+bluepleatedskirt.Thewomanis|image_1|.
+The long-sleeve blouse and a pleated skirt
+are|image_2|.
+Figure16.SomeuniquefeaturesofOmniGen.OmniGencannotonlyextractthedesiredobjectfromimagecontainingmultipleobjects
+basedoninstructions,butalsoprocessmultipleimagessimultaneously.Toourknowledge,noothermodelcurrentlycanofferthislevelof
+flexibleandprecisecontrol.
+6
+Neon words ”OMNIGEN" are A high-resolution photograph of a
+flashing in the prosperous future weathered,historicalbrickwallwith
+city, the sense of science and a rough, hammer-carved inscription
+technology, quality details, hyper of "In this work, we introduce
+realistic,highdefinition,8K,photo, OmniGen,anovelunifiedmodelfor
+bestquality,highquality. imagegeneration"
+(a) OmniGencanprocessshorttext (left example), but lacks the capability to render long texts (right example)
+a well-sculpted midsection of a
+person, showcasing a lean and A view of a person's hand as they
+toned abdomen. The individual's holdalittleclayfigurineofabirdin
+hand is placed lightly on their their hand and sculpt it with a
+lower waist, gently holding the modeling tool in their other hand.
+elastic waistband of their pink You can see the sculptor's scarf.
+lower garment, possibly athletic Theirhandsarecoveredinclaydust.
+leggings. Visible are the pink a macro DSLR image highlighting
+waistband and black main fabric thetextureandcraftsmanship.
+withsubtlegrayaccents.
+(b) OmniGensometimes generates incorrect details for hands.
+TheMAN-1isthepersonwhoiswhoiswearinga
+stripedsuitonthefarrightof|image_1|.MAN-1
+cradles a small, fluffy pet dog in his arms. The
+mansmilesgently,hiseyesfilledwithaffectionas
+he strokes the pet's head, clearly enjoying the
+momentofcompanionship.Theyaresittingona
+park bench, surrounded by the vibrant colors of
+autumnleaves.
+(c) OmniGencan identify the required individual from the reference image based on instructions, and generate image maintains consistencywith the
+reference image in terms of the person's hairstyle and forehead wrinkles; however, the overall facial details do not accurately match the original image.
+According to the
+following examples,
+generate an output
+for the input.
+Input:|image_1|
+Output:|image_2|
+Input:|image_3|
+Output:
+(d) OmniGencannot process unseen image types (surface normal).
+Figure17.FailurecasesofOmniGen
+7
+Instruction: Group Photo Person-A Person-B
+Pumpkin spice latte in a small glass bowl Yes Yes
+with a whole pie pumpkin on the side. Yes Yes
+No Yes
+MS-Diffusion
+Repainting Objects Multimodal Large Language Model
+(e.g. InternVL-2)
+SAM
+Grounding DINO
+Is this person<img>|person_photo|</img>
+InstanceSegmentation in thegroup photo <img>|group_photo|</img>?
+Caption: Pumpkin spice
+latteinasmallglassbowl
+with a wholepiepumpkin
+ontheside.
+Objects: Pumpkin; Latte Person-A Person-B Group Photos
+. . . (Person A&B)
+WebImages
+TargetImage
+Figure18.Left:IllustrationoftheconstructionprocessfortheGRIT-Entitydataset.Weusedinstancesegmentationandrepainting
+methodstoacquirealargevolumeofdata.Right:Illustrationofthecross-verificationstrategyusedinconstructingourwebimages
+dataset.ForagroupphotoofPerson-AandPerson-B,wesampledseveralimagesfromindividualphotosofPerson-AandPerson-Band
+askedMLLMwhethertheyappearinthegroupphoto.Agroupphotoisretainedonlyifthe”Yes”ratioforbothPerson-AandPerson-B
+meetsaspecificthreshold.Theindividualimagesmarkedas”Yes”arethenusedtoconstructdatapairswiththecorrespondinggroupimage.
+8

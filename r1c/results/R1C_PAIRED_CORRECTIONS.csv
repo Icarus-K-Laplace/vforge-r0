@@ -1,0 +1,9 @@
+candidate_id,paper,family,pre_verdict,post_verdict,paired_correct
+CAND-01,Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting,C1_selection_evaluation_leakage,FAIL,PASS,True
+CAND-02,A Metric Learning Reality Check,C1_selection_evaluation_leakage,FAIL,PASS,True
+CAND-03,Deep Reinforcement Learning that Matters,C2_selective_aggregation_reporting,FAIL,PASS,True
+CAND-04,A Call for Clarity in Reporting BLEU Scores,C6_aggregation_statistical_procedure_error,FAIL,PASS,True
+CAND-05,ALBERT: A Lite BERT for Self-supervised Learning of Language Representations,C5_runtime_protocol_mismatch,FAIL,PASS,True
+CAND-06,A Fair Comparison of Graph Neural Networks for Graph Classification,C4_comparator_asymmetry,FAIL,PASS,True
+CAND-07,RoBERTa: A Robustly Optimized BERT Pretraining Approach,C6_aggregation_statistical_procedure_error,FAIL,PASS,True
+CAND-08,Objects as Points (CenterNet),C5_runtime_protocol_mismatch,FAIL,PASS,True

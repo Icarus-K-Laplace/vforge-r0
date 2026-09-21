@@ -1,0 +1,28 @@
+{
+  "trace_id": "DS_E06_DATASET_ASYM_Tminus",
+  "paper": "diffusing_synth_2411.10164",
+  "repository": "tlpss/diffusing-synthetic-data",
+  "family": "E06",
+  "protocol": {
+    "declared_budgets": {
+      "diffusion_texturing": 5000,
+      "random_texturing": 300
+    },
+    "comparator_budgets": {
+      "diffusion_texturing": 5000,
+      "random_texturing": 300
+    },
+    "asymmetry_disclosed": false
+  },
+  "outputs": {
+    "reported_value": {
+      "value": "n/a",
+      "note": "E06 is a documentation pair"
+    }
+  },
+  "is_counterfactual": true,
+  "contract_id": "DS_E06_RESOURCE_ASYM",
+  "self_hash": "83311a74bf683a18e76fc7632794f8a7a372064184b84f14047b3287f9c65627",
+  "vps": 0.0,
+  "value_preserving": true
+}

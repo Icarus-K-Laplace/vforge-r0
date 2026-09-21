@@ -1,0 +1,31 @@
+{
+  "cia": 1.0,
+  "n_contracts": 3,
+  "n_counted": 3,
+  "rows": [
+    {
+      "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+      "audit_label": "SUPPORTED_BY_PAPER",
+      "counted_in_CIA": true,
+      "paper_supported": true,
+      "principle_valid": true,
+      "notes": "group: True, mean: True"
+    },
+    {
+      "contract_id": "VB_C1_TABLE6_SEED_AGGREGATION",
+      "audit_label": "VALID_GENERAL_SCIENTIFIC_PRINCIPLE",
+      "counted_in_CIA": true,
+      "paper_supported": false,
+      "principle_valid": true,
+      "notes": "3x: False, mean: True"
+    },
+    {
+      "contract_id": "VB_C2_TASK_SUBGROUP_SCOPE",
+      "audit_label": "SUPPORTED_BY_PAPER",
+      "counted_in_CIA": true,
+      "paper_supported": true,
+      "principle_valid": true,
+      "notes": "tasks: True, all/consistent: True"
+    }
+  ]
+}

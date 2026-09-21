@@ -1,0 +1,48 @@
+{
+  "trace_id": "RDML_E01_CARS_SoftTriple_4_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CARS_SoftTriple_4_s3",
+    "CARS_SoftTriple_4_s2",
+    "CARS_SoftTriple_4_s4",
+    "CARS_SoftTriple_4_s0"
+  ],
+  "protocol": {
+    "dataset": "CARS",
+    "method": "SoftTriple_4",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CARS_SoftTriple_4_s3",
+      "RDML_E01_CARS_SoftTriple_4_s2",
+      "RDML_E01_CARS_SoftTriple_4_s4",
+      "RDML_E01_CARS_SoftTriple_4_s0"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.745,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CARS_SoftTriple_4_s3",
+        "RDML_E01_CARS_SoftTriple_4_s2",
+        "RDML_E01_CARS_SoftTriple_4_s4",
+        "RDML_E01_CARS_SoftTriple_4_s0"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "1a2c03f17eb4b2f22e7e172e4dbfe6428d23345fbc1f5b9d6d6a99de76707525",
+  "vps": 0.2552,
+  "value_preserving": false,
+  "abs_diff": 0.0026
+}

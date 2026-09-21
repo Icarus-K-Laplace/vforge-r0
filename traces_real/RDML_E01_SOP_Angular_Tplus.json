@@ -1,0 +1,48 @@
+{
+  "trace_id": "RDML_E01_SOP_Angular_Tplus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "SOP_Angular_s0",
+    "SOP_Angular_s1",
+    "SOP_Angular_s2",
+    "SOP_Angular_s3",
+    "SOP_Angular_s4"
+  ],
+  "protocol": {
+    "dataset": "SOP",
+    "method": "Angular",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_SOP_Angular_s0",
+      "RDML_E01_SOP_Angular_s1",
+      "RDML_E01_SOP_Angular_s2",
+      "RDML_E01_SOP_Angular_s3",
+      "RDML_E01_SOP_Angular_s4"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.7262,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_SOP_Angular_s0",
+        "RDML_E01_SOP_Angular_s1",
+        "RDML_E01_SOP_Angular_s2",
+        "RDML_E01_SOP_Angular_s3",
+        "RDML_E01_SOP_Angular_s4"
+      ]
+    }
+  },
+  "is_counterfactual": false,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "5bef9e4f4cc6ac0400ac5bbc204020c917d32fde17ece8d2283d9be21161b5cb"
+}

@@ -1,0 +1,26 @@
+{
+  "contract_id": "CB_E06_CROSS_MODEL_ASYM",
+  "source_paper": "clinicalbench_2605.11143",
+  "family": "E06",
+  "claim_text": "Cross-model comparison uses 6 LLMs of very different sizes (4B to 431B). The gain-slope analysis acknowledges regression-to-mean. A fair comparator claim requires model-size asymmetry to be controlled for or declared.",
+  "paper_text_hash": "36166b27eab6e4fb8a53689fadb033fc20329b06be3b7405d9df5d7656cb41f7",
+  "predicates": [
+    {
+      "predicate_id": "E06_MODEL_SIZE_CONTROL",
+      "principle": "P8_COMPARATOR_FAIRNESS",
+      "natural_language": "Cross-model claims must either control for model-size asymmetry (size-matched) or explicitly declare it as a limitation. Selectively reporting only the model pair with the largest gains is a resource-asymmetry violation.",
+      "trace_fields": [
+        "protocol.model_sizes",
+        "comparator_budgets"
+      ],
+      "condition": "size_asymmetry_controlled OR size_asymmetry_justified",
+      "source_span": "Section 4.7",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P8_COMPARATOR_FAIRNESS"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "49890af7c49e006f44f13bf8802315729775dd1c027accd7e4d33474e2fa7770"
+}

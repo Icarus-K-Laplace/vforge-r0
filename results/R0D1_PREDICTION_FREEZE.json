@@ -1,0 +1,20 @@
+{
+  "experiment_id": "VForge-R0-D1-001",
+  "protocol_version": "R0-D1",
+  "freeze_timestamp": "2026-09-20T04:48:44.014846",
+  "predictions_path": "E:\\VForge-R0\\results\\R0D1_PREDICTIONS_FROZEN.jsonl",
+  "predictions_hash": "6ea043da4187f39890e000f4490599a110e61ef08547f227796c6fbd9f01427a",
+  "dataset_hash": "4de50ad228859ee108a99efab0c28bfd0c2c8cbd561fdb180302795bb94124cc",
+  "ontology_hash": "frozen_before_evaluation",
+  "stats": {
+    "total": 92,
+    "papers_downloaded": 33,
+    "repos_downloaded": 76,
+    "claims_mined": 406,
+    "contracts_built": 92,
+    "graphs_extracted": 76,
+    "verdicts_generated": 92,
+    "failures": 0
+  },
+  "status": "FROZEN"
+}

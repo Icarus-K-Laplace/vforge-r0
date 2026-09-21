@@ -1,0 +1,45 @@
+{
+  "trace_id": "VB_E04_r4_hard_aug_Tminus",
+  "paper": "viewbatchmodel_2503.18371",
+  "repository": "hankyul2/ViewBatchModel",
+  "source_runs": [
+    "VB_icarl_r4_hard_aug_s1997",
+    "VB_icarl_r4_hard_aug_s1993",
+    "VB_icarl_r4_hard_aug_s1996"
+  ],
+  "protocol": {
+    "declared_subgroups": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "reported_subgroups": [
+      4,
+      3,
+      0
+    ],
+    "aggregation_rule": "mean_over_tasks",
+    "aug_repeat": 4,
+    "flag": "hard_aug"
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 73.4167,
+      "aggregation_rule": "mean_over_tasks",
+      "upstream_tasks": [
+        "task_4",
+        "task_3",
+        "task_0"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E04",
+  "contract_id": "VB_C2_TASK_SUBGROUP_SCOPE",
+  "self_hash": "caa6b4da4e028bcdfe6a523ca4b467c194bb9a489f4cfc18da7618bea6afb0ad",
+  "vps": 0.6034,
+  "value_preserving": false,
+  "abs_diff": 6.26
+}

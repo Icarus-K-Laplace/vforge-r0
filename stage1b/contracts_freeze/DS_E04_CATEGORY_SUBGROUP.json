@@ -1,0 +1,26 @@
+{
+  "contract_id": "DS_E04_CATEGORY_SUBGROUP",
+  "source_paper": "diffusing_synth_2411.10164",
+  "family": "E04",
+  "claim_text": "Tables II/III report metrics for all three object categories (mugs, shoes, T-shirts). The claim that diffusion texturing outperforms the real baseline must hold across ALL declared categories, not just a selected subset.",
+  "paper_text_hash": "fb9776a7817afe0cce0e79588f35275df51c81f2a9fad78b8fbaee650d056f29",
+  "predicates": [
+    {
+      "predicate_id": "E04_CATEGORY_SCOPE",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "The reported category set must equal the declared category set; no category may be selectively omitted.",
+      "trace_fields": [
+        "protocol.declared_categories",
+        "protocol.reported_categories"
+      ],
+      "condition": "set(protocol.reported_categories) == set(protocol.declared_categories)",
+      "source_span": "Table II",
+      "confidence": 0.85
+    }
+  ],
+  "universal_principles": [
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "e9949d37aed02661164a76369908f4e44630d0ee5bc8a8ae743ffed693d379d8"
+}

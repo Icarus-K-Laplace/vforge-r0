@@ -1,0 +1,48 @@
+{
+  "trace_id": "RDML_E01_CARS_Histogram_3_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CARS_Histogram_3_s1",
+    "CARS_Histogram_3_s3",
+    "CARS_Histogram_3_s4",
+    "CARS_Histogram_3_s0"
+  ],
+  "protocol": {
+    "dataset": "CARS",
+    "method": "Histogram_3",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CARS_Histogram_3_s1",
+      "RDML_E01_CARS_Histogram_3_s3",
+      "RDML_E01_CARS_Histogram_3_s4",
+      "RDML_E01_CARS_Histogram_3_s0"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.7108,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CARS_Histogram_3_s1",
+        "RDML_E01_CARS_Histogram_3_s3",
+        "RDML_E01_CARS_Histogram_3_s4",
+        "RDML_E01_CARS_Histogram_3_s0"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "f64fe7bc42948c58338f5218f5a515acd6579db9aa7779b9d5c10fbbf3897319",
+  "vps": 0.2427,
+  "value_preserving": true,
+  "abs_diff": 0.0117
+}

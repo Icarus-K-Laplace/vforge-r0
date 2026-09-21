@@ -1,0 +1,48 @@
+{
+  "trace_id": "RDML_E01_SOP_Triplet_Softhard_Tplus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "SOP_Triplet_Softhard_s0",
+    "SOP_Triplet_Softhard_s1",
+    "SOP_Triplet_Softhard_s2",
+    "SOP_Triplet_Softhard_s4",
+    "SOP_Triplet_Softhard_s4"
+  ],
+  "protocol": {
+    "dataset": "SOP",
+    "method": "Triplet_Softhard",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      4,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_SOP_Triplet_Softhard_s0",
+      "RDML_E01_SOP_Triplet_Softhard_s1",
+      "RDML_E01_SOP_Triplet_Softhard_s2",
+      "RDML_E01_SOP_Triplet_Softhard_s4",
+      "RDML_E01_SOP_Triplet_Softhard_s4"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.71,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_SOP_Triplet_Softhard_s0",
+        "RDML_E01_SOP_Triplet_Softhard_s1",
+        "RDML_E01_SOP_Triplet_Softhard_s2",
+        "RDML_E01_SOP_Triplet_Softhard_s4",
+        "RDML_E01_SOP_Triplet_Softhard_s4"
+      ]
+    }
+  },
+  "is_counterfactual": false,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "31acb282a9e8601dc26a36a0edbb47d8e5ff08d9704d2e6c02674ca160c062e5"
+}

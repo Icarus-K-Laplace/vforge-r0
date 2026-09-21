@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "required": ["verdict_id", "verifier_id", "verifier_version", "verdict", "reasoning", "timestamp"],
+  "properties": {
+    "verdict_id": {"type": "string"},
+    "verifier_id": {"type": "string"},
+    "verifier_version": {"type": "string"},
+    "mutation_id": {"type": ["string", "null"]},
+    "is_benign_control": {"type": "boolean"},
+    "benign_control_id": {"type": ["string", "null"]},
+    "verdict": {"type": "string", "enum": ["PASS", "FAIL", "ABSTAIN", "EXECUTION_ERROR", "TIMEOUT"]},
+    "reasoning": {"type": "string"},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "abstention_evidence_missing": {"type": ["array", "null"], "items": {"type": "string"}},
+    "execution_error_message": {"type": ["string", "null"]},
+    "wall_time_seconds": {"type": "number"},
+    "token_cost": {"type": ["number", "null"]},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "prompt_version": {"type": "string"}
+  }
+}

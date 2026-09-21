@@ -1,0 +1,20 @@
+{
+  "mutation_id": "string, unique identifier (e.g. 'M01_study001_001')",
+  "operator": "enum: [M01_DATA_LEAK, M02_BASELINE_HANDICAP, M03_SEED_CHERRY_PICK, M04_SUBGROUP_DROP, M05_METRIC_SWAP, M06_AGGREGATION_FAULT, M07_TEST_SET_SELECTION, M08_PREPROCESS_ASYMMETRY]",
+  "study_id": "string",
+  "claim_id": "string",
+  "precondition": "string, condition required before mutation applies",
+  "modification_description": "string, what was changed",
+  "artifacts_modified": ["string"],
+  "diff_sha256": "string, hash of the mutation diff for reproducibility",
+  "violated_claim_condition": "string, which validity_condition is broken",
+  "independent_oracle_result": "boolean, whether oracle confirms claim is now invalid",
+  "mutation_manifest": {
+    "original_value": "any",
+    "mutated_value": "any",
+    "magnitude": "number"
+  },
+  "deterministic_replay_hash": "string, for exact reproduction",
+  "classification": "enum: [valid_mutant, trivial_mutant, skipped]",
+  "notes": "string"
+}

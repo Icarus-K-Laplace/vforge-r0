@@ -1,0 +1,48 @@
+{
+  "trace_id": "RDML_E01_CUB_SoftTriple_4_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CUB_SoftTriple_4_s0",
+    "CUB_SoftTriple_4_s3",
+    "CUB_SoftTriple_4_s2",
+    "CUB_SoftTriple_4_s4"
+  ],
+  "protocol": {
+    "dataset": "CUB",
+    "method": "SoftTriple_4",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CUB_SoftTriple_4_s0",
+      "RDML_E01_CUB_SoftTriple_4_s3",
+      "RDML_E01_CUB_SoftTriple_4_s2",
+      "RDML_E01_CUB_SoftTriple_4_s4"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.5344,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CUB_SoftTriple_4_s0",
+        "RDML_E01_CUB_SoftTriple_4_s3",
+        "RDML_E01_CUB_SoftTriple_4_s2",
+        "RDML_E01_CUB_SoftTriple_4_s4"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "07e1d7cd282538158514bb5a77f6acbff70e007f30bcbb8ccc9282dcc67b51af",
+  "vps": 0.2355,
+  "value_preserving": true,
+  "abs_diff": 0.0024
+}

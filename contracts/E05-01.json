@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E05-01",
+  "source_paper": "E05-01",
+  "family": "E05",
+  "paper_text_hash": "dcc6a558261ada1b42ce0154d34af4b9eed5aae0916a3c89197bd9777edadc7f",
+  "source_span": "Images are normalised with mean/std and augmented with random crops during training.",
+  "predicates": [
+    {
+      "predicate_id": "P5_PREPROCESS",
+      "principle": "P5_DETERMINISM_OR_SEEDS",
+      "natural_language": "Executed preprocessing must match the paper-declared preprocessing.",
+      "trace_fields": [
+        "protocol",
+        "declared_preprocess",
+        "protocol",
+        "executed_preprocess"
+      ],
+      "condition": "protocol.executed_preprocess == protocol.declared_preprocess",
+      "source_span": "Images are normalised with mean/std and augmented with random crops during training.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P5_DETERMINISM_OR_SEEDS"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "288ae8cf6c2e3d0b711c6ddccfc6ce297a58a292158f601dba05a7cf11a2c0e4"
+}

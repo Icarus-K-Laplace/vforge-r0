@@ -1,0 +1,129 @@
+{
+  "contract_id": "CONTRACT_paper_001",
+  "source_paper": "paper_001",
+  "claim": {
+    "claim_id": "CLAIM_paper_001",
+    "source_paper": "paper_001",
+    "natural_language_claim": "We propose a novel deep learning method for image classification",
+    "population": "train",
+    "method": "propose",
+    "comparator": "",
+    "metric": "",
+    "direction": "",
+    "scope": "",
+    "evaluation_split": "",
+    "aggregation_rule": "mean",
+    "selection_rule": "none",
+    "uncertainty_requirement": {
+      "type": "none",
+      "value": null,
+      "level": 0.95
+    },
+    "required_evidence": [
+      "selection_procedure",
+      "aggregation_code",
+      "train_ids",
+      "code",
+      "data",
+      "test_ids",
+      "raw_metrics",
+      "models",
+      "logs",
+      "validation_set"
+    ],
+    "validity_conditions": [
+      "Data splits must be independent and non-overlapping",
+      "Model selection must use held-out data, not test data",
+      "All required evidence must be accessible and reproducible",
+      "Reported metrics must faithfully represent computations"
+    ],
+    "abstention_conditions": [
+      "No split information available",
+      "No selection information available",
+      "No artifact manifest available",
+      "No metric information available"
+    ],
+    "source_spans": {}
+  },
+  "invariants": [
+    {
+      "invariant_id": "INV_001",
+      "source_principle": "P1_INDEPENDENCE",
+      "natural_language": "Data splits must be independent and non-overlapping",
+      "machine_readable": {
+        "type": "independence",
+        "check": "train \u2229 test = \u2205"
+      },
+      "source_paper_span": "eline ResNet-18 (92.1%).\nWe train on the training split and evaluate on the held-out test set.\nCode and models will be made available.",
+      "required_evidence": [
+        "train_ids",
+        "test_ids"
+      ],
+      "failure_condition": "Overlap detected between train and test sets",
+      "abstention_condition": "No split information available",
+      "confidence": 0.8
+    },
+    {
+      "invariant_id": "INV_002",
+      "source_principle": "P4_SELECTION_SEPARATION",
+      "natural_language": "Model selection must use held-out data, not test data",
+      "machine_readable": {
+        "type": "selection_separation",
+        "check": "selection_data \u2260 test_data"
+      },
+      "source_paper_span": "global",
+      "required_evidence": [
+        "selection_procedure",
+        "validation_set"
+      ],
+      "failure_condition": "Test data used for selection",
+      "abstention_condition": "No selection information available",
+      "confidence": 0.8
+    },
+    {
+      "invariant_id": "INV_003",
+      "source_principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "All required evidence must be accessible and reproducible",
+      "machine_readable": {
+        "type": "closure",
+        "check": "required \u2286 available"
+      },
+      "source_paper_span": "e held-out test set.\nCode and models will be made available.",
+      "required_evidence": [
+        "code",
+        "data",
+        "models",
+        "logs"
+      ],
+      "failure_condition": "Required artifacts missing or inaccessible",
+      "abstention_condition": "No artifact manifest available",
+      "confidence": 0.7
+    },
+    {
+      "invariant_id": "INV_004",
+      "source_principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Reported metrics must faithfully represent computations",
+      "machine_readable": {
+        "type": "fidelity",
+        "check": "reported == computed"
+      },
+      "source_paper_span": "global",
+      "required_evidence": [
+        "raw_metrics",
+        "aggregation_code"
+      ],
+      "failure_condition": "Metric mismatch between reported and computed",
+      "abstention_condition": "No metric information available",
+      "confidence": 0.65
+    }
+  ],
+  "metadata": {
+    "n_invariants": 4,
+    "source_principles": [
+      "P6_AGGREGATION_FIDELITY",
+      "P4_SELECTION_SEPARATION",
+      "P7_EVIDENCE_CLOSURE",
+      "P1_INDEPENDENCE"
+    ]
+  }
+}

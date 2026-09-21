@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E05-03",
+  "source_paper": "E05-03",
+  "family": "E05",
+  "paper_text_hash": "482ba73bfaeea4b1a0ed8f21195b08fd89059383d6e1a328f9acff87eed03f1c",
+  "source_span": "Training data is balanced with oversampling of the minority class.",
+  "predicates": [
+    {
+      "predicate_id": "P5_PREPROCESS",
+      "principle": "P5_DETERMINISM_OR_SEEDS",
+      "natural_language": "Executed preprocessing must match the paper-declared preprocessing.",
+      "trace_fields": [
+        "protocol",
+        "declared_preprocess",
+        "protocol",
+        "executed_preprocess"
+      ],
+      "condition": "protocol.executed_preprocess == protocol.declared_preprocess",
+      "source_span": "Training data is balanced with oversampling of the minority class.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P5_DETERMINISM_OR_SEEDS"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "ec55c7ca06f5261b6b8827d9e9c9439615a809d0927fd341eb2f6f3f8d94a119"
+}

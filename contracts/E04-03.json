@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E04-03",
+  "source_paper": "E04-03",
+  "family": "E04",
+  "paper_text_hash": "15f6a5477644d883e12513e621c57e16f4e738fbd0d2792140396315ec083101",
+  "source_span": "We report ROC-AUC for each of the six clinical subgroups.",
+  "predicates": [
+    {
+      "predicate_id": "P7_SUBGROUPS",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "All declared subgroups must appear in the reported outputs.",
+      "trace_fields": [
+        "protocol",
+        "declared_subgroups",
+        "protocol",
+        "reported_subgroups"
+      ],
+      "condition": "set(protocol.reported_subgroups) == set(protocol.declared_subgroups)",
+      "source_span": "We report ROC-AUC for each of the six clinical subgroups.",
+      "confidence": 0.85
+    }
+  ],
+  "universal_principles": [
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "cb69bdf7b0d3baf455db72a3d1856820def0118ecd56ff14ffe52fad195153ce"
+}

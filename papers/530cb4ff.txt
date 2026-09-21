@@ -1,0 +1,943 @@
+ThisICCVpaperistheOpenAccessversion,providedbytheComputerVisionFoundation.
+Exceptforthiswatermark,itisidenticaltotheacceptedversion;
+thefinalpublishedversionoftheproceedingsisavailableonIEEEXplore.
+ITI-GEN: Inclusive Text-to-Image Generation
+ChengZhang1 XuanbaiChen1 SiqiChai1 ChenHenryWu1 DmitryLagun2
+ThaboBeeler2 FernandoDelaTorre1
+1 CarnegieMellonUniversity 2 Google
+Abstract (a) Original (b) Hard Prompts
+{without, no, with
+[…] […]
+Text-to-image generative models often reflect the biases a headshot of a person etc.} eyeglasses eyeglasses
+of the training data, leading to unequal representations of
+underrepresentedgroups. Thisstudyinvestigatesinclusive
+text-to-imagegenerativemodelsthatgenerateimagesbased
+onhuman-writtenpromptsandensuretheresultingimages
+areuniformlydistributedacrossattributesofinterest. Un- … … …
+fortunately,directlyexpressingthedesiredattributesinthe w/oeyeglasses 92% w/oeyeglasses 12%
+prompt often leads to sub-optimal results due to linguistic w/eyeglasses 8% w/eyeglasses 88%
+ambiguity or model misrepresentation. Hence, this paper (c) Inclusive Text-to-Image Generation, ITI-GEN(ours)
+proposesadrasticallydifferentapproachthatadherestothe
+maximthat“apictureisworthathousandwords”. Weshow
+that, for some attributes, images can represent concepts ITI-GEN
+,
+moreexpressivelythantext. Forinstance,categoriesofskin
+Reference Images
+tones are typically hard to specify by text but can be eas-
+…
+ilyrepresentedbyexampleimages. Buildinguponthesein- w/oeyeglasses 50%
+sights,weproposeanovelapproach,ITI-GEN1,thatlever- a headshot of a person w/eyeglasses 50%
+agesreadilyavailablereferenceimagesforInclusiveText- generated images withouteyeglasses generated images witheyeglasses
+to-Image GENeration. The key idea is learning a set of
+Figure1.(a)Givenahuman-writtenprompt(“aheadshotofaper-
+promptembeddingstogenerateimagesthatcaneffectively son”), existing text-to-image models [63] can hardly synthesize
+representalldesiredattributecategories.Moreimportantly, picturesrepresentingminoritygroups(i.e.,peoplewitheyeglasses
+ITI-GENrequiresnomodelfine-tuning,makingitcomputa- in this example). (b) Conventional hard prompt searching [18]
+tionally efficient to augment existing text-to-image models. is sub-optimal due to linguistic ambiguity. (c) We address these
+Extensive experiments demonstrate that ITI-GEN largely problemsbyleveragingasmallsetofreferenceimagesforinclu-
+improvesoverstate-of-the-artmodelstogenerateinclusive sivetext-to-imagegeneration(ITI-GEN).
+imagesfromaprompt.
+58,63,12,5]andthushaveyettoexhibitinclusiveness—
+the generated images based on the input text may reflect
+1.Introduction stereotypes,leadingtotheexclusionofcertainattributesor
+minoritygroups.Forinstance,giventheprompt“aheadshot
+In recent years we have witnessed a remarkable leap in
+ofaperson”, Figure1(a)showshowastate-of-the-artsys-
+text-basedvisualcontentcreation,drivenbybreakthroughs
+tem generates about 92% images of subjects without eye-
+ingenerativemodeling[69,27,59,58,63]andtheaccessto
+glasses,andonly8%witheyeglasses,showingaclearbias
+large-scalemultimodaldatasets[67,35]. Particularly,pub-
+towardspeoplewithouteyeglasses. Alternatively,asshown
+licly released models, such as Stable Diffusion [63], have
+inFigure1(b),onecouldspecifytheattributeintheprompt,
+maturedtothepointwheretheycanproducehighlyrealis-
+resulting in better outcomes; however, this will still result
+ticimagesbasedonhuman-writtenprompts.
+inasub-optimalsolutionduetolinguisticambiguity.While
+However,onemajordrawbackofexistingtext-to-image
+inclusiveness has been critical to responsible AI, existing
+modelsisthattheyinheritbiasesfromthetrainingdata[6,
+text-to-imagemodelsarestilllagging[12,5,55,53,46]. In
+1Projectpage:https://czhang0528.github.io/iti-gen thiswork,weproposeanewmethodthatachievesinclusive-
+3969
+ness2intext-to-imagegenerationusingonlyafewexample 2.RelatedWork
+images,asillustratedinFigure1(c).
+To advance inclusive generation, a straightforward way Text-to-ImageGenerativeModels.Text-basedimagegen-
+istoretrainorfine-tunethemodeluponrequest,usingtruly eration has been widely studied with numerous model ar-
+inclusive training data [17, 82]. Doing so, however, is in- chitectures and learning paradigms [48, 62, 71, 59, 23,
+surmountably challenging as collecting large-scale train- 79, 18, 19, 9, 69, 78, 16, 17, 38]. Recently, the over-
+ing data that is balanced/inclusive across all attributes of whelming success of diffusion-based text-to-image mod-
+interest is impractical, and training generative models is els[58,66,58,51]hasattractedsignificantattention. Akey
+highly compute-intensive [67, 65, 17]. Another principled factortothissuccessistheirabilitytodealwithlarge-scale
+approach towards inclusiveness is to specify or enumerate multimodaldatasets[67,35,11]. Thus,questionsconcern-
+eachcategoryinnaturallanguage(i.e.,hardpromptsearch- inginclusivenesswhilelearningwithbiaseddatasetsremain
+ing) [18, 55]. However, many categories are difficult to acrucialopenproblem[12,5,3].
+specifywithnaturallanguage(e.g.,skintone)orcannotbe BiasMitigationinText-to-ImageGeneration.Whilefair-
+well synthesized by the existing models due to linguistic ness has been studied extensively in discriminative mod-
+ambiguityormodelmisrepresentation[29]. els [73, 74, 75, 42], research on developing fair genera-
+Atfirstglance,theseseemtopaintagrimpictureforin- tive models is limited [83, 30, 22, 14, 46]. Most efforts
+clusive text-to-image generation. However, we argue that focus on GAN-based models [13, 57, 31, 60, 80, 36, 77,
+instead of specifying attributes explicitly using descriptive 70, 33, 47], restricting their applicability to the emerging
+naturallanguage,imagescanrepresentspecificconceptsor diffusion-basedtext-to-imagemodels. Recently,therehave
+attributes more efficiently. Observing the availability of been some efforts to address this limitation. For instance,
+a shared vision-language embedding in many multimodal Bansaletal.[5]proposedtodiversifymodeloutputsbyeth-
+generativemodels[56],weraisethequestion: canwelearn icalintervention3. Dingetal.[18]proposedtodirectlyadd
+inclusivepromptembeddingsusingimagesasguidance? attributewordstotheprompt. However,thesehardprompt
+To achieve this goal, we introduce ITI-GEN, a novel searching methods have limitations such as being opaque
+andpracticalframeworkthatcreatesdiscriminativeprompts and laborious [5], and not always generating diverse im-
+based on readily available reference images for Inclusive ages reliably [29, 5]. In this work, we incorporate a broad
+Text-to-Image GENeration. Concretely, we leverage the spectrumofattributesbeyondsocialgroups. Moreover,we
+vision-languagepre-trainedCLIPmodel[56]toobtainthe learninclusivepromptsinthecontinuousembeddingspace,
+embeddingsofthereferenceimagesandlearnableprompts. requiringnohardpromptspecification.
+Inthejointembeddingspace,wedesignanewtrainingob- Tolearnafairgenerativemodel,Wuetal.[76]employed
+jectivetoalignthedirectionsoftheimageandpromptfea- off-the-shelf models, such as CLIP [56] and pre-trained
+tures. The core idea is to translate the visual attribute dif- classifiers, as guidance. Choi et al. [13] used a reference
+ferencesintonaturallanguagedifferencessuchthatthegen- datasettotrainthemodelviasamplere-weighting. Incon-
+eratedimagesbasedonthelearnedpromptscaneffectively trast,weusereferencedatainadrasticallydifferentway—
+representalldesiredcategories. Byequalizingthesampling treatingtheimagesasproxysignalstoguidepromptlearn-
+process over the learned prompts, our method guarantees ingbutwithoutretrainingthetext-to-imagemodel.
+inclusivenessfortext-to-imagegeneration. Image-Guided Prompt Tuning. Our method is inspired
+We validate our framework with Stable Diffusion [63]. by Prompt Tuning (PT) [41, 32]. Typically, PT methods
+ITI-GEN canleveragereferenceimagesfromdifferentdo- insert small learnable modules (e.g., tokens) into the pre-
+mains,includinghumanfaces[43,34,20]andscenes[68], trained models and fine-tune these modules with down-
+to achieve inclusive generation in single or multiple at- streamtaskswhilefreezingthemodelparameters.Recently,
+tributes of interest. ITI-GEN needs neither prompt speci- PT has been leveraged in personalized text-to-image gen-
+fication nor model fine-tuning, bypassing the problems of eration [24, 64, 39]. By providing several reference im-
+linguistic ambiguity as well as computational complexity. ages with the customized subject, they use a special to-
+Moreover, ITI-GEN is compatible with the existing text- kentorepresenttheobjectbyoptimizingthetokenembed-
+based image generation models (e.g., ControlNet [81] and ding [24, 39] or the diffusion models [64, 39]. This moti-
+instruction-basedimageeditingmodels[7])inaplug-and- vates us to learn the specific token embedding for each at-
+playmanner. Tothebestofourknowledge,thisisthefirst tribute category for inclusiveness. However, we note that
+methodthatallowsinclusivetext-to-imagegenerationover the previously mentioned methods for personalization do
+afrozenmodelandobtainscompetitiveresultsthroughout. noteffectivelycapturetheattributesintheimages.Thus,we
+propose to optimize the directions of the attribute-specific
+2Fewworks[12,5]havestudiedfairnessissuesintext-to-imagegenera-
+tionbutmainlyfocusedonsocialbiases(e.g.,perceivedgender,ethnicity). 3e.g.,appending“irrespectiveoftheirgender”totheendofaneutral
+Thispaperincorporatesabroaderspectrumofattributes. prompt“aphotoofalawyer”forgeneratingdiversepicturesw.r.t.genders.
+3970
+(a) Input Prompt (b) Learnable Inclusive Tokens (c) Inclusive Prompt Set (d) Generated Images
+a headshot of a Attribute Category … + “man”
+person ; “light skin”
+Tokenizer
+“man” “woman”
+Embedding Lookup … + “man”
+Perceived , ; “dark skin”
+Gender
+…
+… “woman”
++
+; “light skin”
+“light” “dark” Pre-trained
+Model
+O In r c ig lu in si a v l e P T ro o m ke p n t s Skin Tone , … ; + “ “ w da o r m k a s n k ” in ”
+Final Prompt
+Figure2.IllustrationofInclusiveText-to-ImageGENeration(ITI-GEN)withtheexampleoftwobinaryattributes: perceivedgender
+andskintone. (a)Givenaninputprompt,(b)ITI-GENlearnsdiscriminativetokenembeddingstorepresenteachcategoryofeverytarget
+attribute.(c)Byinjectingthelearnedtokensaftertheoriginalinputprompt,ITI-GENsynthesizesaninclusivepromptsetthatcanbeused
+to(d)sampleequal(orcontrollable)numbersofimagesforanycategorycombination. Further, ourframeworkcanbeeasilyextended
+tomulti-categorymulti-attributescenariosofinclusivetext-to-imagegeneration. Notethat,inpractice,multi-categoryskintonesbeyond
+{“light”,“dark”}asinthisexamplemaybechallengingtospecifywithlanguage(seeFigure3).PleaseseeSection3.1fordetails.
+promptsinthejointvision-languageembeddingspace,by- Inclusive Prompt Set. Inspired by [41, 32], we propose
+passingtrainingtext-to-imagegenerativemodels. prompt tuning for inclusive generation. Specifically, for a
+given category am within attribute A , we inject q learn-
+k m
+3.InclusiveText-to-ImageGeneration abletokensSm ∈ Rq×e aftertheoriginalT toconstructa
+k
+newpromptPm = [T;Sm] ∈ R(p+q)×e. Byqueryingthe
+TodrivetheprogressofInclusiveText-to-ImageGenera- modelGwith k Pm, weca k ngenerateimagesexhibitingthe
+tion,weproposeITI-GEN,whichcreatesinclusiveprompts characteristicsof k thecorrespondingcategoryam. Todiffer-
+that represent various attributes and their combinations. entiatethenewtokensSm fromtheoriginalpr k omptT,we
+This is particularly challenging for attributes that are dif- k
+refertothemasinclusivetokens.
+ficult to describe in language or underrepresented. To ad-
+WhenjointlyconsideringM attributes,weaggregateM
+dressthis,ITI-GENusesreadilyavailablereferenceimages separateinclusivetokensS1 ,S2 ,...,SM torepresenta
+asguidance, enablingunambiguousspecificationofdiffer- specificcategorycombinatio o1 n(a o 1 2 ,a2 ,.. o . M ,aM ),e.g.,the
+entattributes. Figure2illustratestheoverallframework. In
+o1 o2 oM
+conceptof(“woman”,“darkskin”,...,“young”). Wethus
+this section, we first introduce the framework of ITI-GEN
+expecttocreateauniqueS ,
+inSection3.1,thendescribethedetailsofthelearningstrat-
+o1o2...oM
+egyinSection3.2,andfinallydiscussthekeypropertiesof S =f(S1 ,S2 ,...,SM ) (2)
+ITI-GENinSection3.3.
+o1o2...oM o1 o2 oM
+thatcanbeinjectedafterT togenerateimagesforthispar-
+3.1.Overview
+ticular category combination. The aggregation function f
+inEquation2shouldbeabletotakevariousnumbersofat-
+Problem Statement. Given a pre-trained text-to-image
+tributes while maintaining the permutation invariant prop-
+generative model G and a human-written prompt (e.g., “a
+erty4 with respect to attributes. Common options include
+headshotofaperson”)tokenizedasT ∈ Rp×e,wherepis
+element-wise average, sum, and max operations. Follow-
+thenumberoftokensandeisthedimensionoftheembed-
+ing [49], we adopt element-wise sum to preserve the text
+dingspace, weaimtosampleequal(orcontrollable)num-
+semantics without losing information5. Finally, we define
+bersofimagesthatcanrepresentanycategorycombination
+theinclusivepromptsetasfollows:
+giventheattributesetA. Formally,
+M
+(cid:88)
+A={A m |1≤m≤M};A m ={am k |1≤k ≤K m } (1) P total ={P o1o2...oM =[T; S o m m ]∈R(p+q)×e|
+m=1
+containsM differentattributes(e.g.,perceivedgender,skin 1≤o ≤K ,...,1≤o ≤K }. (3)
+1 1 M M
+tone,etc.),whereamrecordsamutuallyexclusivecategory
+(e.g., aspecifictyp k eofskintone)inattributeA andK 4Thatis,theoutputoff shouldbethesameevenifwepermutethe
+m m indicesmoftheattributesinA(cf.Equation1).
+denotesthenumberofcategoriesinA m .NotethatK m may 5PleaseseeAppendixE.2formoreanalysisandotheroptionsforag-
+varyamongdifferentattributes. gregatingmultipletokens,e.g.,concatenation.
+3971
+ByuniformlysamplingthepromptsfromP asthecon-
+total
+ditions to generate images using the generative model G,
+weachieveinclusivenessacrossallattributes(seeFigure2).
+More generally speaking, the distribution of the generated
+dataisdirectlycorrelatedtothedistributionoftheprompts,
+whichcanbeeasilycontrolled.
+In contrast to specifying the category name in discrete
+languagespace[5,18],weoptimizepromptsentirelyinthe
+continuous embedding space. Additionally, we only up-
+date the attribute-specific embeddings — the colors • and
+• in Equation 3 indicate frozen and learnable parameters,
+respectively. Thisdecoupledoptimizationmechanismthus
+provides the advantage of using the learned inclusive to-
+kensinaplug-and-playmanneracrossvariousapplications,
+aswillbedemonstratedinSection3.3andSection4.3. We
+elaborateonthelearningprocessinthefollowingsection.
+3.2.LearningInclusivePrompts
+ReferenceImageSet. Weproposeusingreferenceimages
+toguidepromptlearning,astheycanprovidemoreexpres-
+sive signals to describe attributes that may be challenging
+toarticulatethroughlanguage. Specifically,weassumethe
+availabilityofareferenceimagesetDm ={(xm,ym)}Nm
+ref n n n=1
+foratargetattributeA ,whereN isthedatasetsizeand m m
+ym ∈ A (definedinEquation1)indicatesthecategoryto n m
+which x belongs. When considering multiple attributes,
+n
+we only need a reference dataset for each attribute, rather
+thanonelargebalanceddatasetwithallattributelabels.This
+propertyisextremelybeneficial,asitismucheasiertoob-
+tainadatasetthatcapturesonlythedistributionofoneat-
+tribute(i.e.,themarginaldistribution)ratherthanonethat
+capturesthejointdistributionofallattributes.
+AligningPromptstoImageswithCLIP.Givenreference
+image sets for the target attributes, can we learn prompts
+thataligntheattributesintheimages? Recently,pre-trained
+large-scale multimodal models have demonstrated strong
+capabilities in connecting vision and language. One such
+modelisCLIP[56],whichalignsvisualconceptswithtext
+embeddings by jointly training a text encoder E and an text
+image encoder E . The output of the pre-trained CLIP
+img
+text encoder has also been used as the condition for text-
+guided image generation [63, 58], opening up an opportu-
+nitytoalignpromptstoreferenceimageswithouttheneed
+tomodifythetext-to-imagemodels.
+Onestraightforwardsolutionistomaximizethesimilar-
+itybetweenthepromptandthereferenceimageembeddings
+intheCLIPspace,assuggestedby[56].However,wefound
+it deficient for two reasons. First, this objective forces the
+prompttofocusontheoverallvisualinformationintheim-
+ages, rather than the specific attribute of interest. Second,
+thegeneratedimagesfromthelearnedpromptoftenexhibit
+adversarialeffectsorsignificantqualitydegradation,poten-
+tially due to image features distorting the prompt embed-
+…
+Skin Tone Reference Images
+1
+yrogetaC
+2
+yrogetaC
+3 yrogetaC
+k yrogetaC
+Original Learnable
+…
+Dir. Alignment Loss ;
+SemanticConsist. Loss
+…
+SemanticConsist. Loss
+…
+;
+1
+yrogetaC
+3 yrogetaC
+Inclusive Prompt Embeddings
+CLIP
+Space
+Figure 3. Translating visual differences into text embedding
+differences. Givenreferenceimagesofamulti-categoryattribute
+(e.g.,skintone),welearntheinclusivetokensbydirectionalign-
+mentbetweenimagesandprompts,ensuringthatthevisualdif-
+ferencematchesthelearnedlanguagedescription.Inaddition,we
+proposesemanticconsistencylosstoaddresslanguagedrift. Im-
+agesarefromFAIRbenchmark[20].DetailsareinSection3.2.
+ding. Toaddressthese,weproposedirectionalignmentand
+semanticconsistencylosses,asdescribedbelow.
+DirectionAlignmentLoss. Insteadofdirectlymaximizing
+thesimilaritybetweenthepromptsandtheimages,wedraw
+inspiration from [54, 25] to induce the direction between
+the prompt Pm and Pm to be aligned with the direction
+i j
+between the averaged embeddings of the reference images
+corresponding to a pair of categories am and am in A .
+i j m
+Thisalignmentofpairwisecategoriesdirectionservesasa
+proxytaskforguidingthepromptstolearnthevisualdiffer-
+enceamongimagesfromcategoryamandam(Figure3).
+i j
+Specifically, we define the direction alignment loss L
+dir
+tomaximizethecosinesimilaritybetweentheimagedirec-
+tionandthepromptdirectionasfollows:
+Lm(Sm,Sm)=1− (cid:10) ∆m(i,j),∆m(i,j) (cid:11) . (4) dir i j I P
+Here, the image direction ∆ is defined as the difference
+I
+oftheaveragedimageembeddingsbetweentwocategories
+of the attribute A . Let Xm = 1 (cid:80) E (xm)
+m k |Bk| y
+n
+m=am
+k
+img n
+betheaveragedimageembeddingforcategoryam;|B |is
+k k
+thenumberofimagesfromcategoryamineachmini-batch.
+k
+Wedenotetheimagedirectionasfollows:
+∆m(i,j)=Xm−Xm. (5)
+I i j
+Similarly, the prompt direction ∆ is defined as the dif- P
+ference of the averaged prompt embeddings between two
+categories. Let Pm = 1 (cid:80) E (P) be the av- k |Pm| P∈Pm text
+eraged prompt embedding k for attrib k ute am. Specifically,
+k
+3972
+Pm = {P ∈ P | o = k} is a collection of prompts be compatible with a different human-written prompt. For
+k total m
+containingallthecategorycombinationsforotherattributes human face images, an example T for training can be any
+giventhecategoryamforattributeA (cf.Equation3). Fi- neutralprompt,e.g.,“aheadshotofaperson”. Aftertrain-
+k m
+nally,wedenotethepromptdirectionasfollows: ing, inclusive tokens can be used to handle out-of-domain
+prompts (e.g., “a photo of a doctor”) or facilitate differ-
+∆m P (i,j)=Pm i −Pm j . (6) entmodels[81,7]inaplug-and-playmanner,justifyingthe
+generalizabilityofourapproach.
+By inducing the direction alignment, we aim to facilitate
+Data,Memory,andComputationalEfficiency. ITI-GEN
+the prompt learning of more meaningful and nuanced dif-
+usesaveragedimagefeaturestoguidepromptlearning,in-
+ferencesbetweenimagesfromdifferentcategories.
+dicatingthat(1)onlyafewdozenimagespercategoryare
+Semantic Consistency Loss. We observe that direction
+sufficient,and(2)abalanceddistributionacrosscategories
+alignment loss alone may result in language drift [45, 40,
+withinanattributeisnotrequired. ITI-GENkeepsthetext-
+64]—thepromptsslowlylosesyntacticandsemanticprop-
+to-image model intact and only updates the inclusive to-
+erties of language as they only focus on solving the align-
+kens,allowingittocircumventthecostlyback-propagation
+menttask. Toresolvethisissue,wedesignasemanticcon-
+stepinthediffusionmodel. Trainingwithasingleattribute
+sistencyobjectivetoregularizethetrainingbymaximizing
+takesapproximately5minutes(1A4500GPU).Inpractice,
+thecosinesimilaritybetweenthelearningpromptsandthe we set the length6 (q in Equation 3) of inclusive tokens to
+originalinputprompt(seeFigure3):
+3 (which is less than 10KB) for all attribute categories of
+Lm sem (S i m,S j m)=max (cid:16) 0,λ− (cid:10) E text (P),E text (T) (cid:11)(cid:17) (7) i w n i t t e h re m st u i l n tip o l u e r a s t t t u ri d b y u . te H s, e I n T ce I- , G w E h N en al s w ca a l y in s g ha u s p lo to w s m ce e n m ar o io ry s
+requirementsforbothtrainingandstoringinclusivetokens.
+where P ∈ Pm ∪Pm and λ is a hyperparameter (see an
+i j Comparison to Image Editing Methods. Our direction
+analysisinSection4.3). Thislossiscrucialforgenerating
+alignmentlossmaybereminiscentofthedirectionalCLIP
+high-qualityimagesthatremainfaithfultotheinputprompt.
+loss employed in image editing methods [25, 37]. How-
+Optimization. BuildinguponLm dir andLm sem ,ourtotaltrain- ever, theyarefundamentallydifferent. First, our ITI-GEN
+ing loss for learning the inclusive tokens of a pair of cate- isdesignedtopromotetheinclusiveness,whileimageedit-
+goriesinattributeA m iswrittenasfollows: ing methods focus on single image manipulation. Second,
+imageeditingmethodsmodifythesourceimageaccording
+Lm (Sm,Sm)=Lm(Sm,Sm)+Lm (Sm,Sm). (8)
+pair i j dir i j sem i j tothechangeintexts(fromsourcetotarget),whereasITI-
+GENlearnspromptsbyleveragingchangesinimagesfrom
+Ateachiteration,weupdatetheembeddingsofinclusiveto-
+onecategorytoanother. Thiskeydifferencesuggestsasig-
+kensofallthecategoriesfromonlyoneattributebutfreeze
+nificant distinction: the two methods are learning the task
+the parameters of inclusive tokens for all other attributes.
+fromcompletelydifferentdirections.
+The final objective during the whole learning process is:
+4.Experiments
+M
+(cid:88) (cid:88)
+L = Lm (Sm,Sm), (9)
+total pair i j Wevalidate ITI-GEN forinclusivetext-to-imagegener-
+m=11≤i<j≤Km
+ationonvariousattributesandscenarios.Webeginbyintro-
+where the inner summation enumerates all pairwise cate- ducing the experimental setup in Section 4.1, then present
+goriesforoneattributeA ateachiteration,whiletheouter the main results in Section 4.2, and finally, show detailed
+m
+summationalterstheattributeacrosstheiteration. ablationstudiesandapplicationsinSection4.3. Pleasesee
+Appendixforadditionaldetails,results,andanalyses.
+3.3.KeyPropertiesof ITI-GEN
+4.1.Setup
+Generalizability.Unlikepersonalizationmethodsthattrain
+theembeddingsforaspecificmodel(becausetheyusedif- Datasets. We construct reference image sets and investi-
+fusionlosses[24,39,64]),thetokenslearnedby ITI-GEN gateavarietyofattributesbasedonthefollowingdatasets.
+aretransferablebetweendifferentmodels.Wehighlighttwo (1)CelebA[43]isafaceattributesdatasetandeachimage
+use cases for these tokens. (1) In-domain generation. We with 40 binary attribute annotations. We experiment with
+use the user-specified prompt T to learn the inclusive to- these binary attributes and their combinations. (2) FAIR
+kens and then apply them back to T to generate inclusive benchmark (FAIR) [20] is a recently proposed synthetic
+images.(2)Train-once-for-all.AsshowninEquation3,the facedatasetusedforskintoneestimation. Following[20],
+newly introduced inclusive tokens do not change the orig- 6Thetokenlengthusedhereisgeneralizableacrosstheattributeswe
+inal prompt T, which implies that the learned tokens can studiedinthispaper.SeeAppendixE.1foradetailedablationstudy.
+3973
+Table1.Comparisonwithbaselinemethodswith(a)singleattributeand(b)multipleattributes.ReferenceimagesarefromCelebA.
+WeuseCLIP[56]astheattributeclassifier[12,14]. ITI-GENachievescompetitiveresultsforbothsettings. SD:vanillastablediffusion.
+EI:ethicalintervention.HPS:hardpromptsearching.PD:promptdebiasing.CD:customdiffusion.SeeAppendixFformoreresults.
+(a)SingleAttribute (b)MultipleAttributes
+Method
+Dmale ↓ Dyoung ↓ Dpaleskin ↓ Deyeglass ↓ Dmustache ↓ Dsmile ↓ Dmale×young ↓Dmale×young×eyeglass ↓Dmale×young×eyeglass×smile ↓
+KL KL KL KL KL KL KL KL KL
+SD[63] 0.343 0.578 0.308 0.375 0.111 0.134 0.882 1.187 1.406
+EI[5] 0.143 0.423 0.644 0.531 0.693 0.189 0.361 1.054 1.311
+HPS[18] 1×10−5 0.027 2.8×10−3 0.371 0.241 4.4×10−3 3.5×10−3 0.399 0.476
+PD[14] 0.322 0.131 0.165 0.272 0.063 0.146 – – –
+CD[39] 0.309 0.284 0.074 0.301 0.246 0.469 – – –
+ITI-GEN 2×10−6 2×10−4 0 2×10−4 4.5×10−4 2.5×10−3 1.3×10−4 0.061 0.094
+(cid:58)(cid:76)(cid:87)(cid:75)(cid:3)(cid:72)(cid:92)(cid:72)(cid:74)(cid:79)(cid:68)(cid:86)(cid:86)(cid:72)(cid:86) (cid:58)(cid:76)(cid:87)(cid:75)(cid:82)(cid:88)(cid:87)(cid:3)(cid:72)(cid:92)(cid:72)(cid:74)(cid:79)(cid:68)(cid:86)(cid:86)(cid:72)(cid:86)
+(cid:81)(cid:68)(cid:80)(cid:3)(cid:71)(cid:72)(cid:89)(cid:76)(cid:72)(cid:70)(cid:85)(cid:72)(cid:51)
+(cid:81)(cid:68)(cid:80)(cid:82)(cid:90)(cid:3)(cid:71)(cid:72)(cid:89)(cid:76)(cid:72)(cid:70)(cid:85)(cid:72)(cid:51)
+(cid:58)(cid:76)(cid:87)(cid:75)(cid:3)(cid:86)(cid:80)(cid:76)(cid:79)(cid:76)(cid:81)(cid:74)
+(cid:60)(cid:82)(cid:88)(cid:81)(cid:74)
+(cid:58)(cid:76)(cid:87)(cid:75)(cid:82)(cid:88)(cid:87)(cid:3)(cid:86)(cid:80)(cid:76)(cid:79)(cid:76)(cid:81)(cid:74) (cid:58)(cid:76)(cid:87)(cid:75)(cid:3)(cid:86)(cid:80)(cid:76)(cid:79)(cid:76)(cid:81)(cid:74) (cid:58)(cid:76)(cid:87)(cid:75)(cid:82)(cid:88)(cid:87)(cid:3)(cid:86)(cid:80)(cid:76)(cid:79)(cid:76)(cid:81)(cid:74)
+(cid:50)(cid:79)(cid:71)
+(cid:60)(cid:82)(cid:88)(cid:81)(cid:74)
+(cid:50)(cid:79)(cid:71)
+Figure4.Qualitativeresultsofthecombinationoffourbinaryattributes(thelastcolumninTable1). Theinputprompt(T)is“a
+headshotofaperson”.Byusingthelearnedinclusivetokens(cf.Equation3),ITI-GENcaninclusivelygenerateimageswithallattribute
+combinations.Imagesacrosseachtuplearesampledusingthesamerandomseed.MoreexamplesareincludedinAppendixF.
+tiontoolfrom[72],eachimagecanbelabeledwith6quality
+(e.g.,colorfulness,brightness)and6abstraction(e.g.,scary,
+aesthetic)attributes. Figure5showsexampleimages.
+ExperimentalProtocols. Weonlyrequirethatareference
+imagesetcapturesamarginaldistributionforeachattribute
+CelebA FairFace FAIR benchmark LHQ
+(cf. Section 3.2). Note that, while images from CelebA
+Figure5.Examplesofreferenceimages. CelebA[43]andFair-
+Face[34]arereal-facedatasetswithdifferentresolutionsandfo- andFairFaceareannotatedwithmultipleattributes,weuse
+cuses. FAIRbenchmark[20]isasyntheticdatasetusedforskin onlytheattributelabelforeachtargetcategorybutnototh-
+toneestimation.Landscape(LHQ)[68]containsimagesfromnat- ers. We randomly select 25 reference images per category
+uralscenes. ITI-GENcanleveragevariousimagesourcestoben- asourdefaultsetting(andablateitinSection4.3). Forat-
+efitinclusivetext-to-imagegenerationforvariousattributes. tribute settings, we consider single binary attribute, multi-
+category attributes, and multiple attributes in the domains
+of human faces and scenes. We study both in-domain and
+weusetheground-truthalbedostoclassifyeachfacialcrop
+train-once-for-all generations (cf. Section 3.3) and further
+into one of six skin tone levels [21] and use FAIR for in-
+clusivenessonskintonetype. (3)FairFace[34]7 contains providequalitativeandquantitativeanalysesforeachsetup.
+faceimageswithannotationsfor2perceivedgenderand9 Quantitative Metrics. We use two metrics to quantify
+perceivedagecategories. (4)LandscapesHQ(LHQ)[68] distribution diversity and image quality. (1) Distribution
+providesunlabelednaturalsceneimages. Withtheannota- Discrepancy (D ). Following [12, 14], we use the CLIP
+KL
+modeltopredicttheattributesintheimages. Forattributes
+7Wenotethat,whiletheFairFacedatasetcontainsracecategories,we thatCLIPmightbeerroneous,weleveragepre-trainedclas-
+focusinsteadonskintoneinthisstudy. Thisisbecauseskintoneismore sifiers [34] combined with human evaluations. Specifi-
+readily inferable from pixels, whereas racial identities are better under- cally, for skin tone, which is extreme difficult to obtain
+stoodassocialconceptsthatareneitherimmutablenorbiologicalinna-
+an accurate scale [1, 2, 28], we adopt the most commonly
+ture[8,15,61,4];furthermore,phenotypicvariationofskintonewithin
+racialidentificationgroupsiswelldocumented[50]. usedFitzpatrickskintype[10]combinedwithoff-the-shelf
+3974
+Stable Diffusion Stable Diffusion ITI-GEN ITI-GEN
+perceived woman perceived man perceived woman perceived man
+0.4
+Ref: FairFace Ref: CelebAand FAIR
+0.3
+0.2
+0.1
+0
+0-2 3-9 10-19 20-29 30-3 9 40-4 9 50-5 9 60-69 >7 0 Typ e 1 Typ e 2 Typ e 3 Typ e 4 Typ e 5 Type 6
+(a) Perceived Gender ×Age (b) Perceived Gender ×Skin Tone
+noitroporp
+Figure6.Multi-categorydistributionwith“aheadshotofaper-
+son”. For a reliable evaluation, the results of (a) are evaluated
+usingclassifiersin[34],and(b)areevaluatedusingexistingmod-
+els[10,20]. ThegeneratedimagesfromITI-GENaremoreuni-
+formly distributed across different sub-groups than the baseline
+StableDiffusion.SeeFigure7forqualitativeresults.
+models [20] for evaluation. (2) FID. We report the FID
+score [26, 52] (FFHQ [35]) to measure the image quality.
+PleaseseeAppendixDformoredetails.
+Baselines.WecompareITI-GENtothefollowingmethods.
+(1)StableDiffusion(SD)[63]withoutanymodification.(2)
+EthicalIntervention(EI)[5]thateditsthepromptbyadding
+attribute-related interventions. (3) Hard Prompt Searching
+(HPS)[18]thatdirectlyexpressesthedesiredattributecat-
+egoryintheprompt. (4)PromptsDebiasing(PD)[14]that
+calibrates the bias in the text embedding by using the at-
+tribute category names. (5) Custom Diffusion (CD) [39]
+that fine-tunes the text-to-image model with reference im-
+agesbasedonTextualInversion[24,64].
+ImplementationDetails.WeuseStableDiffusion[63](sd-
+v1-4)asthebasemodelforallmethodsandshowcompat-
+ibility with ControlNet [81] and InstructPix2Pix [7]. ITI-
+GEN is model agnostic as long as they take token embed-
+dingsastheinputs.Wesetλ=0.8inL acrossallexper-
+sem
+imentsandshowthatλcanberobustlyselectedaccording
+to the prior knowledge (see Section 4.3). All the inclusive
+tokensareinitiatedaszerovectors8.Wesetthelengthofthe
+inclusive tokens to 3 in all experiments. There is no addi-
+tionalhyper-parameterinourframework.Thetotalnumber
+oftheparametersfortheinclusivetokensthatneedtobeop-
+timizedis
+(cid:80)M
+K ×3×768,whereM isthenumberof
+m=1 m
+attributes, K isthecategorynumberforattributem, and
+m
+768 is the dimension of the embedding (e in Equation 3).
+We train the models with 30 epochs on a batch size of 16
+and a learning rate of 0.01. During training, we leverage
+imageaugmentationsusedintheCLIPimageencoder.
+4.2.MainResults
+Single Binary Attribute. To demonstrate the capability
+of ITI-GEN to sample images with a variety of face at-
+tributes,weconstruct40distinctreferenceimagesetsbased
+onattributesfromCelebA[43]. Eachrepresentsaspecific
+8Weinvestigatedotheroptionssuchasrandominitializationbutdidnot
+seenotabledifferencesinbothgenerationqualityandtrainingspeed.
+(cid:19)
+(cid:72)(cid:74)(cid:36)
+(cid:19)(cid:26)(cid:33)
+(cid:55)(cid:92)(cid:83)(cid:72)(cid:3)(cid:20)
+(cid:54)(cid:78)(cid:76)(cid:81)(cid:3)(cid:55)(cid:82)(cid:81)(cid:72)
+(cid:55)(cid:92)(cid:83)(cid:72)(cid:3)(cid:25)
+Figure7.ResultsofITI-GENonmulti-categoryattributesfor
+Gender×Age(Figure6(a))andGender×SkinTone(Figure6(b)).
+Examplesarerandomlypickedwith“aheadshotofaperson”.
+binary attribute and contains an equal number of images
+(50%)forthepositiveandnegativecategories9. Table1(a)
+showsacomparisontostate-of-the-artmethods. Weevalu-
+ate 5 text prompts — “a headshot of a {person, professor,
+doctor,worker,firefighter}”—andsample200imagesper
+prompt for each attribute, resulting in 40K generated im-
+ages. Wehighlighttheaveragedresultsacross5promptsof
+6attributes. WeprovidecompleteresultsinAppendixF.2.
+ITI-GEN achieves near-perfect performance on balancing
+eachbinaryattribute,justifyingourmotivation: usingsepa-
+rateinclusivetokensisbeneficialingeneratingimagesthat
+areuniformlydistributedacrossattributecategories.
+Multiple Attributes. Given multiple reference image sets
+(each captures the marginal distribution for an attribute),
+can ITI-GEN generate diverse images across any category
+combination of the attributes? We provide an affirmative
+answer and present results in Table 1(b) and Figure 4. As
+we observe, ITI-GEN produces diverse and high-quality
+images with significantly lower distribution discrepancies
+comparedtobaselinemethods. Weattributethistotheag-
+gregationoperationofinclusivetokens(Equation3),allow-
+ing ITI-GEN todisentanglethelearningofdifferentinclu-
+sivetokenswithimagesinmarginaldistributions.
+Multi-Category Attributes. We further investigate multi-
+category attributes including perceived age and skin tone.
+Specifically,weconsidertwochallengingsettings: (1)Per-
+ceivedGender×Age(Figure6(a)),and(2)PerceivedGen-
+der × Skin Tone (Figure 6(b)). ITI-GEN achieves inclu-
+siveness across all setups, especially on extremely under-
+represented categories for age (< 10 and > 50 years old
+inFigure6(a)). Moresurprisingly(Figure6(b)), ITI-GEN
+canleveragesyntheticimages(fromFAIR)andjointlylearn
+9Wefoundthatdifferentratiosdonotleadtonotabledifferences. We
+provideananalysisoflearningwithimbalanceddatainAppendixE.3.
+3975
+(cid:39)(cid:88)(cid:79)(cid:79) (cid:38)(cid:82)(cid:79)(cid:82)(cid:85)(cid:73)(cid:88)(cid:79) Table 2. Ablation on reference image sources and L sem . ITI-
+GENproduceslowerFIDthanthebaselineStableDiffusion. Se-
+manticconsistencylossL playsakeyroleinqualitycontrol.
+sem
+Method Source L FID↓
+sem
+Baseline[63] – – 67.40
+✓ 60.38
+CelebA[43]
+✗ (+17.40)77.78
+✓ 55.10
+ITI-GEN FairFace[34] ✗ (+9.01)64.11
+(cid:37)(cid:68)(cid:86)(cid:72)(cid:79)(cid:76)(cid:81)(cid:72) (cid:44)(cid:55)(cid:44)(cid:16)(cid:42)(cid:40)(cid:49) ✓ 51.83
+Figure8.ITI-GENwithperceptionattributesonsceneimages. FAIR[20] ✗ (+10.86)62.69
+Thetokensof“colorfulness”aretrainedwith“aphotoofanatural
+scene”andappliedto“acastleonthecliff”inthisexample(train-
+once-for-allinSection3.3). ITI-GEN(right)enablesthebaseline
+StableDiffusion(left)togenerateimageswithdifferentlevelsof
+colorfulness.Sameseedforeachrow.Betterviewedincolor.See
+AppendixF.5forresultsofotherattributes,e.g.,scary,brightness.
+(cid:594)(cid:590)(cid:815)(cid:771)(cid:709)(cid:756)(cid:926)(cid:815)(cid:871)(cid:942)(cid:590)(cid:871)(cid:791)(cid:590)(cid:709)(cid:590)(cid:756)(cid:871)(cid:740)(cid:942)(cid:871)(cid:914)
+70 11 .×E-1005-5
+69.9 FID KL
+65
+60.4 60.5 60.4 55 .×E-1006-6
+60
+55 00.E+00 (cid:594)(cid:590)(cid:815)(cid:771)(cid:709)(cid:756)(cid:926)(cid:815)(cid:871)(cid:942)(cid:590)(cid:871)(cid:791)(cid:590)(cid:709)(cid:590)(cid:791)(cid:821)(cid:914)(cid:771)(cid:791)(cid:821)(cid:803)(cid:815)(cid:942)(cid:771)(cid:914)
+10 25 50 75 100
+(cid:37)(cid:68)(cid:86)(cid:72)(cid:79)(cid:76)(cid:81)(cid:72) (cid:44)(cid:55)(cid:44)(cid:16)(cid:42)(cid:40)(cid:49)
+# reference images per category (CelebA)
+Figure9.Ablationonthequantityofreferenceimages. More
+referenceimages(> 10)helppossiblyduetomorediversityand
+lessnoise.ITI-GENisrobustinthelowdataregime(Section3.3).
+from different data sources (CelebA for gender and FAIR
+for skin tone), demonstrating great potential for bootstrap-
+pinginclusivedatagenerationwithgraphicsengines.
+OtherDomains. Besideshumanfaces,weapplyITI-GEN
+toanotherdomain: sceneimages. Weclaimthattheinclu-
+sive text-to-image generation accounts for attributes from
+notonlyhumansbutalsoscenes, objects, orevenenviron-
+mentalfactors. Specifically,weuseimagesfromLHQ[68]
+as guidance to learn inclusive tokens and generate images
+withdiversesubjectiveperceptionattributes. Asillustrated
+in Figure 8, ITI-GEN can enrich the generated images to
+multiple levels of colorfulness10, justifying the generaliz-
+abilityofourmethodtotheattributesindifferentdomains.
+4.3.AblationsandApplications
+Reference Images. Figure 9 illustrates the impact of the
+quantity of reference images per attribute category, telling
+that ITI-GEN can produce high-quality images using very
+few reference data without sacrificing inclusiveness (KL).
+In addition, as indicated in Table 2, ITI-GEN consistently
+generates realistic images regardless of reference sources
+10Notethatthesubjectiveattributesweexploreherearedifferentfrom
+artisticstyles(e.g.,painting,cartoon)inimage-to-imagetranslation(e.g.,
+[25]). Understandingtheattributesrelatedtoqualityandlookofimages
+maybeintuitiveforhumansbutremainnon-trivialforgenerativemodels.
+(cid:81)(cid:68)(cid:48)
+(cid:81)(cid:68)(cid:80)(cid:82)(cid:58)
+(cid:74)(cid:81)(cid:88)(cid:82)(cid:60)
+(cid:71)(cid:79)(cid:50)
+Figure10.Train-once-for-allgeneralization.Inclusivetokensof
+ITI-GENtrainedwithaneutralprompt(“aheadshotofaperson”)
+canbeappliedtoout-of-domainpromptsinthesetwoexamplesto
+alleviatestereotypes.SeeAppendixF.6formoreresults.
+(seeexamplesinFigure4andFigure7).Moreinterestingly,
+we found that using synthetic images (i.e., FAIR [20]) is
+slightlybetterthanrealdata[43,34]. Wehypothesizethat
+thebackgroundnoiseinrealimagesdegradesthequality.
+Semantic Consistency Loss L . Again in Table 2, we
+sem
+compareITI-GENwithandwithoutL
+sem
+. Withthehelpof
+thesemanticconstraint(Figure3),weregularizethelearned
+embeddingsnottoofarfromtheoriginalprompt. Weshow
+evidencetoverifythisinsight:theaveragedCLIPsimilarity
+scores of text features between the hard prompts of 40 at-
+tributesinCelebAandtheoriginalpromptis0.8(theλwe
+used), suggestingthat the hyper-parametercan be robustly
+chosenbasedonpriorlinguisticknowledge.
+Train-once-for-allGeneralization. AsshowninFigure8,
+inclusivetokenscanbeappliedtouser-specifiedpromptsin
+aplug-and-playmanner(Section3.2).InFigure10,wepro-
+videmoreexamplesofprofessionalpromptstodemonstrate
+theabilityoftrain-once-for-allgeneration.
+Compatibility with ControlNet [81]. ITI-GEN achieves
+inclusiveness by learning attribute-specific prompts with-
+outmodifyingtheoriginaltext-to-imagemodel,potentially
+benefiting various downstream vision-language tasks. In
+Figure 11, we demonstrate its compatibility with Control-
+Net [81], a state-of-the-art model capable of conditioning
+3976
+Pose: Type 1 Type 2 Type 3 Type 1 Type 2 Type 3
+Instruction:
+turn her into
+a man
+Type 4 Type 5 Type 6
+Type 4 Type 5 Type 6
++
+Prompt:
+photo of a
+famous
+IP2P IP2P + ITI-GEN(Skin Tone)
+woman
+Figure12.Compatibilitywithinstruction-basedimageediting
+ControlNet + ITI-GEN (Skin Tone) methods. Givenanimageandawritteninstruction(top-left),In-
+Figure 11. Compatibility with models using additional condi- structPix2Pix(IP2P)[7]followstheinstructiontoedittheimage
+tions, e.g., human pose (left). ITI-GEN promotes inclusiveness (bottom-left).ITI-GEN(right)enablesinclusiveinstruction-based
+ofControlNet[81]byusingtheinclusivetokensofsixskintone imageediting. SimilartoFigure11,theinclusivetokensusedin
+types(right).Thetokensaretrainedwith“aheadshotofaperson” thisexamplearetrainedinatrain-once-for-allmanner.
+guidedbyimagesfromFAIRdataset[20], andappliedhereina
+train-once-for-allmanner(Section3.3).SeeAppendixF.7forad-
+ditionalresultsonversatileconditions,e.g.,depth,segmentation. theinclusivenessoftext-to-imagegeneration. Thisproblem
+istimelyandchallenging[6,5,14,22,12]. Ourkeyinsight
+is learning separate token embeddings to represent differ-
+on a variety of inputs beyond text. Interestingly, we ob-
+entattributesofinterestviaimageguidance. Theproposed
+serve an intriguing feature where the newly introduced to-
+ITI-GENmethodissimple,compact,generalizable,andef-
+kensmayimplicitlyentangleotherbiasesorcontrastsinher-
+fective on various applications. Specifically, ITI-GEN has
+entinthereferenceimagesets,suchasclothingstyle. Nev-
+several advantages: (1) scalable to multiple attributes and
+ertheless, we emphasize that disentanglement of attributes
+different domains using relatively small numbers of im-
+isnottheprimaryconcernofthisstudy. ITI-GENachieves
+ages; (2) can be used in a plug-and-play manner to out-
+competitiveresultsindistributionalcontrolfortheintended
+of-distribution, relativelycomplexprompts; (3)efficientin
+attributes (e.g., skin tone in Figure 11) — aggregating to-
+bothtrainingandinference;(4)compatiblewiththetext-to-
+kens learned from marginal distributions implicitly disen-
+imagegenerativemodelsthatsupportadditionalconditions
+tanglestheknownattributesofinterest.
+orinstructions. Weconductextensiveexperimentstoverify
+CompatibilitywithInstructPix2Pix(IP2P)[7].Notethat, the effectiveness of the proposed method on multiple do-
+achievingfullyunsuperviseddisentanglementisachalleng- mains, offeringinsightsintovariousmodelingchoicesand
+ingtask[44]. Previousattemptsinimagegenerationoften mechanismsofITI-GEN. Weincorporateabroadspectrum
+resort to additional supervision, either through the use of ofattributesinbothhumanfacesandscenes. Wehopethat
+referencedata[13],classifierslearnedfromajointdistribu- our results and insights can encourage more future works
+tion[70],orevenmorerobustcontrolssuchasinstruction- onexploringinclusivedatageneration.
+basedimageediting[7]. Here,weshowthat ITI-GEN can
+Limitations. ITI-GEN can handle a wide range of gen-
+potentiallydisentanglethetargetattributebyincorporating
+eralattributes,suchasperceivedgenderandskintone,and
+InstructPix2Pix[7]—toimprovetheinclusivenessofIP2P
+excels in cases where “Hard Prompt” struggles. However,
+on the target attribute, while ensuring minimal changes to
+there remain several limitations. First, ITI-GEN does not
+otherfeaturessuchasclothingandbackground. Resultsare
+always provide optimal results for very subtle facial at-
+shown in Figure 12, telling that ITI-GEN can be an effec-
+tributes (Appendix F.2) or for the combinations of highly
+tivemethodtoconditiondiffusiononcontrastiveimagesets,
+entangledattributes(AppendixF.3). Second,ITI-GENstill
+e.g., images taken by different cameras, art by unknown
+requires dozens of reference images for each category as
+artists,andmaybeevendifferentidentitiesofpeople.
+guidance.Itispossiblethatthereferenceimagesmayintro-
+ducebiasesorinaccuracies.Onemitigationstrategyistoin-
+5.ConclusionandDiscussion
+tegrateITI-GENwithmodelsthatofferrobustcontrols[7],
+suchastheonehighlightedinFigure12.
+We present a new method for inclusive text-to-image
+generation. Our main contribution lies in a new direction: Acknowledgments.WethankOliverWang,JianjinXu,and
+leveraging readily available reference images to improve OrPatashnikfortheirfeedbackonthedraftsofthispaper.
+3977
+References [17] PrafullaDhariwalandAlexanderNichol. Diffusionmodels
+beatgansonimagesynthesis. InNeurIPS,2021. 2
+[1] Gendershades. http://gendershades.org/. 6
+[18] Ming Ding, Zhuoyi Yang, Wenyi Hong, Wendi Zheng,
+[2] Google skin tone research. https://skintone.
+Chang Zhou, Da Yin, Junyang Lin, Xu Zou, Zhou Shao,
+google/. 6
+HongxiaYang,etal.Cogview:Masteringtext-to-imagegen-
+[3] SandhiniAgarwal,GretchenKrueger,JackClark,AlecRad- erationviatransformers. InNeurIPS,2021. 1,2,4,6,7
+ford, Jong Wook Kim, and Miles Brundage. Evaluating
+[19] Ming Ding, Wendi Zheng, Wenyi Hong, and Jie Tang.
+CLIP: towards characterization of broader capabilities and
+Cogview2:Fasterandbettertext-to-imagegenerationviahi-
+downstreamimplications.preprintarXiv:2108.02818,2021.
+erarchical transformers. preprint arXiv:2204.14217, 2022.
+2
+2
+[4] JeroneTAAndrews,DoraZhao,WilliamThong,Apostolos
+[20] Haiwen Feng, Timo Bolkart, Joachim Tesch, Michael J.
+Modas,OrestisPapakyriakopoulos,ShrutiNagpal,andAlice
+Black, and Victoria Abrevaya. Towards racially unbiased
+Xiang. Ethicalconsiderationsforcollectinghuman-centric skin tone estimation via scene disambiguation. In ECCV,
+imagedatasets. arXivpreprintarXiv:2302.03629,2023. 6
+2022. 2,4,5,6,7,8,9
+[5] HritikBansal,DaYin,MasoudMonajatipoor,andKai-Wei
+[21] ThomasBFitzpatrick. Thevalidityandpracticalityofsun-
+Chang. Howwellcantext-to-imagegenerativemodelsun- reactive skin types i through vi. Archives of Dermatology,
+derstandethicalnaturallanguageinterventions? InEMNLP,
+124(6):869–871,1988. 6
+2022. 1,2,4,6,7,9
+[22] Felix Friedrich, Patrick Schramowski, Manuel Brack,
+[6] Federico Bianchi, Pratyusha Kalluri, Esin Durmus, Faisal Lukas Struppek, Dominik Hintersdorf, Sasha Luccioni,
+Ladhak,MyraCheng,DeboraNozza,TatsunoriHashimoto, and Kristian Kersting. Fair diffusion: Instructing text-
+DanJurafsky,JamesZou,andAylinCaliskan. Easilyacces- to-image generation models on fairness. arXiv preprint
+sibletext-to-imagegenerationamplifiesdemographicstereo- arXiv:2302.10893,2023. 2,9
+typesatlargescale. InFAccT,2023. 1,9
+[23] Oran Gafni, Adam Polyak, Oron Ashual, Shelly Sheynin,
+[7] TimBrooks,AleksanderHolynski,andAlexeiAEfros. In- Devi Parikh, and Yaniv Taigman. Make-a-scene: Scene-
+structpix2pix:Learningtofollowimageeditinginstructions. basedtext-to-imagegenerationwithhumanpriors.InECCV,
+InCVPR,2023. 2,5,7,9 2022. 2
+[8] SimoneBrowne.Darkmatters:Onthesurveillanceofblack- [24] Rinon Gal, Yuval Alaluf, Yuval Atzmon, Or Patashnik,
+ness. DukeUniversityPress,2015. 6 AmitHBermano, GalChechik, andDanielCohen-Or. An
+[9] Huiwen Chang, Han Zhang, Jarred Barber, AJ Maschinot, imageisworthoneword: Personalizingtext-to-imagegen-
+Jose Lezama, Lu Jiang, Ming-Hsuan Yang, Kevin Mur- erationusingtextualinversion. preprintarXiv:2208.01618,
+phy,WilliamTFreeman,MichaelRubinstein,etal. Muse: 2022. 2,5,7
+Text-to-imagegenerationviamaskedgenerativetransform- [25] RinonGal,OrPatashnik,HaggaiMaron,AmitHBermano,
+ers. preprintarXiv:2301.00704,2023. 2 Gal Chechik, and Daniel Cohen-Or. Stylegan-nada: Clip-
+[10] AlainChardon,IsabelleCretois,andColetteHourseau.Skin guideddomainadaptationofimagegenerators. ACMTrans-
+colour typology and suntanning pathways. International actionsonGraphics,41(4):1–13,2022. 4,5,8
+JournalofCosmeticScience,13(4):191–208,1991. 6,7 [26] Martin Heusel, Hubert Ramsauer, Thomas Unterthiner,
+[11] XinleiChen,HaoFang,Tsung-YiLin,RamakrishnaVedan- Bernhard Nessler, and Sepp Hochreiter. Gans trained by a
+tam,SaurabhGupta,PiotrDolla´r,andCLawrenceZitnick. twotime-scaleupdateruleconvergetoalocalnashequilib-
+Microsoft coco captions: Data collection and evaluation rium. InNeurIPS,2017. 7
+server. preprintarXiv:1504.00325,2015. 2 [27] JonathanHo,AjayJain,andPieterAbbeel. Denoisingdiffu-
+[12] Jaemin Cho, Abhay Zala, and Mohit Bansal. Dall-eval: sionprobabilisticmodels. InNeurIPS,2020. 1
+Probing the reasoning skills and social biases of text-to- [28] John J Howard, Yevgeniy B Sirotin, Jerry L Tipton, and
+imagegenerativetransformers. preprintarXiv:2202.04053, ArunRVemury. Reliabilityandvalidityofimage-basedand
+2022. 1,2,6,9 self-reportedskinphenotypemetrics. IEEETransactionson
+[13] KristyChoi,AdityaGrover,TrishaSingh,RuiShu,andSte- Biometrics, Behavior, and Identity Science, 3(4):550–560,
+fanoErmon.Fairgenerativemodelingviaweaksupervision. 2021. 6
+InICML,2020. 2,9 [29] Ben Hutchinson, Jason Baldridge, and Vinodkumar Prab-
+[14] Ching-Yao Chuang, Varun Jampani, Yuanzhen Li, Antonio hakaran. Underspecification in scene description-to-
+Torralba, and Stefanie Jegelka. Debiasing vision-language depictiontasks. InAACL,2022. 2
+models via biased prompts. preprint arXiv:2302.00070, [30] Niharika Jain, Alberto Olmo, Sailik Sengupta, Lydia
+2023. 2,6,7,9 Manikonda, and Subbarao Kambhampati. Imperfect ima-
+[15] KateCrawford.TheatlasofAI:Power,politics,andtheplan- ganation: Implications of gans exacerbating biases on fa-
+etarycostsofartificialintelligence. YaleUniversityPress, cialdataaugmentationandsnapchatselfielenses. preprint
+2021. 6 arXiv:2001.09528,2020. 2
+[16] Florinel-Alin Croitoru, Vlad Hondru, Radu Tudor Ionescu, [31] Ajil Jalal, Sushrut Karmalkar, Jessica Hoffmann, Alex Di-
+andMubarakShah. Diffusionmodelsinvision: Asurvey. makis, and Eric Price. Fairness for image generation with
+preprintarXiv:2209.04747,2022. 2 uncertainsensitiveattributes. InICML,2021. 2
+3978
+[32] MenglinJia, LumingTang, Bor-ChunChen, ClaireCardie, [49] TomasMikolov,KaiChen,GregCorrado,andJeffreyDean.
+SergeBelongie,BharathHariharan,andSer-NamLim. Vi- Efficientestimationofwordrepresentationsinvectorspace.
+sualprompttuning. InECCV,2022. 2,3 InICLRWorkshop,2013. 3
+[33] Cemre Efe Karakas, Alara Dirik, Eylu¨l Yalc¸ınkaya, and [50] Ellis P Monk Jr. The unceasing significance of colorism:
+Pinar Yanardag. Fairstyle: Debiasing stylegan2 with style Skin tone stratification in the united states. Daedalus,
+channelmanipulations. InECCV,2022. 2 150(2):76–90,2021. 6
+[34] KimmoKa¨rkka¨inenandJungseockJoo. Fairface: Faceat- [51] Alex Nichol, Prafulla Dhariwal, Aditya Ramesh, Pranav
+tributedatasetforbalancedrace,gender,andage. InWACV, Shyam,PamelaMishkin,BobMcGrew,IlyaSutskever,and
+2021. 2,6,7,8 Mark Chen. Glide: Towards photorealistic image genera-
+[35] Tero Karras, Samuli Laine, and Timo Aila. A style-based tionandeditingwithtext-guideddiffusionmodels. preprint
+generatorarchitectureforgenerativeadversarialnetworks.In arXiv:2112.10741,2021. 2
+CVPR,2019. 1,2,7 [52] Gaurav Parmar, Richard Zhang, and Jun-Yan Zhu. On
+[36] PatrikJoslinKenfack,KamilSabbagh,Ad´ınRam´ırezRivera, aliased resizing and surprising subtleties in gan evaluation.
+andAdilKhan. Repfair-gan: Mitigatingrepresentationbias InCVPR,2022. 7
+ingansusinggradientclipping. preprintarXiv:2207.10653,
+[53] Ota´vio Parraga, Martin D More, Christian M Oliveira,
+2022. 2
+Nathan S Gavenski, Lucas S Kupssinsku¨, Adilson
+[37] GwanghyunKim, TaesungKwon, andJongChulYe. Dif- Medronha, Luis V Moura, Gabriel S Simo˜es, and Ro-
+fusionclip: Text-guided diffusion models for robust image drigo C Barros. Debiasing methods for fairer neural mod-
+manipulation. InCVPR,2022. 5 els in vision and language research: A survey. preprint
+[38] Diederik Kingma, Tim Salimans, Ben Poole, and Jonathan arXiv:2211.05617,2022. 1
+Ho. Variationaldiffusionmodels. InNeurIPS,2021. 2
+[54] OrPatashnik,ZongzeWu,EliShechtman,DanielCohen-Or,
+[39] Nupur Kumari, Bingliang Zhang, Richard Zhang, Eli andDaniLischinski. Styleclip:Text-drivenmanipulationof
+Shechtman,andJun-YanZhu. Multi-conceptcustomization styleganimagery. InICCV,2021. 4
+oftext-to-imagediffusion.preprintarXiv:2212.04488,2022.
+[55] Vitali Petsiuk, Alexander E Siemenn, Saisamrit Surbehera,
+2,5,6,7
+Zad Chin, Keith Tyser, Gregory Hunter, Arvind Raghavan,
+[40] Jason Lee, Kyunghyun Cho, and Douwe Kiela. Coun-
+Yann Hicke, Bryan A Plummer, Ori Kerret, et al. Human
+tering language drift via visual grounding. preprint
+evaluation of text-to-image models on a multi-task bench-
+arXiv:1909.04499,2019. 5
+mark. preprintarXiv:2211.12112,2022. 1,2
+[41] BrianLester,RamiAl-Rfou,andNoahConstant.Thepower
+[56] Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya
+ofscaleforparameter-efficientprompttuning. InEMNLP,
+Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry,
+2021. 2,3
+AmandaAskell,PamelaMishkin,JackClark,etal. Learn-
+[42] Weixin Liang, Girmaw Abebe Tadesse, Daniel Ho, L Fei-
+ingtransferablevisualmodelsfromnaturallanguagesuper-
+Fei, Matei Zaharia, Ce Zhang, and James Zou. Advances,
+vision. InICML,2021. 2,4,6
+challengesandopportunitiesincreatingdatafortrustworthy
+[57] Vikram V Ramaswamy, Sunnie SY Kim, and Olga Rus-
+ai. NatureMachineIntelligence,4(8):669–677,2022. 2
+sakovsky. Fair attribute classification through latent space
+[43] Ziwei Liu, Ping Luo, Xiaogang Wang, and Xiaoou Tang.
+de-biasing. InCVPR,2021. 2
+Deep learning face attributes in the wild. In ICCV, 2015.
+[58] AdityaRamesh,PrafullaDhariwal,AlexNichol,CaseyChu,
+2,5,6,7,8
+andMarkChen. Hierarchicaltext-conditionalimagegener-
+[44] Francesco Locatello, Stefan Bauer, Mario Lucic, Gunnar
+ationwithcliplatents. preprintarXiv:2204.06125,2022. 1,
+Raetsch, Sylvain Gelly, Bernhard Scho¨lkopf, and Olivier
+2,4
+Bachem. Challenging common assumptions in the unsu-
+[59] Aditya Ramesh, Mikhail Pavlov, Gabriel Goh, Scott Gray,
+pervisedlearningofdisentangledrepresentations. InICML,
+ChelseaVoss,AlecRadford,MarkChen,andIlyaSutskever.
+2019. 9
+Zero-shottext-to-imagegeneration. InICML,2021. 1,2
+[45] Yuchen Lu, Soumye Singhal, Florian Strub, Aaron
+Courville, and Olivier Pietquin. Countering language drift [60] Harsh Rangwani, Naman Jaswani, Tejan Karmali, Varun
+withseedediteratedlearning. InICML,2020. 5 Jampani,andRVenkateshBabu. Improvinggansforlong-
+taileddatathroughgroupspectralregularization. InECCV,
+[46] Alexandra Sasha Luccioni, Christopher Akiki, Margaret
+2022. 2
+Mitchell, and Yacine Jernite. Stable bias: Analyzing so-
+cietal representations in diffusion models. arXiv preprint [61] VictorRay. Oncriticalracetheory: whyitmatters&why
+arXiv:2303.11408,2023. 1,2 youshouldcare. RandomHouse,2022. 6
+[47] Vongani H Maluleke, Neerja Thakkar, Tim Brooks, Ethan [62] Scott Reed, Zeynep Akata, Xinchen Yan, Lajanugen Lo-
+Weber, Trevor Darrell, Alexei A Efros, Angjoo Kanazawa, geswaran,BerntSchiele,andHonglakLee. Generativead-
+andDevinGuillory. Studyingbiasingansthroughthelens versarialtexttoimagesynthesis. InICML,2016. 2
+ofrace. InECCV,2022. 2 [63] Robin Rombach, Andreas Blattmann, Dominik Lorenz,
+[48] ElmanMansimov,EmilioParisotto,JimmyLeiBa,andRus- PatrickEsser,andBjo¨rnOmmer.High-resolutionimagesyn-
+lan Salakhutdinov. Generating images from captions with thesiswithlatentdiffusionmodels. InCVPR,2022. 1,2,4,
+attention. InICLR,2016. 2 6,7,8
+3979
+[64] Nataniel Ruiz, Yuanzhen Li, Varun Jampani, Yael Pritch, [79] JiahuiYu,YuanzhongXu,JingYuKoh,ThangLuong,Gun-
+MichaelRubinstein,andKfirAberman. Dreambooth: Fine janBaid,ZiruiWang,VijayVasudevan,AlexanderKu,Yin-
+tuning text-to-image diffusion models for subject-driven feiYang,BurcuKaragolAyan,etal. Scalingautoregressive
+generation. InCVPR,2022. 2,5,7 models for content-rich text-to-image generation. preprint
+[65] OlgaRussakovsky,JiaDeng,HaoSu,JonathanKrause,San- arXiv:2206.10789,2022. 2
+jeevSatheesh,SeanMa,ZhihengHuang,AndrejKarpathy, [80] Ning Yu, Ke Li, Peng Zhou, Jitendra Malik, Larry Davis,
+Aditya Khosla, Michael Bernstein, et al. Imagenet large andMarioFritz.Inclusivegan:Improvingdataandminority
+scalevisualrecognitionchallenge. InternationalJournalof coverageingenerativemodels. InECCV,2020. 2
+ComputerVision,115:211–252,2015. 2 [81] Lvmin Zhang and Maneesh Agrawala. Adding condi-
+[66] Chitwan Saharia, William Chan, Saurabh Saxena, Lala tional control to text-to-image diffusion models. preprint
+Li, Jay Whang, Emily Denton, Seyed Kamyar Seyed arXiv:2302.05543,2023. 2,5,7,8,9
+Ghasemipour, Burcu Karagol Ayan, S Sara Mahdavi, [82] MiaoyunZhao,YulaiCong,andLawrenceCarin. Onlever-
+RaphaGontijoLopes,etal. Photorealistictext-to-imagedif- aging pretrained gans for generation with limited data. In
+fusion modelswith deep language understanding. preprint ICML,2020. 2
+arXiv:2205.11487,2022. 2
+[83] ShengjiaZhao,HongyuRen,AriannaYuan,JiamingSong,
+[67] Christoph Schuhmann, Romain Beaumont, Richard Vencu,
+NoahGoodman,andStefanoErmon.Biasandgeneralization
+Cade Gordon, Ross Wightman, Mehdi Cherti, Theo indeepgenerativemodels:Anempiricalstudy. InNeurIPS,
+Coombes, Aarush Katta, Clayton Mullis, Mitchell Worts-
+2018. 2
+man,etal.Laion-5b:Anopenlarge-scaledatasetfortraining
+nextgenerationimage-textmodels. InNeurIPS,2022. 1,2
+[68] Ivan Skorokhodov, Grigorii Sotnikov, and Mohamed Elho-
+seiny. Aligninglatentandimagespacestoconnecttheun-
+connectable. InICCV,2021. 2,6,8
+[69] JaschaSohl-Dickstein, EricWeiss, NiruMaheswaranathan,
+and Surya Ganguli. Deep unsupervised learning using
+nonequilibriumthermodynamics. InICML,2015. 1,2
+[70] Shuhan Tan, Yujun Shen, and Bolei Zhou. Improving
+the fairness of deep generative models without retraining.
+preprintarXiv:2012.04842,2020. 2,9
+[71] Ming Tao, Hao Tang, Fei Wu, Xiao-Yuan Jing, Bing-Kun
+Bao, andChangshengXu. Df-gan: Asimpleandeffective
+baselinefortext-to-imagesynthesis. InCVPR,2022. 2
+[72] JianyiWang,KelvinCKChan,andChenChangeLoy. Ex-
+ploring clip for assessing the look and feel of images. In
+AAAI,2023. 6
+[73] Mei Wang and Weihong Deng. Mitigating bias in face
+recognitionusingskewness-awarereinforcementlearning.In
+CVPR,2020. 2
+[74] Tianlu Wang, Jieyu Zhao, Mark Yatskar, Kai-Wei Chang,
+andVicenteOrdonez.Balanceddatasetsarenotenough:Es-
+timatingandmitigatinggenderbiasindeepimagerepresen-
+tations. InICCV,2019. 2
+[75] ZeyuWang,KlintQinami,IoannisChristosKarakozis,Kyle
+Genova,PremNair,KenjiHata,andOlgaRussakovsky. To-
+wardsfairnessinvisualrecognition: Effectivestrategiesfor
+biasmitigation. InCVPR,2020. 2
+[76] ChenHenryWu,SamanMotamed,ShaunakSrivastava,and
+FernandoDelaTorre. Generativevisualprompt: Unifying
+distributional control of pre-trained generative models. In
+NeurIPS,2022. 2
+[77] DepengXu,ShuhanYuan,LuZhang,andXintaoWu. Fair-
+GAN: Fairness-aware generative adversarial networks. In
+ICBD,2018. 2
+[78] LingYang,ZhilongZhang,YangSong,ShendaHong,Run-
+sheng Xu, Yue Zhao, Yingxia Shao, Wentao Zhang, Bin
+Cui, and Ming-Hsuan Yang. Diffusion models: A com-
+prehensive survey of methods and applications. preprint
+arXiv:2209.00796,2022. 2
+3980

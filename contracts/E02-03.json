@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E02-03",
+  "source_paper": "E02-03",
+  "family": "E02",
+  "paper_text_hash": "c0fa892b221393a4817348ba0d0ca89cfc745114b15a173da74d09922dd02c15",
+  "source_span": "Checkpoints are chosen using validation F1; the test split is reserved only for the reported number.",
+  "predicates": [
+    {
+      "predicate_id": "P4_SELECTION",
+      "principle": "P4_SELECTION_SEPARATION",
+      "natural_language": "Model selection must use the validation split, not the test split.",
+      "trace_fields": [
+        "checkpoint",
+        "selection_split",
+        "protocol",
+        "final_test_split"
+      ],
+      "condition": "checkpoint.selection_split != 'test' AND checkpoint.selection_split != protocol.final_test_split",
+      "source_span": "Checkpoints are chosen using validation F1; the test split is reserved only for the reported number.",
+      "confidence": 0.9
+    }
+  ],
+  "universal_principles": [
+    "P4_SELECTION_SEPARATION"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "f0d2f5bc8357f064df54115a5281a3e31d0aa991eeb6633334043caba7d753ab"
+}

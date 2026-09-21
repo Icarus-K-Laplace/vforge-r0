@@ -1,0 +1,27 @@
+{
+  "contract_id": "CB_E01_BOOTSTRAP_AGG",
+  "source_paper": "clinicalbench_2605.11143",
+  "family": "E01",
+  "claim_text": "ClinicalBench uses BCa bootstrap 95% CIs, n=2000 resamples, seed 42, with patient-level cluster bootstrap over 43 patients. Any reported CI must use the full declared resample set; a bootstrap resample subset is a selective-aggregation violation.",
+  "paper_text_hash": "36166b27eab6e4fb8a53689fadb033fc20329b06be3b7405d9df5d7656cb41f7",
+  "predicates": [
+    {
+      "predicate_id": "E01_BOOTSTRAP_FIDELITY",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "The bootstrap CI must use all declared resamples (n=2000, seed 42); no resample subset may be selectively used.",
+      "trace_fields": [
+        "protocol.bootstrap_n",
+        "protocol.bootstrap_seed",
+        "protocol.resample_used"
+      ],
+      "condition": "protocol.resample_used == protocol.bootstrap_n",
+      "source_span": "Methods: Bootstrap",
+      "confidence": 0.9
+    }
+  ],
+  "universal_principles": [
+    "P6_AGGREGATION_FIDELITY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "386ab9586585238d04cc98b3e86b7dd5ab2e41087fb8b6090c23b4b5ea742219"
+}

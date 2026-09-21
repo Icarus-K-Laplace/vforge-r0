@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E02-02",
+  "source_paper": "E02-02",
+  "family": "E02",
+  "paper_text_hash": "f54ee65f2d20fc056e1832c519246112e00e262f76c3b5bdbe2ae95cd48a36e2",
+  "source_span": "We select the best checkpoint by validation loss and report final accuracy on the untouched test partition.",
+  "predicates": [
+    {
+      "predicate_id": "P4_SELECTION",
+      "principle": "P4_SELECTION_SEPARATION",
+      "natural_language": "Model selection must use the validation split, not the test split.",
+      "trace_fields": [
+        "checkpoint",
+        "selection_split",
+        "protocol",
+        "final_test_split"
+      ],
+      "condition": "checkpoint.selection_split != 'test' AND checkpoint.selection_split != protocol.final_test_split",
+      "source_span": "We select the best checkpoint by validation loss and report final accuracy on the untouched test partition.",
+      "confidence": 0.9
+    }
+  ],
+  "universal_principles": [
+    "P4_SELECTION_SEPARATION"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "8852b1b5659dd09b34c5b92ee63489effcbf777266e66a20660e0853f33f553d"
+}

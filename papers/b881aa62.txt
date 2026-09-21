@@ -1,0 +1,624 @@
+AcceptedforpublicationatWACV2023,pleaseciteasfollows:
+A.Rosinol,J.Leonard,L.Carlone
+“ProbabilisticVolumetricFusionforDenseMonocularSLAM”,
+IEEE/CVFWinterConf. onApplicationsofComputerVision(WACV),2023.
+Probabilistic Volumetric Fusion
+for Dense Monocular SLAM
+AntoniRosinol JohnJ.Leonard LucaCarlone
+MassachusettsInstituteofTechnology
+{arosinol, jleonard, lcarlone}@mit.edu
+search, butrelyonaccuratecalibrationofthecamerasthat
+Abstract is prone to miscalibration during practical operations. In-
+stead,monocularcamerasareinexpensive,lightweight,and
+Wepresentanovelmethodtoreconstruct3Dscenesfrom representthesimplestsensorconfigurationtocalibrate.
+imagesbyleveragingdeepdensemonocularSLAMandfast Unfortunately, monocular 3D reconstruction is a chal-
+uncertainty propagation. The proposed approach is able lenging problem due to the lack of explicit measurements
+to 3D reconstruct scenes densely, accurately, and in real- of the geometry of the scene. Nonetheless, great progress
+time while being robust to extremely noisy depth estimates hasbeenrecentlymadetowardsmonocular-based3Drecon-
+comingfromdensemonocularSLAM.Differentlyfrompre- structions by leveraging deep-learning approaches. Given
+vious approaches, that either use ad-hoc depth filters, or that deep-learning currently achieves the best performance
+that estimate the depth uncertainty from RGB-D cameras’ foropticalflow[23], anddepth[29]estimation, aplethora
+sensor models, our probabilistic depth uncertainty derives of works have tried to use deep-learning modules for
+directlyfromtheinformationmatrixoftheunderlyingbun- SLAM.Forexample,usingdepthestimationnetworksfrom
+dleadjustmentprobleminSLAM.Weshowthattheresulting monocular images [22], multiple images, as in multi-view
+depthuncertaintyprovidesanexcellentsignaltoweightthe stereo[10],orusingend-to-endneuralnetworks[3]. How-
+depth-mapsforvolumetricfusion.Withoutourdepthuncer- ever,evenwiththeimprovementsduetodeep-learning,the
+tainty, theresultingmeshisnoisyandwithartifacts, while resulting reconstructions are prone to errors and artifacts,
+our approach generates an accurate 3D mesh with signifi- since the depth-maps are most of the time noisy and with
+cantlyfewerartifacts.Weprovideresultsonthechallenging outliers.
+Euroc dataset, and show that our approach achieves 92% Inthiswork, weshowhowwecansubstantiallyreduce
+betteraccuracythandirectlyfusingdepthsfrommonocular the artifacts and inaccuracies in 3D reconstructions from
+SLAM, and up to 90% improvements compared to the best noisy depth maps estimated when using dense monocular
+competingapproach. SLAM. To achieve this, we fuse the depth maps volumet-
+ricallybyweightingeachdepthmeasurementbyitsuncer-
+tainty,whichweestimateprobabilistically.Differentlyfrom
+1.Introduction previous approaches, we show that using the depth uncer-
+taintyderivedfromtheinformationmatrixofthebundlead-
+3Dreconstructionfrommonocularimageryremainsone justmentprobleminmonocularSLAMleadstosurprisingly
+ofthemostdifficultcomputervisionproblems. Achieving accurate 3D mesh reconstructions. Our approach achieves
+3D reconstructions in real-time from images alone would up to 90% improvements in mapping accuracy, while re-
+enable many applications in robotics, surveying, and gam- tainingmostofthescenegeometry.
+ing, such as autonomous vehicles, crop monitoring, and Contributions. Weshowanapproachtovolumetrically
+augmentedreality. fuse dense depth maps weighted by the uncertainties de-
+While many 3D reconstruction solutions are based on rivedfromtheinformationmatrixindenseSLAM.Ourap-
+RGB-DorLidarsensors,scenereconstructionfrommonoc- proachenablesthereconstructionofthesceneuptoagiven
+ular imagery provides a more convenient solution. RGB- maximumleveloftolerableuncertainty.Wecanreconstruct
+D cameras can fail under certain conditions, such as un- the scene with superior accuracy compared to competing
+dersunlight,andLidarremainsheavierandmoreexpensive approaches, while running in real-time, and only using
+thanamonocularRGBcamera. Alternatively, stereocam- monocular images. We achieve state-of-the-art 3D recon-
+erassimplifythedepthestimationproblemtoa1Ddisparity structionperformanceinthechallengingEuRoCdataset.
+2202
+tcO
+61
+]VC.sc[
+2v67210.0122:viXra
+Figure1. (Left)Raw3Dpoint-cloudgeneratedfromdensemonocularSLAMbyback-projectingtheinversedepth-maps,withoutfiltering
+orpost-processing. (Right)Estimated3Dmeshafteruncertainty-awarevolumetricfusionofthedepth-maps. Despitelargeamountsof
+noiseinthedepth-maps,thereconstructed3Dmeshusingourproposedapproachisaccurateandcomplete.EuRoCV2 01dataset.
+2.RelatedWork etyofchallengingdatasets(suchastheEuroc[4]andTar-
+tanAir[25]datasets),eventhoughitrequiresglobalbundle-
+We review the literature on two different lines of work:
+adjustmenttooutperformmodel-basedapproaches. Droid-
+denseSLAManddepthfusion.
+SLAM avoids the dimensionality problem by using down-
+sampleddepthmapsthataresubsequentlyupsampledusing
+2.1.DenseSLAM
+a learned upsampling operator. Finally, there are a myriad
+ThemainchallengestoachievedenseSLAMare(i)the ofworksthatavoidthedimensionalityandambiguityprob-
+computationalcomplexityduetotheshearamountofdepth lems stated above that have nevertheless recently achieved
+variables to be estimated, and (ii) dealing with ambiguous improvedperformance. Forexample,iMap[21]andNice-
+or missing information to estimate the depth of the scene, SLAM[31]canbuildaccurate3Dreconstructionsbyboth
+suchastexturelesssurfacesoraliasedimages. de-couplingposeanddepthestimatesandusingRGB-Dim-
+Historically, the first problem has been bypassed by ages,andachievephotometricallyaccuratereconstructions
+decoupling the pose and depth estimation. For exam- by using neural radiance fields [11]. Given these works,
+ple, DTAM [12] achieves dense SLAM by using the same wecanexpectfuturelearneddenseSLAMtobecomemore
+paradigmasthesparsePTAM[9],whichtrackedthecamera accurateandrobust.
+posefirstandthenthedepth,inade-coupledfashion. The Unfortunately, we are not yet able to achieve pixel-
+second problem is also typically avoided by using RGB-D perfectdepthmapsfromcasualimagecollections,andfus-
+orLidarsensors,thatprovideexplicitdepthmeasurements, ing these depth maps directly into a volumetric represen-
+orstereocamerasthatsimplifydepthestimation. tation often leads to artifacts and inaccuracies. Our work
+leverages Droid-SLAM [24] to estimate extremely dense
+Nevertheless, recent research on dense SLAM has
+(but very noisy) depth maps per keyframe (see left point-
+achieved impressive results in these two fronts. To reduce
+cloudinFig.1),thatwesuccessfullyfuseintoavolumetric
+the number of depth variables, CodeSLAM [3] optimizes
+representationbyweightingthedepthsbytheiruncertainty,
+instead the latent variables of an auto-encoder that infers
+estimatedasmarginalcovariances.
+depth maps from images. By optimizing these latent vari-
+ables, the dimensionality of the problem is significantly
+2.2.DepthFusion
+reduced, while the resulting depth maps remain dense.
+Tandem [10] is able to reconstruct 3D scenes with only The vast majority of 3D reconstruction algorithms are
+monocular images by using a pre-trained MVSNet-style based on fusing depth maps provided from a depth-sensor
+neural-network on monocular depth estimation, and then into a volumetric map [13,15,17]. Most of the literature
+decoupling the pose/depth problem by performing frame- usingvolumetricrepresentationshavethereforefocusedon
+to-model photometric tracking. Droid-SLAM [24] shows studying ways to obtain better depth maps, such as with
+that by adapting a state-of-the-art dense optical flow esti- post-processingtechniques,orontheweightingfunctionto
+mation architecture [23] to the problem of visual odome- beusedwhenfusingthedepths[5,13,14,28]. Mostofthe
+try, it is possible to achieve competitive results in a vari- literature, by assuming that the depth maps come from a
+sensor, have focused on sensor modelling. Alternatively, TheSchurcomplementcanbequicklycomputedgiventhat
+when using deep-learning, a similar approach is to make P−1consistsonanelement-wiseinversionofeachdiagonal
+a neural network learn the weights instead. For example, elementthatcanbeperformedinparallel,sinceP isalarge
+RoutedFusion[26]andNeuralFusion[27]learntode-noise butdiagonalmatrix.
+volumetricreconstructionsfromRGB-Dscans. The resulting matrix (H/P) is known as the reduced
+Inourcase,sincethedepthmapsareestimatedthrough cameramatrix. ThesystemofequationsinEq.(2)onlyde-
+dense bundle adjustment, we propose to directly fuse the pendsonthekeyframeposes. Hence,wefirstsolveforthe
+depthmapsusingthemarginalcovariancesoftheestimated posesusingtheCholeskydecompositionof(H/P)=LLT
+depths. This is computationally difficult to do since, in using front and then back-substitution. The resulting pose
+dense SLAM, the number of depths per keyframe can be solutions ∆ξ are then used to solve back for the inverse
+ashighasthetotalnumberofpixelsintheframe(≈ 105). depthmaps∆d,asfollows:
+Weshowbelowhowwecanachievethisbyleveragingthe
+block-sparsestructureoftheinformationmatrix. ∆d=P−1(cid:0) w−ET∆ξ (cid:1) . (3)
+Nevertheless, to make inference fast enough for real-
+3.Methodology
+time SLAM, the inverse depth-maps are estimated at a
+Themainideaofourmethodistofuseextremelydense lower1/8th resolutionthantheoriginalimages,inourcase
+butnoisydepth-mapsweightedbytheirprobabilisticuncer- of 69 × 44 pixels (Euroc dataset’s original resolution is
+tainty into a volumetric map, and then extract a 3D mesh 752×480whichwefirstdownsampleto512×384). Once
+thathasagivenmaximumuncertaintybound. Towardsthis this low resolution depth map of is solved for, a learned
+goal, we leverage Droid-SLAM’s formulation to produce upsampling operation (shown first in [23] for optical flow
+poseestimatesanddensedepth-maps,andextendittogen- estimation,andusedaswellinDroid-SLAM)recoversthe
+eratedenseuncertainty-maps. fullresolutiondepthmap. Thisallowsustoeffectivelyre-
+We will first show how we compute depth uncertain- construct dense depth maps of the same resolution as the
+ties from the information matrix of the underlying bundle inputimages.
+adjustment problem efficiently. Then, we present our fu- SolvingthesameBAproblemwithhighresolutiondepth
+sionstrategytoproduceaprobabilisticallysoundvolumet- maps is prohibitively expensive for real-time SLAM, the
+ricmap. Finally,weshowhowweextractameshfromthe computation of depth-uncertainties further exacerbates the
+volumeatagivenmaximumuncertaintybound. problem. We believe this is the reason why other authors
+havenotuseddepthuncertaintiesderivedfromBAforreal-
+3.1.DenseMonocularSLAM time volumetric 3D reconstruction: using full-depth BA is
+prohibitivelyexpensive,andusingsparse-depthBAleadsto
+Atitscore,classicalvision-basedinverse-depthindirect
+way too sparse depth-maps for volumetric reconstruction.
+SLAMsolvesabundleadjustment(BA)problemwherethe
+The alternative has always been to use sparse BA for pose
+3D geometry is parametrized as a set of (inverse) depths
+estimation and a first guess of the geometry, followed by
+perkeyframe. Thisparametrizationofthestructureleadsto
+a densification step unrelated to the information matrix in
+an extremely efficient way of solving the dense BA prob-
+sparseBA[20]. Thatiswhyotherauthorshaveproposedto
+lem,whichcanbedecomposedintothefamiliararrow-like
+usealternative3DrepresentationsfordenseSLAM,suchas
+block-sparsematrixwithcamerasanddepthsinsequence:
+latentvectorsinCodeSLAM[3]. Ourapproachcanalsobe
+(cid:20) (cid:21)(cid:20) (cid:21) (cid:20) (cid:21) appliedtoCodeSLAM.
+C E ∆ξ v
+Hx=b, i.e. = , (1)
+ET P ∆d w
+3.2.InverseDepthUncertaintyEstimation
+where H is the Hessian matrix, C is the block camera GiventhesparsitypatternoftheHessian,wecanextract
+matrix, and P is the diagonal matrix corresponding to the the required marginal covariances for the per-pixel depth
+points(oneinversedepthperpixelperkeyframe). Werep- variables efficiently. The marginal covariances of the in-
+resentby∆ξthedeltaupdatesontheliealgebraofthecam- versedepth-mapsΣ aregivenby:
+d
+era poses in SE(3), while ∆d is the delta update to the
+per-pixelinversedepths. Σ d =P−1+P−1ETΣ T EP−1
+(4)
+TosolvetheBAproblem, theSchurcomplementofthe Σ =(H/P)−1,
+T
+HessianH withrespecttoP (denotedasH/P)isfirstcal-
+culatedtoeliminatetheinversedepthvariables: whereΣ T isthemarginalcovarianceoftheposes. Unfor-
+tunately,afullinversionofH/P canbecostlytocompute.
+(H/P)∆ξ = (cid:2) C−EP−1ET(cid:3) ∆ξ = (cid:0) v−EP−1w (cid:1) . Nevertheless,sincewealreadysolvedtheoriginalBAprob-
+(2) lem by factorizing H/P into its Cholesky factors, we can
+re-usetheminthefollowingway,similarlyto[8]: Sofarwehavebeenworkingwithinversedepths,thelast
+stepistoconvertthemtoactualdepthanddepth-variances.
+Σ d =P−1+P−1ETΣ T EP−1 Wecaneasilycomputethedepthvariancebyusingnonlin-
+=P−1+P−1ET(LLT)−1EP−1 earuncertaintypropagation:
+(5)
+=P−1+P−TETL−TL−1EP−1 z =1/d, σ =σ /d2, (9)
+z d
+=P−1+FTF,
+wherezistheresultingdepth,anddistheinversedepth.
+whereF = L−1EP−1. Hence,weonlyneedtoinvertthe 3.4.Uncertainty-awareVolumetricMapping
+lowertriangularCholeskyfactorL,whichisafastoperation
+Giventhedensedepth-mapsavailableforeachkeyframe,
+tocomputebysubstitution. Therefore,wecancomputeall
+itispossibletobuildadense3Dmeshofthescene. Unfor-
+inversematricesefficiently: theinverseofP isgivenbythe
+tunately, the depth-maps are extremely noisy due to their
+element-wiseinversionofeachdiagonalentry,andweavoid
+density, since even textureless regions are given a depth
+afullinversionof(H/P)byinvertinginsteaditsCholesky
+value. Volumetricallyfusingthesedepth-mapsreducesthe
+factor.Itthensufficestomultiplyandaddmatricestogether:
+noise, but the reconstruction remains inaccurate and cor-
+[Σ ] =σ2 =P−1+{FTF} =P−1+ (cid:88) F2, ruptedbyartifacts(see‘Baseline’inFig.4,whichwascom-
+d i di i i i ki (6)
+putedbyfusingthepointcloudshowninFig.1).
+k
+Whileitispossibletomanuallysetfiltersonthedepth-
+whered i isoneoftheper-pixelinversedepths. Sincemost maps (see PCL’s documentation for examples of possible
+oftheoperationscanbecomputedinparallel, weleverage depthfilters[19])andDroidimplementsonead-hocdepth
+themassiveparallelismofGPUs. filter (see Droid in Fig. 4), we propose to use instead the
+estimateddepthmaps’uncertainties,whichprovidearobust
+3.3.DepthUpsampling&UncertaintyPropagation
+andmathematicallysoundwaytoreconstructthescene.
+Finally,sincewewanttohaveadepth-mapofthesame Volumetric fusion is grounded on a probabilistic model
+resolution than the original images, we upsample the low- [7],wherebyeachdepthmeasurementisassumedtobein-
+resolutiondepth-mapsusingtheconvexupsamplingopera- dependent and Gaussian distributed. Under this formula-
+tor defined in Raft [23] and also used in Droid [24]. This tion,thesigneddistancefunction(SDF)φ,whichwetryto
+upsampling operation calculates a depth estimate for each estimate,maximizesthefollowinglikelihood:
+pixelinthehigh-resolutiondepth-mapbytakingtheconvex
+φ(cid:63) =argmax p(z,σ |φ), (10)
+combination of the neighboring depth values in the low- z
+φ
+resolution depth-map. The resulting depth estimates are
+(cid:18) (cid:19)
+givenforeachpixelby: (cid:89) 1
+p(z,σ |φ)∝ exp − (cid:107)φ−z (cid:107)2 . (11)
+z 2 i σ z 2 i
+8 i
+(cid:88)
+d= w i d i , (7) Taking the negative log leads to a weighted least-squares
+i=0 problem:
+w
+in
+h
+R
+er
+a
+e
+ft
+th
+[
+e
+23
+w
+]
+i
+),
+ar
+a
+e
+nd
+lea
+d
+rne
+is
+d
+t
+w
+he
+ei
+i
+g
+n
+h
+v
+t
+e
+s
+r
+(
+s
+m
+e
+o
+d
+r
+e
+e
+p
+d
+th
+eta
+o
+i
+f
+ls
+a
+c
+p
+an
+ix
+b
+e
+e
+l i
+f
+n
+ou
+t
+n
+h
+d
+e φ(cid:63) =argmin
+1(cid:88)(φ−z
+i
+)2
+, (12)
+i 2 σ
+low-resolutioninversedepth-mapsurroundingthepixelfor φ i zi
+whichwearecomputingthedepth(a3×3windowisused
+thesolutionofwhichisobtainedbysettingthegradientto
+tosampleneighboringdepthvalues).
+zeroandsolvingforφ, leadingtoaweightedaverageover
+Assuming independence between inverse depth esti-
+allthedepthmeasurements:
+mates,theresultinginversedepthvarianceisgivenby:
+(cid:80) (cid:80)
+z /σ w z
+8 φ= (cid:80) i i zi = (cid:80) i i i, (13)
+σ2 = (cid:88) w2σ2 , (8) i 1/σ zi i w i
+d i di
+i=0 withtheweightsw definedasw =σ−1.
+i i zi
+Inpractice,theweightedaverageiscomputedincremen-
+where w are the same weights used for the inverse depth
+i
+upsamplinginEq.(7),andσ2 isthevarianceoftheinverse tally for every new depth-map, by updating the voxels in
+di the volume with a running average, leading to the familiar
+depth of a pixel in the lower resolution inverse depth-map
+volumetricreconstructionequations:
+surrounding the pixel to be calculated. We upsample the
+inversedepthsanduncertaintiesbyafactorof8,goingfrom W φ +w z
+φ = i i i i, W =W +w , (14)
+a69×44resolutiontoa512×384resolution. i+1 W +w i+1 i i
+i i
+Figure 2. 3D mesh reconstructions for a given maximum admissible mesh uncertainty Σ logarithmically decreasing from an infinity
+di
+upper-bound(i.e.minimumweightof0.0, left-most3Dmesh)to0.01(i.e.minimumweightof10, right-most3Dmesh). Theregions
+highlighted with red circles disappear first because of high uncertainty. These correspond to textureless and aliased regions. The two
+closestredcirclescorrespondtothesameregionastheonedepictedinFig.3.
+where W is the weight stored in each voxel. The weights 3.5.MeshingwithUncertaintyBounds
+i
+areinitializedtozero,W = 0,andtheTSDFisinitialized
+0
+Giventhatourvoxelshaveaprobabilisticallysoundun-
+to the truncation distance τ, φ = τ (in our experiments
+0
+certainty estimate of the signed distance function, we can
+τ = 0.1m). Theformulationabove,asarunningweighted
+extracttheiso-surfacefordifferentlevelsofmaximumun-
+average, is extremely flexible in terms of the weight func-
+certainty allowed. We extract the surfaces using marching
+tion to be used. This flexibility has led to many differ-
+cubes, by only meshing those voxels which have an un-
+entwaystofusedepth-maps,sometimesdepartingfromits
+certaintyestimatebelowthemaximumalloweduncertainty.
+probabilisticformulations.
+Theresultingmeshhasonlygeometrywithagivenupper-
+Most approaches determine a weight function by mod- bounduncertainty,whileourvolumecontainsallthedepth-
+ellingtheerrordistributionfromthedepth-sensorused, be maps’information.
+it a laser scanner, an RGB-D camera, or a stereo camera If we set the uncertainty bound to infinity i.e., a weight
+[7,15,18]. For example, Nguyen et al. [14] modeled the of 0, we recover the baseline solution, which is extremely
+residualerrorsfromanRGB-Dcameraanddeterminedthat noisy. Byincrementallydecreasingthebound,wecanbal-
+thedepthvariancewasdominatedbyz2, z beingthemea- ance between having more accurate, but less complete 3D
+sured depth. Bylow et al. [5] analyzed a variety of weight meshes, and vice-versa. In Section 4, we show different
+functions, and concluded that a linearly decreasing weight meshesobtainedwithdecreasingvaluesfortheuncertainty
+functionbehindthesurfaceledtothebestresults. Voxblox bound (Fig. 2). In our experiments, we did not try to find
+[15] combined these two works into a simplified formula- a particular pareto optimal solution for our approach, but
+tionwithgoodresults,whichisalsousedinKimera[17]. instead used a fixed maximum upper bound on the uncer-
+taintyof0.1,whichleadstoveryaccurate3Dmesheswith
+In our case, there is no sophisticated weighting or sen-
+a minor loss in completeness (see Section 4 for a quanti-
+sor model needed; the depth uncertainties are computed
+tative evaluation). Note that, without fixing the scale, this
+from the inherently probabilistic factor-graph formulation
+uncertainty bound is unitless, and may need to be adapted
+in SLAM. Specifically, our weights are inversely propor-
+dependingontheestimatedscale.
+tional to the marginal covariance of the depths, as derived
+fromaprobabilisticperspectiveinEq.(13). Notably,these
+3.6.ImplementationDetails
+weights result from the fusion of hundreds of optical flow
+measurementswiththeirassociatedmeasurementnoisees- We perform all computations in Pytorch with CUDA,
+timatedbyaneuralnetwork(GRU’soutputinDroid[24]). anduseanRTX2080TiGPUforallourexperiments(11Gb
+of memory). For the volumetric fusion, we use Open3D’s
+[30] library, that allows for custom volumetric integration.
+WeusethesameGPUforSLAMandtoperformvolumetric
+reconstruction. Weusethepre-trainedweightsfromDroid-
+SLAM[24]. Finally,weusethemarchingcubesalgorithm
+implementedinOpen3Dtoextractthe3Dmesh.
+4.Results
+Section4.2andSection4.3showaqualitativeandquan-
+titative evaluation of our proposed 3D mesh reconstruc-
+tionalgorithm,withrespecttothebaselineandstate-of-the-
+art approaches, on the EuRoC dataset, using the subset of
+scenesthathaveaground-truthpointcloud.
+Thequalitativeanalysispresentsthestrengthsandweak-
+nessesofourapproach,andcompareswithothertechniques
+intermsofperceptualqualityandgeometricfidelity,Forthe Figure3. (LeftColumn)Framei.(RightColumn)Framej.(Top-
+quantitativepart,wecomputetheRMSEforbothaccuracy Left)Estimateddepth-mapforframei. (Bottom-Left)Estimated
+andcompletenessmetrics, toobjectivelyassesstheperfor- depth-mapuncertaintyforframei.(Top-Right)Optical-flowmea-
+manceofouralgorithmagainstcompetingapproaches. We surement weights for the x component of the flow from frame i
+nowdescribethedatasetanddifferentapproachesusedfor toframej.(Bottom-Right)Optical-flowmeasurementweightsfor
+evaluation. theycomponent. Notethattheflowweightsarelocalizedwhere
+frameiisvisibleinframej. Thedepthuncertaintyresultsfrom
+4.1.Datasets&MethodsforEvaluation thefusionofseveraloptical-flowmeasurements,ratherthanasin-
+gleone.Fortheleftcolumn,lowvaluesareinyellow,highvalues
+For evaluation of our reconstruction algorithm, we use
+are in blue. For the right column, low values are in blue, high
+theEuRoCdataset,whichconsistsofimagesrecordedfrom
+valuesareinyellow.EuRoCV1 01dataset.
+adroneflyinginanindoorspace. Weusetheground-truth
+pointclouds available in the EuRoC V1 and V2 datasets to
+assess the quality of the 3D meshes produced by our ap- less certain geometry gradually disappears. The least cer-
+proach. For all our experiments, we set our maximum ad- tain geometry corresponds to the artifacts floating in 3D
+missiblemeshuncertaintyto0.1. space due to the depths that are poorly triangulated, and
+We compare our approach with two different open- scattered in 3D rays when back-projected (first column in
+sourcestate-of-the-artlearningandmodel-baseddenseVO Fig. 2). Then, we see that the subsequent geometry that
+algorithms: Tandem [10], a learned dense monocular VO disappearscorrespondstotexturelessregions(left-mostand
+algorithmthatusesaMVSNet-stylearchitectureandphoto- right-mostredcirclesineachcolumnFig.2). Interestingly,
+metricbundle-adjustment,andKimera[17],amodel-based theremovedgeometrythatfollowsaftertexturelessregions
+densestereoVIOalgorithm. Bothusevolumetricfusionto correspondstohighlyaliasedregions(middleredcirclesin
+reconstruct the 3D scene and output a 3D mesh of the en- eachcolumnFig.2),suchastheheaters,orthecenterofthe
+vironment. WealsopresenttheresultsfromfusingDroid’s checkerboardspresentintheroom.
+pointclouds after Droid’s ad-hoc depth filter, which com- A careful look in Fig. 3 shows that the estimated depth
+putes the support of a depth value by counting the num- uncertaintyΣ isnotonlylargefortexturelessregions,but
+d
+ber of nearby depth-maps that reproject within a threshold alsoforregionswithstrongaliasingthataredifficulttore-
+(0.005 by default). Any depth value with less than 2 sup- solveforoptical-flowbasedSLAMalgorithms(theheaterin
+porting depths, or smaller than half of the mean depth, is themiddleoftheimage). Indeed, theopticalflowweights
+thendiscarded. Droid’sfilterisusedtoremoveoutlierson (rightcolumninFig.3)arecloseto0forregionswithstrong
+thedepth-maps,whilewefusealldepth-mapsweightedby aliasingortexturelessregions.Thisemergingbehaviorisan
+their uncertainty. As our baseline, we use the raw point- interestingresultthatcouldbeusedtodetectaliasedgeom-
+clouds estimated by Droid, and fuse them directly into a etry,ortoguidehole-fillingreconstructionapproaches.
+volumetricreconstruction. Fig. 4 qualitatively compares the 3D reconstruction of
+Kimera [17], Tandem [10], the baseline approach, Droid
+4.2.QualitativeMappingPerformance
+[24] and our approach. We can see that compared to our
+Fig. 2 shows how we can trade-off accuracy for com- baselineapproach,weperformmuchbetterbothintermsof
+pleteness by varying the maximum level of uncertainty al- accuracyandcompleteness. Kimeraisabletobuildacom-
+lowed in the 3D reconstruction. We can also see how the plete 3D reconstruction but lacks both accuracy and detail
+Figure4.Comparisonofthe3DmeshreconstructedbyKimera[17],Tandem[10],ourbaseline,andDroid’sdepthfilter[24](usingthe
+defaultthresholdof0.005)versusourapproachusingamaximumtoleratedmeshuncertaintyof0.1.EuRoCV2 01dataset.
+Table1.AccuracyRMSE[m]: forthe3Dmeshgeneratedfrom Table 2. Completeness RMSE [m]: for the 3D mesh generated
+ourapproachcomparedtoKimera,Tandem,Droid’sfilter,andour from our approach compared to Kimera, Tandem, and our base-
+baseline, on the subset of the EuRoC dataset with ground-truth line,onthesubsetoftheEuRoCdatasetwithground-truthpoint-
+pointclouds.Notethatifanapproachonlyestimatesafewaccurate clouds.Notethatifanapproachestimatesadensecloudofpoints
+points (e.g. Droid), the accuracy can reach 0. Best approach in (e.g.Baseline),completenesscanreach0. Bestapproachinbold,
+bold,second-bestinitalics,−indicatesnomeshreconstructed. second-bestinitalics,−indicatesnomeshreconstructed.
+V1 V2 V1 V2
+01 02 03 01 02 03 01 02 03 01 02 03
+Kimera 0.14 0.15 0.16 0.22 0.22 0.25 Kimera 0.36 0.38 0.35 0.48 0.43 0.41
+Tandem 0.10 0.12 0.20 0.12 0.16 0.29 Tandem 0.16 0.12 0.13 0.20 0.12 0.24
+Baseline 0.22 0.24 0.28 0.32 0.31 0.34 Baseline 0.05 0.04 0.04 0.05 0.05 0.05
+Droid 0.05 − − 0.07 − 0.11 Droid 0.62 − − 0.35 − 0.32
+Ours 0.03 0.03 0.02 0.04 0.04 0.07 Ours 0.20 0.16 0.19 0.24 0.18 0.16
+compared to our approach. Tandem is the competing ap- ate the average distance from ground truth point cloud to
+proach performing best, and results in similar reconstruc- itsnearestneighborintheestimatedpointcloud(accuracy),
+tions than our proposed approach. From Fig. 4, we can andvice-versa(completeness),witha0.5mmaximumdis-
+see that Tandem is more complete than ours (see bottom tance.
+rightmissingstripoffloorinourreconstruction),whilebe-
+Section4.2andSection4.3provideaquantitativecom-
+ingslightlylessaccurate(seetop-leftsectionoftherecon-
+parisonbetweenourproposedapproach,Droid’sfilter,and
+structionthat isdistortedinTandem’s mesh). In principle,
+ourbaseline,aswellasacomparisonwithKimera[17]and
+ourapproachcouldreconstructtheground-flooroftheroom
+Tandem[10],intermsofaccuracyandcompleteness.Aswe
+as well (the baseline reconstruction has that information).
+can see from the tables, our proposed approach is the best
+Nonetheless,inaroboticscontext,itisbettertobeawareof
+performingintermsofaccuracybyasubstantialmargin(as
+whatregionisunknownratherthancommittingwithafirst
+high as 90% compared to Tandem and 92% compared to
+guessthatisinaccurate,sincethatcanclosepath-waysthat
+thebaselineforV1 03),whileTandemachievesthesecond-
+couldhavebeentraversedbytherobot(acommonscenario
+best accuracy overall. In terms of completeness, Tandem
+intheDARPASubTchallenge[1], whererobotsexplorea
+achievesthebestperformance(afterthebaselineapproach),
+network of tunnels and caves). Finally, Droid’s depth fil-
+followedbyourapproach. Droid’sfilterachievesgoodac-
+ter is missing important regions and negatively affects the
+curacyattheexpenseofsubstantiallyincompletemeshes.
+reconstructionaccuracy.
+Fig.6showstheestimatedcloud(V2 01)color-codedby
+the distance to the closest point in the ground-truth cloud
+4.3.QuantitativeMappingPerformance
+(accuracy) for both Tandem (top) and our reconstruction
+We evaluate each mesh against the ground truth using (bottom). We can see from this figure where our recon-
+theaccuracyandcompletenessmetrics,asin[16,Sec. 4.3]: struction is more accurate than Tandem’s. In particular,
+(i) we first compute a point cloud by sampling the recon- it is interesting to see that Tandem tends to generate in-
+structed3Dmeshwithauniformdensityof104points/m2, flated geometry, particularly in textureless regions such as
+(ii) we register the estimated and the ground truth clouds theblackcurtainsintheV2 01dataset(gray-coloredgeom-
+with ICP [2] using CloudCompare [6], and (iii) we evalu- etry). Our approach has better details, and better overall
+accuracy. Fig.5showsaclose-upviewofthereconstructed
+3D mesh for both Tandem and our approach. Our recon-
+structionstendtobelesscompleteandsufferfrombleeding
+edges,butretainmostofthedetails,whileTandem’srecon-
+structionslackoveralldetailandtendtobeslightlyinflated,
+butremainmorecomplete.
+4.4.Real-TimePerformance
+DownsamplingtheEurocimagesto512×384resolution
+leadstotrackingspeedsof15framespersecond. Comput-
+ingthedepthuncertaintiesdecreasesthetrackingspeedby
+a few frames per second to 13 frames per second. Volu-
+metricallyfusingthedepthestimates,withorwithoutdepth
+uncertainties,takeslessthan20ms. Overall,ourpipelineis
+able to reconstruct the scene in real-time at 13 frames per
+second,byparallelizingcameratrackingandvolumetricre-
+construction,andbyusingcustomCUDAkernels.
+Figure 6. Accuracy evaluation of both Tandem’s (top) and our
+(bottom) 3D mesh reconstruction results. We truncate the color
+scaleat0.05m,andvisualizeanythingaboveitasgray,upto0.5m
+(geometry beyond this error is discarded). Note that our recon-
+struction has its biggest error at 0.37m, while Tandem’s largest
+errorisbeyondthe0.5mbound.EuRoCV2 01dataset.
+and complete 3D volumetric reconstructions, resulting in
+meshesthathavesignificantlylowernoiseandartifacts.
+Given the mapping accuracy and probabilistic uncer-
+tainty estimates afforded by our approach, we can foresee
+future research to focus on active exploration of uncertain
+regions in the map, reconstructing the 3D scene beyond
+its geometry by incorporating semantics, as in Kimera-
+Semantics[18],orbyusingneuralvolumetricimplicitrep-
+resentations for photometrically-accurate 3D reconstruc-
+Figure5.CloserlookatthedifferencesbetweenTandem’s3Dre- tions,asinNice-SLAM[31].
+constructionsandours.EuRoCV2 01dataset.
+Acknowledgments
+5.Conclusion This work is partially funded by ‘la Caixa’ Foundation
+(ID 100010434), LCF/BQ/AA18/11680088 (A. Rosinol),
+Weproposeanapproachto3Dreconstructscenesusing ‘Rafael Del Pino’ Foundation (A. Rosinol), ARL DCIST
+densemonocularSLAMandfastdepthuncertaintycompu- CRAW911NF-17-2-0181,andONRMURIgrantN00014-
+tation and propagation. We show that our depth-map un- 19-1-2571.WethankBernardoAceitunoforhelpfuldiscus-
+certaintiesareasourceofreliableinformationforaccurate sions.
+References [17] A.Rosinol, M.Abate, Y.Chang, andL.Carlone. Kimera:
+anOpen-SourceLibraryforReal-TimeMetric-SemanticLo-
+[1] A.Aghaetal. NeBula: Questforroboticautonomyinchal-
+calizationandMapping.InIEEEIntl.Conf.onRoboticsand
+lengingenvironments;TEAMCoSTARattheDARPASub-
+Automation(ICRA),2020. (video),(code),(pdf).
+terraneanChallenge. JournalofFieldRobotics,2021.
+[18] A. Rosinol, A. Violette, M. Abate, N. Hughes, Y. Chang,
+[2] P.J.BeslandN.D.McKay.Amethodforregistrationof3-D
+J.Shi, A.Gupta, andL.Carlone. Kimera: fromSLAMto
+shapes. IEEETrans.PatternAnal.MachineIntell.,1992.
+SpatialPerceptionwith3DDynamicSceneGraphs. Intl.J.
+[3] M. Bloesch, J. Czarnowski, R. Clark, S. Leutenegger, and
+ofRoboticsResearch,2021. (pdf).
+A.J.Davison.CodeSLAM:learningacompact,optimisable
+[19] R. B. Rusu and S. Cousins. 3D is here: Point Cloud Li-
+representation for dense visual SLAM. In IEEE Conf. on
+brary(PCL).InIEEEIntl.Conf.onRoboticsandAutomation
+ComputerVisionandPatternRecognition(CVPR),2018.
+(ICRA),2011.
+[4] M. Burri, J. Nikolic, P. Gohl, T. Schneider, J. Rehder, S.
+[20] J. L Schonberger and J.-M. Frahm. Structure-from-motion
+Omari,M.W.Achtelik,andR.Siegwart. TheEuRoCmicro
+revisited. In IEEE Conf. on Computer Vision and Pattern
+aerialvehicledatasets. Intl.J.ofRoboticsResearch,2016.
+Recognition(CVPR),2016.
+[5] E. Bylow, Ju¨rgen Sturm, C. Kerl, F. Kahl, and D. Cre-
+[21] E. Sucar, S. Liu, J. Ortiz, and A. J Davison. iMAP: Im-
+mers. Real-timecameratrackingand3Dreconstructionus-
+plicitmappingandpositioninginreal-time. InIEEEConf.
+ingsigneddistancefunctions. InRobotics:ScienceandSys-
+onComputerVisionandPatternRecognition(CVPR),2021.
+tems(RSS),2013.
+[22] K.Tateno,F.Tombari,I.Laina,andN.Navab.CNN-SLAM:
+[6] Cloudcompare.org. CloudCompare - open source project.
+Real-timedensemonocularSLAMwithlearneddepthpre-
+https://www.cloudcompare.org,2019.
+diction. In IEEE Conf. on Computer Vision and Pattern
+[7] B.CurlessandM.Levoy. Avolumetricmethodforbuilding
+Recognition(CVPR),2017.
+complexmodelsfromrangeimages. InSIGGRAPH,1996.
+[23] Z. Teed and J. Deng. Raft: Recurrent all-pairs field trans-
+[8] V.Ila,L.Polok,M.Solony,andK.Istenic. Fastincremental
+formsforopticalflow. InEuropeanConf.onComputerVi-
+bundleadjustmentwithcovariancerecovery. 2017.
+sion(ECCV),2020.
+[9] G.KleinandD.Murray. Paralleltrackingandmappingfor
+[24] Z.TeedandJ.Deng. Droid-SLAM:DeepvisualSLAMfor
+smallARworkspaces.InIEEEandACMIntl.Sym.onMixed
+monocular,stereo,andRGB-Dcameras.AdvancesinNeural
+andAugmentedReality(ISMAR),2007.
+InformationProcessingSystems(NIPS),2021.
+[10] L.Koestler, N.Yang, N.Zeller, andD.Cremers. Tandem:
+[25] W.Wang,D.Zhu,X.Wang,Y.Hu,Y.Qiu,C.Wang,Y.Hu,
+Trackinganddensemappinginreal-timeusingdeepmulti-
+A.Kapoor,andS.Scherer. TartanAir: Adatasettopushthe
+viewstereo.InConferenceonRobotLearning(CoRL),2022.
+limitsofvisualSLAM.InIEEE/RSJIntl.Conf.onIntelligent
+[11] B.Mildenhall, P.P.Srinivasan, M.Tancik, J.T.Barron, R.
+RobotsandSystems(IROS),2020.
+Ramamoorthi, and R. Ng. NeRF: Representing scenes as
+[26] S.Weder, J.Schonberger, M.Pollefeys, andM.ROswald.
+neuralradiancefieldsforviewsynthesis. InEuropeanConf.
+RoutedFusion: Learning real-time depth map fusion. In
+onComputerVision(ECCV),2020.
+IEEE Conf. on Computer Vision and Pattern Recognition
+[12] R.A.Newcombe,S.J.Lovegrove,andA.J.Davison.DTAM:
+(CVPR),2020.
+Densetrackingandmappinginreal-time. InIntl.Conf.on
+[27] S.Weder,J.LSchonberger,M.Pollefeys,andM.ROswald.
+ComputerVision(ICCV),2011.
+NeuralFusion: Onlinedepthfusioninlatentspace. InIEEE
+[13] R. A Newcombe, S. Izadi, O. Hilliges, D. Molyneaux, D.
+Conf.onComputerVisionandPatternRecognition(CVPR),
+Kim,A.JDavison,P.Kohli,J.Shotton,S.Hodges,andA.W
+2021.
+Fitzgibbon.KinectFusion:Real-timedensesurfacemapping
+[28] T. Whelan, S. Leutenegger, R. Salas-Moreno, B. Glocker,
+and tracking. In IEEE and ACM Intl. Sym. on Mixed and
+andA.Davison.ElasticFusion:DenseSLAMwithoutapose
+AugmentedReality(ISMAR),2011.
+graph. InRobotics:ScienceandSystems(RSS),2015.
+[14] C.VNguyen,S.Izadi,andD.Lovell. ModelingKinectsen-
+[29] Y.Yao,Z.Luo,S.Li,T.Fang,andL.Quan.MVSNet:Depth
+sornoiseforimproved3Dreconstructionandtracking.InIn-
+inference for unstructured multi-view stereo. In European
+ternationalConferenceon3DImaging,Modeling,Process-
+Conf.onComputerVision(ECCV),2018.
+ing,Visualization&Transmission,2012.
+[30] Qian-YiZhou,JaesikPark,andVladlenKoltun. Open3D:A
+[15] H.Oleynikova,Z.Taylor,M.Fehr,R.Siegwart,andJ.Nieto.
+modernlibraryfor3Ddataprocessing. arXiv:1801.09847,
+Voxblox:Incremental3Deuclideansigneddistancefieldsfor
+2018.
+on-boardmavplanning. InIEEE/RSJIntl.Conf.onIntelli-
+[31] Z.Zhu,S.Peng,V.Larsson,W.Xu,H.Bao,Z.Cui,M.ROs-
+gentRobotsandSystems(IROS),2017.
+wald,andM.Pollefeys. Nice-SLAM:Neuralimplicitscal-
+[16] A.Rosinol. DensifyingSparseVIO:amesh-basedapproach
+ableencodingforSLAM.InIEEEConf.onComputerVision
+usingStructuralRegularities. Master’sthesis,ETHZurich,
+andPatternRecognition(CVPR),2022.
+2018.

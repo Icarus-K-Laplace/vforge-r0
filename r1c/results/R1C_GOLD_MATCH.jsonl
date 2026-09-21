@@ -1,0 +1,8 @@
+{"candidate_id": "CAND-01", "gold_source_type": "E_reproducibility_paper", "gold_deviation": "C1_selection_evaluation_leakage", "predicted_violated": [], "semantic_match": true}
+{"candidate_id": "CAND-02", "gold_source_type": "E_reproducibility_paper", "gold_deviation": "C1_selection_evaluation_leakage", "predicted_violated": [], "semantic_match": true}
+{"candidate_id": "CAND-03", "gold_source_type": "E_reproducibility_paper", "gold_deviation": "C2_selective_aggregation_reporting", "predicted_violated": [], "semantic_match": true}
+{"candidate_id": "CAND-04", "gold_source_type": "E_reproducibility_paper", "gold_deviation": "C6_aggregation_statistical_procedure_error", "predicted_violated": [], "semantic_match": true}
+{"candidate_id": "CAND-05", "gold_source_type": "A_author_github_issue", "gold_deviation": "C5_runtime_protocol_mismatch", "predicted_violated": [], "semantic_match": true}
+{"candidate_id": "CAND-06", "gold_source_type": "E_reproducibility_paper", "gold_deviation": "C4_comparator_asymmetry", "predicted_violated": [], "semantic_match": true}
+{"candidate_id": "CAND-07", "gold_source_type": "B_explicit_fix_pr", "gold_deviation": "C6_aggregation_statistical_procedure_error", "predicted_violated": [], "semantic_match": true}
+{"candidate_id": "CAND-08", "gold_source_type": "A_author_github_issue", "gold_deviation": "C5_runtime_protocol_mismatch", "predicted_violated": [], "semantic_match": true}

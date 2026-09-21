@@ -1,0 +1,16 @@
+{
+  "trace_id": "CAND-02_pre",
+  "protocol": {
+    "split_disjointness": false,
+    "selection_target": "test",
+    "early_stopping_metric": "test_recall_at_1"
+  },
+  "outputs": {
+    "reported_r_at_1": 65.4,
+    "metric": "Recall@1"
+  },
+  "candidate_id": "CAND-02",
+  "paper": "A Metric Learning Reality Check",
+  "family": "C1_selection_evaluation_leakage",
+  "self_hash": "9eae72cecae4a68d5fe0962f6368f5d63a9f599293e078259464589477f01cad"
+}

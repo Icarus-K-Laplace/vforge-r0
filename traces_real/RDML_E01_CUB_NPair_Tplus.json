@@ -1,0 +1,48 @@
+{
+  "trace_id": "RDML_E01_CUB_NPair_Tplus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CUB_NPair_s0",
+    "CUB_NPair_s1",
+    "CUB_NPair_s2",
+    "CUB_NPair_s3",
+    "CUB_NPair_s4"
+  ],
+  "protocol": {
+    "dataset": "CUB",
+    "method": "NPair",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CUB_NPair_s0",
+      "RDML_E01_CUB_NPair_s1",
+      "RDML_E01_CUB_NPair_s2",
+      "RDML_E01_CUB_NPair_s3",
+      "RDML_E01_CUB_NPair_s4"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.5741,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CUB_NPair_s0",
+        "RDML_E01_CUB_NPair_s1",
+        "RDML_E01_CUB_NPair_s2",
+        "RDML_E01_CUB_NPair_s3",
+        "RDML_E01_CUB_NPair_s4"
+      ]
+    }
+  },
+  "is_counterfactual": false,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "f6e86f1987a87eea09c2dc202e167c6cee82d2f574472984197d2284a795ca92"
+}

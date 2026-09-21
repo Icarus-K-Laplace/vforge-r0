@@ -1,0 +1,653 @@
+Semantic Pyramid for Image Generation
+AssafShocher∗1,2 YossiGandelsman∗1 InbarMosseri1 MichalYarom1
+MichalIrani1,2 WilliamT.Freeman1 TaliDekel1
+1GoogleResearch 2WeizmannInstituteofScience
+(a) Semantic Pyramid Generation Levels
+CONV1 CONV4 CONV5 FC7 FC8
+Original Image Generated Images from increasing sematic levels
+(b) From Sketch to Photo (c) Semantic Image Composition (d) Image Re-labeling
+Original Image Generated Image Original Images Composite Original label: New label:
+Image Volcano Mountain Snowy
+Figure 1: Semantic Pyramid for Image Generation. We introduce a new image generative model that is designed and
+trainedtoleveragethehierarchicalspaceofdeep-featureslearnedbyapre-trainedclassificationnetwork.Ourmodelprovides
+a unified versatile framework for various image generation and manipulation tasks, including: (a) generating images with
+a controllable extent of semantic similarity to a reference image, obtained by reconstructing images from different layers
+ofaclassificationmodel; (b)generatingrealisticimagesamplesfromunnaturalreferenceimagesuchaslinedrawings; (c)
+semanticallycompositingdifferentimages,and(d)controllingthesemanticcontentofanimagebyenforcinganew,modified
+classlabel.
+turesateachsemanticleveloftheclassificationmodel. We
+Abstract demonstrate that our model results in a versatile and flex-
+ible framework that can be used in various classic and
+We present a novel GAN-based model that utilizes the novel image generation tasks. These include: generating
+space of deep features learned by a pre-trained classifica- images with a controllable extent of semantic similarity to
+tionmodel. Inspiredbyclassicalimagepyramidrepresen- a reference image, and different manipulation tasks such
+tations, we construct our model as a Semantic Generation assemantically-controlledinpaintingandcompositing; all
+Pyramid – a hierarchical framework which leverages the achievedwiththesamemodel,withnofurthertraining. 1
+continuum of semantic information encapsulated in such
+deep features; this ranges from low level information con-
+tained in fine features to high level, semantic information 1.Introduction
+contained in deeper features. More specifically, given a
+setoffeaturesextractedfromareferenceimage,ourmodel Convolutional Neural Networks (CNNs) trained for vi-
+generates diverse image samples, each with matching fea- sualclassificationwereshowntolearnpowerfulandmean-
+ingful feature spaces, encoding rich information ranging
+∗indicatesequalcontributions.
+ThefirstauthorperformedthisworkasaninternatGoogle. 1Projectwebsite:https://semantic-pyramid.github.io/
+1
+0202
+raM
+61
+]VC.sc[
+2v12260.3002:viXra
+fromlowlevelfeaturestohigh-levelsemanticcontent[23]. 2.RelatedWork
+Suchfeatureshavebeenwidelyutilizedbynumerousmeth-
+Inverting deep features. Inverting deep features back
+odsforclustering,perceptualloss[42]anddifferentimage
+to images has been mostly studies in the context of in-
+manipulationtasks[35,13,21,2].
+terpretability and understanding of visual recognition net-
+The process of working in feature space typically in-
+works. Simonyan et al. [31] formulated the feature inver-
+volvesthefollowingstages:animageisfedtoapre-trained
+sionproblemasanoptimizationproblemwheretheobjec-
+classification network; its feature responses from different
+tive is to minimize the L distance between the mapping
+layersareextracted, andoptionallymanipulatedaccording 2
+oftheimagetofeatures(bythepre-trainednetwork)anda
+to the application at hand. The manipulated features are
+given feature map. They apply back-propagation to mini-
+theninvertedbacktoanimagebysolvingareconstruction
+mize this objective – a slow process, which is highly sen-
+optimization problem. However, the problem of inverting
+sitive to initialization. An important observation made by
+deep features into a realistic image is challenging – there
+thisprocesswashowreconstructableanimageisfromvar-
+is no one-to-one mapping between the deep features and
+ious depths of CNN layers; first several layers are almost
+animage,especiallywhenthefeaturesaretakenfromdeep
+fully invertible, but the ability to reconstruct the input im-
+layers. Thishasbeenaddressedsofarmostlybyimposing
+agequicklydeclinesalongthedepthofthenetwork.
+regularizationpriorsonthereconstructedimage,whichof-
+Otheroptimization-basedmethodsattempttotherecon-
+tenleadstoblurryunrealisticreconstructionsandlimitsthe
+struction from deeper features by imposing different reg-
+typeoffeaturesthatcanbeused.
+ularization priors on the reconstructed image [24, 28, 39].
+In this paper, to overcome the aforementioned limita-
+However,thesemethodsareabletoreconstructonlyasin-
+tions, we take the task of feature inversion to the realm
+gle,averageimage.Becausethereisnoone-to-onemapping
+of Generative Adversarial Networks (GANs). GANs have
+betweendeepfeaturestoanimage,thereconstructedimage
+madeadramaticleapinmodelingthedistributionofnatural
+isoftenblurryandunrealistic.
+imagesandarenowcapableofgeneratingimpressivereal-
+Dosovitskiy&Brox[9]proposetotrainaCNNtoinvert
+istic image samples. However, most existing GAN-based
+variousimagedescriptors,amongwhicharedeepfeatures.
+modelsthatusedeepfeaturesconditionthegenerationonly
+Thisapproachalsoimposeregularization,yetimplicitly;the
+on objects’ class information [29, 27, 40, 7]. In contrast,
+factthatanimagewasgeneratedbyaCNNformsastrong
+we propose a novel generative model that utilizes the con-
+naturalimageprior[34,11]. However, suchregularization
+tinuum of semantic information encapsulated in deep fea-
+alsotendstoproduceblurryunrealisticimageswheninvert-
+tures; this ranges from low level information contained in
+ingthedeeperfeatures.
+fine features to high level, semantic information contained
+Toovercomethislimitation,agenerativemodelforfea-
+indeeperfeatures. Bydoingso,webridgethegapbetween
+ture invertion was proposed by the same authors [10]. Al-
+optimization based methods for feature inversion and gen-
+thoughtheyusedaGAN,theirmodelisstilldeterministic,
+erativeadversariallearning.
+i.e., generates only a single possible image from an input
+Inspiredbyclassicalimagepyramidrepresentations,we
+set of features. In this case the discriminator was used as
+construct our model as a Semantic Generation Pyramid –
+a learned regularizer to try to impose realistic reconstruc-
+a hierarchical GAN-based framework which can leverage
+tionsfromthegenerator. Thisresultedinimagesthathave
+information from different semantic levels of the features.
+local structure that looks natural but distorted unrealistic
+More specifically, given a set of features extracted from
+global structure. The final image cannot be considered re-
+a reference image, our model can generate diverse image
+alistic (See examples in supplementary material). The au-
+samples,eachwithmatchingfeaturesateachsemanticlevel
+thors mention a desire to add diversity and randomization
+of the classificationmodel. This allowsus to generate im-
+totheirprocessandreportanattempttoinjectnoiseforthis
+ages with a gradual, controllable semantic similarity to a
+purpose. This attempt failed due to the fact that ”Nothing
+referenceimage(seeFig.1andFig.2).
+in the loss function forces thegenerator to output multiple
+The hierarchical nature of our model provides a versa-
+differentreconstructions”. Weaddressthisproblemusinga
+tile and flexible framework that can be used for a variety
+diversity-loss.
+ofsemantically-awareimagegenerationandmanipulation
+tasks.Similartoclassicimagepyramidrepresentations,this Deep features for image manipulation. Inverting deep
+is done by manipulating features at different semantic lev- features crossed the line from the field of interpretability
+els, and controlling the pyramid levels in which features and understanding to image manipulation. A general ap-
+are fed to our model. We demonstrate this approach in a proachistoapplysomemanipulationtosemanticfeatures,
+number of applications, including semantically-controlled and then invert back to pixels to project the manipulation
+inpainting, semantic compositing of objects from differ- to a resulting output image. Such manipulation include
+entimages,andgeneratingrealisticimagesfromgrayscale, Texture-synthesis[12],Style-transfer[13],featureinterpo-
+line-drawings or paintings. All these tasks are performed lation, demonstrated to apply aging to faces [35] and re-
+withthesameunifiedframework,withoutanyfurtheropti- centlyalsoimageretargetingbyapplyingSeamCarving[3]
+mizationorfinetuning. to semantic features [2]. In all of these works the output
+4VNOC
+5VNOC
+7CF
+8CF
+Input Input Input Input
+Random Samples Random Samples Random Samples Random Samples
+sleveL
+noitareneG
+dimaryP
+citnameS
+Figure 2: Random image samples from increasing semantic levels. For each input image (top row), we show random
+image samples generated by our model when fed with deep features from increasing semantic levels (top to bottom). Our
+model generates realistic image samples, where the similarity to the original image is controlled by the level of the input
+features—thedeeperthefeatures’levelis,themorewecandeviatefromtheoriginalimage. Forallgenerationlevels,our
+modelpreservesthesemanticcontentoftheinputimageandproduceshighqualitydiverseimagesamples.
+image is reconstructed by some variant of the iterative op- goal and setting of how to make use of the semantic fea-
+timizationprocessof[31]thattakestimeandissensitiveto tures. Further analysis [6] has shown limitations on what
+initialization. Some solutions to speed up were proposed, GANscannotgenerate.WeintroducetheapplicationofRe-
+liketrainingaCNNtoimitatethemappingoftheoptimiza- paintingwhichallowsregeneratingselectedpartsoftheim-
+tionprocess[21]. age and by that enables keeping wanted parts of an image
+asis. Tosomepracticaluses,thisovercomesthelimitations
+GenerativeAdversarialNetworks Inourworkwemake
+presentedin[6](suchasinabilitytogeneratehumans).
+useofrecentadvancesofGenerativeAdversarialNetworks
+(GANs) [14]. There has been huge progress in the qual-
+Classicalhierarchicalimagerepresentations. Wedraw
+ity of image generation using GANs [30, 29, 27, 40, 7].
+inspirationtoourmethodfromtheclassicalimageprocess-
+OurGANisbasedonSelf-AttentionGAN[40]withslight
+ingapproachofimagepyramids,especiallyLaplacianpyra-
+modifications. Differently from classical GANs, we per-
+mids [8, 1]. This method decomposes images to distinct
+form image to image mapping using a conditional GAN
+frequency-bandsthusallowsfrequencyawaremanipulation
+similarly to [19, 36]. There has been some recent impres-
+for stitching and fusion of images. reconstruction is fast
+sive work on interpreting and controlling the outcomes of
+andtrivial. Ourmethodisasemanticanalogoustothisap-
+GANsbyeitherinterpretingneurons[5]orbysteeringthe
+proach. Weaimtoperformsemanticmanipulationandget
+latent space [20]. Our approach differs due to the use of
+immediateprojectionbacktotheimagepixels.
+semanticfeaturesthatoriginateinsupervisedclassification
+networks. [18]makesuseofclassificationfeaturemapsto 3.Method
+improve quality of classic generation tasks. They stack a
+setofGANsfirsttrainedseparatelytogeneratefeaturesof Ourgoalistodesignagenerativeimagemodelthatcan
+differentlevelsandthencombinethem. Wehavedifferent fully leverage the feature space learned by a pre-trained
+(a) Object Recognition Model (pre-trained) (b) Generator block (G)
+i
+Input
+...
+C C C C
+1 2 N-1 N
+Conv
+v
+n o
+C
+Output
+...
+Legend: G G G G
+1 2 N-1 N
+- Fixed block
+Semantic Pyramid Generator
+vnoC
+f
+i
+f f f f m
+1 2 N-1 N i
+m m m m
+1 2 N-1 N G out G in
+i i
+ResNet block
+z
+Noise
+vector
+- Trainable block
+Figure 3: Semantic pyramid image pipeline. (a) The generator works in full mirror-like conjunction with a pre-trained
+classificationmodel. Eachstageoftheclassificationmodelhasacorrespondingblockinthegenerator. (b)Specificationof
+a single generator block. the feature map is first multiplied by its input mask. The masked feature map then undergoes a
+convolutionlayerandtheresultissummedwiththeresultofthecorrespondinggeneratorblock.
+Selected layer 2. Flexibilityandusercontrollability.Wewanttosupport
+various manipulation tasks at test time via editing in
+the deep feature space. For example, combining fea-
+... ... tures from different images, or from different levels.
+Themodelthenhavetoprovidesuchusercontrollabil-
+m
+m N ityandadapttovariousmanipulationsforthefeatures.
+m N-1
+m i-1 m i i+1 3. Diversity. Wewouldlikeourmodeltolearnthespace
+m ofpossibleimagesthatmatchagivensetofinputfea-
+m 2
+m 1 tures,ratherthanproducingasingleimagesample.
+Figure 4: Applying spatially varying masks. To gener-
+We next describe how we achieve these objectives via
+ate only wanted areas of the image, feature maps are mul-
+a unified GAN-based architecture and a dedicated training
+tipliedwithmasks. Whiteindicates“pass”andblackindi-
+scheme.
+cates“block”. Fortraining,arandomblockedcropissam-
+pledaswellasarandom“selectedlayer”.atinferencetime,
+3.1.Architecture
+ausercansetanyshapeofthemaskanddeterminethe”se-
+lected layer” according to the extent of divergence wanted Our generator works in full conjunction with a a pre-
+w.r.ttooriginalinput. trainedclassificationmodel,whichweassumeisgivenand
+fixed. In practice, we use VGG-16 model [32] trained on
+classificationnetwork. Morespecifically,weopttoachieve Places365 dataset [43] dataset. More specifically, given
+thefollowingobjectives: an input image x, we feed it into the classification model
+and extract a set of features maps F = {f } by taking the
+l
+1. Leveraging features from different semantic levels. activation maps of different layers of the model. That is,
+Givenaninputimage,thedeepfeaturesextractedfrom f = C∗(x),whereC∗ dnotesthel-thlayeroftheclassifi-
+l l l
+different layers have hierarchical structure – features cationmodel. Thesefeaturesarethenfusedintoourgener-
+extracted from finer layers of the model contain low atorasfollows.
+level image information, while deeper features can Our generator’s architecture is loosely based on the
+encode higher level, semantic information [38]. We class-conditioned GAN [40]. However, we modify it to
+would like to benefit from the continuum space of have a mirror structure w.r.t. the classification model, as
+thesefeatures. illustratedinFig.3. Morespecifically,eachresidual-block
+Input Random Samples from CONV5
+sgnitniaP
+sgniwarD
+eniL
+segamI
+elacsyarG
+Figure 5: Image generation from paintings, line draw-
+ingsandgrayscaleimages.Ourmodelproduceshighqual-
+ity,diverseimagesamplesevenwhentheinputfeaturesare
+extracted from unnatural images such as painting or line-
+drawings,orimagesthatarescarceinthetrainingdatasuch
+asgrayscaleimages. Inallthesecases,ourgeneratedimage
+samples conveyrealistic imageproperties that donot exist
+intheoriginalinputimages,includingtexture,lightingand
+colors.
+inourgeneratorcorrespondstoasinglestageintheclassi-
+fication model (a stage consists of 2-3 conv layers + pool-
+ing). This structure forms a semantic generation pyramid,
+which at the coarsest level takes a random noise vector, z,
+asinput. Ateachoftheupperlevels,ourmodelcanoption-
+ally receive features, f , extracted from the corresponding
+l
+level of the classification model. The flow of the features
+fromtheclassificationmodeltoourgeneratoriscontrolled
+ateachlevelbyaninputmaskm .Themaskcaneitherpass
+l
+theentirefeaturemap(allones),mask-outtheentirefeature
+map(allzeros)orpassregionsfromit.
+Toconclude,theinputtothenetworkis:(1)asetofdeep
+features,F ={f }computedbyfeedinganinputimage,x,
+l
+tupnI
+tupnI
+deksaM
+selpmaS
+modnaR
+Figure6: ImageRe-painting. Weuseourmodeltogener-
+atenewrandomsamplesfordesiredimageregions,marked
+inred(secondrow)overtheoriginalimages(firstrow);the
+image content in the unmasked regions is persevered. Our
+model generates diverse region samples that match the se-
+manticcontentoftheoriginalimage,andblendsthemnat-
+urallywiththeunmaskedregionswhichremainintact.
+into the classification model and extracting the activation
+mapsfromdifferentlayers; (2)anoisevector,z,whichal-
+lowsdiversityandlearningadistributionratherthanaone-
+to-one mapping; (3) a set of masks M = {m }, each for
+l
+input feature f ; these masks allows us to control, manip-
+l
+ulate and leverage features from different semantic levels.
+Thus,thegeneratorcanbeformulatedbyG(z,F,M).
+Fig.3(b)depictshowthefeaturemapsarefusedintoour
+generator.Thegoalistocombineinformationbothfromthe
+currentclassificationmodellayerandfrompreviousgener-
+atorblocksthatoriginateinthenoisevector. Ateachlevel,
+thefeature map f isfirst multipliedby its inputmask m .
+l l
+Themaskedfeaturemapthenundergoesaconvolutionlayer
+andtheresultissummedwiththeresultofthecorrespond-
+inggeneratorblock. Incaseswheretheentirefeaturemap
+is masked, nothing is added to the result of the previous
+generatorblock. Themaskitselfisconcatenatedasanother
+channel to allow the proceeding layers awareness and dis-
+tinctionbetweenmaskedareasandemptyareas.
+Asin[40],thegeneratorconsistsofresidual-blocks[15].
+Weusedself-attentionlayersinboththegeneratoranddis-
+criminator. Thediscriminatoristhesameas[40].
+Source Target Input Result givenby:
+min max L (G,D)+αL (G)+βL (G) (1)
+adv rec div
+G D
+The first term L is an adversarial loss. That is, our
+adv
+generatoristrainedagainstaclass-conditioneddiscrimina-
+torD,similarto[40]. WeadopttheLSGAN[26]variantof
+thisoptimizationproblem. Formally,
+L (G,D)=
+adv
+E [(D(x)−1)2]+ (2)
+x∼pdata(x)
+E [D(G(z,F,M))2]
+z∼pz(z),F∼pdata(F),M∼pm(M)
+Wherep isnormaldistributionfornoiseinstances,andp
+z m
+isthedistributionforsamplingmasksasdescribedabove.
+ThesecondtermL isasemanticreconstructionloss,
+rec
+whichencouragestheoutputimagetopreservethefeature
+informationusedtogenerateit.Thisissimilartoperceptual
+loss [21,42]. More specifically, whenfeeding a generated
+image back to the classification model, we want to ensure
+thattheresultingfeatureswillbeascloseaspossibletothe
+features extracted from the original image. To allow the
+model to generate diverse image samples from high level
+Figure 7: Semantic Image Composition. Implanting an
+features,weapplythislossonlytothefeaturesatlevelsthat
+objectorsomeimagecropinsideanotherimage, suchthat
+areusedforgeneration(notmaskedout). Formally,
+theimplantedobjectcanchangeinordertofititssurround-
+ingsbutstillholdontoitssemanticinterpretation.
+(cid:88)
+L = (cid:107)(C∗(x)−C∗(G(z,F,M))·m (cid:107) (3)
+rec l l l 1
+3.2.Trainingprocedure l∈layers
+WhereC denotesthellayeroftheclassificationmodel.
+l
+Ourgoalistohaveasingleunifiedmodelthatcangener- Both the original feature maps and the reconstructed ones
+ateimagesfromanylevelofoursemanticpyramid.Inother are normalized together so that comparison is agnostic to
+words,wewanttobeabletogeneratediverse,highquality globalcolorscaling. Furthermore,toallowmoregeometric
+imagesamplesfromanysubsetofinputfeatures{f i }⊂F. diversity and not imposing pixel to pixel complete match-
+Weachievethisthroughthefollowingtrainingscheme. ing,wefirstapplymax-poolingtobothoriginalandrecon-
+Ateachtrainingiteration,abatchofinputimagesissam- structedfeaturemaps,with2×2windowsgrid. Soweare
+pledfromthedatasetandisbeingfedtoclassificationmodel effectively onlycomparing thestrongest activationin each
+to compute their features. In our default training step, we window,allowingslightshiftsinlocations(whichtranslate
+randomly select a pyramid level, and feed to the generator tobiggershiftsinimagepixelsthedeeper thefeaturemap
+only the features at that level, while masking out the fea- is).
+turesinallotherlevels. Finally, L isadiversityloss, basedon[25]. Specifi-
+div
+However, we also want the ability to generate from a cally,eachbatchisdividedintopairsofinstancesthathave
+mixtureofsemanticlevels,keepingsomeareasoftheimage thesameinputimageandmasking(butdifferentnoisevec-
+while modifying other areas. We therefore train with spa- tors). AregularizationisappliedsuchthattheL distance
+1
+tiallyvaryingmaskstoo. Atsomeoftheiterations(defined betweentwosuchgeneratedresultsshouldbehigherasthe
+byahyper-parameterprobability),weincorporatespatially twonoisevectorsaredistantonefromtheother.
+varying masks. Fig. 4 depicts the masking procedure in
+(cid:107)z −z (cid:107)
+such cases. First, random crop of the image is sampled. L = 1 2 1 (4)
+div
+Then, for one randomly selected layer the mask is fully (cid:107)G(z 1 ,F,M)−G(z 2 ,F,M)(cid:107) 1 +(cid:15)
+turnedon.Foralltheotherlayers,closertotheinputimage,
+themaskisturnedonexceptthesampledcrop. Thissortof 3.4.Implementationdetails
+trainingisorientedtowardstasksofeditingdifferentspatial
+WeuseVGG-16[32].Theinputstothegeneratorarethe
+areasoftheimagedifferently.
+feautres at the end of each stage (after the pooling layer).
+We also use the fully-connected layers, FC7 and FC8. To
+3.3.Losses
+enable matching between the SA-GAN generator to the
+Wetrainallthelevelsinourpyramidarchitecturesimul- VGGclassifier,wedidnotuseFC6. Wetrainedourmodel
+taneously, where our training loss consists of three terms on Places365 dataset [43]. We used the loss as indicated
+tupnI
+Original label: Original label: Original label:
+Valley Highway Mountain
+oun
+New label:
+Mountain snowy
+tuptuO
+layerisagnostictomildlightingandcolormodificationsbut
+preservesgeometricstructuresandtextures. Thefullycon-
+nectedlayersaremostlyagnostictogeometricglobalstruc-
+turebutpreservetexturesandlocalstructures(e.g.,bottom
+rowofFig.2);theglobalshapeoftheroad,thepositionof
+theislandandthearchitectureofthecastleshascompletely
+changed. However,localattributessuchastheexistenceof
+small windows, towers remained (even though in different
+locations). Thisalignswithobservationsmadeby[17].
+New label: New label:
+Desert road Volcano 4.1.QuantitativeEvaluation
+Weevaluatedthequalityofourgeneratedimagesusing
+two measures; Fre´chet Inception Distance (FID) [16] and
+“Real/Fake”userstudy.
+For FID, we used 6000 test images randomly sampled
+fromPlaces365[43].Weextracteddeepfeaturesbyfeeding
+theseimagestotheclassificationmodel,andthengenerated
+randomimagesamplesfromeachsemanticlevelseparately,
+Figure 8: Image re-labeling. Given an input image (top i.e., by inputting to our model only the features extracted
+row),withitsclasslabel(estimatedbytheclassificationnet- fromthatlevel.
+work), we generate a new image by feeding to our model Table.1reportsFIDscoresmeasuredforourgeneration
+itsoriginalmid-levelfeatures,yetmodifyingitsclasslabel, resultsfromeachsemanticlevel. Asexpected,thefinerthe
+e.g., Valley→Mountain snowy (see Sec. 4). By doing so, features’ level is the lower the FID score. For example,
+wecanchangethesemanticpropertiesoftheimage,while when generating images from CONV1 features the distri-
+preservingitsdominantstructures. butionofgeneratedimagesalmostperfectlyalignswiththe
+in Eq. 1 with α = 0.1 and β = 0.1. The probability for real images. As the features’ level increase, our generated
+training with missing crops was set to 0.3. We used Ten- imagesdeviatemorefromtheoriginalimages,whichisre-
+sorflowplatformwithTFGANtool. We trainedthemodel flectedbyaconsistentincreaseintheFIDscores.
+forapproximatelytwodaysonDragonfishTPUwith4×4 For the user study, we used Amazon Mechanical Turk
+topology. We employed some methods from [7] such as (AMT), following the protocol of [41, 19]. The following
+class-embeddings and truncation trick. Optimization was twotestsweregiven:
+byAdamoptimizer[22]withlearningrateof10−4forboth 1. Pairedtest: Ageneratedimageispresentedagainstits
+thegeneratoranddiscriminator.Batchsizeof1024and128 correspondingreferenceimage(i.e., thefeaturesused
+latentspacedimensionsasin[40]. for generation are extracted from the reference). The
+workerswereaskedtoselectthefakeone.
+4.ExperimentsandApplications 2. Unpairedtest: Ageneratedimageispresentedagainst
+some real unrelated image. The workers were asked
+We tested our model on various natural images taken askedtodeterminewhetheritisfake.
+fromPlaces365[43]anddownloadedfromtheWeb. Fig.1 Ineachtrail,imageswerepresentedfor1sec.Eachofthese
+andFig.2showseveralqualitativeresultsofourgenerated tests was performed by 100 raters, using 75 images ran-
+images from increasing semantic levels. That is, for each domlysampledfromPlaces365[43];topreventimmediate
+pyramidlevel,wefeedourgeneratorwithfeaturesextracted discriminationbetweenrealandfakeimages,wedidnotin-
+only from that level. In Fig. 2, we show for each exam- cludeimageswithpeopleinthistest(generally,humansare
+pleandforeachsemanticleveltwodifferentrandomimage notsynthesizedwellbyGANs[6],aswellasbyourmodel
+samples, generated both from the same features, but with whenfedwithfeaturesfromhighsemanticlevels).
+differentnoiseinstances. Table.2reportstheconfusionrate(percentageoffooled
+Ascanbeseen,thepyramidlevelfromwhichtheimage turkers) separately measured for images generated from
+isgenerateddeterminestowhichextentitdivergesfromthe eachsemanticlevel. Perfectconfusionis50%. Thismeans,
+reference image – the fidelity to the reference image de- for example, that the images generated from CONV1 are
+creases with the pyramid level, whereas the diversity be- almost indistinguishable from real ones. Similarly, About
+tweendifferentimagesamplesincreases. Nevertheless,for 17%-18% of the images generated from FC8 looked more
+all generation levels, the semantic content of the original genuinethantherealonesshown.
+imageispreserved.
+4.2.SemanticPyramidImageManipulation
+Observingourgeneratedimagesmorecloselyrevealsde-
+tailsaboutthedistributionofimagesmatchingtoafeature The pyramid structure of our model provides a flexible
+mapateachlevel. Forexample,itisapparentthatCONV4 frameworkthatcanbeusedforvarioussemantically-aware
+Conv1 Conv2 Conv3 Conv4 Conv5 FC7 FC8 Semanticimagecomposition. Thetechniqueintroduced
+2.89 8.67 11.08 17.64 19.59 22.67 29.34 forre-paintingcanbeexpandedandusedforthechallenge
+of Semantic Image Composition. Namely, implanting an
+Table 1: FID per semantic level. In each column, we re-
+objectorsomeimagecropinsideanotherimage, suchthat
+porttheestimatedFIDscorewhenourimagesaregenerated
+theimplantedobjectcanchangeinordertofititssurround-
+from different semantic levels. As expected, the finer the
+ings but still hold on to its semantic interpretation. Fig. 7
+levelisthelowertheFIDscoreis.
+shows such examples. Note how the church changes its
+Conv1 Conv2 Conv3 Conv4 Conv5 FC7 FC8 structureandcoloraccordingtoitssurroundings. Theseare
+Paired 49.6% 42.7% 22.2% 20.9% 16% 19.1% 18% semantic changes as oppose to just matching textures and
+Unpaired 51.1% 39.1% 27.6% 15.1% 13.3% 21.6% 17.2%
+lighting;Inthetopexamplethechurchdoesnotjustmatch
+bytexture, itistransformedtoatemplethatismorelikely
+Table2:AMTReal/Fakeuserstudy:Wereportconfusion
+rates(%offooledturkers)fortwotypesoftests: (i)Paired: tobefoundinsuchsurrounding. Compositionisdonesim-
+ilarlytoRe-painting;theonlydifferenceisthatforthecho-
+generated image against its reference image, and (ii) Un-
+senmostsemanticlayerweuseanaivepastingoftheobject
+paired:generatedimage,againstsomerealunrelatedimage.
+ontheimage. Thenwemaskoutthematchingregionfrom
+We report the results for images generated from different
+allthefeature-mapsthatareclosertotheinputimage.
+pyramidlevels.
+Generation from unnatural reference image. Fig. 5
+image generation and manipulation tasks. Similar to clas- demonstrates the effect of using a reference image which
+sic image pyramid representations [8, 1], this can be done doesnotbelongtothedistribution,i.e. notaanaturalRGB
+by manipulating features at different semantic levels, and image.Sincethegeneratorwastrainedtooutputimagesthat
+controlling the pyramid levels in which features are fed to belongtothedatasetdistribution,wegetanimagetoimage
+ourmodel. Wenextdescribehowthisapproachcanbeap- translation. Wedemonstrateconvertingpaintingstorealis-
+plied for a number of applications. Note that we use the tic photos, line drawings to images and coloring grayscale
+samemodel,whichwastrainedonceandusedatinference images. Foreachcasewegenerateadiversesetofpossible
+modeforallapplications. results. Differentlyfrom[19,36], thereisnoexactmatch-
+ing of pixels between the reference image and the output.
+InvertingfromCONV5featureshassomedegreeofspatial
+Re-painting. We introduce a new application, we name
+freedom and allows modifying the structure. As an exam-
+re-painting, where an image region can be re-generated,
+ple,therightmostcolorizationofthecityreplacedthetower
+withacontrollablesemanticsimilaritytotheoriginalimage
+withtwotowers.
+content.Incontrasttotraditionalin-painting,inwhichthere
+isnoinformationinthegeneratedregion(e.g.,[4,37,33]), Re-labeling. Wedemonstrate arathersimple application
+weutilizetheinformationavailableindeepfeaturesforthat usingoursemanticpyramid;weuseCONV5featuresfrom
+region. In other words, re-painting allows us to re-sample an input image but manually change the class label fed to
+theimagecontentinaspecificregionbasedonitsoriginal thegenerator. Fig.8showstheeffectofsuchmanipulation.
+content. Our GAN based on [40] is class conditioned. The condi-
+Fig. 6 shows a number of re-painting results. As can tioninginthegeneratorisenforcedthroughtheconditional
+beseen,ourmodelsuccessfullyreplacethedesiredregions batch norm layers as introduced in [40]. This means that
+withdiversegeneratedregionsamples,whilepreservingthe the difference between regular inversion and relabeling in
+content around it. This enables practical image manipu- the generator is carried out by just normalizing activations
+lations such as generating the same hiker at various envi- todifferentmeanandvariance.
+ronments (Fig. 6 second column from left), or replacing a
+housewithvariousotherhouseswhilekeepingthesameen- 5.DiscussionandConclusion
+vironment (rightmost column). These results demonstrate
+the ability of our network to fuse information from differ- Thisworkproposesamethodtobridgethegapbetween
+entlevelsatdifferentimageregions. Sinceourtrainingpro- semantic discriminative models and generative modelling.
+cedure of the network combines generating from different Wedemonstratedhowoursemanticgenerationpyramidcan
+semanticlevels(differentlayersoftheclassifier)withinthe beusedasaunifiedandversatileframeworkforvariousim-
+same image, our generator can produce plausible images agegenerationandmanipulationtasks.Ourframeworkalso
+when some spatial piece of the image is generated from a allowsexploringthesub-spaceofimagesmatchingspecific
+moresemanticfeature-map. semantic feature-maps. We believe that projecting seman-
+tic modification back to the pixels realistically, is a key
+Fig. 4 depicts how re-painting is done at both training
+for future work that involves image manipulation or edit-
+andinference.Thefeaturemapmatchingthesemanticlevel
+ing through the semantic domain. We hope this work can
+we want to repaint from is fed to the generator. Then we
+guide and trigger further progress in utilizing semantic in-
+maskoutthewantedre-paintedregionfromallthefeature-
+formationingenerativemodels.
+mapsthatareclosertotheinputimage(thelesssemantic).
+References [16] Martin Heusel, Hubert Ramsauer, Thomas Unterthiner,
+Bernhard Nessler, and Sepp Hochreiter. Gans trained by a
+[1] E.H.Adelson,C.H.Anderson,J.R.Bergen,P.J.Burt,and
+twotime-scaleupdateruleconvergetoalocalnashequilib-
+J.M.Ogden. 1984,Pyramidmethodsinimageprocessing.
+rium. In Proceedings of the 31st International Conference
+RCAEngineer,29(6):33–41,1984. 3,8
+onNeuralInformationProcessingSystems,NIPS’17,pages
+[2] MoabArar,DovDanon,DanielCohen-Or,andArielShamir. 6629–6640,USA,2017.CurranAssociatesInc. 7
+Imageresizingbyreconstructionfromdeepfeatures, 2019.
+[17] Baker Nicholasand Lu Hongjing, Erlikhman Gennady, and
+2
+KellmanPhilipJ. Deepconvolutionalnetworksdonotclas-
+[3] Shai Avidan and Ariel Shamir. Seam carving for content- sifybasedonglobalobjectshape. PLOS,2018. 7
+awareimageresizing. ACMTrans.Graph.,26(3):10,2007. [18] XunHuang,YixuanLi,OmidPoursaeed,JohnHopcroft,and
+2 SergeBelongie.Stackedgenerativeadversarialnetworks.In
+[4] Connelly Barnes, Eli Shechtman, Adam Finkelstein, and CVPR,2017. 3
+Dan B Goldman. PatchMatch: A randomized correspon- [19] Phillip Isola, Jun-Yan Zhu, Tinghui Zhou, and Alexei A
+dence algorithm for structural image editing. ACM Trans- Efros. Image-to-image translation with conditional adver-
+actionsonGraphics(Proc.SIGGRAPH),28(3),Aug.2009. sarialnetworks. TheIEEEConferenceonComputerVision
+8 andPatternRecognition(CVPR),2017. 3,7,8
+[5] David Bau, Jun-Yan Zhu, Hendrik Strobelt, Bolei Zhou, [20] Ali Jahanian, Lucy Chai, and Phillip Isola. On the ”steer-
+Joshua B. Tenenbaum, William T. Freeman, and Antonio ability” of generative adversarial networks. arXiv preprint
+Torralba. Gan dissection: Visualizing and understanding arXiv:1907.07171,2019. 3
+generative adversarial networks. In Proceedings of the In- [21] JustinJohnson,AlexandreAlahi,andLiFei-Fei. Perceptual
+ternationalConferenceonLearningRepresentations(ICLR), lossesforreal-timestyletransferandsuper-resolution. Lec-
+2019. 3 tureNotesinComputerScience, page694711, 2016. 2, 3,
+[6] David Bau, Jun-Yan Zhu, Jonas Wulff, William Peebles, 6
+HendrikStrobelt,BoleiZhou,andAntonioTorralba. Seeing [22] Diederik P. Kingma and Jimmy Ba. Adam: A method for
+whatagancannotgenerate. InProceedingsoftheInterna- stochasticoptimization. CoRR,abs/1412.6980,2014. 7
+tionalConferenceComputerVision(ICCV),2019. 3,7
+[23] Alex Krizhevsky, Ilya Sutskever, and Geoffrey E. Hinton.
+[7] AndrewBrock,JeffDonahue,andKarenSimonyan. Large Imagenet classification with deep convolutional neural net-
+scaleGANtrainingforhighfidelitynaturalimagesynthesis. works.CommunicationsoftheACM,60(6):84–90,jun2017.
+CoRR,abs/1809.11096,2018. 2,3,7 2
+[8] PeterJ.BurtandEdwardH.Adelson. Thelaplacianpyra- [24] Aravindh Mahendran and Andrea Vedaldi. Understanding
+midasacompactimagecode. IEEETRANSACTIONSON deep image representations by inverting them. 2015 IEEE
+COMMUNICATIONS,31:532–540,1983. 3,8 Conference on Computer Vision and Pattern Recognition
+[9] Alexey Dosovitskiy and Thomas Brox. Inverting con- (CVPR),Jun2015. 2
+volutional networks with convolutional networks. CoRR, [25] Qi Mao, Hsin-Ying Lee, Hung-Yu Tseng, Siwei Ma, and
+abs/1506.02753,2015. 2 Ming-HsuanYang.Modeseekinggenerativeadversarialnet-
+[10] AlexeyDosovitskiyandThomasBrox. Generatingimages worksfordiverseimagesynthesis. InIEEEConferenceon
+withperceptualsimilaritymetricsbasedondeepnetworks. ComputerVisionandPatternRecognition,2019. 6
+InProceedingsofthe30thInternationalConferenceonNeu- [26] XudongMao,QingLi,HaoranXie,RaymondY.K.Lau,and
+ral Information Processing Systems, NIPS’16, pages 658– ZhenWang. Leastsquaresgenerativeadversarialnetworks.
+666,USA,2016.CurranAssociatesInc. 2 InComputerVision(ICCV),IEEEInternationalConference
+[11] Yossi Gandelsman, Assaf Shocher, and Michal Irani. on,2017. 6
+”double-dip”: Unsupervisedimagedecompositionviacou- [27] Takeru Miyato, Toshiki Kataoka, Masanori Koyama, and
+pleddeep-image-priors. 62019. 2 Yuichi Yoshida. Spectral normalization for generative ad-
+[12] LeonGatys,AlexanderSEcker,andMatthiasBethge. Tex- versarialnetworks.InInternationalConferenceonLearning
+ture synthesis using convolutional neural networks. In C. Representations,2018. 2,3
+Cortes, N. D. Lawrence, D. D. Lee, M. Sugiyama, and R. [28] A. Nguyen, J. Yosinski, and J. Clune. Multifaceted Fea-
+Garnett,editors,AdvancesinNeuralInformationProcessing ture Visualization: Uncovering the Different Types of Fea-
+Systems28,pages262–270.CurranAssociates,Inc.,2015.2 turesLearnedByEachNeuroninDeepNeuralNetworks.In
+[13] LeonA.Gatys,AlexanderS.Ecker,andMatthiasBethge. A WorkshoponVisualizationforDeepLearning,International
+neuralalgorithmofartisticstyle,2015. 2 ConferenceonMachineLearning(ICML),June2016. 2
+[14] Ian Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing [29] Augustus Odena, Christopher Olah, and Jonathon Shlens.
+Xu,DavidWarde-Farley,SherjilOzair,AaronCourville,and Conditional image synthesis with auxiliary classifier gans.
+YoshuaBengio. Generativeadversarialnets. InZ.Ghahra- InProceedingsofthe34thInternationalConferenceonMa-
+mani, M. Welling, C. Cortes, N. D. Lawrence, and K. Q. chine Learning - Volume 70, ICML’17, pages 2642–2651.
+Weinberger, editors, Advances in Neural Information Pro- JMLR.org,2017. 2,3
+cessing Systems 27, pages 2672–2680. Curran Associates, [30] AlecRadford,LukeMetz,andSoumithChintala. Unsuper-
+Inc.,2014. 3 visedrepresentationlearningwithdeepconvolutionalgener-
+[15] KaimingHe,XiangyuZhang,ShaoqingRen,andJianSun. ativeadversarialnetworks,2015. 3
+Deepresiduallearningforimagerecognition.arXivpreprint [31] Karen Simonyan, Andrea Vedaldi, and Andrew Zisserman.
+arXiv:1512.03385,2015. 5 Deepinsideconvolutionalnetworks:Visualisingimageclas-
+sificationmodelsandsaliencymaps. CoRR,abs/1312.6034,
+2013. 2,3
+[32] KarenSimonyanandAndrewZisserman. Verydeepconvo-
+lutionalnetworksforlarge-scaleimagerecognition.InInter-
+nationalConferenceonLearningRepresentations,2015. 4,
+6
+[33] Piotr Teterwak, Aaron Sarna, Dilip Krishnan, Aaron
+Maschinot, David Belanger, Ce Liu, and William T. Free-
+man. Boundless:Generativeadversarialnetworksforimage
+extension. InTheIEEEInternationalConferenceonCom-
+puterVision(ICCV),October2019. 8
+[34] Dmitry Ulyanov, Andrea Vedaldi, and Victor Lempitsky.
+Deepimageprior. arXiv:1711.10925,2017. 2
+[35] Paul Upchurch, Jacob Gardner, Geoff Pleiss, Robert Pless,
+Noah Snavely, Kavita Bala, and Kilian Weinberger. Deep
+featureinterpolationforimagecontentchanges. 2017IEEE
+Conference on Computer Vision and Pattern Recognition
+(CVPR),Jul2017. 2
+[36] Ting-ChunWang,Ming-YuLiu,Jun-YanZhu,AndrewTao,
+JanKautz,andBryanCatanzaro.High-resolutionimagesyn-
+thesisandsemanticmanipulationwithconditionalgans. In
+Proceedings of the IEEE Conference on Computer Vision
+andPatternRecognition,2018. 3,8
+[37] ChaoYang,XinLu,ZheLin,EliShechtman,OliverWang,
+andHaoLi. High-resolutionimageinpaintingusingmulti-
+scaleneuralpatchsynthesis,2016. 8
+[38] JasonYosinski,JeffClune,AnhNguyen,ThomasFuchs,and
+Hod Lipson. Understanding neural networks through deep
+visualization. In Deep Learning Workshop, International
+ConferenceonMachineLearning(ICML),2015. 4
+[39] Jason Yosinski, Jeff Clune, Anh Mai Nguyen, Thomas J.
+Fuchs, and Hod Lipson. Understanding neural networks
+through deep visualization. CoRR, abs/1506.06579, 2015.
+2
+[40] Han Zhang, Ian Goodfellow, Dimitris Metaxas, and Au-
+gustus Odena. Self-attention generative adversarial net-
+works. In Kamalika Chaudhuri and Ruslan Salakhutdinov,
+editors,Proceedingsofthe36thInternationalConferenceon
+Machine Learning, volume 97 of Proceedings of Machine
+LearningResearch,pages7354–7363,LongBeach,Califor-
+nia,USA,09–15Jun2019.PMLR. 2,3,4,5,6,7,8
+[41] RichardZhang,PhillipIsola,andAlexeiAEfros. Colorful
+imagecolorization. InECCV,2016. 7
+[42] RichardZhang,PhillipIsola,AlexeiAEfros,EliShechtman,
+and Oliver Wang. The unreasonable effectiveness of deep
+featuresasaperceptualmetric. InCVPR,2018. 2,6
+[43] Bolei Zhou, Agata Lapedriza, Aditya Khosla, Aude Oliva,
+andAntonioTorralba. Places: A10millionimagedatabase
+forscenerecognition. IEEETransactionsonPatternAnaly-
+sisandMachineIntelligence,2017. 4,6,7

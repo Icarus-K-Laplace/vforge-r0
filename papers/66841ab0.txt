@@ -1,0 +1,641 @@
+Hate Speech Detection based on Sentiment Knowledge Sharing
+XianbingZhou1,YongYang1,XiaochaoFan1∗,
+GeRen1,YunfengSong1,YufengDiao2,LiangYang2,HongfeiLin2∗
+1SchoolofComputerScienceandTechnology,XinjiangNormalUniversity,China
+2DepartmentofComputerScienceandTechnology,DalianUniversityofTechnology,China
+{1783696285, 68523593, 37769630, 236789497, 1697277502}@qq.com
+{diaoyufeng, liang}@mail.dlut.edu.cn,hflin@dlut.edu.cn
+Abstract challenging due to the inherent complexity of the
+natural language constructs. Most of the existing
+The wanton spread of hate speech on the in- works revolves either around rules (Krause and
+ternet brings great harm to society and fami-
+Grassegger, 2016) or manual feature extraction
+lies. It is urgent to establish and improve au-
+(Gitarietal.,2015). Rule-basedmethodsdonotin-
+tomaticdetectionandactiveavoidancemecha-
+volvelearningandtypicallyrelyonapre-compiled
+nismsforhatespeech. Whilethereexistmeth-
+odsforhatespeechdetection, theystereotype list or dictionary of subjectivity clues (Haralam-
+wordsandhencesufferfrominherentlybiased bous and Lenca, 2014). Chen et al. (2012) pro-
+training. In other words, getting more affec- posed a variety of linguistic rules to determine
+tivefeaturesfromotheraffectiveresourceswill whether a sentence constitutes hate speech or not.
+significantly affect the performance of hate
+For example, if a second-person pronoun and a
+speech detection. In this paper, we propose
+derogatory word appear at the same time, such as
+a hate speech detection framework based on
+“<you, gay>”, the sentence is judged to be insult-
+sentiment knowledge sharing. While extract-
+ing. Thistypeofmethodnotonlyrequiresmanual
+ingtheaffectivefeaturesofthetargetsentence
+itself,wemakebetteruseofthesentimentfea- formulationofrules,butalsorequiresdictionaries
+turesfromexternalresources,andfinallyfuse of derogatory words. There have also been many
+featuresfromdifferentfeatureextractionunits attemptstodetecthatespeechusingtraditionalma-
+todetecthatespeech. Experimentalresultson chine learning methods. Mehdad and Tetreault
+two public datasets demonstrate the effective-
+(2016) extracted the n-gram, character-level and
+nessofourmodel.
+sentimentfeaturesoftextandusedsupportvector
+machines (SVM) to detect hate speech. However,
+1 Introducon
+artificial features can only reflect the shallow fea-
+With the prevalence of mobile Internet and social tures of text and cannot understand content from
+media, phenomena such as the malicious spread thedeepsemanticfeatures.
+ofhatespeechhavegraduallybecomewidespread.
+Deep learning methods have been widely used
+This often has incalculable consequences and has
+in the field of hate speech detection and have
+becomeaserioussocialproblem. Howtoquickly
+achievedgoodperformance(Badjatiyaetal.,2019;
+and accurately detect hate speech automatically,
+Qian et al., 2018) in recent years. Wang (2018)
+andthenbetterintervenetopreventithasbecome
+compared the performance of various neural net-
+one of the hot research issues in the field of nat-
+workmodelsindetectinghatespeechandusedvi-
+ural language processing. The automatic detec-
+sualizationtechniquestogivethemodelsbetterin-
+tionofhatespeechcanpreventtheviralspreadof
+terpretability. The semantics of hate speech con-
+hatespeech,therebyreducingthemaliciousspread
+tains a strong negative sentiment tendency. The
+of cyberbullying and harmful information. In the
+deep learning methods of predecessors often only
+field of public opinion analysis, monitoring and
+usedpre-trainedmodelsordeepernetworkstoob-
+intervention, hate speech detection has extensive
+tainsemantic features, ignoringthe sentiment fea-
+valueinapplication.
+turesofthetargetsentencesandexternalsentiment
+In recent years, the hate speech detection has resources, which also makes the performance of
+been paid more attention, and many research re- neural networks unsatisfactory in hate speech de-
+sults have appeared. However, the task is quite tection.
+c∗orrespondingauthor:XiaochaoFan,HongfeiLin. Toovercometheweaknessesofpreviousworks,
+7158
+Proceedingsofthe59thAnnualMeetingoftheAssociationforComputationalLinguistics
+andthe11thInternationalJointConferenceonNaturalLanguageProcessing,pages7158–7166
+August1–6,2021.©2021AssociationforComputationalLinguistics
+we propose a hate speech detection framework Machine learning-based methods based on fea-
+based on sentiment knowledge sharing (SKS)1. tureengineeringarewidelyusedinthefieldofhate
+Our intuition is that most hate speech contains speech detection. Malmasi and Zampieri (2018)
+words with strong negative emotions, which are provided empirical evidence that n-gram features
+usuallythemostdirectcluestohatespeech. Mean- andsentimentfeaturescanbesuccessfullyapplied
+while, as claimed by Davidson et al. (2017), lex- to the task of hate speech detection. Rodríguez
+ical detection methods tend to have low preci- et al. (2019) constructed a dataset of hate speech
+sion because they classify all messages contain- from Facebook, and proposed a rich set of senti-
+ingparticulartermsashatespeech. Therefore,we mentfeatures,includingnegativesentimentwords
+hope to make better use of external sentiment re- and negative sentiment symbols, to detect hate
+sources so that the model can learn sentiment fea- speech. Del Vigna12 et al. (2017) used the senti-
+turesandsharethem,whichwillgreatlyaffectthe mentalvalueofwordsasthemainfeaturetomea-
+performance of hate speech detection. In addi- sure whether a sentence constitutes hate speech.
+tion, inspired by the recent MoE layer (Shazeer Gitarietal.(2015)designedseveralsentimentfea-
+etal.,2017)andtheMulti-gateMixture-of-Experts tures and achieved good performance in experi-
+(MMoE)model(Maetal.,2018),weusemultiple ments. Previousstudieshaveshownthatsentiment
+feature extraction units and use a gated attention features play an important role in hate speech de-
+mechanism to fuse features. The main contribu- tection.
+tionsofthisworkaresummarisedasfollows:
+Recently, deep learning-based methods have
+(1)Inviewofthelackoftheuseofsentimentin-
+garneredconsiderablesuccessinhatespeechdetec-
+formationinpreviousworks,wenotonlyintegrate
+tion. Zhangetal.(2018)fedinputintoaconvolu-
+the derogatory words of target sentences into the
+tionalneuralnetwork(CNN)andagatedrecurrent
+neuralnetwork,butalsousemulti-tasklearningto
+unit (GRU) to learn higher-level features. Kshir-
+makethemodellearnandshareexternalsentiment
+sagar et al. (2018) proposed a transformed word
+knowledge.
+embedding model (TWEM), which had a simple
+(2)Inordertobettercapturesharedtaskortask-
+structure but can achieve better performance than
+specificinformation,weproposeanewframework
+many complex models. Badjatiya et al. (2019)
+whichusesmultiplefeatureextractionunitswhere
+foundthatduetothelimitationofthetrainingset,
+each extraction unit uses the multi-head attention
+thedeeplearningmodelwouldhave“bias”andhe
+mechanism and a feedforward neural network to
+designed and implemented a “bias removal” strat-
+extract features, and finally uses gated attention
+egy to detect hate speech. Tekiroglu et al. (2020)
+fusefeatures.
+constructed a large-scale dataset based on hate
+(3) Experimental results on the SemEval-2019
+speech and its responses and used the pre-trained
+task-5andDavidsondatasetsdemonstratethatour
+languagemodel,GPT-2,todetecthatespeech. Ob-
+methodachievesstate-of-the-artperformancecom-
+viously,deeplearningmodelscanextractthelatent
+pared with strong baselines, and then further de-
+semantic features of text, which can provide the
+tailedexamplesverifytheeffectivenessofourpre-
+mostdirectcluesfordetectinghatespeech.
+sentedmodelforhatespeechdetection.
+Multi-task learning can learn multiple related
+2 RelatedWork tasks and share knowledge at the same time. In
+recent years, there have been some achievements
+Hate speech is very dependent on the nuance of
+in the field of hate speech detection. Kapil and
+language. Even if it is manually distinguished
+Ekbal (2020) proposed a deep multi-task learning
+whether certain sentences contain hate seman-
+(MTL) framework to leverage useful information
+tics, consensus is rare (Waseem, 2016). Re-
+from multiple related classification tasks in order
+cently, automatically detecting hate speech has
+to improve the performance of hate speech detec-
+been widely studied by researchers. In this
+tion. Liu et al. (2019) introduced a novel formu-
+section, we will review related works on tra-
+lation of a hate speech type identification prob-
+ditional machine learning-based methods, deep
+lem in the setting of multi-task learning through
+learning-based methods, and multi-task learning-
+their proposed fuzzy ensemble approach. Ousid-
+basedmethodsofhatespeechdetection.
+houm et al. (2019) presented a new multilingual
+1Codeisavailableathttps://github.com/1783696285/SKS. multi-aspecthatespeechanalysisdatasetandused
+7159
+Hate Speech Sentiment
+Task Task
+Feed Feed
+Forward Forward
+Feed Feed Feed
+Forward Forward Forward
+Gate1 Max Pooling Avg Pooling Max Pooling Avg Pooling Max Pooling Avg Pooling Gate2
+Feed Feed Feed
+Forward Forward Forward
+Multi-Head Multi-Head Multi-Head
+Attention Attention Attention
+Word
+Embedding
+(cid:17)(cid:17)(cid:17)
+Category
+Embedding
+Figure 1: The overall framework of our proposed Hate Speech Detection based on Sentiment Knowledge Shar-
+ing(SKS).
+it to test the current state-of-the-art multilingual Weusemultiplefeatureextractionunitscomposed
+multitask learning approaches. Ousidhoum et al. of a multi-head attention layer and a feedforward
+(2019) proposed BERT-based multi-task learning neuralnetwork. 3)Gatedattention layer. Agated
+for offensive language detection. Some studies attentionmechanismisusedtooutputtheprobabil-
+have shown that multi-task learning can improve ity that the feature extraction unit is selected. Fi-
+theperformanceandgeneralizationabilityofmod- nally, a feedforward neural network is used to de-
+elsinhatespeechdetectionbyusingthecorrelation tecthatespeech.
+between the task of sentiment analysis and hate
+speechdetection. 3.1 InputLayer
+Hate speech often contains obvious negative sen-
+3 Methodology
+timentwordsbecauseofthestrongnegativesenti-
+ment.
+In this section we introduce our model, SKS. Our
+modelisabletoimprovehatespeechdetectionby exp1: Go fucking kill yourself and die already
+consideringbothtargetsentencesentimentandex- uselessuglypileofshitscumbag.
+ternalsentimentknowledge. The words “fucking”, “ugly”, and “shit scum-
+TheoverallarchitectureofSKSisshowninFig- bag”inexp1areallobviouslyinsultingandoffen-
+ure1. Theframeworkconsistsmainlyofthreelay- sive, and they contain strong negative sentiment.
+ers: 1) Input layer. In order to better obtain the Obviously,whetherthewordinthetargetsentence
+sentiment features of the sentence itself, we use a isaderogatorywordisthemostdirectcluetojudge
+derogatorywordsdictionarytojudgewhethereach hatespeech. Therefore,payingattentiontocaptur-
+wordisahateword,andthenappendthecategory ingderogatorywordsinasentencecanhelpusim-
+informationtothewordembedding. 2)Sentiment provehatespeechdetection.
+knowledge sharing layer. Since sentiment analy- Word Embedding. Word Embedding is based
+sisandhatespeechdetectionarehighlycorrelated, ondistributedassumptionsandmappedwordsinto
+weusethemulti-tasklearningframeworktomodel a high dimension feature space and maintaining
+task relationships and learn task-specific features thesemanticinformation. Foreachtargetsentence
+to take advantage of shared sentiment knowledge. S = {w ,w ,,w }, we transform each token w
+1 2 N i
+7160
+intoarealvaluedvectorx usingwordembedding, “fucking” does not specifically refer to a person,
+i
+wherex ∈ Rd isthewordvector,disdimensions but is just an adverb of degree, which strengthens
+i
+ofwordvectors. thetone. Itisnothatespeech. Itcanbeseenfrom
+Category Embedding. Our work is strongly theaboveexamplethatalthoughhatespeechoften
+basedontheintuitionthathatespeecharisesfrom containsnegativesentimentwords,onlyusingthe
+derogatory words. In other words, some specific sentimentinformationofthetargetsentenceitself
+words that are extremely insulting will make a todetecthatespeechoftenmakesitdifficulttoob-
+greatercontributiontojudginghatespeech. There- tainsatisfactoryperformance.
+fore, we have established a derogatory word dic- Deep learning methods require a large amount
+tionary. The vocabulary comes from Wikipedia2 of labelled data for supervised learning, which
+andanotherwebsite3,includingHateSpeech,Dis- needs more human effort and prior knowledge of
+ability, LGBT, Ethnic, and Religious, with 5 cate- this particular task. High-quality annotation data
+gories. Sincethevocabularycontains2or3word is scarce in hate speech detection, which makes
+phrases, when judging whether it is a dirty word, the task stereotype words and hence suffer from
+weusen-gram,n∈[1,2,3]. inherently biased training. Sentiment analysis re-
+Thederogatoryworddictionaryisusedtodivide search has been carried out for many years, and
+tweetintotwocategories,eithercontainingderoga- there are abundant high-quality labelled datasets.
+torywordsornotcontainingderogatorywords,and Thereisahighdegreeofcorrelationbetweentwo
+thenassignthetwocategoriestoeachwordinthe tasks, and multi-task learning can use the correla-
+tweet. Thecategoryofeachwordisinitializedran- tionbetweenmultipletaskstoimprovetheperfor-
+domlyasvectorC = (c ,c ,,c ),c ∈ Rd′ . mance and generalization ability of the model in
+1 2 n i
+Sincethecommonwordembeddingrepresenta- each task. Therefore, we adopt a multi-task learn-
+tionsexhibitalinearstructure,thatmakesitpossi- ingmethodforsentimentknowledgesharing,soas
+bletomeaningfullycombinewordsbyanelement- tobetterextractsentimentfeaturesandapplythem
+wiseadditionoftheirvectorrepresentations. Inor- tohatespeechdetection.
+dertobettertakeadvantageofinformationwithin The framework of multi-task learning widely
+derogatory words, we append the category repre- usesashared-bottomstructure,anddifferenttasks
+sentation to each word embedding. The embed- share the bottom hidden layer. This structure can
+ding of a word x for a category embedding c is essentiallyreducetheriskofoverfitting,buttheef-
+i i
+x ′ = x ⊕c ,where⊕isthevectorconcatenation fect may be affected by task differences and data
+i i i
+operation. distribution. Weadopttheframeworkstructureof
+Mix-of-Expert (MoE). The MoE layer has multi-
+3.2 SentimentKnowledgeSharingLayer ple identical feature extraction units, which share
+the output of the previous layer as input and out-
+Duetotheinfluenceofdifferentcountries,regions,
+putstoasuccessivelayer. Then,thewholemodel
+religionsandcultures,insultingmeaningsinmany
+istrainedinanend-to-endway. Ourfeatureextrac-
+languages are hidden in the underlying semantics,
+tionunitslayeriscomposedofamulti-headatten-
+ratherthanjustreflectedinsentimentwords.
+tionlayerandtwofeedforwardneuralnetworks.
+exp2: Jewsarelowerclasspigs.
+Multi-head Attention Layer. The self-
+exp3: i’msofuckingready!
+attention mechanism connects any two words in
+Therearenoobviousnegativesentimentwords
+a sentence by calculating the semantic similarity
+in exp2, but the sentence constitutes hate speech.
+and semantic features of each word in the sen-
+Although “pig” is a neutral word, most people
+tence and other words so as to better obtain the
+equate the word “pig” with stupid and clumsy.
+long-distance dependency. The multi-head self-
+Comparing“Jews”and“pig”isobviouslyaninsult
+attentionproposedbyVaswanietal.(2017)isused
+to “Jews”. Latent semantics and common sense
+in this section. For a given query Q ∈ R(n1 ×d1),
+of sentiment are the keys to correctly judging the
+key K ∈ R(n1 ×d1), value V ∈ R(n1 ×d1), we use
+sentence. Exp3 contains the word “fucking” with
+the dot product to calculate attention parameters.
+a strong negative sentiment. This word often ap-
+Theformulaisasfollows:
+pears in hate speech. However, in this sentence,
+( )
+2https://www.wikipedia.org/ QKT
+3https://www.noswearing.com/ Attention(Q,K,V)=softmax
+d
+V (1)
+1
+7161
+whered isthenumberofhiddenlayerunites. Dataset total Classes
+1
+The multi-head attention mechanism maps the hate(5,035)
+SE 11,971
+input vector X to query, key, and value using lin- non-hate(6,936)
+ear changes. In our task, key=value. Then, the hate(1,430)
+DV 24,783
+modellearnsthesemanticfeaturesbetweenwords non-hate(23,353)
+throughthel-timeattention. Forthei-thattention negative(2,242)
+SA 31,962
+head, let the parameter matrix W i Q ∈ Rn1 ×d l 1 , positive(29,720)
+W i K ∈ Rn1 ×d l 1 ,W i V ∈ Rn1 ×d l 1 , we use the dot Table1: Statisticsofdatasetsusedintheexperiment.
+producttocalculatethesemanticfeaturesbetween
+them:
+y = hkfk(x) (9)
+k
+M = Attention(QWQ,KWK,VWV) (2)
+i i i i
+wherekisthenumberoftasksandhisthehidden
+Thevectorrepresentationobtainedbythemulti- layerrepresentation.
+head attention mechanism is concatenated to ob-
+tainthefinalfeaturerepresentation: 3.4 ModelTraining
+Fortrainingprocess,thewholeparameterscanbe
+optimizedfromournetworks. Then,crossentropy
+Hs = concat(M ,M ,...,M )W (3)
+1 2 l o
+is applied with L2 regularization as the loss func-
+Pooling Layer. Shen et al. (2018) used maxi- tion,whichisdefinedas:
+mumpoolingandaveragepoolingtofusefeatures. ∑∑
+loss = − yjlogyˆj +λ∥θ∥2 (10)
+Experimentalresultsshowedthattheperformance i i
+of this method is significantly better than using a i j
+single pooling strategy. Therefore, we use maxi-
+where i is the index of sentences, j is the index of
+mumpoolingandaveragepoolingatthesametime.
+class, λ is the L regularization term, θ is the pa-
+2
+Theformulaisasfollows:
+rameterset.
+P = Pooling_max(Hs) (4)
+m
+4 Experiments
+In this section, we first introduce the datasets and
+P = Pooling_average(Hs) (5)
+a
+evaluation metrics. Then we compare the perfor-
+manceofourmodelwithseveralstrongbaselines.
+P s = concat(P m ,P a ) (6) Finally,adetailedanalysisisgiven.
+3.3 GatedAttention
+4.1 Datasetsandevaluationmetrics
+Gated attention can learn to select a subset of the
+We try to explore whether sharing sentiment
+feature extraction units to use, conditioned on the
+knowledge can improve the performance of hate
+input. For different tasks, the weight selection of
+speech detection. Therefore, two public hate
+themodelisdifferent,soeachtaskhasaGate. The
+speech datasets and one sentiment dataset is used
+outputofaspecificgatekrepresentstheprobabil-
+in our experiment. The details of the datasets are
+ityofadifferentfeatureextractunitbeingselected,
+showninTable1.
+andmultipleunitsareweightedandsummedtoob-
+SemEval2019 task5 (SE) (Basile et al., 2019).
+tainthefinalrepresentationofthesentence,which
+TheSEcomesfromSemEval2019task5,andsub-
+will be passed into the exclusive layer of the task.
+task A is hate speech detection. The dataset is
+Our gating unit has the same structure as the fea-
+divided into three subsets. The training contains
+tureextractionunit. Theformulaisasfollows:
+9000cases,thevalidationcontains1000cases,and
+gk(x) = softmax(W ∗gate(x)) (7) thetestcontains2971cases.
+gn
+Davidsondataset(DV)(Davidsonetal.,2017).
+TheDVdatasetwasconstructedbyDavidsonwho
+∑n
+fk(x) = gk(x) f (x) (8) implementedaweb-basedbootstrappingalgorithm
+i i
+to automatically collect a large number of hate
+i=1
+7162
+speech examples from Tweets. This is an unbal- BiGRU-Capsule. This baseline was proposed
+anceddatasetwithlesshatespeech. byDingetal.(2019). Two-layerBiGRUandacap-
+Sentiment Analysis (SA)4. The SA is a sen- sulelayerwereusedtodetecthatespeech.
+timent dataset from Kaggle2018. The SA con- Universal Encoder. It was proposed by In-
+tainsmorepositivecases,butfewernegativecases. durthietal.(2019). Theauthorusedsentenceem-
+Since the test set is unlabelled, we only use the beddings, such as lexical vectors and deep con-
+trainingset. textualized word representations, to detect hate
+For comparison with baseline methods, Accu- speech.
+racy (Acc) and F-measure (F1) are used as eval- BERT and GPT. They were proposed by Ben-
+uationmetricsinourhatespeechdetection. balla et al. (2019). The pre-trained model BERT
+and GPT were used to capture the features to de-
+4.2 TrainingDetails
+tecthatespeech.
+In SemEval2019 evaluation, the performance of
+SKS.SKSisourproposedmodelwhichdetects
+thetestsetisthefinalresult. Tocomparewithpub-
+hate speech based on sentiment knowledge shar-
+lishedpapers,theresultsofthetestsetareusedon
+ing.
+the dataset and we use Acc and micro F1 as met-
+TheoverallperformancecomparisonofSKSis
+rics. For the DV dataset, we use a 5-fold cross-
+showninTable2. FromTable2,wecanseethat:
+validation method to measure the performance of
+(1) Overall, the performance of the model is
+the proposed model. To compare with previous
+quite different on the two datasets. For the DV
+works,WereportresultsofDVusingthestandard
+dataset, the F1 value is about 90%, while for the
+AccuracyandweightedF1.
+SE dataset, the F1 value is less than 60%. This is
+Inourexperiments,fortheinputlayer,allword
+mainlybecausetherearefewnegativeexamplesin
+vectors are initialized by Glove Common Crawl
+teh DV, and the model does not learn enough use-
+Embeddings (840B Token), and the dimension is
+ful features. Furthermore, the nuance of the lan-
+300. Thecategoryembeddingsareinitializedran-
+guage can significantly affect the performance of
+domly, and the dimension is 100. For the senti-
+themodel.
+ment knowledge sharing layer, the multi-head at-
+(2)TheperformanceofSVMbasedonfeatures
+tention has 4 heads. The first Feed-Forward net-
+is much worse than the neural network. Espe-
+work has one layer with 400 neurons and the sec-
+cially on the SE dataset, performance is unaccept-
+ondhastwolayerswith200neurons. Thedropout
+able. This indicates that the neural network can
+isusedaftereachlayer,andtherateis0.1. Theop-
+bettercapturethesemanticrelationshipsofwords
+timizerisRMSprop,andthelearningrateis0.001.
+forhatespeechdetection.
+The models are trained by a mini-batch of 512 in-
+(3) The performance of the hybrid neural net-
+stances. Topreventoverfitting,weusethelearning
+work is better than the simple Recurrent Neural
+ratedecayandearlystopinthetrainingprocess.
+Network (RNN). Compared with the traditional
+4.3 ComparisonwithBaselines RNNs, such as LSTM and so on, whether CNN-
+We compare our proposed model with several GRU or BiGRU-capsule, its performance has a
+strongbaselines: small improvement. By stacking a layer of a neu-
+SVM.ItisproposedbyZhangetal.(2018)and ral network onto another, a deep learning model
+Basile et al. (2019). The author implemented sev- ishelpfulforbetterlearningofhigh-levelfeatures.
+eralfeatures,suchasn-gram,misspellings,deroga- The traditional RNNs, such as LSTM and GRU,
+torywords. havealmostthesameperformance.
+LSTMandGRU.Themethodwasproposedby (4) BERT achieves better performance on the
+Ding et al. (2019). LSTM and GRU were used to DV dataset. However, both BERT and GPT
+extractthefeaturesoftargetsentences. achieveworseperformanceontheSEdataset. The
+CNN-GRU.Zhangetal.(2018)employedword experimental results show that the pre-training
+embedding and learnt the latent semantic repre- model is very dependent on the training data. For
+sentations through a hybrid neural network CNN- thespecificfield,itisdifficulttoprovidegoodfea-
+GRU. turerepresentationswithoutsuitableandsufficient
+data.
+4https://www.kaggle.com/dv1453/twitter-sentiment-
+analysis-analytics-vidya (5) Our proposed method, SKS, achieves the
+7163
+DV SE
+Model
+Acc F1(wei) Acc F1(macro)
+SVM* - 87.0 49.2 45.1
+LSTM* 94.5 93.7 55.0 53.0
+GRU* 94.5 93.9 54.0 52.0
+CNN-GRU* - 94.0 62.0 61.5
+BiLSTM* 94.4 93.7 53.5 51.9
+BiGRU_Stacked* - - 56.0 54.6
+USE_SVM* - - 65.3 65.1
+BERT* 94.8 95.8 - 48.8
+GPT* - - - 51.5
+SKS 95.1 96.3 65.9 65.2
+Table2: Comparisonwithexistingmethods. Theresultswithsuperscript*areimportedfromtheliterature. The
+bestresultsineachtypearehighlighted.
+DV SE DV SE
+Model Model
+Acc F1(wei) Acc F1(macro) Acc F1(wei) Acc F1(macro)
+-sc 94.0 94.0 59.6 59.3 no-gate 94.8 95.9 64.7 64.3
+-s 94.5 94.3 61.3 61.3 SKS 95.1 96.3 65.9 65.2
+SKS 95.1 96.3 65.9 65.2
+Table4: theinfluenceofgatedattention.
+Table 3: the results of ablation experiments The best
+resultsineachtypearehighlighted.
+formanceofourmodelisimprovedslightlywhen
+the category embedding is used. The main rea-
+best performance for F1. Compared with other son is that the information of derogatory words is
+neuralnetworks,includingLSTM,GRUandBiL- highlyrelatedtohatespeech,butitwillalsomake
+STM, the F1 value of SKS is increased by nearly the model too sensitive. Therefore, the direct ex-
+3% on the DV dataset, and on the SE dataset, the traction of derogatory words’ sentiment features
+performance of SKS greatly improves to nearly has a limited impact on the performance. 3) SKS
+10%. Even compared with the strong baseline outperforms the other models, which proves the
+model, universal encoder, our model is superior. effectiveness of sentiment knowledge sharing di-
+TheSKSiseasiertoimplementandhasfewerpa- rectly.
+rameters. We also analyse the role of gated attention in
+ourmodel. AsshowninTable4,theperformance
+4.4 AblationExperiments of the model is further improved on both datasets
+when the gated attention is used. This framework
+We then analyze the influence of different parts
+isabletomodelthetaskrelationshipsinasophisti-
+of our model. The results are shown in Table 3,
+cated way by deciding how the separations result-
+where “–sc” denotes ablation of sentiment knowl-
+ing from different gates overlap with each other
+edge sharing and the category embedding. Simi-
+(Ma et al., 2018). Each gated network can learn
+larly,“-s”meansthatsentimentdataisnotusedas
+to select which feature extraction unit is used on
+input for the model, and it only uses category em-
+the input cases. If the tasks are highly related,
+bedding.
+thensharingknowledgewillachievebetterperfor-
+BasedontheresultsinTable3,wecanseethat:
+mance.
+1)Theperformanceonthetwodatasetsdecreases
+significantlywiththemodelablationofsentiment
+4.5 TheInfluenceofTheScaleofSentiment
+knowledgesharingandcategoryembedding. How-
+Dataset
+ever, the performance of the model is better than
+the existing hybrid neural networks. It is shown Hate speech detection and sentiment analysis are
+that this framework can better learn the latent se- highly correlated, so that sentiment knowledge
+manticfeaturesofthetargetsentence. 2)Theper- sharing can improve the performance of hate
+7164
+6 Acknowledgments
+We thank our anonymous reviewers for their
+helpful comments. This work was supported
+by grant from the Natural Science Foundation
+of China (No.62066044, 61632011, 62076046).
+This work was also supported by Xinjiang Uygur
+Autonomous Region Natural Science Foundation
+Project No.2021D01B72 and National Youth Sci-
+enceFundProjectNo.62006130.
+Figure 2: the influence of the scale of sentiment data
+set.
+References
+Pinkesh Badjatiya, Manish Gupta, and Vasudeva
+speech detection. But we cannot ignore the im- Varma. 2019. Stereotypical bias removal for hate
+pact of the scale of the sentiment dataset on the speech detection task using knowledge-based gen-
+eralizations. In The World Wide Web Conference,
+performance. Since the scale of the DV is similar
+pages49–59.
+totheSAdataset,wefocusouranalysisontheSE
+dataset. Valerio Basile, Cristina Bosco, Elisabetta Fersini,
+Nozza Debora, Viviana Patti, Francisco
+As shown in Figure 2, the performance of the
+Manuel Rangel Pardo, Paolo Rosso, Manuela
+model is poor when the ratio of the two types of Sanguinetti, et al. 2019. Semeval-2019 task 5:
+datais1:2. Astheratioofsentimentdataincreases, Multilingual detection of hate speech against immi-
+grants and women in twitter. In 13th International
+theperformanceofthemodelisimproved. When
+Workshop on Semantic Evaluation, pages 54–63.
+the ratio is 2:1, the performance reaches a peak,
+AssociationforComputationalLinguistics.
+andthenmaintainsadecliningtrend. Itisobserved
+that the ratio of multi-task data will also directly MiriamBenballa,SebastienCollet,andRomainPicot-
+Clemente. 2019. Saagie at semeval-2019 task 5:
+affecttheperformance.
+From universal text embeddings and classical fea-
+tures to domain-specific text classification. In Pro-
+ceedings of the 13th International Workshop on Se-
+5 ConclusionandFutureWork manticEvaluation,pages469–475.
+YingChen,YiluZhou,SencunZhu,andHengXu.2012.
+Inthispaper,weexploretheeffectivenessofmulti- Detectingoffensivelanguageinsocialmediatopro-
+task learning in hate speech detection tasks. The tectadolescentonlinesafety. In2012International
+ConferenceonPrivacy,Security,RiskandTrustand
+mainideaistousemultiplefeatureextractionunits
+2012InternationalConferneceonSocialComputing,
+to share multi-task parameters so that the model
+pages71–80.IEEE.
+can better share sentiment knowledge, and then
+Thomas Davidson, Dana Warmsley, Michael Macy,
+gated attention is used to fuse features for hate
+and Ingmar Weber. 2017. Automated hate speech
+speech detection. The proposed model can make
+detectionandtheproblemofoffensivelanguage. In
+full use of the sentiment information of the tar- Proceedings of the International AAAI Conference
+get and external sentiment resources. We show onWebandSocialMedia,volume11.
+that sentiment knowledge sharing improves sys-
+Fabio Del Vigna12, Andrea Cimino23, Felice
+tem performance over the baselines and advances Dell’Orletta, Marinella Petrocchi, and Maurizio
+hate speech detection. Finally, the detailed analy- Tesconi. 2017. Hate me, hate me not: Hate speech
+sis further proves the validity and interpretability detection on facebook. In Proceedings of the First
+Italian Conference on Cybersecurity (ITASEC17),
+ofourmodel.
+pages86–95.
+Overall,ourexperimentsgiveusabetterunder-
+YunxiaDing,XiaobingZhou,andXuejieZhang.2019.
+standing of the relationship between hate speech
+Ynu_dyx at semeval-2019 task 5: A stacked bigru
+detection and sentiment analysis through multi- modelbasedoncapsulenetworkindetectionofhate.
+tasklearning. Wehavelaidthegroundworkforfu- In Proceedings of the 13th International Workshop
+ture efforts in better modelling and data selection, onSemanticEvaluation,pages535–539.
+including different types of hate speech, the type
+Njagi Dennis Gitari, Zhang Zuping, Hanyurwimfura
+andscaleofsentimentdata,andsoon. Damien, and Jun Long. 2015. A lexicon-based
+7165
+approach for hate speech detection. International International Conference on Artificial Intelligence
+JournalofMultimediaandUbiquitousEngineering, inInformationandCommunication(ICAIIC),pages
+10(4):215–230. 169–174.IEEE.
+Yannis Haralambous and Philippe Lenca. 2014. Text NoamShazeer, AzaliaMirhoseini, KrzysztofMaziarz,
+classification using association rules, dependency Andy Davis, Quoc Le, Geoffrey Hinton, and Jeff
+pruning and hyperonymization. arXiv preprint Dean. 2017. Outrageously large neural networks:
+arXiv:1407.7357. The sparsely-gated mixture-of-experts layer. arXiv
+preprintarXiv:1701.06538.
+Vijayasaradhi Indurthi, Bakhtiyar Syed, Manish Shri-
+vastava, Nikhil Chakravartula, Manish Gupta, and Dinghan Shen, Guoyin Wang, Wenlin Wang, Mar-
+Vasudeva Varma. 2019. Fermi at semeval-2019 tin Renqiang Min, Qinliang Su, Yizhe Zhang, Ri-
+task5: Usingsentenceembeddingstoidentifyhate cardoHenao,andLawrenceCarin.2018. Ontheuse
+speechagainstimmigrantsandwomenintwitter. In of word embeddings alone to represent natural lan-
+Proceedings of the 13th International Workshop on guagesequences.
+SemanticEvaluation,pages70–74.
+Serra Sinem Tekiroglu, Yi-Ling Chung, and Marco
+Prashant Kapil and Asif Ekbal. 2020. A deep neu- Guerini.2020. Generatingcounternarrativesagainst
+ral network based multi-task learning approach to online hate speech: Data and strategies. arXiv
+hate speech detection. Knowledge-Based Systems, preprintarXiv:2004.04216.
+210:106458.
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob
+TillKrauseandHannesGrassegger.2016. Facebook’s Uszkoreit, Llion Jones, Aidan N Gomez, Lukasz
+secretrulesofdeletion. SüddeutscheZeitung. Kaiser, and Illia Polosukhin. 2017. Attention is all
+youneed. arXivpreprintarXiv:1706.03762.
+Rohan Kshirsagar, Tyrus Cukuvac, Kathy Mckeown,
+andSusanMcgregor.2018. Predictiveembeddings Cindy Wang. 2018. Interpreting neural network hate
+forhatespeechdetectionontwitter. InProceedings speechclassifiers. InProceedingsofthe2ndWork-
+of the 2nd Workshop on Abusive Language Online, shop on Abusive Language Online (ALW2), pages
+EMNLP2018,Brussels,Belgium,pages26–32. 86–92.
+HanLiu,PeteBurnap,WafaAlorainy,andMatthewL ZeerakWaseem.2016. Areyouaracistoramiseeing
+Williams. 2019. Fuzzy multi-task learning for hate things? annotatorinfluenceonhatespeechdetection
+speech type identification. InThe WorldWideWeb on twitter. In Proceedings of the first workshop on
+Conference,pages3006–3012. NLP and computational social science, pages 138–
+142.
+Jiaqi Ma, Zhe Zhao, Xinyang Yi, Jilin Chen, Lichan
+Hong, and Ed H Chi. 2018. Modeling task re- Ziqi Zhang, David Robinson, and Jonathan Tepper.
+lationships in multi-task learning with multi-gate 2018. Detecting hate speech on twitter using a
+mixture-of-experts. InProceedingsofthe24thACM convolution-gru based deep neural network. In Eu-
+SIGKDD International Conference on Knowledge ropean semantic web conference, pages 745–760.
+Discovery&DataMining,pages1930–1939. Springer.
+Shervin Malmasi and Marcos Zampieri. 2018. Chal-
+lengesindiscriminatingprofanityfromhatespeech.
+JournalofExperimental&TheoreticalArtificialIn-
+telligence,30(2):187–202.
+Yashar Mehdad and Joel Tetreault. 2016. Do charac-
+tersabusemorethanwords? InProceedingsofthe
+17th Annual Meeting of the Special Interest Group
+onDiscourseandDialogue,pages299–303.
+Nedjma Ousidhoum, Zizheng Lin, Hongming Zhang,
+YangqiuSong, andDit-YanYeung.2019. Multilin-
+gual and multi-aspect hate speech analysis. arXiv
+preprintarXiv:1908.11049.
+Jing Qian, Mai ElSherief, Elizabeth Belding, and
+William Yang Wang. 2018. Hierarchical cvae
+for fine-grained hate speech classification. arXiv
+preprintarXiv:1809.00088.
+Axel Rodríguez, Carlos Argueta, and Yi-Ling Chen.
+2019. Automatic detection of hate speech on face-
+bookusingsentimentandemotionanalysis. In2019
+7166

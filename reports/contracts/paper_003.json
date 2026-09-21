@@ -1,0 +1,59 @@
+{
+  "contract_id": "CONTRACT_paper_003",
+  "source_paper": "paper_003",
+  "claim": {
+    "claim_id": "CLAIM_paper_003",
+    "source_paper": "paper_003",
+    "natural_language_claim": "The original authors achieved 85% F1, but we can only reproduce 72%",
+    "population": "",
+    "method": "",
+    "comparator": "",
+    "metric": "",
+    "direction": "",
+    "scope": "",
+    "evaluation_split": "",
+    "aggregation_rule": "mean",
+    "selection_rule": "none",
+    "uncertainty_requirement": {
+      "type": "none",
+      "value": null,
+      "level": 0.95
+    },
+    "required_evidence": [
+      "raw_metrics",
+      "aggregation_code"
+    ],
+    "validity_conditions": [
+      "Reported metrics must faithfully represent computations"
+    ],
+    "abstention_conditions": [
+      "No metric information available"
+    ],
+    "source_spans": {}
+  },
+  "invariants": [
+    {
+      "invariant_id": "INV_001",
+      "source_principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Reported metrics must faithfully represent computations",
+      "machine_readable": {
+        "type": "fidelity",
+        "check": "reported == computed"
+      },
+      "source_paper_span": "global",
+      "required_evidence": [
+        "raw_metrics",
+        "aggregation_code"
+      ],
+      "failure_condition": "Metric mismatch between reported and computed",
+      "abstention_condition": "No metric information available",
+      "confidence": 0.65
+    }
+  ],
+  "metadata": {
+    "n_invariants": 1,
+    "source_principles": [
+      "P6_AGGREGATION_FIDELITY"
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "contract_id": "CAND-04_CONTRACT",
+  "candidate_id": "CAND-04",
+  "source_paper": "A Call for Clarity in Reporting BLEU Scores",
+  "deviation_category": "C6_aggregation_statistical_procedure_error",
+  "claim_text": "In paper 'A Call for Clarity in Reporting BLEU Scores', statistical metrics and aggregations (such as macro-averages or tokenized BLEU) must follow exact mathematical definitions without denominator or tokenization skew.",
+  "predicates": [
+    {
+      "predicate_id": "STATISTICAL_PROCEDURE_FIDELITY",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Metric aggregation rules must be correctly implemented according to standard statistical formulations.",
+      "trace_fields": [
+        "protocol.metric_formula",
+        "protocol.implementation_correct"
+      ],
+      "condition": "protocol.implementation_correct == True",
+      "confidence": 0.93
+    }
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "a9b373e0a5ab4ee99d3e7847dcdca16e44e2c466629782a16a86938861ba1ac5"
+}

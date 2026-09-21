@@ -1,0 +1,11 @@
+{
+  "candidate_id": "CAND-04",
+  "paper_title": "A Call for Clarity in Reporting BLEU Scores",
+  "deviation_category": "C6_aggregation_statistical_procedure_error",
+  "gold_source_type": "E_reproducibility_paper",
+  "gold_url": "https://github.com/mjpost/sacrebleu",
+  "gold_authority": "Matt Post (WMT 2018) + Fairseq Issue #2499",
+  "gold_text": "Across published machine translation papers, BLEU scores were reported after custom tokenization / compound splitting with multi-bleu.perl, producing non-comparable scores that differed by 1.5 to 2.0 BLEU from the standardized detokenized BLEU.",
+  "pre_fix_ref": "multi-bleu.perl tokenized evaluation scripts",
+  "post_fix_ref": "sacreBLEU standardized hash protocol"
+}

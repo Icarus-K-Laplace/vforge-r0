@@ -1,0 +1,11 @@
+{
+  "candidate_id": "CAND-06",
+  "paper_title": "A Fair Comparison of Graph Neural Networks for Graph Classification",
+  "deviation_category": "C4_comparator_asymmetry",
+  "gold_source_type": "E_reproducibility_paper",
+  "gold_url": "https://github.com/diningphil/gnn-comparison",
+  "gold_authority": "Errica, Podda, Bacciu, Micheli (ICLR 2020)",
+  "gold_text": "Existing graph classification literature tuned baseline models (GCN, GraphSAGE) with 10x fewer hyperparameter trials than the proposed architecture, and used test split accuracy to select the best checkpoint instead of validation split.",
+  "pre_fix_ref": "Original GNN paper repos (DiffPool, ECC, DGCNN)",
+  "post_fix_ref": "Standardized 10-fold nested CV with equal random search budgets"
+}

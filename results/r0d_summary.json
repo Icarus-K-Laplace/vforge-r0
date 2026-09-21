@@ -1,0 +1,46 @@
+{
+  "experiment_id": "VForge-R0-D-001",
+  "protocol_version": "R0-D",
+  "date": "2026-09-20",
+  "status": "FRAMEWORK_COMPLETE",
+  
+  "framework": {
+    "description": "Paper-only normative invariant induction system",
+    "implementation": "sciinvariant_r0d.py",
+    "ontology_version": "SCIENTIFIC_VALIDITY_ONTOLOGY_V1",
+    "principles_count": 8,
+    "mock_tested": true
+  },
+  
+  "data_status": {
+    "synthetic_studies": "Available (R0-B/R0-C)",
+    "scicoqa_real": "Pending download",
+    "temporal_holdout": "Not yet started (R0-D2)"
+  },
+  
+  "leakage_audit": {
+    "status": "PASSED",
+    "checklist_complete": true,
+    "code_review": "No gold label imports",
+    "frozen_components": [
+      "SCIENTIFIC_VALIDITY_ONTOLOGY_V1.json"
+    ]
+  },
+  
+  "mock_results": {
+    "papers_tested": 3,
+    "invariants_induced": [4, 2, 1],
+    "original_verdicts": ["PASS", "PASS", "PASS"],
+    "note": "Mock data only - real evaluation pending"
+  },
+  
+  "next_steps": [
+    "Download SciCoQA benchmark",
+    "Load real paper-text + repository pairs",
+    "Run frozen prediction pipeline",
+    "Compute real discrepancy recall",
+    "Compare to baselines"
+  ],
+  
+  "go_criteria_assessment": "UNDETERMINED (awaiting real data)"
+}

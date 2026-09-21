@@ -1,0 +1,51 @@
+{
+  "claim_id": "study_05_claim_01",
+  "study_id": "study_05",
+  "natural_language_claim": "Method A (full features) achieves statistically significantly higher accuracy than Method B (feature-subset) with p < 0.05 under paired 5-fold CV.",
+  "claim_type": "statistical_evidence",
+  "population": "synthetic_binary_classification",
+  "method": "Paired 5-fold cross-validation t-test",
+  "comparator": "LogisticRegression with full vs reduced features",
+  "outcome_metric": "cross_validation_accuracy",
+  "direction": "improves",
+  "reported_value": 0.9875,
+  "uncertainty_requirement": {
+    "type": "p_value",
+    "value": 7.597462551823415e-05,
+    "level": 0.05
+  },
+  "protocol_constraints": [
+    "same_data_splits_for_both_methods",
+    "paired_test_statistic_used",
+    "alpha=0.05_significance_threshold",
+    "5_fold_cross_validation"
+  ],
+  "required_artifacts": [
+    "E:\\VForge-R0\\data\\study_05_dataset.json",
+    "E:\\VForge-R0\\models\\study_05\\model_a.pkl",
+    "E:\\VForge-R0\\models\\study_05\\model_b.pkl"
+  ],
+  "evidence_targets": [
+    "mean_accuracy_method_a",
+    "mean_accuracy_method_b",
+    "p_value"
+  ],
+  "validity_conditions": [
+    "cross_validation_folds_are_identical_between_methods",
+    "no_data_leakage_across_folds",
+    "paired_test_appropriate_for_correlated_estimates"
+  ],
+  "abstention_conditions": [
+    "if_p_value_cannot_be_computed",
+    "if_any_fold_has_zero_samples"
+  ],
+  "oracle_definition": {
+    "description": "Re-run 5-fold CV for both methods on same data, recompute paired t-test, verify p < 0.05.",
+    "input_artifacts": [
+      "E:\\VForge-R0\\data\\study_05_dataset.json",
+      "E:\\VForge-R0\\models\\study_05\\model_a.pkl",
+      "E:\\VForge-R0\\models\\study_05\\model_b.pkl"
+    ],
+    "output_format": "boolean"
+  }
+}

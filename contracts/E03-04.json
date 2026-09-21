@@ -1,0 +1,25 @@
+{
+  "contract_id": "CONTRACT_E03-04",
+  "source_paper": "E03-04",
+  "family": "E03",
+  "paper_text_hash": "db449067fc81ddb5546ee76d6f7447852594c2d7b30faa8662bf375cf04fbe4a",
+  "source_span": "Learning rate is 5e-5 with 5 fine-tuning epochs.",
+  "predicates": [
+    {
+      "predicate_id": "P7_GENERIC",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "All reported outputs must be traceable to upstream entities.",
+      "trace_fields": [
+        "outputs",
+        "reported_value",
+        "upstream_runs"
+      ],
+      "condition": "len(outputs.reported_value.upstream_runs) > 0",
+      "source_span": "Learning rate is 5e-5 with 5 fine-tuning epochs.",
+      "confidence": 0.5
+    }
+  ],
+  "universal_principles": [],
+  "coverage_threshold": 0.7,
+  "self_hash": "030cc1ff3932e3ca87d0da8d0c5a2544cef5997ac426c31447cc8da61918fbb7"
+}

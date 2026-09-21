@@ -1,0 +1,1265 @@
+Masked Image Training for Generalizable Deep Image Denoising
+HaoyuChen1∗, JinjinGu2,3*, YihaoLiu2,4,5, SalmaAbdelMagid6,
+ChaoDong2,4, QiongWang4, HanspeterPfister6, LeiZhu1,7†
+1TheHongKongUniversityofScienceandTechnology(Guangzhou) 2ShanghaiAILab 3TheUniversityofSydney
+4ShenzhenInstitutesofAdvancedTechnology,ChineseAcademyofSciences 5UniversityofChineseAcademyofSciences
+6HarvardUniversity 7TheHongKongUniversityofScienceandTechnology
+Project page: https://github.com/haoyuc/MaskedDenoising
+Abstract
+When capturing and storing images, devices inevitably
+introducenoise. Reducingthisnoiseisacriticaltaskcalled
+image denoising. Deep learning has become the de facto
+methodforimagedenoising,especiallywiththeemergence Gaussian 15 SwinIR Mixture noise SwinIR Ours
+of Transformer-based models that have achieved notable a. In-distribution b. Out-of-distribution
+state-of-the-art results on various image tasks. However, Figure 1. We illustrate the generalization problem of denois-
+deep learning-based methods often suffer from a lack of ingnetworks. WetrainaSwinIRmodelonGaussiannoisewith
+generalizationability. Forexample,deepmodelstrainedon σ = 15. When tested on the same noise, SwinIR demon-
+Gaussian noise may perform poorly when tested on other stratesoutstandingperformance. However, whenappliedtoout-
+noise distributions. To address this issue, we present a of-distribution noise, e.g., the mixture of various noise. SwinIR
+suffersfromahugeperformancedrop. Themodeltrainedbythe
+novelapproachtoenhancethegeneralizationperformance
+proposedmaskedtrainingmethodmaintainsareasonabledenois-
+of denoising networks, known as masked training. Our
+ingeffect,despitealdobeingtrainedonGaussiannoise.
+methodinvolvesmaskingrandompixelsoftheinputimage
+andreconstructingthemissinginformationduringtraining.
+eralizetosuchscenarios.
+We also mask out the features in the self-attention layers
+to avoid the impact of training-testing inconsistency. Our More specifically, most existing denoising works train
+approach exhibits better generalization ability than other and evaluate models on images corrupted with Gaussian
+deep learning models and is directly applicable to real- noise, limiting their performance to a single noise distri-
+worldscenarios. Additionally,ourinterpretabilityanalysis bution. When these models are applied to remove noise
+demonstratesthesuperiorityofourmethod. drawn from other distributions, their performance drasti-
+cally drops. Figure 1 shows an example. The research
+1.Introduction community has become increasingly aware of this gener-
+alization issue of deep models in recent years. As a coun-
+Image denoising is a crucial research area that aims to
+termeasure,somemethods[81]assumethatthenoiselevel
+recover clean images from noisy observations. Due to the
+of a particular noise type is unknown, while others [5,69]
+rapid advancements in deep learning, many promising im-
+attempttoimprovetheperformanceinreal-worldscenarios
+age denoising networks have been developed. These net-
+bysynthesizingorcollectingtrainingdataclosertothetar-
+works are typically trained using images synthesized from
+get noise or directly performing unsupervised training on
+apre-definednoisedistributionandcanachieveremarkable
+the target noise [11,72]. However, none of these meth-
+performance in removing the corresponding noise. How-
+odssubstantiallyimprovethegeneralizationperformanceof
+ever,asignificantchallengeinapplyingthesedeepmodels
+denoising networks, and they still struggle when the noise
+toreal-worldscenariosistheirgeneralizationability. Since
+distributionismismatched[1]. Thegeneralizationissueof
+the real-world noise distribution can differ from that ob-
+deepdenoisingstillposeschallengestomakingthesemeth-
+servedduringtraining, thesemodelsoftenstruggletogen-
+odsbroadlyapplicable.
+In this work, we focus on improving the generalization
+*HaoyuChenandJinjinGucontributeequallytothiswork.
+†LeiZhu(leizhu@ust.hk)isthecorrespondingauthor. abilityofdeepdenoisingmodels. Wedefinegeneralization
+1
+3202
+raM
+32
+]VC.sc[
+1v23131.3032:viXra
+abilityasthe model’sperformanceonnoise different from learning methods [13]. Many techniques have been pro-
+what it observedduring training. Weargue that the gener- posedtoimprovethecapabilitiesofthedenoisingnetworks
+alizationissueofdeepdenoisingisduetotheoverfittingof continuously,e.g.,residualnetworks[39,81,82],densenet-
+training noise. The existing training strategy directly op- works [37,87], recursive networks [9,49,64], multi-scale
+timizes the similarity between the denoised image and the [21,31,77], encoder-decoder [16,55,74], attention opera-
+groundtruth. Theintentionbehindthisisthatthenetwork tions[85,86],self-similarity[35],andnon-localoperations
+shouldlearntoreconstructthetextureandsemanticsofnat- [44,45,59]. Since 2020, the paradigm of vision network
+uralimagescorrectly. However,whatisoftenoverlookedis design has gradually shifted from CNNs to Transformers
+thatthenetworkcanalsoreducethelosssimplybyoverfit- [22]. Vision Transformers treat input pixels as tokens and
+tingthenoisepattern,whichiseasierthanlearningtheim- useself-attentionoperationstoprocessinteractionsbetween
+agecontent. Thisisattheheartofthegeneralizationprob- thesetokens. InspiredbythesuccessofvisionTransform-
+lem. Evenmanypopulardeeplearningmethodsexacerbate ers,manyattemptshavebeenmadetoemployTransformers
+this overfitting problem. When it comes to noise different forlow-levelvisiontasks[10,14,15,46,63,68,71,75,78,79]
+fromthatobservedduringtraining,thenetworkexhibitsthis Duringthedevelopmentofthesemodels, thenoisepattern
+samebehavior,resultinginpoorperformance. used for training is often consistent with the testing one.
+In light of the preceding discussion, our study seeks Thefactorthatdeterminesitsdenoisingperformanceisthe
+to improve the generalization performance of deep de- fitting ability of the network, in other words, the ability of
+noising networks by directing them to learn image con- thenetworktooverfittothetrainingnoise. However,abet-
+tent reconstruction instead of overfitting to training noise. ternetworkdoesnotmeanabettergeneralizationabilityof
+Drawinginspirationfromrecentmaskedmodelingmethods the denoising model. As we will show in the experiment
+[4,20,34,70],weemployamaskedtrainingstrategytoex- section,amoreefficientnetworkevenindicatesworsegen-
+plicitlylearnrepresentationsforimagecontentreconstruc- eralizationperformance.
+tion,asopposedtotrainingnoise.Leveragingtheproperties
+GeneralizationProblem inlow-levelvisionoftenarises
+ofimageprocessingTransformers[15,46,79],weintroduce
+when the testing degradation does not match the training
+twomaskingmechanisms: theinputmaskandtheattention
+degradation, e.g., different downsampling kernel in super-
+mask. Duringtraining,theinputmaskremovesinputimage
+resolution [30,40,48]. We typically develop deep denois-
+pixelsrandomly,andthenetworkreconstructstheremoved
+ing models based on Gaussian noise in the laboratory set-
+pixels. The attention mask is implemented in each self-
+ting. However, noise in the real-world is mostly non-
+attention layer of the Transformer, enabling it to learn the
+Gaussian. Models trained on Gaussian noise fail in these
+completion of masked features dynamically and mitigate
+non-Gaussian scenarios. There are two main categories
+thedistributionshiftbetweentrainingandtestinginmasked
+of solutions to this problem. The first is to make training
+learning. Although we use Gaussian noise for training –
+datasetswithnoisemodelingasclosetorealityaspossible
+similar to previous works – our method demonstrates sig-
+duringdevelopment,e.g.,synthesizingrealnoiseaccording
+nificantperformanceimprovementsonvariousnoisetypes,
+to physical system modeling [5,69], learning to generate
+suchasspecklenoise,Poissonnoise,saltandpeppernoise,
+real noise [11,24,72], collecting real noise – clean image
+spatially correlated Gaussian noise, Monte Carlo-rendered
+pairs for training [1,33,42,58]. Although the models ob-
+image noise, ISP noise, and complex mixtures of multiple
+tained by these methods can improve the effect on the tar-
+noisesources. Existingmethodsandmodelshaveyettoef-
+getnoise,theystillcannotgeneralizetoout-of-distribution
+fectivelyandaccuratelyremoveallthesediversenoisepat-
+noise. Another category of solutions is to develop “blind”
+terns.
+denoising models, which are supposed to deal with un-
+known noise [42,73,81]. These methods usually simply
+2.RelatedWorks
+assumethat thenoiselevel isunknown, or trainona large
+Image Denoising approaches very broadly lie in two cat- amountofnoisetypes[80],whichalsofailstogeneralizeto
+egories: traditional model-based and data-driven deep- othernoisenotpresentinthetrainingset. Fewworkdhave
+learning-based. Traditional methods are usually based on beenproposedtostudythereasonsforthelackofgeneral-
+modeling image priors to recover image content contami- ization ability in low-level vision [40]. Liu et al. [50] ar-
+nated by noise [7,19,23,32,54]. These methods usually guethatnetworkstendtooverfittodegradationsandshow
+do not impose too many constraints on the type of noise, degradation “semantics” inside the network. The presence
+andhavebeenproventobeapplicabletoavarietyofnoise, oftheserepresentationsoftenmeansadecreaseingeneral-
+withgoodgeneralizationperformance[1]. However, these izationability. Theutilizationofthisknowledgecanguide
+methods are not satisfactory for the reconstruction of im- us to analyze and evaluate the generalization performance
+age content. In recent years, the paradigm of denoising [51]. Apart from that, few works have been proposed to
+hasgraduallyshiftedtodata-drivenmethodsbasedondeep improvethegeneralizationabilityofdenoisingmodels.
+2
+learn to discern the rich semantics of natural images from
+noise-contaminated test cases. However, several studies
+have noted that the semantics and knowledge acquired by
+low-level vision networks differ significantly from our ex-
+Ground truth Denoised by SwinIR
+pectations[29,50,51,53]. Wearguethatthepoorgeneral-
+ization ability of denoising models results from our train-
+ing method, which leads the model to focus on overfit-
+ting the training noise rather than learning image recon-
+Trainging image Denoised by our method Our reconstruction result
+struction. Weconductasimpleexperimentforverification.
+Figure2. SwinIR,whentrainedsolelyonimmunohistochemistry
+WetrainedaSwinIRdenoisingnetwork[46]usingimages
+imageswithGaussiannoise,canstilldenoisenaturalimages.This
+thatgreatlydifferfromnaturalimages(immunohistochem-
+observationsupportstheassertionthatmostexistingmethodsper-
+istry images [66]). We synthesized training data pairs us-
+formdenoisingprimarilythroughoverfittingthetrainingnoise.In
+ing Gaussian noise, and then assessed the model’s perfor-
+contrast, our approach emphasizes reconstructing natural image
+mance on natural images with Gaussian noise. According
+texturesandedgesobservedinthetrainingsetonnaturalimages,
+ratherthanrelyingonnoiseoverfittingfordenoising.Thisdistinc- toourhypothesis,ifthemodellearnsthecontentandrecon-
+tion underlines the fundamental difference between our method structionofimagesemanticsfromthetrainingset,itshould
+andpreviousapproaches.“Ourreconstructionresult”referstous- not perform well on natural images, as it has not been ex-
+ingourmodelbuttakingmaskedimagesasinput. posed to any. If the model is simply overfitting the noise,
+themodelcanremovethenoiseeveniftheimagesaredif-
+ferent,asthemodelmainlyreliesondetectingthenoisefor
+denoising.
+The results are presented in Figure 2. As observed, the
+SwinIR trained on immunohistochemistry images can still
+denoiseandreproducethenaturalimage. Thissupportsour
+conjecture regarding generalization ability, indicating that
+mostexistingmethodsperformdenoisingbyoverfittingthe
+original mask 70% mask 90% trainingnoise. Consequently,whenthenoisedeviatesfrom
+thetrainingconditions,thedenoisingperformanceofthese
+Figure 3. The illustration of the proposed mask-and-complete
+training strategy. Even if a large number of pixels are masked, modelsdeclinessignificantly.
+themodelcanstillreconstructtheinputtosomeextent. This observation also inspires our approach to develop-
+ing deep denoising models with improved generalization
+Maskedmodeling forlanguage[6,20,60,61]issuccess-
+ability. We aim for the model to learn the reconstruction
+ful for learning pre-trained representations that generalize
+of image textures andstructures, rather than focusing only
+welltovariousdownstreamtasks. Thesemethodsmaskout
+onnoise. Inthispaper, weproposeanewmaskedtraining
+aportionoftheinputsequenceandtrainmodelstopredict
+strategyfordenoisingnetworks. Duringtraining,wemask
+the missing content. A similar approach can also be ap-
+outaportionoftheinputpixelsandthentrainthedeepnet-
+pliedtothevisionmodelpre-training. Maskedimagemod-
+worktocompletethem,asshowninFigure3.Ourapproach
+elslearnrepresentationsfromcorruptedimages. Theearli-
+emphasizesreconstructingnaturalimagetexturesandedges
+estattemptsinthisregardcanbetracedbackatleasttothe
+observedintheimage,ratherthanoverfittingnoise. InFig-
+denoisingauto-encoder[67]. Sincethen,manyworkshave
+ure 2 we also show the results of our method. It is evi-
+used predicting missing parts of images to learn efficient
+dent that our approach seeks to reconstruct the immuno-
+image representations [4,12,34,57,70]. However, there
+histochemistry image texture from the training set on the
+have been few successful attempts to apply masked image
+testing natural image, instead of relying on noise overfit-
+modelingtolow-levelvision,eventhoughthemaskedpre-
+ting for denoising. This demonstrates the potential of this
+trainingmethodisintheformoflow-levelvisiontasks.
+ideainimprovinggeneralizationperformance. Bytraining
+ourmethodonnaturalimages,itwillconcentrateonrecon-
+3.Method
+structing the content of natural images, aligning with our
+Our objective is to create denoising models capable of core concept of employing deep learning for low-level vi-
+generalizingtonoisenotencounteredinthetrainingset. In siontasks.
+thissection, wefirstdiscussourmotivationbeforedelving
+The Transformer Architecture. Our approach exploits
+intothespecificsofourmaskedtrainingmethod.
+the excellent properties of visual Transformers, so we first
+Motivation. When training a deep network on a large describethebasicTransformerbackboneusedinthisstudy.
+number of images, the expectation is for the network to Theshiftedwindowmechanismisproventobeflexibleand
+3
+re R p a l n a d ce o m w l i y th [mask-token]
+Input Mask
+LTS
+deksaM
+LTS
+deksaM
+Mask Swin Transformer Block (STL)
++
+mroNreyaL
+PLM +
+Randomly replace with [mask-token]
+Attention Mask
+reyaL
+vnoC
+mroNreyaL
+ASM
+6<latexit sha1_base64="FXxODS1uN5rphMcgWhJkIZgXvN0=">AAAB7nicbVBNS8NAEJ3Ur1q/qh69LBbBU0mkVI9FLx4r2A9oQ9lsN+3SzSbsToQS+iO8eFDEq7/Hm//GbZuDtj4YeLw3w8y8IJHCoOt+O4WNza3tneJuaW//4PCofHzSNnGqGW+xWMa6G1DDpVC8hQIl7yaa0yiQvBNM7uZ+54lrI2L1iNOE+xEdKREKRtFKnXofRcTNoFxxq+4CZJ14OalAjuag/NUfxiyNuEImqTE9z03Qz6hGwSSflfqp4QllEzriPUsVtUv8bHHujFxYZUjCWNtSSBbq74mMRsZMo8B2RhTHZtWbi/95vRTDGz8TKkmRK7ZcFKaSYEzmv5Oh0JyhnFpCmRb2VsLGVFOGNqGSDcFbfXmdtK+qXr1ae6hVGrd5HEU4g3O4BA+uoQH30IQWMJjAM7zCm5M4L86787FsLTj5zCn8gfP5AzEyj30=</latexit>
+⇥
+Mask STLB
+gniddebmE
+erutaeF
+BLTS
+ksaM
+BLTS
+ksaM
+BLTS
+ksaM
+a. b.
+Noisy Input D I e m no a i g s e ed
+Figure 4. The transformer architecture of our proposed masked image training. We make a minimal change to the original SwinIR
+architecture–theinputmaskoperationandtheattentionmasks.Othermicro-designsarenotessentiallydifferentfromotherTransformers.
+Mixture noise w/o input maskw/o attention mask full method Reference
+Figure6. Theeffectivenessoftheinputmaskandattentionmask.
+Notethatthebrightnessoftheimageiswrongw/oattentionmask.
+Input Attention Mix.noiseonCBSD68[56]
+PSNR SSIM
+original w/o attention mask w/ attention mask Mask Mask Ratio(%) PSNR SSIM
+Figure5.Quantitativeeffectoftheattentionmask.Thehistogram ✓ 29.17 0.8227 65 29.57 0.8657
+✓ 26.96 0.8202 75 29.76 0.8678
+differencesarealsoshownabove. ✓ ✓ 29.74 0.8672 85 28.84 0.8548
+Table 1. The importance of using Table 2. Ablation on the at-
+differentmaskoperations. tentionmaskratio.
+effective for image processing tasks [15,46,79]. We only
+Masked Training. Our masked training mainly consists
+make minimal changes when applying it to the proposed
+oftwoaspects,theinputmaskandtheattentionmask. Al-
+maskedtrainingmethodwithoutthelossofgenerality. This
+thoughbotharemaskoperations, thepurposeofthesetwo
+model is illustrated in Figure 4. Transformers divide the
+masksisdifferent. Wedescribethemseparately.
+inputsignalintotokensandprocessspatialinformationus-
+The Input Mask randomly masks out the feature tokens
+ingself-attentionlayers. Inourmethod,aconvolutionlayer
+embeddedbythefirstconvolutionlayer,andencouragesthe
+with kernel size 1 is used as the feature embedding mod-
+network to complete the masked information during train-
+uletoprojectthe3-channelpixelvaluesintoC-dimensional
+ing.Theinputmaskexplicitlyconstructsaverychallenging
+feature tokens. The 1 1 convolution layer ensures that
+× inpaintingproblem,asshowninFigure3.Itcanbeseenthat
+pixels do not affect each other during feature embedding,
+evenifupto90%ofthepixelinformationisdestroyed,the
+which facilitates subsequent masking operations. These
+network can still reconstruct the target image to a certain
+featuretokensaregatheredwithshapeH W C,where
+× × extent. Themethodisverysimple. Giventhefeaturetoken
+H, W and C are the height, width and feature dimension.
+tensorf RH×W×C,werandomlyreplacethetokenwitha
+The shifted window mechanism first reshapes the feature [mask ∈ token] RC withaprobabilityp ,wherep
+mapsofeachframeto HW M2 Cfeaturesbypartition- ∈ IM IM
+M2 × × iscalledtheinputmaskratio. Thenetworkistrainedunder
+ingtheinputintonon-overlappingM M localwindows,
+where HW is the total number of win × dows. We calculate the supervision of the l 1 -norm of the reconstructed image
+M2 and the ground truth. The [mask token] can be learn-
+self-attentiononthefeaturetokenswithinthesamewindow.
+ableandinitializedwitha0vector. Butweactuallyfound
+Therefore, M2 tokens are involved in each standard self-
+thatthe0vectoritselfisalreadyasuitablechoice. Theex-
+attention operation, and we produce the local window fea-
+istenceoftheinputmaskforcesthenetworktolearntorec-
+tureX RM2×C.Ineachself-attentionlayer,thequeryQ,
+∈ ognize and reconstruct the content of the image from very
+keyK andvalueV arecalculatedasQ = XWQ, K =
+limitedinformation.
+XWK, V = XWV, where WQ,WK,WV RC×D
+∈ TheAttentionMask. Wecannotbuildusableimagepro-
+are weight matrices, and D is the dimension of projected
+cessing networks relying solely on the input mask opera-
+vectors. Then,weuseQtoqueryK togeneratetheatten-
+tion. Becauseduringtesting,wewillinputuncorruptedim-
+tionmapA=softmax(QKT/ √ D+B)
+∈
+RM2×M2,where
+agestoretainenoughinformation. Atthistime,duetothe
+B isthelearnablerelativepositionalencoding. Thisatten-
+inconsistencybetweentrainingandtesting,thenetworkwill
+tionmapAisthenusedfortheweightedsumofM2vectors
+tendtoincreasethebrightnessoftheoutputimage. Suchas
+inV. Themulti-headsettingsarealignedwithSwinIR[46]
+the example in Figure 5. Since Transformer uses the self-
+andViT[22].
+4
+35 33 31
+29
+27
+0 15 25 50 758085 95
+51 naissuaG
+31
+30 29
+28
+420.0
+,elkcepS
+28
+26 24
+Gaussian 15 Speckle, 0.024 Mixture, level 3 22
+3
+level ,erutxiM
+PSNR markdatasets,includingCBSD68[56],Kodak24[26],Mc-
+Master[83], andUrban100[36]. Wealsoincludetworeal noisetypesinthiswork: theSmartphoneImageDenoising
+Dataset(SIDD)[1]andMonteCarlo(MC)renderedimage
+Mask ratio (%) noise.Forevaluation,wefollow[27,28]andusethemetrics
+Figure7.Thetrade-offofchoosingdifferentmaskratios.Theper- PSNR, SSIM [52], and LPIPS [84] to evaluate the results.
+formancedropontrainingnoiseisnotsignificantuntil75%mask- SincePSNRandSSIMarequestionedinassessingtheper-
+ingratio. Ourperformancegainonthenoiseoutsidethetraining ceptualqualityofimages[27,28],wealsousetheLPIPSas
+setisgreaterthantheperformancelossonthetrainingset. anadditionalmetric.
+attention operation to process spatial information, we can 4.1.Resutls
+narrow the gap between training and testing by perform-
+AblationStudy. Table1andFigure6showtheeffective-
+ing the same mask operation during the self-attention pro-
+ness of using different mask operations. As we can see,
+cess. The specific mask operation is similar to the input
+without the input mask, the model will lose its generaliza-
+mask,butadifferentattentionmaskratiop and[mask
+AM
+tion ability, and cannot effectively remove the noise out-
+token]areused. Whensometokensintheself-attention
+sidethetrainingset. Withouttheattentionmask,duetothe
+are masked, the attention operation will adjust to the fact
+training-testinginconsistency,thequantitativeperformance
+that the information of these tokens is no longer reliable.
+degrades significantly, and the output image will have the
+Self-attentionwillfocusonunmaskedtokensineachlayer
+wrong brightness. In addition, even without the attention
+and complete the masked information. This operation is
+mask, the generalization ability of the model is not signif-
+difficulttoimplementonconvolutionalnetworks. Figure5
+icantly affected, and most of the noise is still effectively
+showstheeffectoftheattentionmask. Ascanbeseen,the
+removed. Theinputmaskisthecrucialfactorinimproving
+attentionmasksuccessfullymakesthemaskedtrainednet-
+themodelthegeneralizationability.
+workworkontheunmaskedinputimage.
+Table 3a shows the impact of the different input mask
+4.Experiments ratios. We test fixed ratios and random ratios from a uni-
+form distribution. From our experiments, fixed ratios are
+Training Settings. For synthesizing training data, we lessstablefortrainingthanrandomlychosenfromarange,
+samplethecleanimagesfromDIV2K[65],Flickr2K[47], and the performance is also worse. The best quantitative
+BSD500 [3], and WED [52] during training. In our work, performance is achieved with random sampling ratios be-
+allthenetworksaretrainedusingGaussiannoisewithstan- tween 75% 85%. This is a trade-off between denoising
+∼
+dard deviation σ = 15. Each input image is randomly generalizationabilityandthepreservationofimagedetails.
+cropped to a spatial resolution of 64 64, and the number AsshowninFigure7,smallerratiosarenotenoughforthe
+×
+of the total training iteration is 200K. We adopt the Adam network to learn the distribution of images because more
+optimizer[38]withβ =0.9andβ =0.99tominimizetheL noisepatternsarepreserved. Thelargerratioimprovesthe
+1 2 1
+pixelloss. Theinitiallearningrateissetas1 10−4andre- modelgeneralization,asthemodelfocusesmoreonrecon-
+×
+ducedbyhalfatthemilestoneof100Kiterationsand150K struction. But at the same time, some image details may
+iterations. Thebatchsizeissetto64. be lost. For attention mask ratio, we show the effects in
+Table2. Theoptimalratiosarearound75%.
+Testing Noise. Since the training process utilizes the
+Gaussiannoise,weevaluatethegeneralizationperformance TheGeneralizationPerformance. Weevaluateourdeep
+of the models on six other synthetic noise: (1) Speckle denoising method on synthetic noise, where our training
+noise, a type of noise that occurs during the acquisition of noise follows a Gaussian distribution with a single noise
+medical images or tomography images. (2) Poisson noise, level, but we test on multiple types of non-Gaussian noise
+atypeofsignal-dependentnoisethatoccursduringtheac- to assess the model’s generalization performance. In Fig-
+quisition of digital images. (3) Spatially-correlated noise. ure 11, we compare our method with other state-of-the-art
+Thisistosynthesizethecomplexartifactafterdenoisingus- models based on their PSNR and SSIM scores. The re-
+ingaflawedalgorithm. ItisproducedbyfilteringGaussian sults show that our model outperforms all the other mod-
+noisewitha3 3averagekernel. Differentstandarddevi- elsintermsofgeneralizationperformance. Particularly,as
+×
+ationsoftheGaussiannoiseindicatedifferentnoiselevels. the noise level increases, our model exhibits a slower per-
+(4)Salt&peppernoise. (5)Imagesignalprocessing(ISP) formance degradation and thus demonstrates better gener-
+noise. [5] proposes a method to synthesize realistic ISP alization. In contrast, other models suffer from significant
+noise during digital imaging. (6) Mixture noise obtained performance drops when dealing with more severe noise.
+bymixingtheabovedifferenttypesofnoisewithdifferent WealsoprovidevisualcomparisonsinFigure8,whereour
+levels[80]. Thecleanimagesaresampledfromthebench- modelachievesremarkabledenoisingresultseventhoughit
+5
+SpatiallycorrelatedGaussian,σ=50 DnCNN[81] RIDNet[2] RNAN[86]
+CBSD68:img053 Restormer[76] SwinIR[46] baseline MaskedTraining
+Specklenoise,σ2=0.013 DnCNN[81] RIDNet[2] RNAN[86]
+CBSD68:img0046 Restormer[76] SwinIR[46] baseline MaskedTraining
+Salt-and-peppernoise,d=0.02 DnCNN[81] RIDNet[2] RNAN[86]
+CBSD68:img0067 Restormer[76] SwinIR[46] baseline MaskedTraining
+Figure 8. Visual comparison on out-of-distribution noise. When all other methods fail completely, our method is still able to denoise
+effectively.Pleaserefertothesupplementarymaterialtoseemorevisualresults.
+Noisy Reference DnCNN Noisy Reference DnCNN
+Rendered image (256 spp) RNAN SwinIR Ours RNAN SwinIR Ours
+Figure9.VisualresultsofdenoisingaMonteCarlorenderedimage. Figure10.ResultsofISPnoiseremoval.
+istrainedonlyonGaussiannoisewithafixedstandarddevi- achieves superior results compared to all other methods.
+ation. Incontrast,existingmodelstendtooverfitthetrain- Notably, our method achieves a significant lead in LPIPS,
+ingnoiseandfailwhenfacingunseennoise. Morequanti- indicatingthatourresultsexhibitbetterperceptualquality.
+tativeandqualitativeresultscanbefoundinthesupplemen- AlthoughDnCNNandourmethodobtainthesamePSNR,
+tarymaterial. ourmethodstilloutperformsDnCNNintermsofSSIMand
+LPIPS.Furthermore,asevidentfromFigure10,DnCNN’s
+Evaluation on ISP noise. The removal of the ISP noise
+results still contain visible noise, while our method effec-
+isofgreatapplicationvalue. Brooksetal.[5]presentasys-
+tivelyremovesthenoise.
+tematicapproachforgeneratingrealisticrawdatawithISP
+noise that can facilitate our research. We use the default Evaluation on Monte Carlo rendering noise. Monte
+parametersettingsofthemethodproposedin[5]tosynthe- Carlo denoising is avital component of the rendering pro-
+sizeISPnoiseontheKodak24[26]datasetfortesting. The cesssincethewidespreaduseintheindustryofMonteCarlo
+results are shown in Figure 10 and Table 3c. Our method rendering algorithms [8,17,43]. We use the test dataset
+6
+Mix.noiseonCBSD68[56] 128samplesperpixel 64samplesperpixel SyntheticISPnoise[5]
+Ratio(%) PSNR SSIM Method PSNR SSIM LPIPS PSNR SSIM LPIPS Method PSNR SSIM LPIPS
+75 29.17 0.8132 DnCNN[81] 29.94 0.7883 0.2671 26.28 0.6779 0.4216 DnCNN[81] 29.44 0.7857 0.3083
+85 29.44 0.8545 RIDNet[2] 29.96 0.7921 0.2548 26.27 0.6788 0.4122 RIDNet[2] 28.75 0.7446 0.3696
+95 19.60 0.7273 RNAN[86] 29.86 0.7825 0.2702 26.26 0.6743 0.4290 RNAN[86] 28.47 0.7243 0.3601
+SwinIR[46] 29.32 0.7627 0.2943 26.14 0.6651 0.4485 SwinIR[46] 28.39 0.7079 0.3346
+70–80 29.86 0.8593
+Restormer[76] 24.98 0.6598 0.4575 24.59 0.5880 0.5375 Restormer[76] 19.31 0.4982 0.6556
+75–85 30.04 0.8756
+Dropout[40] 28.85 0.7753 0.2941 26.10 0.6696 0.4443 Dropout[40] 28.39 0.7816 0.2621
+75–90 29.87 0.8728
+baseline 29.68 0.7738 0.2851 25.91 0.6535 0.4564 baseline 28.89 0.7595 0.2917
+75–95 29.26 0.8607
+80–90 29.74 0.8672 Ours 30.62 0.8500 0.2254 28.25 0.7694 0.3348 Ours 29.44 0.7920 0.2368
+(a)Abl.ofinputmaskratios. (b)QuantitativecomparisononMonteCarlorenderedimagedenoising. (c)ComparisononsyntheticISPnoise.
+Table3. WetrainallthemodelsonGaussiannoise,σ =15. Allthetestingnoiseisoutofthetrainingset,thereforetheresultscanshow
+themodels’generalizationperformanceondifferentunseennoise.
+DnCNN RIDNet RNAN SwinIR Restormer Dropout baseline Ours
+RNSP
+MISS
+SPIPL
+32 30 30
+28 30 28
+26 26
+26 28 24
+24 26 22 22
+20
+40 45 50 55 60 0.018 0.024 0.03 0.036 0.04 2 2.5 3 3.5 1 2 3 4 5
+0.9
+0.8 0.8 0.8
+0.8 0.7
+0.7 0.6 0.6
+0.6 0.7 0.5
+0.4
+0.4
+0.5 0.6
+40 45 50 55 60 0.018 0.024 0.03 0.036 0.04 2 2.5 3 3.5 1 2 3 4 5
+0.6 0.6
+0.3
+0.5 0.5 0.5
+0.25
+0.4 0.4
+0.4 0.2 0.3 0.3
+0.3 0.15 0.2 0.2
+40 45 50 55 60 0.018 0.024 0.03 0.036 0.04 2 2.5 3 3.5 1 2 3 4 5
+Spatially-correlated Noise Level Speckle Noise Level Poisson Noise Level Mixture Noise Level
+Figure11. PerformancecomparisonsonfournoisetypeswithdifferentlevelsontheKodak24dataset[26]. Allmodelsaretrainedonly
+onGaussiannoise.Ourmaskedtrainingapproachdemonstratesgoodgeneralizationperformanceacrossdifferentnoisetypes.Weinvolve
+multipletypesandlevelsofnoiseintesting,theresultscannotbeshownhere.Moreresultsareshowninthesupplementarymaterial.
+proposed by [25] for Monte Carlo rendered image denois- CKA analysis. To investigate how masked training dif-
+ing. The test images were rendered in 128 samples-per- fers from normal training strategy, we utilize the centered
+pixel(spp)and64spp. Thelowerthespp,themoresevere kernelalignment(CKA)[18,62]toanalyzethedifferences
+thenoiseoftheimage. Inordertoadaptthetestsettoour between network representations obtained from those two
+model,wefirstconvertthedatasettosRGBcolorspaceby trainingmethods. Duetothelimitedspace,wedescribethe
+tonemapping.Figure9andTable3bshowthedenoisingre- detail of CKA in supplementary. In Figure 12, we present
+sults. Ourmethodoutperformsallmethodsonboth128spp our key findings. Specifically, Figure 12 (a) shows the
+and 64spp settings. In Figure 9, the existing methods fail cross-model comparison between the baseline model and
+completely because of poor generalization. Our model is our masked training model. We observe a significant dif-
+still able to remove this noise, demonstrating the wide ap- ference between the two models in terms of their feature
+plicabilityofourmethod. correlations in the deeper layers. Specifically, the features
+ofthedeeperlayersofthebaselinemodelexhibitlowcor-
+relationswithalllayersofourmodel. Thisfindingsuggests
+that these two training methods exhibit inconsistent learn-
+4.2.GeneralizationAnalysis
+ingpatternsforfeatures,especiallyforthedeeperlayers.
+Training curve. Figure 13 shows the training curves of To explore how the models perform on different noise
+the model with and without the proposed masked training. types, Figure 12 (b) shows the cross-noise comparison be-
+The models are trained using only Gaussian noise. The tween in-distribution noise and out-of-distribution noise,
+baselinemethodhasasignificantoverfittingproblem. The suchasGaussianandPoissonnoise.Forthebaselinemodel,
+performanceofourmethodgraduallyimproveswithtrain- weobservealowcorrelationbetweendifferentnoisetypes
+ingwithoutoverfitting.
+7
+a. cross-model comparison on Gaussian 15 b. cross-model comparison between different noise
+Figure12.CKAsimilaritytoanalyzetherepresentationsimilarityofnetworklayers.
+Iteration (K) Iteration (K)
+RNSP
+RNSP
+RNSP
+Speckle
+0.85
+0.8
+0.75
+0.7
+10 60 110 160
+MISS
+MISS
+MISS
+30
+28
+26
+10 60 110 160
+28 0.8 Poisson
+0.75
+26 0.7
+0.65 24 0.6
+22 0.55
+0.5
+10 60 110 160 10 60 110 160
+28 0.8 Spatially-correlated
+0.75
+26 0.7 24 0.65
+0.6
+22 0.55
+0.5
+10 60 110 160 10 60 110 160
+Figure13.Thetestingcurvesondifferentnoisetypesandlevels.
+with masked training without masked training
+Figure14. ComparinggeneralizationabilitywiththeSRGAmet-
+ric.AlowerSRGAvalueindicatesbettergeneralizationability.
+5 1e6 Gaussian 1e6 Gaussian
+Speckle 4 Speckle
+4 Mixture Mixture Poisson 3 Poisson
+3
+2 2
+1 1
+0 0
+-0.10 -0.05 0.0 0.05 0.10 -0.3 -0.2 -0.1 0.0 0.1 0.2 0.3
+Without Masked Training Masked Training
+tnuoc
+phenomenon may be due to the baseline approach causing
+thedeeplayersofthemodeltooverfittothepatternsofthe
+training set, thereby limiting their generalization capabili-
+ties to handle different noise types. In contrast, the high
+correlationbetweenadjacentlayersinourmaskedtraining
+model suggests that the model’s representation of the two
+differentnoisetypesissimilar. Theproposedmaskedtrain-
+ingforcesthenetworktolearntheunderlyingdistributionof
+theimagesthemselves,whichmakesthemodelmorerobust
+to different types of noise and enhances its generalization
+capability.
+Quantification of generalization performance. Liu et
+al.[50,51]suggestthatmodelgeneralizationabilitycanbe
+measuredbymeasuringtheconsistencyofthemodel’srep-
+resentationsacrossdifferenttypesofnoise. Theyalsopro-
+poseageneralizationassessmentindexforlow-levelvision
+networkscalledSRGA[51].Itisanon-parametricandnon-
+learningmetricwhichexploitsthestatisticalcharacteristics
+ofinternalfeaturesofdeepnetworks.Thelowerthevalueof
+SRGA,thebetterthegeneralizationability. Inourcase,we
+useGaussiannoiseasthereferenceandothertypesofnoise
+for testing. Figure 14 shows the SRGA results. Inspired
+by [51], we visualize the distributions of deep features on
+differentnoisetypes, showninFigure15. Wecanseethat
+forthebaselinemodel,thefeaturedistributionsunderdiffer-
+entnoisetypesdeviatefromeachothersignificantly.Forthe
+modelw/ maskedtraining,thedeepfeaturedistributionsof
+differentnoisetypesareclosetoeachother. Thisconfirms
+theeffectivenessofourmethod.
+5.ConclusionandLimitations
+In summary, our masked training method provides a
+promising approach to improving the generalization per-
+formance of deep learning-based image denoising models.
+Thelimitationofourmethodisthatthemaskoperationin-
+Figure 15. The distribution of baseline model features is biased evitably loses information. How to preserve more details
+acrossdifferentnoisetypes. Ourmethodproducessimilarfeature needstobeexploredinfuturework. Ourapproachisastep
+distributionsacrossdifferentnoise. towards developing more robust models for real-world ap-
+plications.
+in the deep layers, indicating that the network processes
+thesetwotypesofnoiseindifferentwaysforthedeeplay- Acknowledgment. This work is supported in part by
+ers. Thistrendholdsforothertypesofnoiseaswell. This Guangzhou Municipal Science and Technology Project
+8
+(Grant No. 2023A03J0671), the National Natural Science [13] YunjinChenandThomasPock.Trainablenonlinearreaction
+FoundationofChinaunderGrant(62276251),theJointLab diffusion: Aflexibleframeworkforfastandeffectiveimage
+ofCAS-HK,andtheYouthInnovationPromotionAssocia- restoration. IEEEtransactionsonpatternanalysisandma-
+tionofChineseAcademyofSciences(No. 2020356). chineintelligence,39(6):1256–1272,2016. 2
+[14] Zheng Chen, Yulun Zhang, Jinjin Gu, Linghe Kong, and
+References Xiaokang Yang. Recursive generalization transformer for
+image super-resolution. arXiv preprint arXiv:2303.06373,
+[1] Abdelrahman Abdelhamed, Stephen Lin, and Michael S 2023. 2
+Brown. A high-quality denoising dataset for smartphone [15] Zheng Chen, Yulun Zhang, Jinjin Gu, Yongbing Zhang,
+cameras. InProceedingsoftheIEEEConferenceonCom- LingheKong,andXinYuan. Crossaggregationtransformer
+puter Vision and Pattern Recognition, pages 1692–1700, forimagerestoration. InNIPS,2022. 2,4
+2018. 1,2,5,13,14
+[16] Shen Cheng, Yuzhi Wang, Haibin Huang, Donghao Liu,
+[2] SaeedAnwarandNickBarnes. Realimagedenoisingwith
+Haoqiang Fan, and Shuaicheng Liu. Nbnet: Noise basis
+feature attention. In Proceedings of the IEEE/CVF inter-
+learning for image denoising with subspace projection. In
+nationalconferenceoncomputervision, pages3155–3164,
+ProceedingsoftheIEEE/CVFConferenceonComputerVi-
+2019. 6,7,13,16,17,18,19,20
+sionandPatternRecognition,pages4896–4906,2021. 2
+[3] Pablo Arbelaez, Michael Maire, Charless Fowlkes, and Ji-
+[17] Per Christensen, Julian Fong, Jonathan Shade, Wayne
+tendraMalik. Contourdetectionandhierarchicalimageseg-
+Wooten,BrendenSchubert,AndrewKensler,StephenFried-
+mentation. TPAMI,2010. 5
+man, Charlie Kilpatrick, Cliff Ramshaw, Marc Bannister,
+[4] HangboBao,LiDong,andFuruWei.Beit:Bertpre-training
+etal. Renderman:Anadvancedpath-tracingarchitecturefor
+of image transformers. arXiv preprint arXiv:2106.08254,
+movie rendering. ACM Transactions on Graphics (TOG),
+2021. 2,3
+37(3):1–21,2018. 6
+[5] Tim Brooks, Ben Mildenhall, Tianfan Xue, Jiawen Chen,
+[18] CorinnaCortes,MehryarMohri,andAfshinRostamizadeh.
+DillonSharlet,andJonathanTBarron.Unprocessingimages
+Algorithmsforlearningkernelsbasedoncenteredalignment.
+forlearnedrawdenoising. InProceedingsoftheIEEE/CVF
+The Journal of Machine Learning Research, 13:795–828,
+Conference on Computer Vision and Pattern Recognition,
+2012. 7,15
+pages11036–11045,2019. 1,2,5,6,7,13
+[19] Kostadin Dabov, Alessandro Foi, Vladimir Katkovnik, and
+[6] Tom Brown, Benjamin Mann, Nick Ryder, Melanie Sub-
+KarenEgiazarian.Imagedenoisingbysparse3-dtransform-
+biah,JaredDKaplan,PrafullaDhariwal,ArvindNeelakan-
+domaincollaborativefiltering. IEEETransactionsonimage
+tan,PranavShyam,GirishSastry,AmandaAskell,etal.Lan-
+processing,16(8):2080–2095,2007. 2
+guagemodelsarefew-shotlearners. Advancesinneuralin-
+[20] Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina
+formationprocessingsystems,33:1877–1901,2020. 3
+Toutanova. Bert: Pre-training of deep bidirectional
+[7] AntoniBuades,BartomeuColl,andJ-MMorel.Anon-local
+transformers for language understanding. arXiv preprint
+algorithmforimagedenoising. In2005IEEEcomputerso-
+arXiv:1810.04805,2018. 2,3
+cietyconferenceoncomputervisionandpatternrecognition
+(CVPR’05),volume2,pages60–65.Ieee,2005. 2 [21] Nithish Divakar and R Venkatesh Babu. Image denoising
+via cnns: An adversarial approach. In Proceedings of the
+[8] Brent Burley, David Adler, Matt Jen-Yuan Chiang, Hank
+IEEEConferenceonComputerVisionandPatternRecogni-
+Driskill,RalfHabel,PatrickKelly,PeterKutz,YiningKarl
+tionWorkshops,pages80–87,2017. 2
+Li,andDanielTeece. Thedesignandevolutionofdisney’s
+hyperionrenderer. ACMTransactionsonGraphics(TOG), [22] Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov,
+37(3):1–22,2018. 6 Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner,
+[9] Chang Chen, Zhiwei Xiong, Xinmei Tian, and Feng Wu. MostafaDehghani,MatthiasMinderer,GeorgHeigold,Syl-
+Deep boosting for image denoising. In Proceedings of the vain Gelly, et al. An image is worth 16x16 words: Trans-
+EuropeanConferenceonComputerVision(ECCV),pages3– formers for image recognition at scale. arXiv preprint
+18,2018. 2 arXiv:2010.11929,2020. 2,4
+[10] Hanting Chen, Yunhe Wang, Tianyu Guo, Chang Xu, Yip- [23] Michael Elad and Michal Aharon. Image denoising via
+ingDeng,ZhenhuaLiu,SiweiMa,ChunjingXu,ChaoXu, sparseandredundantrepresentationsoverlearneddictionar-
+andWenGao. Pre-trainedimageprocessingtransformer. In ies. IEEETransactionsonImageprocessing,15(12):3736–
+CVPR,2021. 2 3745,2006. 2
+[11] Jingwen Chen, Jiawei Chen, Hongyang Chao, and Ming [24] RuichengFeng,JinjinGu,YuQiao,andChaoDong. Sup-
+Yang.Imageblinddenoisingwithgenerativeadversarialnet- pressing model overfitting for image super-resolution net-
+workbasednoisemodeling.InProceedingsoftheIEEEcon- works. In Proceedings of the IEEE/CVF Conference on
+ference on computer vision and pattern recognition, pages ComputerVisionandPatternRecognitionWorkshops,pages
+3155–3164,2018. 1,2 0–0,2019. 2
+[12] MarkChen,AlecRadford,RewonChild,JeffreyWu,Hee- [25] Arthur Firmino, Jeppe Revall Frisvad, and Henrik Wann
+wooJun, DavidLuan, andIlyaSutskever. Generativepre- Jensen. Progressivedenoisingofmontecarlorenderedim-
+trainingfrompixels.InInternationalconferenceonmachine ages.InComputerGraphicsForum,volume41,pages1–11.
+learning,pages1691–1703.PMLR,2020. 3 WileyOnlineLibrary,2022. 7,13
+9
+[26] RichFranzen.Kodaklosslesstruecolorimagesuite.source: [40] Xiangtao Kong, Xina Liu, Jinjin Gu, Yu Qiao, and Chao
+http://r0k.us/graphics/kodak/,1999. 5,6,7,15,17 Dong. Reflash dropout in image super-resolution. In Pro-
+[27] JinjinGu,HaomingCai,HaoyuChen,XiaoxingYe,Jimmy ceedingsoftheIEEE/CVFConferenceonComputerVision
+Ren,andChaoDong. Imagequalityassessmentforpercep- andPatternRecognition,pages6002–6012,2022. 2,7,13,
+tualimagerestoration: Anewdataset,benchmarkandmet- 17,18,19,20
+ric. arXivpreprintarXiv:2011.15002,2020. 5 [41] Simon Kornblith, Mohammad Norouzi, Honglak Lee, and
+[28] JinjinGu,HaomingCai,HaoyuChen,XiaoxingYe,Jimmy Geoffrey Hinton. Similarity of neural network represen-
+Ren, and Chao Dong. Pipal: a large-scale image qual- tations revisited. In International Conference on Machine
+ity assessment dataset for perceptual image restoration. In Learning,pages3519–3529.PMLR,2019. 15
+EuropeanConferenceonComputerVision,pages633–651. [42] Alexander Krull, Tim-Oliver Buchholz, and Florian Jug.
+Springer,2020. 5 Noise2void-learningdenoisingfromsinglenoisyimages. In
+[29] Jinjin Gu and Chao Dong. Interpreting super-resolution Proceedings of the IEEE/CVF conference on computer vi-
+networks with local attribution maps. In Proceedings of sionandpatternrecognition,pages2129–2137,2019. 2
+theIEEE/CVFConferenceonComputerVisionandPattern [43] Christopher Kulla, Alejandro Conty, Clifford Stein, and
+Recognition,pages9199–9208,2021. 3 LarryGritz. Sonypicturesimageworksarnold. ACMTrans-
+[30] Jinjin Gu, Hannan Lu, Wangmeng Zuo, and Chao Dong. actionsonGraphics(TOG),37(3):1–18,2018. 6
+Blind super-resolution with iterative kernel correction. In [44] Stamatios Lefkimmiatis. Non-local color image denoising
+ProceedingsoftheIEEE/CVFConferenceonComputerVi- with convolutional neural networks. In Proceedings of the
+sionandPatternRecognition,pages1604–1613,2019. 2 IEEE conference on computer vision and pattern recogni-
+[31] Shuhang Gu, Yawei Li, Luc Van Gool, and Radu Timofte. tion,pages3587–3596,2017. 2
+Self-guidednetworkforfastimagedenoising. InProceed- [45] Stamatios Lefkimmiatis. Universal denoising networks: a
+ings of the IEEE/CVF International Conference on Com- novel cnn architecture for image denoising. In Proceed-
+puterVision,pages2511–2520,2019. 2 ingsoftheIEEEconferenceoncomputervisionandpattern
+[32] Shuhang Gu, Lei Zhang, Wangmeng Zuo, and Xiangchu recognition,pages3204–3213,2018. 2
+Feng. Weighted nuclear norm minimization with applica- [46] JingyunLiang, JiezhangCao, GuoleiSun, KaiZhang, Luc
+tion to image denoising. In Proceedings of the IEEE con- VanGool,andRaduTimofte. Swinir: Imagerestorationus-
+ference on computer vision and pattern recognition, pages ingswintransformer. InCVPR,2021. 2,3,4,6,7,13,16,
+2862–2869,2014. 2 17,18,19,20
+[33] Shi Guo, Zifei Yan, Kai Zhang, Wangmeng Zuo, and Lei [47] BeeLim,SanghyunSon,HeewonKim,SeungjunNah,and
+Zhang. Toward convolutional blind denoising of real pho- KyoungMuLee.Enhanceddeepresidualnetworksforsingle
+tographs. In Proceedings of the IEEE/CVF conference on imagesuper-resolution. InCVPRW,2017. 5
+computervisionandpatternrecognition,pages1712–1722, [48] AnranLiu,YihaoLiu,JinjinGu,YuQiao,andChaoDong.
+2019. 2 Blindimagesuper-resolution: Asurveyandbeyond. IEEE
+[34] Kaiming He, Xinlei Chen, Saining Xie, Yanghao Li, Piotr TransactionsonPatternAnalysisandMachineIntelligence,
+Dolla´r,andRossGirshick.Maskedautoencodersarescalable 2022. 2
+visionlearners.InProceedingsoftheIEEE/CVFConference [49] DingLiu,BihanWen,YuchenFan,ChenChangeLoy,and
+onComputerVisionandPatternRecognition,pages16000– Thomas S Huang. Non-local recurrent network for image
+16009,2022. 2,3 restoration. Advancesinneuralinformationprocessingsys-
+[35] XiaowanHu,RuijunMa,ZhihongLiu,YuanhaoCai,Xiaole tems,31,2018. 2
+Zhao, Yulun Zhang, and Haoqian Wang. Pseudo 3d auto- [50] Yihao Liu, Anran Liu, Jinjin Gu, Zhipeng Zhang, Wen-
+correlation network for real image denoising. In Proceed- hao Wu, Yu Qiao, and Chao Dong. Discovering” se-
+ingsoftheIEEE/CVFConferenceonComputerVisionand mantics” in super-resolution networks. arXiv preprint
+PatternRecognition,pages16175–16184,2021. 2 arXiv:2108.00406,2021. 2,3,8
+[36] Jia-BinHuang,AbhishekSingh,andNarendraAhuja.Single [51] Yihao Liu, Hengyuan Zhao, Jinjin Gu, Yu Qiao, and
+imagesuper-resolutionfromtransformedself-exemplars. In ChaoDong. Evaluatingthegeneralizationabilityofsuper-
+CVPR,2015. 5,15,20 resolution networks. arXiv preprint arXiv:2205.07019,
+[37] XixiJia,SanyangLiu,XiangchuFeng,andLeiZhang. Foc- 2022. 2,3,8
+net: Afractionaloptimalcontrolnetworkforimagedenois- [52] Kede Ma, Zhengfang Duanmu, Qingbo Wu, Zhou Wang,
+ing. InProceedingsoftheIEEE/CVFConferenceonCom- HongweiYong,HongliangLi,andLeiZhang. Waterlooex-
+puter Vision and Pattern Recognition, pages 6054–6063, plorationdatabase:Newchallengesforimagequalityassess-
+2019. 2 mentmodels. TIP,2016. 5
+[38] Diederik Kingma and Jimmy Ba. Adam: A method for [53] SalmaAbdelMagid,ZudiLin,DonglaiWei,YulunZhang,
+stochasticoptimization. InICLR,2015. 5 JinjinGu,andHanspeterPfister.Texture-basederroranalysis
+[39] Filippos Kokkinos and Stamatios Lefkimmiatis. Deep im- forimagesuper-resolution.InProceedingsoftheIEEE/CVF
+agedemosaickingusingacascadeofconvolutionalresidual Conference on Computer Vision and Pattern Recognition,
+denoising networks. In Proceedings of the European con- pages2118–2127,2022. 3
+ferenceoncomputervision(ECCV),pages303–319, 2018. [54] JulienMairal,FrancisBach,JeanPonce,GuillermoSapiro,
+2 andAndrewZisserman. Non-localsparsemodelsforimage
+10
+restoration. In2009IEEE12thinternationalconferenceon [68] Zhendong Wang, Xiaodong Cun, Jianmin Bao, and
+computervision,pages2272–2279.IEEE,2009. 2 JianzhuangLiu. Uformer: Ageneralu-shapedtransformer
+[55] Xiaojiao Mao, Chunhua Shen, and Yu-Bin Yang. Image for image restoration. arXiv preprint arXiv:2106.03106,
+restoration using very deep convolutional encoder-decoder 2021. 2
+networkswithsymmetricskipconnections.Advancesinneu- [69] KaixuanWei, YingFu, JiaolongYang, andHuaHuang. A
+ralinformationprocessingsystems,29,2016. 2 physics-basednoiseformationmodelforextremelow-light
+[56] David Martin, Charless Fowlkes, Doron Tal, and Jitendra rawdenoising. InProceedingsoftheIEEE/CVFConference
+Malik. A database of human segmented natural images on Computer Vision and Pattern Recognition, pages 2758–
+anditsapplicationtoevaluatingsegmentationalgorithmsand 2767,2020. 1,2
+measuringecologicalstatistics. InProceedingsEighthIEEE [70] Zhenda Xie, Zheng Zhang, Yue Cao, Yutong Lin, Jianmin
+International Conference on Computer Vision. ICCV 2001, Bao,ZhuliangYao,QiDai,andHanHu.Simmim:Asimple
+volume2,pages416–423.IEEE,2001. 4,5,7,15,19 frameworkformaskedimagemodeling. InProceedingsof
+[57] Deepak Pathak, Philipp Krahenbuhl, Jeff Donahue, Trevor theIEEE/CVFConferenceonComputerVisionandPattern
+Darrell, and Alexei A Efros. Context encoders: Feature Recognition,pages9653–9663,2022. 2,3
+learning by inpainting. In Proceedings of the IEEE con- [71] FuzhiYang,HuanYang,JianlongFu,HongtaoLu,andBain-
+ference on computer vision and pattern recognition, pages ing Guo. Learning texture transformer network for image
+2536–2544,2016. 3 super-resolution. InCVPR,2020. 2
+[58] Tobias Plotz and Stefan Roth. Benchmarking denoising [72] Yuan Yuan, Siyuan Liu, Jiawei Zhang, Yongbing Zhang,
+algorithms with real photographs. In Proceedings of the Chao Dong, and Liang Lin. Unsupervised image super-
+IEEE conference on computer vision and pattern recogni- resolution using cycle-in-cycle generative adversarial net-
+tion,pages1586–1595,2017. 2 works.InProceedingsoftheIEEEConferenceonComputer
+[59] TobiasPlo¨tzandStefanRoth. Neuralnearestneighborsnet- VisionandPatternRecognitionWorkshops,pages701–710,
+works. AdvancesinNeuralinformationprocessingsystems, 2018. 1,2
+31,2018. 2 [73] Zongsheng Yue, Hongwei Yong, Qian Zhao, Deyu Meng,
+[60] Alec Radford, Karthik Narasimhan, Tim Salimans, Ilya andLeiZhang.Variationaldenoisingnetwork:Towardblind
+Sutskever,etal. Improvinglanguageunderstandingbygen- noisemodelingandremoval.Advancesinneuralinformation
+erativepre-training. 2018. 3 processingsystems,32,2019. 2
+[61] AlecRadford,JeffreyWu,RewonChild,DavidLuan,Dario [74] Zongsheng Yue, Qian Zhao, Lei Zhang, and Deyu Meng.
+Amodei, Ilya Sutskever, et al. Language models are unsu- Dualadversarialnetwork: Towardreal-worldnoiseremoval
+pervisedmultitasklearners. OpenAIblog,1(8):9,2019. 3 andnoisegeneration. InEuropeanConferenceonComputer
+[62] Maithra Raghu, Thomas Unterthiner, Simon Kornblith, Vision,pages41–58.Springer,2020. 2
+Chiyuan Zhang, and Alexey Dosovitskiy. Do vision trans- [75] Syed Waqas Zamir, Aditya Arora, Salman Khan, Mu-
+formersseelikeconvolutionalneuralnetworks? Advances nawarHayat,FahadShahbazKhan,andMing-HsuanYang.
+inNeuralInformationProcessingSystems,34:12116–12128, Restormer: Efficient transformer for high-resolution image
+2021. 7,15 restoration. InCVPR,2022. 2
+[63] Shuwei Shi, Jinjin Gu, Liangbin Xie, Xintao Wang, Yujiu [76] Syed Waqas Zamir, Aditya Arora, Salman Khan, Mu-
+Yang,andChaoDong.Rethinkingalignmentinvideosuper- nawarHayat,FahadShahbazKhan,andMing-HsuanYang.
+resolution transformers. arXiv preprint arXiv:2207.08494, Restormer: Efficient transformer for high-resolution image
+2022. 2 restoration. In Proceedings of the IEEE/CVF Conference
+[64] YingTai,JianYang,XiaomingLiu,andChunyanXu.Mem- on Computer Vision and Pattern Recognition, pages 5728–
+net: Apersistentmemorynetworkforimagerestoration. In 5739,2022. 6,7,13,16,17,18,19,20
+Proceedings of the IEEE international conference on com- [77] SyedWaqasZamir, AdityaArora, SalmanKhan, Munawar
+putervision,pages4539–4547,2017. 2 Hayat, Fahad Shahbaz Khan, Ming-Hsuan Yang, and Ling
+[65] Radu Timofte, Eirikur Agustsson, Luc Van Gool, Ming- Shao. Multi-stage progressive image restoration. In Pro-
+HsuanYang,LeiZhang,BeeLim,SanghyunSon,Heewon ceedings of the IEEE/CVF conference on computer vision
+Kim,SeungjunNah,KyoungMuLee,etal.Ntire2017chal- andpatternrecognition,pages14821–14831,2021. 2
+lengeonsingleimagesuper-resolution:Methodsandresults. [78] Jiale Zhang, Yulun Zhang, Jinjin Gu, Jiahua Dong,
+InCVPRW,2017. 5 Linghe Kong, and Xiaokang Yang. Xformer: Hybrid x-
+[66] MathiasUhlen,PerOksvold,LinnFagerberg,EmmaLund- shaped transformer for image denoising. arXiv preprint
+berg, Kalle Jonasson, Mattias Forsberg, Martin Zwahlen, arXiv:2303.06440,2023. 2
+CarolineKampf,KennethWester,SophiaHober,etal. To- [79] Jiale Zhang, Yulun Zhang, Jinjin Gu, Yongbing Zhang,
+wards a knowledge-based human protein atlas. Nature Linghe Kong, and Xin Yuan. Accurate image restora-
+biotechnology,28(12):1248–1250,2010. 3 tion with attention retractable transformer. arXiv preprint
+[67] Pascal Vincent, Hugo Larochelle, Isabelle Lajoie, Yoshua arXiv:2210.01427,2022. 2,4
+Bengio, Pierre-Antoine Manzagol, and Le´on Bottou. [80] KaiZhang, YaweiLi, JingyunLiang, JiezhangCao, Yulun
+Stackeddenoisingautoencoders: Learningusefulrepresen- Zhang,HaoTang,RaduTimofte,andLucVanGool. Prac-
+tations in a deep network with a local denoising criterion. ticalblinddenoisingviaswin-conv-unetanddatasynthesis.
+Journalofmachinelearningresearch,11(12),2010. 3 arXivpreprintarXiv:2203.13278,2022. 2,5
+11
+[81] KaiZhang,WangmengZuo,YunjinChen,DeyuMeng,and
+LeiZhang.Beyondagaussiandenoiser:Residuallearningof
+deepcnnforimagedenoising. IEEEtransactionsonimage
+processing, 26(7):3142–3155, 2017. 1, 2, 6, 7, 13, 14, 16,
+17,18,19,20
+[82] KaiZhang,WangmengZuo,andLeiZhang.Ffdnet:Toward
+a fast and flexible solution for cnn-based image denoising.
+IEEETransactionsonImageProcessing,27(9):4608–4622,
+2018. 2
+[83] LeiZhang,XiaolinWu,AntoniBuades,andXinLi. Color
+demosaicking by local directional interpolation and nonlo-
+cal adaptive thresholding. Journal of Electronic imaging,
+20(2):023016,2011. 5,15,18
+[84] RichardZhang,PhillipIsola,AlexeiAEfros,EliShechtman,
+and Oliver Wang. The unreasonable effectiveness of deep
+featuresasaperceptualmetric. InCVPR,2018. 5
+[85] YulunZhang,KunpengLi,KaiLi,GanSun,YuKong,and
+Yun Fu. Accurate and fast image denoising via attention
+guided scaling. IEEE Transactions on Image Processing,
+30:6255–6265,2021. 2
+[86] YulunZhang,KunpengLi,KaiLi,BinengZhong,andYun
+Fu.Residualnon-localattentionnetworksforimagerestora-
+tion.arXivpreprintarXiv:1903.10082,2019.2,6,7,13,16,
+17,18,19,20
+[87] Yulun Zhang, Yapeng Tian, Yu Kong, Bineng Zhong, and
+YunFu.Residualdensenetworkforimagerestoration.IEEE
+TransactionsonPatternAnalysisandMachineIntelligence,
+43(7):2480–2495,2020. 2
+12
+Appendix
+A.DetailsoftheTestNoise
+39
+38.5
+Weevaluatethegeneralizationperformanceofthemod-
+38
+elsonsixdifferentsyntheticnoisetypestoevaluatethegen-
+37.5
+eralizationperformanceonthenoiseoutofthetrainingset: 37
+(1)Specklenoiseisakindofnoisethatcanoccurduringthe 36.5
+acquisition of medical images or tomography images. We
+10 60 110 160
+usedifferentvariancesσ2toobtaindifferentlevelsofnoise. Iteration (K)
+The imnoise function in MATLAB is used for generating
+Specklenoise.Weaddmultiplicativenoiseaccordingtothe
+equation J = I +n I, where n is uniformly distributed
+∗
+randomnoisewithmean0andvarianceσ2, J isthenoisy
+image.
+(2) Poisson noise is a kind of signal-dependent noise that
+occurs during the acquisition of digital images. We am-
+plified the noise using different scaling factor α using the
+equationJ = I +n α,wherewegeneratePoissonnoise
+∗ nfirst,thenmultiplyitbyascalingfactorα.
+(3)Spatially-correlatednoiseindicatesadditiveGaussian
+noisefilteredwithanaveragekernelofsize3 3. Different
+×
+levels indicate different standard deviations σ for the used
+Gaussian noise. This is to synthesize the complex artifact
+afterdenoisingusingaflawedalgorithm.
+(4) Salt & pepper noise. Different noise levels represent
+different noise densities, denoted by d. The imnoise func-
+tioninMATLABisusedforgeneratingSalt&peppernoise.
+This noise can appear during image acquisition as a result
+ofcameraimagingpipelineerrors.
+(5) Image signal processing (ISP) noise. Modern digital
+camerasaimtoproducevisuallypleasingandaccurateim-
+ages that match human perception. The raw sensor data
+captured by the camera cannot directly produce a usable
+image, and several post-processing stages are required to
+convertitslinearintensitiesintothefinalimage[5]. Asthe
+originalrawimagecontainsnoise,thepost-processedimage
+exhibits more complex noise. Since there are no adequate
+realnoisyandnoise-freeimagepairs,manydenoisingalgo-
+rithmsperformpoorlyonrealdataduetothegapbetween
+synthetic and real noise. In our experiments, we use the
+defaultparametersettingsof[5]tosynthesizeISPnoiseon
+RGBimages.
+(6) Mixture noise is obtained by mixing the above dif-
+ferent types of noise with different levels. We consider
+the real-world case where the image suffers from multi-
+ple degradations. The order of noise adding is Gaussian
+noise(variancesσ2),specklenoise(variancesσ2 ),Poisson
+g s1
+noise (scale α), Salt & pepper noise (density d), speckle
+noise (variances σ2 ). Since speckle noise is a multiplica-
+s2
+tive noise, it will have different effects when used in dif-
+ferent positions. It will be multiplied by the noise already
+existingintheimagetoobtaincomplexnoisedegradation.
+Thereare4levels:
+RNSP
+from scratch pre-train (Gaussian) w/o mask
+pre-train (Gaussian) w/ mask pre-train (clean) w/ mask
+0.9
+0.85
+0.8
+0.75
+10 60 110 160
+Iteration (K)
+MISS
+Figure16.Trainingcurveofdifferentmethodsvalidatedusingour
+SIDDtestset.
+SIDD Masked
+ID Pre-train PSNR SSIM LPIPS Fine-tune Traning
+1 Gaus.15 32.11 0.6606 0.5434
+2 Gaus.15 ✓ 33.01 0.6999 0.4626
+3 None ✓ 38.36 0.8879 0.3555
+4 Gaus.15 ✓ 37.08 0.7920 0.3622
+5 Gaus.15 ✓ ✓ 38.15 0.8822 0.3237
+6 Clean ✓ ✓ 39.11 0.9135 0.2614
+Table4. Maskedpre-trainingforlimitedpaireddata. Ourmethod
+ofpre-trainingoncleanimagesbymaskedtrainingfirstandthen
+fine-tuningontargetlimiteddatasetyieldsthebestresults.
+1. σ2 = 0.003, σ2 = 0.003, α = 1, d = 0.002, σ2 =
+g s1 s2
+0.003;
+2. σ2 = 0.004, σ2 = 0.004, α = 1, d = 0.002, σ2 =
+g s1 s2
+0.004;
+3. σ2 = 0.006, σ2 = 0.006, α = 1, d = 0.003, σ2 =
+g s1 s2
+0.006;
+4. σ2 = 0.008, σ2 = 0.008, α = 1, d = 0.004, σ2 = g s1 s2
+0.008;
+Thenoisepatternsproducedbythesefoursettingsarecom-
+pletelydifferentfromexistingstudies.
+We also include two real noise types in this work:
+the Smartphone Image Denoising Dataset (SIDD) [1] and
+MonteCarlo(MC)renderedimagenoise[25].
+B.AdditionalComparisons
+MethodsforComparison. Wecompareourmethodwith
+several classical methods: DnCNN [81], RIDNet [2],
+RNAN [86], SwinIR [46], Restormer [76], Dropout [40].
+Among them, Dropout [40] was proposed to improve the
+generalization ability and relieve the overfitting problem.
+Following [40],weapplythedropoutlayerwithadropout
+probability of 0.7 before the output convolutional layer of
+thebaselinemodel.
+Masked Training as Pre-training. In many real-world
+scenarios, wecanonlyaccessverylimitedimagepairsfor
+13
+0100179008S603200008005500L HQ Noisy SwinIR fromscratch pre-trainw/omask pre-trainw/mask
+Figure17. VisualcomparisonofdifferentmethodsonrealsmartphonenoisedatasetSIDD[1]. “SwinIR”istrainedonGaussiannoise,
+σ=15.”fromscratch”istraineddirectlyonthetargettwoSIDDtrainingsamples.“pre-trainw/omask”ispre-trainedonGaussiannoise,
+σ=15,andfine-tunedwithoutmask.“pre-trainw/ mask”ispre-trainedoncleanimagesandfine-tunedbymaskedtraining.
+a. b.
+c. d.
+seitiralimiS
+AKC
+seitiralimiS
+AKC
+seitiralimiS
+AKC
+seitiralimiS
+AKC
+baseline ours baseline ours
+Layer Index Layer Index
+baseline ours baseline ours
+Layer Index Layer Index
+Figure18.CKAsimilaritytoanalyzetherepresentationsimilarityofnetworklayers.
+training. It is not enough to adequately train a denoising itedtrainingsamples,thetrainingsetonlycontainstwo4K
+network because the network can easily overfit the train- noisy–cleanimagepairsfromSIDD.Wealsoselectedone
+ing data. The performance of the network will be limited imagefromeachofthetenscenes,foratotaloftenimages
+if it is trained only on limited data. The pre-training and asatestset. Table4showstheexperimentsettingsandre-
+fine-tuning paradigm may be helpful in this case. One ap- sults. Forexperiment3,wedirectlytrainthemodelonthe
+proach is to train the network on the synthetic data first limited training samples. For experiment 4 and 5, we first
+and then fine-tune it on the target data [81], but the per- pre-trainthemodelsusingGaussiannoisewithσ =15and
+formancemayalsobeunsatisfactorybecauseofthegapbe- thenfine-tunethemontargetnoise.Whileforexperiment6,
+tween the pre-train data and the target data. In this para- wepre-trainedthemodelonclean(noise-free)imageswith
+graph, wewillintroduceapracticalapproachthatusesthe theproposedmaskedtrainingstrategy, andthenfine-tuned
+maskedtrainingmethodforpre-training. Wefirstpre-train itonthetargettrainingsamples. Themodelpre-trainedon
+the model on clean images with the masked training strat- clean images using the proposed masked training achieves
+egy, andthenfine-tunethemodelonthelimitedrealtrain- thebestresults. Thisdemonstratesthepotentialofourap-
+ingsampleswiththemask. Thisallowsthemodeltoobtain proachasanewlow-levelpre-trainingmethod. Inaddition,
+generalizationabilityevenwhentrainedonextremelylim- our method pre-trained on noisy images is not as effective
+itedtrainingdata. Pre-trainingoncleanimagesenablesthe as pre-trained on clean images, which illustrates that our
+network to learn the content representation of natural im- method benefits from learning information about the im-
+ages and thus benefits the fine-tuning of target noise. To age’s distribution. Visual results are shown in Figure 17.
+conduct such experiments, we use images from the SIDD Our method preserves the most texture detail. Figure 16
+dataset [1]. SIDD contains real noisy images with high- showsthetrainingcurvesfordifferentexperiments.Thenu-
+quality clean references. Due to different lighting and dif- mericalperformanceofthemodelpre-trainedonGaussian
+ferent cameras, the noise of the image is also different. It noise and fine-tuned without masking (red line) is gener-
+is consistent with the complex noise situation in the real allylowanddoesnotincreasewithtraining. Forthemodel
+world. Inordertosimulateascenariowithextremelylim- trainedfromscratchdirectlyonSIDD(blueline),itsPSNR
+14
+startstofluctuateatthebeginningoftraininganddoesnot baselinemodelhavelowcorrelationswithalllayersofour
+improve any further. Its SSIM even drops with training. model. Thisindicatesthatthesetwotrainingmethodshave
+Thisindicatesasevereoverfittingproblem. Incontrast,the inconsistentlearningpatternsforfeatures,especiallyforthe
+methodusingtheproposedmaskedtraining(purpleandyel- deeperlayers.Toexplorehowthemodelperformsondiffer-
+lowlines)cancontinuetoimprovetheperformanceduring ent noise, Figure 18 (b) shows the cross-noise comparison
+the training process. This indicates that the model has not between in-distribution noise and out-of-distribution noise
+yethadanoverfittingproblem.Themethodpre-trainedwith (GaussianandPoissonnoise).Forthebaselinemodel,there
+cleanimages(purpleline)performsbetter. isalowcorrelationbetweenthedifferentnoiseinthedeep
+layers. Itshowsthatthenetworkprocessesthesetwotypes
+QuantitativeComparison. Weprovidefullnumericalre- ofnoisedifferentlyforthedeeplayers. Theothertypesof
+sults in Table 5, Table 7, Table 6, and Table 8, where we noise share a similar phenomenon. We suggest that this is
+evaluate our method on four benchmark datasets, namely becausethebaselineapproachmakesthedeeplayerofthe
+CBSD68 [56], Kodak24 [26], McMaster [83], and Ur- model focus on overfitting the patterns of the training set,
+ban100[36].Ourmethodoutperformsotherstate-of-the-art which leads to the poor generalization of the deep layers
+modelssignificantlyacrossallnoisetypes. Particularly,we tohandledifferentnoise. Inourmodel,thecorrelationbe-
+obtainasignificantleadinLPIPSperformance,suggesting tween adjacent layers in our model is high. The proposed
+thatourresultshavebetterhumanvisualperceptualquality. maskedtrainingforcesthenetworktolearnthedistribution
+oftheimagesthemselves,whichissimilartodifferenttypes
+ofnoise. Thisallowsourmethodtohaveastrongergener-
+AdditionalVisualResults. Figure19showsmorevisual
+alizationcapability.
+comparisons. The model’s performance without masked
+trainingissignificantlylimitedoverthevariousnoisetypes.
+Ourmodelstilleffectivelyremovesnoisewhendealingwith
+avarietyofnoiseoutsidethetrainingset.
+C.AdditionalAnalysesofCKA
+In the main text, in order to investigate how masked
+trainingdiffersfromnormaltrainingstrategy,weutilizethe
+centered kernel alignment (CKA) [18,62] to analyze the
+differencesbetweennetworkrepresentationsobtainedfrom
+thosetwotrainingmethods. Indetail,wecalculatetherep-
+resentations of two layers X Rm×p1 and Y Rm×p2
+∈ ∈
+onthesamemdatapoints,withp andp neuronsrespec-
+1 2
+tively. GrammatricesK=XX⊤ andL=YY⊤ areused
+tocomputeCKA:
+HSIC(K,L)
+CKA(K,L)=
+(cid:112)
+HSIC(K,K)HSIC(L,L)
+whereHSICistheHilbert-Schmidtindependencecriterion
+[41]. Given the centering matrix H = I 111⊤, and
+n − n
+centered Gram matrices K′ = HKH and L′ = HLH,
+we have HSIC(K,L) = vec(K′) vec(L′)/(m 1)2.
+· −
+More CKA results are shown in Figure 18. We first com-
+parethecorrelationofthefeaturesbetweendifferentnoise
+types. For the baseline model, the correlation between the
+featuresofGaussiannoiseandotherdifferentnoisesatthe
+deeplevelisrelativelylow(a,b,c).Besides,thefeaturecor-
+relationbetweenthenoiseoutsidethetrainingsetisalsolow
+(d). Themodelusingtheproposedmaskedtrainingisable
+tohaveahighcorrelationinallcases. Figure18(a)shows
+the cross-model comparison between baseline and masked
+training models. We find that a significant difference be-
+tweenthetwoisthatthefeaturesofthedeeperlayersofthe
+15
+Salt-and-peppernoise,d=0.02 DnCNN[81] RIDNet[2] RNAN[86]
+CBSD68:img0067 Restormer[76] SwinIR[46] baseline MaskedTraining
+Specklenoise,σ2=0.016 DnCNN[81] RIDNet[2] RNAN[86]
+urban100:img054 Restormer[76] SwinIR[46] baseline MaskedTraining
+Poissonnoise2 DnCNN[81] RIDNet[2] RNAN[86]
+kodak24:img14 Restormer[76] SwinIR[46] baseline MaskedTraining
+Spatially-correlatednoise,σ=45 DnCNN[81] RIDNet[2] RNAN[86]
+McM:img2 Restormer[76] SwinIR[46] baseline MaskedTraining
+Poissonnoise,α=1.7 DnCNN[81] RIDNet[2] RNAN[86]
+kodak24:img10 Restormer[76] SwinIR[46] baseline MaskedTraining
+Mixturenoise,level1 DnCNN[81] RIDNet[2] RNAN[86]
+CBSD68:img0009 Restormer[76] SwinIR[46] baseline MaskedTraining
+16
+Figure19.Visualcomparison.
+Specklenoise σ2=0.02 σ2=0.024 σ2=0.03 σ2=0.04
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 30.74 0.8281 0.1806 29.31 0.7891 0.2082 27.49 0.7353 0.2533 25.22 0.6620 0.3292
+RIDNet[2] 31.01 0.8337 0.1665 29.51 0.7916 0.1944 27.57 0.7331 0.2436 25.17 0.6554 0.3212
+RNAN[86] 30.15 0.8101 0.1660 28.59 0.7662 0.1972 26.76 0.7101 0.2449 24.59 0.6377 0.3203
+SwinIR[46] 29.64 0.7939 0.1555 28.16 0.7514 0.1851 26.43 0.6981 0.2305 24.37 0.6298 0.3004
+Restormer[76] 29.95 0.8135 0.1521 28.84 0.7810 0.1767 27.50 0.7395 0.2113 25.66 0.6839 0.2649
+Dropout[40] 29.97 0.8382 0.1709 29.03 0.8041 0.1974 27.77 0.7570 0.2413 26.14 0.6925 0.3110
+baseline 29.84 0.8016 0.1778 28.34 0.7608 0.2082 26.56 0.7071 0.2536 24.44 0.6367 0.3242
+Ours 31.22 0.8739 0.1594 30.81 0.8617 0.1683 30.20 0.8412 0.1849 29.10 0.8000 0.2248
+Poissonnoise α=2 α=2.5 α=3 α=3.5
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 28.41 0.7359 0.2284 24.38 0.5767 0.3887 21.63 0.4571 0.5330 19.65 0.3711 0.6521
+RIDNet[2] 28.17 0.7231 0.2215 24.00 0.5546 0.3849 21.34 0.4379 0.5246 19.48 0.3567 0.6397
+RNAN[86] 27.55 0.7000 0.2231 23.66 0.5402 0.3783 21.14 0.4263 0.5184 19.33 0.3486 0.6355
+SwinIR[46] 27.32 0.6877 0.2081 23.68 0.5398 0.3487 21.17 0.4294 0.4860 19.32 0.3506 0.6059
+Restormer[76] 29.22 0.7639 0.1662 26.11 0.6452 0.2608 23.98 0.5613 0.3530 22.55 0.5174 0.4306
+Dropout[40] 28.47 0.7601 0.2209 25.61 0.6245 0.3652 23.53 0.5218 0.4986 21.97 0.4454 0.6136
+baseline 27.70 0.7040 0.2339 23.85 0.5524 0.3782 21.27 0.4377 0.5109 19.45 0.3550 0.6241
+Ours 30.59 0.8510 0.1662 28.80 0.7709 0.2488 27.04 0.6834 0.3493 25.46 0.6039 0.4502
+Spatially-correlated σ=40 σ=45 σ=50 σ=55
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 29.63 0.8036 0.3527 28.17 0.7474 0.4192 26.85 0.6898 0.4718 25.70 0.6360 0.5173
+RIDNet[2] 28.94 0.7766 0.4109 27.58 0.7189 0.4746 26.39 0.6637 0.5208 25.34 0.6131 0.5580
+RNAN[86] 28.86 0.7644 0.3943 27.50 0.7078 0.4532 26.32 0.6542 0.4980 25.28 0.6050 0.5373
+SwinIR[46] 28.73 0.7524 0.4056 27.38 0.6951 0.4620 26.20 0.6414 0.5070 25.17 0.5930 0.5458
+Restormer[76] 23.42 0.6533 0.4412 23.06 0.6109 0.4783 22.82 0.5709 0.5072 22.59 0.5353 0.5356
+Dropout[40] 29.35 0.8173 0.3188 28.27 0.7719 0.3800 27.19 0.7206 0.4400 26.19 0.6694 0.4943
+baseline 29.34 0.7834 0.3706 27.82 0.7205 0.4375 26.55 0.6628 0.4878 25.46 0.6118 0.5295
+Ours 29.55 0.8296 0.2949 28.84 0.8045 0.3358 28.05 0.7735 0.3762 27.27 0.7388 0.4163
+Salt&pepper d=0.002 d=0.004 d=0.008 d=0.012
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 24.75 0.6785 0.3639 21.15 0.4952 0.5626 17.55 0.2993 0.8196 15.47 0.2066 0.9779
+RIDNet[2] 25.19 0.6769 0.3617 21.38 0.4934 0.5498 17.65 0.2969 0.8029 15.60 0.2066 0.9598
+RNAN[86] 23.59 0.6416 0.3829 20.42 0.4639 0.5599 17.21 0.2850 0.8048 15.31 0.2006 0.9644
+SwinIR[46] 23.42 0.6329 0.3873 20.21 0.4511 0.5710 17.00 0.2688 0.8103 15.14 0.1875 0.9614
+Restormer[76] 23.81 0.6384 0.3919 20.99 0.4831 0.5551 19.79 0.3878 0.6512 19.25 0.3257 0.7574
+Dropout[40] 27.44 0.7180 0.3041 24.36 0.5557 0.4898 21.01 0.3790 0.7415 19.03 0.2902 0.9047
+baseline 25.36 0.6510 0.3694 21.93 0.4747 0.5642 18.42 0.2939 0.8153 16.46 0.2106 0.9656
+Ours 30.52 0.8477 0.1768 28.48 0.7681 0.2786 25.01 0.5958 0.5039 22.48 0.4622 0.6979
+Mixturenoise level1 level2 level3 level4
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 28.31 0.7514 0.2299 26.53 0.6636 0.3011 23.55 0.5117 0.4522 21.66 0.4162 0.5622
+RIDNet[2] 28.13 0.7335 0.2215 26.11 0.6320 0.2971 23.13 0.4776 0.4461 21.34 0.3899 0.5514
+RNAN[86] 27.46 0.7090 0.2280 25.67 0.6126 0.2948 22.90 0.4657 0.4369 21.19 0.3826 0.5431
+SwinIR[46] 27.44 0.7049 0.2051 25.73 0.6113 0.2682 23.03 0.4689 0.4073 21.29 0.3847 0.5145
+Restormer[76] 29.23 0.7859 0.1639 28.22 0.7330 0.1965 25.69 0.6034 0.2894 24.05 0.5257 0.3662
+Dropout[40] 28.61 0.7797 0.2071 27.23 0.7039 0.2777 24.96 0.5715 0.4290 23.49 0.4906 0.5324
+baseline 28.12 0.7295 0.2259 26.22 0.6346 0.2985 23.28 0.4795 0.4441 21.44 0.3885 0.5463
+Ours 30.31 0.8518 0.1617 29.63 0.8251 0.1903 28.12 0.7513 0.2732 26.91 0.6841 0.3530
+Table5.QuantitativecomparisononKodak24[26].
+17
+Specklenoise σ2=0.02 σ2=0.024 σ2=0.03 σ2=0.04
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 30.67 0.8254 0.1506 29.24 0.7927 0.1840 27.54 0.7551 0.2269 25.49 0.7095 0.2856
+RIDNet[2] 30.77 0.8261 0.1444 29.31 0.7934 0.1757 27.58 0.7551 0.2168 25.49 0.7081 0.2750
+RNAN[86] 29.77 0.8066 0.1492 28.32 0.7745 0.1814 26.67 0.7377 0.2224 24.75 0.6932 0.2796
+SwinIR[46] 29.17 0.7947 0.1258 27.83 0.7660 0.1524 26.30 0.7322 0.1893 24.46 0.6909 0.2412
+Restormer[76] 28.89 0.8005 0.1300 27.95 0.7790 0.1515 26.81 0.7523 0.1807 25.30 0.7173 0.2213
+Dropout[40] 28.64 0.8153 0.1416 27.85 0.7852 0.1688 26.89 0.7501 0.2032 25.64 0.7062 0.2525
+baseline 28.86 0.7283 0.1353 27.61 0.7014 0.1593 26.15 0.6679 0.1938 24.38 0.6251 0.2437
+Ours 30.33 0.8157 0.1130 30.01 0.8016 0.1238 29.53 0.7800 0.1412 28.66 0.7463 0.1761
+Poissonnoise α=2 α=2.5 α=3 α=3.5
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 29.13 0.7771 0.1772 25.40 0.6740 0.2915 22.78 0.5910 0.3972 20.86 0.5261 0.4846
+RIDNet[2] 29.00 0.7706 0.1681 25.17 0.6636 0.2838 22.59 0.5836 0.3877 20.76 0.5227 0.4730
+RNAN[86] 28.13 0.7488 0.1760 24.58 0.6476 0.2897 22.18 0.5710 0.3916 20.44 0.5119 0.4765
+SwinIR[46] 27.85 0.7419 0.1468 24.48 0.6459 0.2472 22.12 0.5710 0.3419 20.35 0.5122 0.4229
+Restormer[76] 28.74 0.7765 0.1310 25.78 0.6936 0.2082 23.57 0.6296 0.2778 21.94 0.5792 0.3342
+Dropout[40] 27.74 0.7699 0.1649 25.56 0.6751 0.2645 23.84 0.5986 0.3558 22.47 0.5377 0.4355
+baseline 27.89 0.7024 0.1557 24.51 0.6025 0.2522 22.19 0.5361 0.3427 20.49 0.4761 0.4207
+Ours 30.01 0.8016 0.1120 28.67 0.7439 0.1683 27.23 0.6876 0.2329 25.99 0.6347 0.2976
+Spatially-correlated σ=40 σ=45 σ=50 σ=55
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 29.92 0.8159 0.2221 28.59 0.7672 0.2718 27.35 0.7160 0.3197 26.23 0.6665 0.3654
+RIDNet[2] 29.36 0.7958 0.2608 28.06 0.7433 0.3146 26.90 0.6910 0.3624 25.85 0.6426 0.4056
+RNAN[86] 29.16 0.7792 0.2542 27.85 0.7257 0.3053 26.70 0.6751 0.3514 25.68 0.6286 0.3941
+SwinIR[46] 29.10 0.7710 0.2498 27.77 0.7165 0.3005 26.61 0.6658 0.3446 25.59 0.6193 0.3876
+Restormer[76] 24.46 0.6408 0.2867 23.90 0.6043 0.3217 23.48 0.5723 0.3542 23.18 0.5431 0.3874
+Dropout[40] 28.15 0.7946 0.2123 27.32 0.7542 0.2562 26.47 0.7097 0.3021 25.65 0.6649 0.3493
+baseline 29.43 0.7731 0.2365 28.05 0.7191 0.289 26.61 0.6532 0.3513 25.82 0.6223 0.3770
+Ours 28.96 0.7996 0.1952 28.36 0.7779 0.2216 27.65 0.7529 0.2507 27.01 0.7251 0.2827
+Salt&pepper d=0.002 d=0.004 d=0.008 d=0.012
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 23.53 0.6675 0.3607 20.13 0.4878 0.5403 16.72 0.2966 0.7748 14.73 0.2057 0.9320
+RIDNet[2] 24.01 0.6639 0.3581 20.48 0.4864 0.5288 16.93 0.2960 0.7584 14.92 0.2065 0.9131
+RNAN[86] 22.62 0.6428 0.3731 19.54 0.4651 0.5374 16.43 0.2854 0.7626 14.59 0.2007 0.9193
+SwinIR[46] 22.68 0.6391 0.3580 19.50 0.4581 0.5226 16.32 0.2749 0.7379 14.47 0.1914 0.8889
+Restormer[76] 23.04 0.6398 0.3667 20.10 0.4829 0.5207 18.64 0.3555 0.6163 18.34 0.3156 0.6797
+Dropout[40] 25.83 0.6771 0.3082 23.04 0.5197 0.4693 19.89 0.3536 0.6918 17.96 0.2709 0.8487
+baseline 24.06 0.6224 0.3485 20.87 0.4630 0.5183 17.69 0.2959 0.7378 15.86 0.2156 0.8867
+Ours 29.51 0.7929 0.1504 27.45 0.7117 0.2476 24.03 0.5508 0.4350 21.59 0.4313 0.5968
+Mixturenoise level1 level2 level3 level4
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 28.41 0.7627 0.1869 26.88 0.6989 0.2406 24.16 0.5781 0.3564 22.33 0.4877 0.4447
+RIDNet[2] 28.38 0.7509 0.1781 26.65 0.6811 0.2337 23.82 0.5558 0.3479 22.03 0.4659 0.4335
+RNAN[86] 27.52 0.7285 0.1886 25.99 0.6616 0.2414 23.42 0.5412 0.3510 21.75 0.4533 0.4351
+SwinIR[46] 27.57 0.7271 0.1601 26.07 0.6619 0.2050 23.56 0.5453 0.3059 21.86 0.4557 0.3869
+Restormer[76] 28.59 0.7674 0.1410 27.53 0.7210 0.1703 25.29 0.6263 0.2462 23.71 0.5578 0.2991
+Dropout[40] 27.47 0.7515 0.1694 26.41 0.6924 0.2190 24.58 0.5856 0.3255 23.27 0.5086 0.4079
+baseline 28.05 0.7472 0.1665 26.40 0.6810 0.2148 23.70 0.5418 0.3229 21.91 0.4397 0.4061
+Ours 29.91 0.8267 0.1094 29.44 0.8111 0.1312 28.24 0.7570 0.1870 27.15 0.7018 0.2452
+Table6.QuantitativecomparisononMcMaster[83].
+18
+Specklenoise σ2=0.02 σ2=0.024 σ2=0.03 σ2=0.04
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 29.90 0.8380 0.1699 28.57 0.8044 0.1982 26.90 0.7610 0.2374 24.84 0.7035 0.2996
+RIDNet[2] 30.11 0.8404 0.1597 28.75 0.8044 0.1884 27.03 0.7590 0.2305 24.87 0.6999 0.2927
+RNAN[86] 29.36 0.8228 0.1593 27.95 0.7883 0.1872 26.28 0.7451 0.2276 24.28 0.6870 0.2893
+SwinIR[46] 28.89 0.8101 0.1602 27.55 0.7774 0.1867 25.98 0.7362 0.2251 24.07 0.6810 0.2849
+Restormer[76] 29.16 0.8279 0.1518 28.13 0.8015 0.1742 26.84 0.7667 0.2049 25.17 0.7202 0.2523
+Dropout[40] 29.13 0.8447 0.1684 28.28 0.8171 0.1953 27.16 0.7804 0.2347 25.69 0.7311 0.2936
+baseline 29.11 0.8122 0.1794 27.75 0.7801 0.2077 26.15 0.7393 0.2465 24.19 0.6837 0.3050
+Ours 30.46 0.8777 0.1435 30.08 0.8697 0.1511 29.49 0.8502 0.1691 28.53 0.8169 0.2060
+Poissonnoise α=2 α=2.5 α=3 α=3.5
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 28.13 0.7790 0.1957 24.40 0.6417 0.3284 21.77 0.5295 0.4524 19.83 0.4446 0.5639
+RIDNet[2] 28.00 0.7705 0.1878 24.08 0.6199 0.3237 21.50 0.5082 0.4459 19.67 0.4279 0.5542
+RNAN[86] 27.38 0.7505 0.1902 23.73 0.6081 0.3201 21.29 0.5003 0.4405 19.51 0.4220 0.5498
+SwinIR[46] 27.12 0.7392 0.1849 23.69 0.6049 0.3094 21.27 0.4992 0.4282 19.46 0.4200 0.5393
+Restormer[76] 28.68 0.7973 0.1506 25.67 0.6951 0.2361 23.54 0.6167 0.3139 22.25 0.5598 0.3831
+Dropout[40] 28.03 0.7953 0.1975 25.42 0.6823 0.3220 23.45 0.5901 0.4366 21.94 0.5182 0.5418
+baseline 27.55 0.7517 0.2085 23.92 0.6173 0.3346 21.42 0.5087 0.4510 19.63 0.4259 0.5572
+Ours 30.01 0.8656 0.1390 28.48 0.8053 0.2072 26.84 0.7318 0.2974 25.33 0.6616 0.3937
+Spatially-correlated σ=40 σ=45 σ=50 σ=55
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 29.38 0.8304 0.2819 28.02 0.7839 0.3379 26.78 0.7349 0.3864 25.68 0.6880 0.4290
+RIDNet[2] 28.74 0.8092 0.3306 27.45 0.7603 0.3865 26.32 0.7122 0.4300 25.31 0.6670 0.4672
+RNAN[86] 28.68 0.7983 0.3192 27.39 0.7499 0.3703 26.25 0.7029 0.4122 25.25 0.6591 0.4500
+SwinIR[46] 28.56 0.7883 0.3353 27.26 0.7389 0.3853 26.13 0.6918 0.4298 25.13 0.6484 0.4664
+Restormer[76] 24.54 0.7076 0.3661 24.17 0.6689 0.4007 23.70 0.6320 0.4348 23.35 0.5978 0.4640
+Dropout[40] 28.89 0.8383 0.2580 27.89 0.7999 0.3109 26.90 0.7563 0.3656 25.96 0.7123 0.4135
+baseline 29.11 0.8109 0.3071 27.69 0.7578 0.3658 26.48 0.7078 0.4147 25.42 0.6625 0.4537
+Ours 29.08 0.8445 0.2431 28.43 0.8242 0.2765 27.71 0.7985 0.3127 27.03 0.7719 0.3476
+Salt&pepper d=0.002 d=0.004 d=0.008 d=0.012
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 24.39 0.7102 0.3205 20.88 0.5423 0.5032 17.33 0.3499 0.7615 15.27 0.2510 0.9304
+RIDNet[2] 24.83 0.7065 0.3165 21.12 0.5400 0.4912 17.44 0.3470 0.7459 15.41 0.2510 0.9096
+RNAN[86] 23.32 0.6768 0.3312 20.19 0.5127 0.4970 16.99 0.3343 0.7464 15.12 0.2443 0.9133
+SwinIR[46] 23.21 0.6724 0.3416 20.04 0.5035 0.5123 16.84 0.3206 0.7541 14.97 0.2320 0.9190
+Restormer[76] 23.58 0.6779 0.3429 20.77 0.5292 0.5016 19.13 0.4143 0.6322 18.37 0.3500 0.7409
+Dropout[40] 26.92 0.7433 0.2739 23.97 0.5999 0.4380 20.70 0.4330 0.6832 18.75 0.3431 0.8508
+baseline 25.09 0.6879 0.3289 21.71 0.5261 0.5088 18.25 0.3480 0.7621 16.30 0.2594 0.9216
+Ours 29.96 0.8558 0.1512 28.01 0.7893 0.2295 24.69 0.6391 0.4408 22.23 0.5174 0.6331
+Mixturenoise level1 level2 level3 level4
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 27.91 0.7876 0.1955 26.28 0.7151 0.2561 23.52 0.5791 0.3825 21.70 0.4867 0.4833
+RIDNet[2] 27.80 0.7740 0.1888 25.97 0.6885 0.2510 23.14 0.5463 0.3777 21.38 0.4589 0.4752
+RNAN[86] 27.16 0.7543 0.1946 25.52 0.6718 0.2515 22.89 0.5366 0.3711 21.22 0.4532 0.4683
+SwinIR[46] 27.10 0.7477 0.1827 25.51 0.6668 0.2378 22.96 0.5363 0.3563 21.29 0.4523 0.4533
+Restormer[76] 28.54 0.8091 0.1493 27.50 0.7625 0.1796 25.17 0.6509 0.2599 23.52 0.5729 0.3270
+Dropout[40] 28.01 0.8076 0.1841 26.78 0.7455 0.2455 24.70 0.6296 0.3722 23.29 0.5532 0.4672
+baseline 27.81 0.7717 0.2022 26.06 0.6916 0.2659 23.27 0.5476 0.3927 21.48 0.4563 0.4886
+Ours 29.74 0.8672 0.1342 29.14 0.8466 0.1551 27.80 0.7900 0.2231 26.62 0.7305 0.2964
+Table7.QuantitativecomparisononCBSD68[56].
+19
+Specklenoise σ2=0.02 σ2=0.024 σ2=0.03 σ2=0.04
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 28.66 0.8207 0.1456 27.28 0.7880 0.1745 25.64 0.7478 0.2138 23.67 0.6962 0.2716
+RIDNet[2] 28.73 0.8218 0.1386 27.31 0.7874 0.1683 25.63 0.7457 0.2086 23.63 0.6933 0.2662
+RNAN[86] 27.99 0.8047 0.1414 26.60 0.7726 0.1697 25.01 0.7333 0.2085 23.14 0.6826 0.2652
+SwinIR[46] 27.50 0.7931 0.1408 26.19 0.7626 0.1683 24.68 0.7256 0.2059 22.88 0.6772 0.2609
+Restormer[76] 28.22 0.8100 0.1370 27.17 0.7851 0.1578 25.86 0.7529 0.1874 24.15 0.7106 0.2302
+Dropout[40] 27.69 0.8258 0.1516 26.83 0.7981 0.1797 25.78 0.7639 0.2167 24.42 0.7200 0.2693
+baseline 27.66 0.7916 0.1611 26.33 0.7617 0.1877 24.80 0.7242 0.2241 22.98 0.6753 0.2772
+Ours 28.97 0.8771 0.1062 28.60 0.8642 0.1180 28.04 0.8421 0.1421 27.12 0.8055 0.1832
+Poissonnoise α=2 α=2.5 α=3 α=3.5
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 27.72 0.7814 0.1656 24.06 0.6682 0.2738 21.52 0.5807 0.3740 19.65 0.5128 0.4638
+RIDNet[2] 27.51 0.7728 0.1600 23.75 0.6536 0.2697 21.27 0.5675 0.3686 19.51 0.5025 0.4561
+RNAN[86] 26.88 0.7550 0.1634 23.37 0.6428 0.2682 21.02 0.5593 0.3662 19.30 0.4953 0.4544
+SwinIR[46] 26.59 0.7451 0.1586 23.27 0.6392 0.2575 20.95 0.5575 0.3533 19.21 0.4929 0.4426
+Restormer[76] 28.39 0.7964 0.1326 25.34 0.7049 0.2043 22.89 0.6266 0.2802 21.25 0.5684 0.3524
+Dropout[40] 27.19 0.7928 0.1722 24.82 0.6989 0.2706 22.98 0.6269 0.3607 21.55 0.5698 0.4437
+baseline 26.94 0.7511 0.1790 23.45 0.6425 0.2788 21.09 0.5593 0.3712 19.40 0.4936 0.4556
+Ours 28.72 0.8710 0.1051 27.48 0.8142 0.1668 26.04 0.7446 0.2464 24.71 0.6845 0.3232
+Spatially-correlated σ=40 σ=45 σ=50 σ=55
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 29.87 0.8526 0.1912 28.50 0.8110 0.2371 27.23 0.7677 0.2795 26.09 0.7258 0.3173
+RIDNet[2] 29.24 0.8364 0.2216 27.89 0.7908 0.2702 26.68 0.7464 0.3116 25.62 0.7051 0.3464
+RNAN[86] 29.07 0.8203 0.2248 27.72 0.7767 0.2674 26.54 0.7351 0.3052 25.50 0.6961 0.3385
+SwinIR[46] 28.99 0.8116 0.2360 27.64 0.7678 0.2769 26.46 0.7265 0.3131 25.43 0.6882 0.3455
+Restormer[76] 26.38 0.7360 0.2593 25.56 0.7011 0.2902 24.77 0.6686 0.3189 24.06 0.6384 0.3455
+Dropout[40] 28.68 0.8529 0.1797 27.78 0.8191 0.2204 26.86 0.7808 0.2635 25.96 0.7411 0.3046
+baseline 29.58 0.8440 0.2092 28.11 0.7950 0.2567 26.84 0.7492 0.2974 25.74 0.7076 0.3323
+Ours 28.06 0.8586 0.1720 27.55 0.8410 0.1976 26.98 0.8196 0.2266 26.40 0.7951 0.2562
+Salt&pepper d=0.002 d=0.004 d=0.008 d=0.012
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 24.01 0.7372 0.2643 20.55 0.5828 0.4143 17.05 0.4029 0.6335 15.01 0.3062 0.7973
+RIDNet[2] 24.56 0.7372 0.2613 20.88 0.5835 0.4062 17.20 0.4023 0.6220 15.16 0.3072 0.7824
+RNAN[86] 23.01 0.7132 0.2744 19.87 0.5582 0.4137 16.71 0.3892 0.6223 14.86 0.2999 0.7840
+SwinIR[46] 22.90 0.7075 0.2823 19.74 0.5507 0.4215 16.56 0.3790 0.6231 14.71 0.2910 0.7773
+Restormer[76] 23.42 0.7145 0.2799 20.53 0.5772 0.4086 18.65 0.4571 0.5308 17.81 0.3967 0.6311
+Dropout[40] 26.33 0.7591 0.2326 23.48 0.6279 0.3647 20.29 0.4781 0.5635 18.35 0.3943 0.7181
+baseline 24.92 0.7224 0.2667 21.56 0.5752 0.4130 18.11 0.4103 0.6263 16.15 0.3225 0.7840
+Ours 28.58 0.8655 0.1158 26.93 0.8074 0.1850 24.01 0.6780 0.3530 21.75 0.5652 0.5140
+Mixturenoise level1 level2 level3 level4
+Method PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS PSNR SSIM LPIPS
+DnCNN[81] 27.62 0.7842 0.1656 26.08 0.7221 0.2120 23.41 0.6112 0.3116 21.64 0.5332 0.3907
+RIDNet[2] 27.51 0.7725 0.1592 25.75 0.7011 0.2076 23.01 0.5844 0.3080 21.31 0.5099 0.3851
+RNAN[86] 26.85 0.7535 0.1651 25.28 0.6866 0.2092 22.75 0.5759 0.3046 21.13 0.5041 0.3813
+SwinIR[46] 26.79 0.7475 0.1566 25.26 0.6816 0.1973 22.81 0.5751 0.2878 21.19 0.5040 0.3634
+Restormer[76] 28.45 0.8085 0.1269 27.39 0.7665 0.1517 25.03 0.6716 0.2171 23.26 0.5984 0.2749
+Dropout[40] 27.22 0.7976 0.1608 26.11 0.7431 0.2077 24.22 0.6484 0.3035 22.91 0.5849 0.3770
+baseline 27.47 0.7795 0.1718 25.79 0.7136 0.2191 23.12 0.5931 0.3170 21.38 0.5131 0.3925
+Ours 28.57 0.8749 0.0995 28.08 0.8566 0.1186 26.97 0.8053 0.1747 25.97 0.7516 0.2337
+Table8.QuantitativecomparisononUrban100[36].
+20

@@ -1,0 +1,927 @@
+LICO: Explainable Models with
+Language-Image COnsistency
+YimingLei1,ZilongLi1,YangyangLi2,JunpingZhang1,HongmingShan3,4∗
+1ShanghaiKeyLaboratoryofIntelligentInformationProcessing,
+SchoolofComputerScience,FudanUniversity
+2AcademyofMathematicsandSystemsScience,ChineseAcademyofSciences
+3InstituteofScienceandTechnologyforBrain-InspiredIntelligenceand
+MOEFrontiersCenterforBrainScience,FudanUniversity
+4ShanghaiCenterforBrainScienceandBrain-inspiredTechnology
+{ymlei, jpzhang, hmshan}@fudan.edu.cn,
+zilongli23@m.fudan.edu.cn, yyli@amss.ac.cn
+Abstract
+Interpretingthedecisionsofdeeplearningmodelshasbeenactivelystudiedsince
+theexplosionofdeepneuralnetworks. Oneofthemostconvincinginterpretation
+approachesissalience-basedvisualinterpretation,suchasGrad-CAM,wherethe
+generation of attention maps depends merely on categorical labels. Although
+existinginterpretationmethodscanprovideexplainabledecisionclues,theyoften
+yieldpartialcorrespondencebetweenimageandsaliencymapsduetothelimited
+discriminativeinformationfromone-hotlabels. ThispaperdevelopsaLanguage-
+ImageCOnsistencymodelforexplainableimageclassification,termedLICO,by
+correlatinglearnablelinguisticpromptswithcorrespondingvisualfeaturesina
+coarse-to-fine manner. Specifically, we first establish a coarse global manifold
+structurealignmentbyminimizingthedistancebetweenthedistributionsofimage
+andlanguagefeatures. Wethenachievefine-grainedsaliencymapsbyapplying
+optimal transport (OT) theory to assign local feature maps with class-specific
+prompts. Extensiveexperimentalresultsoneightbenchmarkdatasetsdemonstrate
+thattheproposedLICOachievesasignificantimprovementingeneratingmore
+explainable attention maps in conjunction with existing interpretation methods
+suchasGrad-CAM.Remarkably,LICOimprovestheclassificationperformanceof
+existingmodelswithoutintroducinganycomputationaloverheadduringinference.
+Sourcecodeismadeavailableathttps://github.com/ymLeiFDU/LICO.
+1 Introduction
+Althoughdeepneuralnetworks(DNNs)haveshownexcellentperformanceinmanyfields,thelack
+ofinterpretabilityisstillabarriertolandinginsomehigh-stakesscenariossuchasmedicaldiagnosis,
+autonomousdriving,etc. Therefore,theliteratureproposesvariousinterpretationmethodsforDNNs
+andrevealsthedecisioncluesofDNNstosomeextent.
+Popular interpretation methods can be roughly categorized into two types: 1) gradient back-
+propagation-based,and2)classactivationmapping(CAM)-based. Bothofthemmainlytakeimage
+classificationasthepretexttaskandthengenerateexplainablenoisygradientsandsaliencymaps,
+respectively. AsillustratedinFig.1(a),CAM-basedmethodsoftenexploreabetterweightingscheme
+forintegratingfeaturemapsofagiveninputimage. Thegradient-basedmethods,inFig.1(b),also
+∗Correspondingauthor.
+37thConferenceonNeuralInformationProcessingSystems(NeurIPS2023).
+Feature
+Maps logits Back-propagation Weighting Prompt embedding Text
+Encoder
+Prompts
+CNNs CNNs CNNs
+Input Input Input
+(a) Post-hoc CAM-based methods (b) Post-hoc Gradient-based methods (c) LICO (ours)
+Figure1: MotivationofLICO.(a)Existingpost-hocCAM-basedmethodsfocusongeneratingbetter
+weighting schemes to obtain weighted-sum attention maps. (b) Gradient-based methods tend to
+back-propagate gradients from logits to input space. (c) Proposed LICO incorporates learnable
+promptstoenableimagefeaturestoapproximatesemanticinformationinlatentspace.
+startfromtheoutputlogitswhileback-propagatinggradientstotheinputspace. However,theyare
+allpost-hocapproachesthatinvestigateaDNNpre-trainedonaspecificdataset[1,2,3,4,5,6,7],
+andyieldbiasedinterpretationsduetothelimitedsemanticinformationthatasetofone-hotlabels
+canoffer. Inaddition,one-hotlabelsoftentriggeroverfittingofthepre-trainedmodelsothatthe
+effectivenessofexistinginterpretationmethodscouldbecompromised. Ontheotherhand,thelatent
+featurespaceofsuchpre-trainedmodelsisunabletosenserealsemanticspacereflectingcrucial
+partsinimages. Therefore,itmaybefutiletoexplorecomplexpost-hoctechniquesforinterpretinga
+pre-trainedmodel.
+Inspired by advanced large vision-language models (VLMs) such as CLIP [8], which developed
+generalizedimageandtextencodersthroughtrainingonhugeamountsofimage-textpairs,inthis
+paper,weassumethatthelargeVLMscanencodereal-worldsemanticknowledgethroughcontrastive
+vision-languagealignments,whereasthetraditionalmodelspre-trainedonrelativelysmalldatasets,
+suchasImageNet-1k,areinferiorincapturingthetruesemanticinformation.
+Motivation. TheDNN-basedimageclassificationframeworkgenerallyconsistsofaconvolutional
+neuralnetwork(CNN)forfeatureextractionandalinearlayeractingasaclassifier. Sincefeature
+representationsareusedastheinputtotheclassifier,iftheDNNistruncatedfromfeaturerepresenta-
+tions,itbecomesalinearclassifierthataimstoclassifyfeaturerepresentationslinearlyintodiscrete
+one-hotlabelspace. Morespecifically,thefeaturerepresentationliesinthelearnedmanifoldsof
+high-dimensionalsemanticspace[9]. Unfortunately,trainingusingcross-entropylosswithone-hot
+labelscannotguaranteethatthemanifoldsofimagefeaturescanreflectthedistributionofreal-world
+semanticknowledge,whichhindersperformanceimprovementofexistinginterpretationmethods.
+Inthispaper,weleveragelanguageinformationfromlargeVLMstoenhancecurrentinterpretation
+methods for achieving more explainable saliency maps while enabling promising classification
+performanceimprovements;seeFig.1(c). First,weproposeLanguage-Image-COnsistent(LICO)
+learningtofacilitatethealignmentbetweenthemanifoldsofvisualfeaturesandclass-awarelanguage
+information. Toaddressthediscretenatureofcategoricalclasses,weconstructalearnableprompt
+for each class and map all prompts into a continuous space using the CLIP text encoder, which
+is feasible to align manifolds of both image and text. Second, we impose each prompt token to
+correlate with certain feature maps. Considering that the feature maps are redundant to the final
+classificationdecision,weproposetoencouragethecontexttokenstoguidecertainfeaturemaps
+throughdistributionalignmentusingoptimaltransport(OT)theory.
+Contributions. Wesummarizethemaincontributionsofthispaperasfollows. (i)Weproposea
+novelframeworktoenhancecurrentinterpretationmethodsbyintroducinglanguageguidancefrom
+large VLMs. (ii) We model the discrete categorical class to a continuous space by constructing
+class-awarelearnableprompts,hence,enablingconsistentmanifoldmatchingbetweenimagefeatures
+andtextfeatures. (iii)Toensureconsistentlocalfeaturealignment,weutilizeOTtheorytoreduce
+thedistancebetweendistributionsofimageandtext. (iv)Extensiveexperimentalresultsoneight
+classificationdatasetsdemonstratethesuperiorityoftheproposedLICOagainstcurrentinterpretation
+methodsintermsofquantitativeandqualitativeresults. Forpracticalapplications,LICOdoesnot
+introduceanycomputationaloverheadduringinferencewhilemaintainingimprovedperformance.
+2
+(a) End-to-end DNN classification (b) Language Knowledge Extraction
+Classifier
+Image:
+Feature Extraction Classification Prompt:
+(c) Coarse Manifold Matching and
+Fine Optimal Transport Alignment
+Parameter updated
+Parameter frozen
+Image encoder
+Text encoder
+MLP
+Language MM loss
+Image Manifold
+Prompt Manifold OT loss
+Figure2: FrameworkoftheproposedLICO.(a)ConventionalclassificationpipelineofDNNs. (b)
+Languagefeatureextractionwithpre-trainedtextencoder. (c)Manifoldmatchingamongsamples
+andoptimaltransportalignmentbetweenfeaturemapsandprompttokenswithineachsample.
+2 RelatedWork
+Interpretationmethods. Classactivationmapping(CAM)isasimpleapproachtogenerating
+class-awaresaliencymapsforCNNs[1]. InspiredbyCAM’seffectiveness,itsvariantsincluding
+Grad-CAM[2],Grad-CAM++[3],Score-CAM[4],RISE[10],andGroup-CAM[5],wereproposed
+to enhance the precision and interpretability of CNNs. Gradient-based methods such as Guided
+Back-propatation [11], SmoothGrad [7], and Integrated Gradient (IG) [6] compute the gradients
+fromoutputlogitsbacktoinputspace. However,theyarepronetoyieldingattributionnoisethat
+is inconsistent with human intuition. Some advanced techniques have been developed to reduce
+attributionnoisebyutilizingimprovedpathintegrationtheory,suchasadaptivepathmethod[12]
+andimportantdirectionmethod[13]. Distinctfromexistinginterpretationmethodsthatfocusedon
+thepost-processingoffeaturemapweightingschemeandaccurategradientscalculationbasedona
+pre-trainedmodel,ourLICOaimstoincorporateclass-awarelearnablepromptsthatreflectreal-world
+semanticknowledgetoguidelatentimagefeatures. ItisworthnotingthatLICOiscompatiblewith
+currentmethodsandcanconsistentlyimprovetheirperformance.
+Promptlearning. Promptlearningstemsfromnaturallanguageprocessing(NLP),enablinglarge
+languagemodelstodirectlymodelthepredictionprobabilityofrawtext[14,15,16]. Following
+theproliferationoflargeVLMs,promptlearningbegantosurfaceintherealmofcomputervision,
+significantly enhancing multi-modal tasks and text-guided image generation. To overcome the
+limitationsoflearningwithfixedpromptsusedinCLIP,learnablepromptshavebeenexploredto
+providemoregeneralizedperformanceondownstreamtasks. CoOpfirstlyproposedaframework
+thatconstructslearnablepromptstoalignimageandtextinlatentspace[17]. Furthermore,toenable
+CoOpwithastrongercapabilitytoperceivetheknowledgeofnewclasses, theauthorsproposed
+CoCoOpinwhichthepromptsarelearnedconditionedonimagefeatures[18]. PLOTcorrelatedone
+givenimagewithmultiplepromptsofitsclassbyoptimaltransport,leadingdifferentpromptsto
+reflectfeatureswithrespecttodifferentregionswithinthisimage[19]. InourLICO,weproposethat
+learnableprompttokensinonesentenceshouldberegisteredtocertainpartsofanimage,asshown
+inFig.1(c).
+Optimal transport. Optimal transport (OT) is a typical metric for measuring discrepancy be-
+tween two distributions, requiring solving a linear programming problem [20, 21]. Thanks to
+somefastalternatives,OThasbeenwidelyutilizedindeeplearning,includinggraphcross-domain
+alignment[22,23],domainadaptation[24,25,26],optimalgraphmatchingforvesselimageregistra-
+tion[27],andmulti-modaldistributionalignment[28,29]. AlthoughKL-divergencecaneffectively
+measurethecostofwhichthepredicteddistributionapproximatesground-truthdistribution,given
+thenormalizedimageandtextdistributions,itisintractabletoguaranteetheyshareacommonmetric
+space. Therefore,weproposetoutilizeOTtotacklefine-grainedcross-modalalignment.
+3
+3 Methodology
+3.1 OverviewofLICO
+Fig. 2 presents the overview of LICO framework. Given a mini-batch of B training samples
+{(x ,y ,t )}B , theinputimagex isofsizeH ×W ×C, whereC isthenumberofchannels,
+i i i i=1 i
+H andW areheightandwidth,respectively. y ∈ C denotestheclasslabel,andt representsthe
+i i
+textofcorrespondinglabely . Wedenotethepre-trainedCLIPtextencoderasg whilewefixed
+i ϕ
+itsparametersϕduringtraining. Theimageencoderisdenotedasf thatistobeoptimized. The
+θ
+image encoder takes x as input and outputs feature maps F with N channels. Note that F is
+i i i
+a tensor, which is then flattened to one-dimension for each channel; i.e., F ∈ RN×d′. For the
+i
+language modeling branch, the text encoder g takes as input the constructed learnable prompt:
+ϕ
+t =[X ,X ,...,X ,t ],where[...]denotestheconcatenation,t isthetextcorrespondingto
+i 1 2 M−1 i i
+labelofthei-thsample,X arelearnablecontexttokens,andM−1isthenumberofcontexttokens.
+m
+Throughthepre-trainedtextencoder,thepromptvectort ismappedintoacontinuousd-dimension
+i
+space;i.e.,d=512inCLIP.
+Inordertomeasurethedistancesbetweenimageandlanguagefeaturesinlatentspace,weappenda
+mappingneth ,amultilayerperceptron(MLP)withonlyonehiddenlayer,tomapthed-dimension
+ψ
+languagefeaturest ∈RM×dtothespaceofd′-dimension,i.e.,G ∈RM×d′,whichisthesameas
+i i
+thatofimagefeaturesF . Thestructureofh variesalongdifferentimageencoders. Weuseh [a,b]
+i ψ ψ
+todescribeitsstructure,i.e.,numbersofhiddenunitsandoutputunitsareaandb,respectively. Note
+thatinthispaper,wedonotintendtomodifythestructureoftheexistingimageandtextencodersso
+thatwecanobtainthefeaturemapsandcorrespondingattentionmapsthatarecomparabletoexisting
+methods. Consequently,weutilizeF andG topreservethelanguage-image-consistentstructurein
+i i
+latentspaceusingmanifoldmatching(Section3.2)andfine-grainedfeature-languagealignmentby
+optimaltransport(Section3.3).
+3.2 Language-ImageManifoldMatching
+Topreservetheglobalmanifoldstructureinlatentspace,wefirstmeasuretherelationships,i.e.the
+distancesorsimilarities,amongtrainingimagesandcorrespondingclass-awareprompts.
+Althoughtheclasscategoriesarediscretelydistributedthatitisinfeasibletocapturetheirmanifold,
+we can map them into a continuous space by constructing a prompt vector for each class, then
+mappingittoalatentspaceusingapre-trainedtextencoder. Therefore,wecanenforcetheimage
+manifold[30]toapproximatethelanguagemanifold.
+Inpractice,wealigntheadjacentmatricesoflanguageandimagefeatures. Specifically,thelanguage
+adjacentmatrixisdenotedasAG ,andthatofimageisAF :
+B×B B×B
+exp(−D(F ,F )/τ) exp(−D(G ,G )/τ)
+AF = i j , AG = i j , (1)
+i,j (cid:80)B
+exp(−D(F ,F )/τ)
+i,j (cid:80)B
+exp(−D(G ,G )/τ)
+s=1 i s s=1 i s
+whereD(·,·)calculatesthedistancebetweentwoimagesortwoprompts,suchasEuclideandistance,
+τ isthetemperaturetobelearnedduringtraining. Then,eachimageisformulatedasadistribution
+AF whereeachdimensiondenotesthedistancefromthei-thsampletootherswithinamini-batch.
+i,:
+Similartotheclass-wiseprompts,AG impliestherelationshipsbetweentheclasspromptofthei-th
+i,:
+sampleandthoseofothers.
+Recallourassumptionthatthelargeamountsofimage-textpairsusedinlargeVLMs,suchasCLIP,
+canleadtoageneralizedtextencoderthatwellestablishesareal-worldsemanticspace. Therefore,for
+certaindownstreamtasksanddatasets,weaimtointroducetheknowledgeofthissemanticspaceto
+thelatentspaceofthetargetimagedomain. Then,weproposeamanifoldmatchinglossL ,which
+MM
+enablesthemanifoldofimagefeaturestoapproachthatofpromptfeaturesusingKL-divergence:
+1 (cid:88)B
+L = KL[AG∥AF]. (2)
+MM B i=1 i,: i,:
+WenotethatwedonotconsidertheinverseversionKL[AF∥AG]sinceLICOfocusesonenabling
+i,: i,:
+imagemanifoldtoapproachthemanifoldoflanguageprompts.
+4
+3.3 FeatureDistributionAlignmentbyOptimalTransport
+Whilewestriveforacoarsealignmentoftheglobalmanifoldstructure,itiscrucialtoestablisha
+correlationbetweenprompttokensandspecificfeaturemapsforeachsample,whichaidsinmitigating
+theinfluenceofredundantfeaturesonthegenerationofattentionmaps. Mostimportantly,thecritical
+featuremapsthataremostrelatedtothetargetclassshouldpossessthehighestsimilaritywithrespect
+totheclasstoken.
+Unfortunately,itischallengingtodetermineorassignwhichoftheN featuremapsarecorrelatedwith
+certainprompttokens. Inthispaper,weproposetoalignG =[g ,g ,...,g ,g ]⊤ ∈RM×d′
+i 1 2 M−1 ti
+andF =[f ,f ,...,f ]⊤ ∈RN×d′ forachievingconsistencybetweenfeaturemapsandspecific
+i 1 2 N
+prompttokens. Inotherwords,differentwordsinasentenceshouldcorrespondtopartsofanimage,
+and in contrast, partial regions in an image reflect the semantic information delivered by certain
+tokens. Therefore,itisintractabletomeasurethisdistanceusingKL-divergencesinceitisnotastrict
+metric,i.e.,itdoesnotsatisfythepropertyoftriangleinequality. InLICO,weuseoptimaltransport,
+whichiswidelyusedinmeasuringdistancesoftwodistributions,toaligndistributionsofnormalized
+visualfeaturesandpromptfeatures.
+ForthegivenimagefeaturemapsF ∈RN×d′ andaprompttokensG ∈RM×d′,weconstructtwo
+i i
+discretedistributions:
+(cid:88)N (cid:88)M
+µ= u δ , v = v δ , (3)
+n=1
+n fn
+m=1
+m gm
+whereδ isaDiracfunctioncenteredatf ,soastoδ ,andtheweightsu={u }N ∈∆ and
+fn n gm n n=1 N
+v ={v }M ∈∆ ,∆denotestheN-andM-dimensionalprobabilitysimplex,i.e., (cid:80)N u =
+m m=1 M n=1 n
+1,
+(cid:80)M
+v =1. Finally,thediscreteOTdistanceforonesampleisdefinedasfollows:
+m=1 m
+N M
+(cid:88) (cid:88)
+D (µ,v)= inf E [C(f,g)]= min T ·c(f ,g ), (4)
+OT (µ,v)∼π n,m n m
+π∈Π(µ,v) T∈Π(µ,v)
+n=1m=1
+s.t. T1 =µ, T1 =v,
+m n
+whereC ∈RN×M representsthecostmatrixinwhicheachelementc(f ,g )denotestransportation
+n m
+cost between f and g . T ∈ RN×M is the transport plan that is to be optimized and Π(µ,v)
+n m
+denotes the transportation polytope that contains all joint probabilities of µ and v. In practice,
+solvingtheoptimizationprobleminEq.(4)oftenequipswithahighcomputationcost. Thusweuse
+theSinkhornalgorithm,whichismorecomputationallyamenable,tosolveanentropy-constrained
+problem[31]:
+N M
+(cid:88) (cid:88)
+D (µ,v)= min T ·c(f ,g )−λH(T), s.t. T1 =µ, T1 =v, (5)
+OT n,m n m m n
+T∈Π(µ,v)
+n=1m=1
+whereλisLagrangemultiplierandH(T) = (cid:80) T logT . Thenafterafewiterations,we
+n,m n,m n,m
+obtaintheoptimalsolutions:
+T∗ =diag(µt)exp(−C/λ)diag(vt), (6)
+wheretistheiterationstep. µtandvtareupdatedaccordingtofollowingrules:
+µt =µ/(exp(−C/λ)vt−1), vt =v/(exp(−C/λ)⊤µt). (7)
+Dynamiccontext(DC). Toendoweachimagewithdiverseprompttokens,weshufflethelearnable
+contexttokensineachtrainingiterationreferringtothetrainingprocedureinAlgorithm1.
+3.4 FinalObjectiveFunction
+Thefinaltraininglossfunctionisasfollows:
+L=L +αL +βL , (8)
+CE MM OT
+whereL isthecross-entropyloss,L = 1 (cid:80)B D ,αandβarehyperparametersforadjusting
+CE OT B i=1 OT
+differentterms. Duringtheinferencephase,weapplythetrainedimageencoderandclassifierto
+conductconventionalclassificationthatyieldsthepredictedprobabilityofagiveninputimage. Note
+that the text encoder and the MLP mapping do not affect the inference procedure. The detailed
+algorithmcanbefoundinAlgorithm1.
+5
+Algorithm1TrainingAlgorithmofLICO.
+Require: TrainingsetS,totalepochsU,imageencoderf ,textencoderg ,MLPh ,learnable
+θ ϕ ψ
+promptst =[X ,X ,...,...,X ,t ].
+i 1 2 M−1 i
+Return: Imageencoderwithoptimalparameterθ∗.
+1: foru=1toU do
+2: Sampleamini-batchof({x i ,t i ,y i }B i=1 )fromS.
+3: RandomlyshufflingX m andt i . ▷Dynamiccontext
+4: F i =f θ (x i ),G i =h ψ (g ϕ (t i )). ▷Imageandtextfeatures
+5: CalculateAG ,AF ▷Adjacientmatrices
+B×B B×B
+6: CalculateL accordingtoEq.(2). ▷Coarsealignmentbymanifold
+MM
+7: OptimaltransportplanT∗byEq.(6),thencalculateL OT . ▷Fine-grainedalignmentbyOT
+8: Classifier←−F i
+9: Totalloss: L=L CE +αL MM +βL OT ,updateθ,ψ,andX m bygradients: ∂ ∂ L θ , ∂ ∂ ψ L, ∂ ∂ X L.
+10: endfor
+4 Experiments
+4.1 Datasets
+ThispaperfocusesonimageclassificationtaskandevaluatestheproposedLICOonwell-known
+datasets,includingImageNet-1k[32],CIFAR-10/100[33],andSVHN[34]. Weconducttheclassifi-
+cationexperimentsunderthesettingoflimitedtrainingdatainwhichthesplitsoflabeleddatafollow
+thepreviousworksforfaircomparison[35,36]. Furthermore,weconductfine-grainedclassification
+ontypicalbenchmarks,includingCUB-200[37],FGVC-Aircraft[38],StanfordCars-196[39],VGG
+Flowers[40]. Theevaluationiscarriedoutonboththefulldatasetandfew-shotsettings,following
+theprocedureofCGC[41].
+4.2 ImplementationDetails
+WeemploytheViT-B/32trainedbyCLIP[8]asthetextencoderanditsparametersarefixedduring
+training. Theoutputdimensionofthistextencoderis512foreachtoken. Theimageencodersin
+ourexperimentsvaryalongdifferentdatasetsandtrainingsettings. Specifically,fortheImageNet
+experiments,weutilizeResNet-50astheimageclassifier[42]. Indoingso,theconvolutionallayers
+precedingthefinallinearlayerconstitutetheimageencoderofLICO.FortheCIFAR-10/100and
+SVHN,wefollowtheexperimentalsettingsin[35,36],theclassificationnetworkisWideResNet
+(WRN)[43]. Wefurtherconductthesameexperimentsusinganothernetwork,thePreAct-ResNet-18
+(PARN-18)[44]. Forfine-grainedclassificationsonCUB-200,Standford-Cars,Aircraft,andVGG
+Flowers datasets, we applied the same settings used in CGC for fair comparison [41], where the
+imageencoderisalsotheResNet-50thathasbeenpre-trainedonImageNet-1kwithCEloss. Note
+thatforalltheexperimentsofLICO,weonlyusethetrainedimageencoderandtheclassifierduring
+theinferencephase. Thetextencoder,learnablepromptcontexts,andMLPmappingnetaredropped,
+thus,willnotcompromisethecomputationalefficiency. Hyperparametersαandβ aresetas10and
+1,respectively.
+AlltheexperimentsareimplementedbyPyTorch[45]. ThelearningratesforImageNet,CIFAR-
+10/100,andSVHNareof0.03withaconsineratedecayschedule,i.e.,η =η cos(7πk),whereη
+0 16K 0
+denotestheinitiallearningrateandkistheindexoftrainingstep[46]. Weuseastandardstochastic
+gradientdescent(SGD)optimizerwithamomentumof0.9[47,48],andtheweightdecayis0.0001.
+Thetrainingbatchsizesare128and64forImageNetandotherdatasets,respectively. Specifically,
+themappingnetforResNet-50ish [512,49],h [512,64]forWRN,andh [512,49]forPARN-18.
+ψ ψ ψ
+Thetotaltrainingepochis90forImageNetand200forothers. Theexperimentsweretrainedonfour
+NVIDIAA100GPUsforImageNet-1kandoneGPUforotherdatasets.
+4.3 ComparisonofInterpretationCapability
+Inthisexperiment,wecompareinterpretationresultsofpopularmethods,includingGrad-CAM[2],
+Grad-CAM++[3],RISE[10],Score-CAM[4],Group-CAM[5],andCGC[41]. NotethatLICOis
+compatiblewiththesepost-hocinterpretationmethodssothatinourexperiments,wecomparethe
+6
+Grad-CAM Score-CAM Group-CAM
+lanigirO
+OCIL
++
+lanigirO
+OCIL
++
+lanigirO
+OCIL
++
+RISE
+00012111
+00012864
+Figure3: Saliencymaps(Left)andInsertion/Deletioncurves(Right)onImageNet-1kvalidationset.
+saliencymapsobtainedbytheseinterpretationmethodsusingbaselineImageNetpre-trainedmodel
+andLICOtrainedcounterpartsofthesamearchitectures.
+Qualitativeresults. Qualitatively,wecomparethesaliencymapsobtainedbydifferentinterpreta-
+tionmethodsinFig.3(Left). Wecanseethatforsingleobjectimages,LICOcaneffectivelyhelp
+baselinemethodscovermorecomprehensiveanddiscriminativeregions,e.g.,theheadandfurofa
+bird. However,thebaselinemethodsareinferiorincapturingalltheobjectsinthemulti-objectimage.
+PleaserefertoAppendixAformoreresultsofmulti-classandmulti-objectcases.
+Table 1: Quantitative comparisons of different interpretation methods on ImageNet in terms of
+InsertionandDeletion.Wereporttheresults:“Baseline/+LICO”.Overall=Insertion−Deletion.
+Method Grad-CAM++ Grad-CAM RISE Score-CAM Group-CAM CGC
+Insertion↑ 50.0/51.2 53.5/57.1 54.0/54.9 55.1/55.6 56.8/55.2 52.2/55.4
+Deletion↓ 14.8/11.7 13.3/15.1 11.7/10.8 11.5/11.2 12.3/10.5 -/15.8
+Overall↑ 35.2/39.5 40.2/42.0 43.6/44.1 42.3/44.4 44.5/44.7 -/39.6
+Quantitativeresults. Toachievequantitativeevaluation,wefollow[10,4,5]toconductInsertion
+andDeletiontests. Insertiongraduallyintroducesclass-relatedregions(3.6%pixels)ofanoriginal
+imagetoablurredimageaccordingtothevaluesofthesaliencymap. Thisprocessisrepeateduntil
+theblurredimageisfullyrecovered. Incontrast,Deletionaimstoreplacerelatedpixels(3.6%)ina
+blurredimagewiththoseofthecorrespondingoriginalimage. InTable1,weprovidetheAUCof
+theclassificationscoreafterSoftmax. Formostoftheinterpretationmethods,LICOconsistently
+improvestheInsertionandDeletionvalues. AlthoughtheinsertionvalueofGroup-CAManddeletion
+valueofGrad-CAMisbetterthanLICO,theLICOstillachievesthebestoverallvalues. Wealso
+reportthequantitativeresultsofcorrespondingcaseswithdifferentinterpretationmethodsinFig.3
+(Right). PleaserefertoAppendixBfortheexperimentofPointingGame[5].
+Sanitychecks. Sanitycheckforsaliencymapswasfirstproposedin[49],whichisaqualitativetest
+aimingatevaluatingwhetherthesaliencymapsaresensitivetomodelparameters. Weconductedtwo
+typesoftest: cascadingrandomizationfromtoptobottomlayersandindependentrandomizingof
+7
+Input Logit Conv34 Conv32 Conv30 Conv28
+(a) Cascading randomization from top to bottom layers (b) Independent randomization of different layers
+MAC-erocS
+OCIL
++
+Logit Conv34 Conv32 Conv30 Conv28
+Figure4: SanitychecksevaluatedusingImageNetpre-trainedVGG-19andLICOtrainedversion.
+Eachcolumnrepresentssaliencymapsafterrandomizingcorrespondinglayersfollowingtworan-
+domizationschemes: (a)cascadingrandomizationfromtoptobottomlayers,and(b)independent
+randomizationofdifferentlayers.
+differentlayers. Inthisexperiment,Score-CAMisselectedasthebaselinemethod,andthebackbone
+networkisVGG-19. InFig.4, wecanseethatScore-CAMissensitivetothemodelparameters,
+andthesaliencymapsobtainedbyLICO-trainedmodelalsopassthesetwotests. FromFig.4(a)
+wecanseethatthesaliencymapsofLICOaremoresensitivetomodelparametersalongcascaded
+randomization,e.g.,fromLogittoConv34,thentoConv32.
+4.4 ClassificationPerformance
+In addition to interpretation comparison, we compare the classification performance on various
+datasetssinceLICOcanactasaregularizationforenhancingimageclassifier. Accordingtoprevious
+studies[1,41,50],agoodinterpretationmethodoftensacrificesthediscriminativeability,i.e.,lower
+classification accuracy than baselines. As shown in Table 2, we compare non-post-hoc methods
+GCC [50] and CGC [41] with our LICO. Despite their emphasis on interpretation ability, both
+GCC and CGC experience performance degradation compared to the CE loss pre-trained model.
+Incontrast,LICOsurpassesthebaselinemodelandachieves
+thehighestTop-1andTop-5accuracyvalues,anotableadvan- Table2: Classificationaccuracy(%)
+tagenotsharedbypreviousinterpretationmethods. Although onImageNetusingResNet.
+LICOintroducesrelativelyfewamountsoftrainingparameters, Method Top-1 Top-5
+i.e.,MLPh andprompttokensX ,whichistrivialtothe
+ψ m ResNet-50 76.13 92.91
+enhancementofbothinterpretationandclassificationperfor-
++GCC[50] 74.40 92.12
+mance. Furthermore,itdoesnotaffectmodelarchitecturesand
++CGC[41] 74.60 92.24
+introducesanycomputationaloverheadattheinferencephase. +LICO 76.27 92.99
+PleaserefertoAppendicesCandDforfurtherevaluationof ResNet-18 69.76 89.08
+LICOusingViTsandthepotentialinregularizingsemantic +GCC[50] 67.74 88.52
+spaceobtainedbyt-SNE,respectively. +CGC[41] 66.37 88.27
++LICO 69.83 89.21
+Training with limited data. In Table 3, we evaluate the
+performanceofLICOwithlimitedtrainingdata. Following[36,35],weconductexperimentson
+CIFAR-10/100andSVHNwithdifferentlabelamounts. Notethatweonlyuselimitedlabeleddata
+fortraininganddonotfocusonwhetherLICOisusefulunderasemi-supervisedsetting. Acrossall
+thelimitedtrainingsettings,LICOconsistentlyimprovesbothPARN18andWRNbaselines. Notably,
+inthefulltrainingsetting,LICOexhibitsthelargestimprovementonCIFAR-100,whichisattributed
+totheeffectivenessofpromptguidanceintroducedbymanifoldoflargeramountsofclasses.
+Table3: Classificationaccuracies(%)onCIFAR-10/100andSVHNdatasetsusingdifferentamounts
+oflabels. “Full”meanstrainingwithalllabeleddata.
+Dataset CIFAR-10 CIFAR-100 SVHN
+Labels 40 250 4000 400 2500 10000 40 1000
+PARN18 22.9 32.9 77.5 5.2 23.7 54.9 14.7 56.2
+±0.23 ±0.42 ±0.63 ±0.07 ±0.17 ±0.14 ±0.27 ±0.21
++LICO 23.7 36.1 80.1 5.8 21.4 56.5 16.0 59.5
+±0.12 ±0.61 ±0.05 ±0.14 ±0.48 ±0.67 ±0.19 ±0.41
+WRN 23.4 36.9 80.8 8.6 32.3 60.7 15.9 58.9
+±0.92 ±1.08 ±0.07 ±0.17 ±0.66 ±0.24 ±0.23 ±0.22
++LICO 24.9 41.7 81.5 10.7 35.5 62.0 17.4 63.7
+±0.42 ±0.91 ±0.43 ±0.51 ±0.40 ±0.48 ±0.34 ±0.34
+WRN 95.6 80.9 97.9
+Full ±0.12 ±0.18 ±0.02
++LICO 95.8 82.2 98.3
+±0.08 ±0.02 ±0.06
+8
+Table4: Fine-grainedclassificationaccuracyunderfullandfew-shotsettings.
+Method 1-shot 5-shot 10-shot Full 1-shot 5-shot 10-shot Full
+CUB-200 Standford-Cars
+Baseline 13.7 51.7 66.4 80.1 6.1 34.3 61.1 89.7
+±0.3 ±0.3 ±0.2 ±0.9 ±0.2 ±0.4 ±0.4 ±0.1
++CGC[41] 15.8 55.2 68.4 81.5 6.5 36.5 63.0 90.3
+±0.3 ±0.3 ±0.3 ±0.1 ±0.2 ±0.4 ±0.4 ±0.1
++LICO 16.9 55.8 68.4 82.7 7.1 37.2 64.4 91.5
+±0.2 ±0.4 ±0.2 ±0.3 ±0.3 ±0.5 ±0.4 ±0.2
+Aircraft VGGFlowers
+Baseline 7.7 25.7 41.4 83.7 52.1 85.6 93.2 96.1
+±0.3 ±0.4 ±0.3 ±0.2 ±0.5 ±0.4 ±0.2 ±0.2
++CGC[41] 8.0 26.9 42.9 85.7 53.3 85.8 93.4 96.2
+±0.3 ±0.4 ±0.3 ±0.2 ±0.5 ±0.4 ±0.2 ±0.2
++LICO 8.4 27.5 43.1 85.6 55.6 86.2 93.4 96.8
+±0.4 ±0.2 ±0.4 ±0.2 ±0.4 ±0.3 ±0.4 ±0.3
+Fine-Grainedclassification. Furthermore,weevaluateLICOonafine-grainedclassificationprob-
+lemthatrequiresthemodeltocapturefine-grainedfeatures. InTable4,exceptfortheAircraft,LICO
+enhancesclassificationperformanceunderallsettingscomparedwithCGC.Thisobservationhigh-
+lightsthatcontrastivelearningamongattentionmapsusedinCGCprimarilyemphasizessimilarities
+betweentargetimagesandotherrandom/augmentedimages,whiledisregardingthemeasurement
+of semantic distinctions. For the Aircraft dataset, it is difficult for LICO to achieve significant
+improvementsduetothecategoricallabelsaretypesofaircraft,e.g.,thenumericalsymbolssuch
+as727-200whicharechallengingforCLIPtextencodertoachievemeaningfulembedding, and
+CLIPhasdemonstratedrelativelyloweraccuracyonsomeoutofdistributiondatalikeaircraft
+andsatellite[8]. Toaddressthechallenges,weincorporatepriortextknowledgebyconstructing
+initialpromptsas“atypeofaircraft”,whichallowsLICOtoimproveperformanceinthefew-shot
+settingswhileachievingcomparableresultstoCGCunderthefullsetting. Thisstrategyhasalsobeen
+verifiedinCoCoOp[18].
+4.5 AblationStudy Table5: AblationonL andL .
+MM OT
+L L L Top-1 Top-5 Insert. Delet.
+CE MM OT
+Ablation on manifold matching and (cid:34) 76.13 92.91 53.5 13.3
+OT alignment. In Table 5, we inves- (cid:34) (cid:34) 75.98 92.92 56.6 16.0
+tigatetheeffectivenessofL andL . (cid:34) (cid:34) 76.18 92.90 56.9 15.5
+MM OT
+WecanseethatonlyusingL OT obtains (cid:34) (cid:34) (cid:34) 76.27 92.99 57.1 15.1
+moreperformancedropthanthatofL .
+MM
+Thisindicatesthattheglobalconsistencyofmanifoldsguaranteesthebasicperformance,andOT
+onlyfocusesonlocalfeaturealignmentssothatitcannotbesensitivetorelationshipsbetweenintra-
+andinter-classsamples.
+Ablationonnumberofcontexttokens. InTable6,weevaluatetheperformancesinfluencedby
+differentnumbersoflearnabletokens. Wefindthat12isthebestchoiceinourexperiments,andthe
+settingsof16and20arerelativelybetterthanthoseof4and8.
+AblationondistancefunctionDinEq.(1). InTable7,wecomparethesimilarityfunctionsused
+inmanifoldmatching,whichmeasuresdistancesamongsampleswithinamini-batch. Wecansee
+thattheEuclideandistanceismoresuitabletoourLICO.
+Table6: Ablationonno. ofcontexttokens.
+Table7: Ablationondistancefunction.
+no. Top-1 Top-5 Insertion Deletion
+Dataset Euclidean Cosine
+0 75.64 91.92 54.1 17.8
+CIFAR-10 95.78 95.46
+4 76.03 92.74 55.2 17.5 ±0.08 ±0.12
+CIFAR-100 82.22 81.85
+8 76.09 92.89 56.3 16.0 ±0.02 ±0.05
+SVHN 98.25 98.21
+12 76.27 92.99 57.1 15.1 ±0.06 ±0.06
+CUB-200 82.70 82.10
+16 76.21 92.87 57.0 15.8 ±0.30 ±0.30
+Flowers 96.80 96.20
+20 76.14 92.93 56.9 15.5 ±0.30 ±0.40
+PleaserefertoAppendicesE,F,andGformoreablationstudiesonDC,effectsofdifferenttypeof
+textencoders,andfrozenparametersofprompts,respectively.
+9
+5 Conclusion
+Inthispaper,weproposedLICOtoenhanceexistingvisualinterpretationmethodsbyincorporating
+languageinformation,whichiscompatiblewiththesemethods. TheLICOalignsimageandprompt
+embeddingsgloballyusingmanifoldmatching,simultaneouslyalignsfeaturemapswithcorrespond-
+inglearnablecontexttokensbyapplyingoptimaltransportalignment. Extensiveexperimentson
+evaluatinginterpretationcapabilityandclassificationperformanceexhibitbothquantitativeandquali-
+tativeenhancementintroducedbyLICO.AkeylimitationofLICOisthatitdependsonatrainable
+MLP to project language embeddings into a metric space of same dimension with that of image
+features,wheretheoutputdimensionofsuchMLPsvariesaccordingtodifferentimageencoders.
+BroaderImpacts LICOexploreseffectivevisualinterpretationsofDNNsbyintroducinglanguage
+knowledge, whichisorthogonaltoexistingpost-hocinterpretationmethods. Animportantmerit
+of LICO is to enhance interpretability while achieving competitive or even better classification
+performance,applicabletovariouskindsoftasksandmodelseffectively.
+Acknowledgements
+This work was supported in part by Shanghai Municipal Science and Technology Major Project
+(No. 2018SHZDZX01)andZJLab,NaturalScienceFoundationofShanghai(No. 21ZR1403600),
+National Natural Science Foundation of China (Nos. 62101136, 62306075), China Postdoctoral
+ScienceFoundation(No. 2022TQ0069),YoungEliteScientistsSponsorshipProgrambyCAST(No.
+2022QNRC001),ShanghaiMunicipalofScienceandTechnologyProject(No. 20JC1419500),and
+ShanghaiCenterforBrainScienceandBrain-inspiredTechnology.
+References
+[1] BoleiZhou,AdityaKhosla,AgataLapedriza,AudeOliva,andAntonioTorralba. Learningdeep
+featuresfordiscriminativelocalization. InProceedingsoftheIEEEConferenceonComputer
+VisionandPatternRecognition,pages2921–2929,2016.
+[2] RamprasaathRSelvaraju,MichaelCogswell,AbhishekDas,RamakrishnaVedantam,Devi
+Parikh,andDhruvBatra. Grad-CAM:Visualexplanationsfromdeepnetworksviagradient-
+basedlocalization. InProceedingsoftheIEEEInternationalConferenceonComputerVision,
+pages618–626,2017.
+[3] Aditya Chattopadhay, Anirban Sarkar, Prantik Howlader, and Vineeth N Balasubramanian.
+Grad-CAM++:Generalizedgradient-basedvisualexplanationsfordeepconvolutionalnetworks.
+In2018IEEEwinterConferenceonApplicationsofComputerVision,pages839–847,2018.
+[4] HaofanWang,ZifanWang,MengnanDu,FanYang,ZijianZhang,SiruiDing,PiotrMardziel,
+andXiaHu.Score-CAM:Score-weightedvisualexplanationsforconvolutionalneuralnetworks.
+In Proceedings of the IEEE/CVF Conference on Computer Vision and pattern Recognition
+Workshops,pages24–25,2020.
+[5] QinglongZhang,LuRao,andYubinYang. Group-CAM:Groupscore-weightedvisualexplana-
+tionsfordeepconvolutionalnetworks. arXivpreprintarXiv:2103.13859,2021.
+[6] MukundSundararajan,AnkurTaly,andQiqiYan. Axiomaticattributionfordeepnetworks. In
+InternationalConferenceonMachineLearning,pages3319–3328,2017.
+[7] DanielSmilkov,NikhilThorat,BeenKim,FernandaViégas,andMartinWattenberg. Smooth-
+grad: removingnoisebyaddingnoise. arXivpreprintarXiv:1706.03825,2017.
+[8] AlecRadford,JongWookKim,ChrisHallacy,AdityaRamesh,GabrielGoh,SandhiniAgarwal,
+GirishSastry,AmandaAskell,PamelaMishkin,JackClark,etal. Learningtransferablevisual
+modelsfromnaturallanguagesupervision. InInternationalConferenceonMachineLearning,
+pages8748–8763,2021.
+[9] YipeiWangandXiaoqianWang. “whynototherclasses?”: Towardsclass-contrastiveback-
+propagationexplanations. AdvancesinNeuralInformationProcessingSystems,35:9085–9097,
+2022.
+10
+[10] VitaliPetsiuk,AbirDas,andKateSaenko. RISE:Randomizedinputsamplingforexplanation
+ofblack-boxmodels. InBritishMachineVisionConference,page151,2018.
+[11] JostTobiasSpringenberg,AlexeyDosovitskiy,ThomasBrox,andMartinRiedmiller. Striving
+forsimplicity:Theallconvolutionalnet.InternationalConferenceonLearningRepresentations,
+2015.
+[12] AndreiKapishnikov,SubhashiniVenugopalan,BesimAvci,BenWedin,MichaelTerry,and
+TolgaBolukbasi. Guidedintegratedgradients: Anadaptivepathmethodforremovingnoise. In
+ProceedingsoftheIEEE/CVFConferenceonComputerVisionandpatternRecognition,pages
+5050–5058,2021.
+[13] RuoYang,BinghuiWang,andMustafaBilgic. IDGI:Aframeworktoeliminateexplanation
+noisefromintegratedgradients. ProceedingsoftheIEEE/CVFConferenceonComputerVision
+andPatternRecognition,2023.
+[14] PengfeiLiu,WeizheYuan,JinlanFu,ZhengbaoJiang,HiroakiHayashi,andGrahamNeubig.
+Pre-train,prompt,andpredict: Asystematicsurveyofpromptingmethodsinnaturallanguage
+processing. ACMComputingSurveys,55(9):1–35,2023.
+[15] Fabio Petroni, Tim Rocktäschel, Patrick Lewis, Anton Bakhtin, Yuxiang Wu, Alexander H
+Miller, and Sebastian Riedel. Language models as knowledge bases? arXiv preprint
+arXiv:1909.01066,2019.
+[16] Alec Radford, Jeffrey Wu, Rewon Child, David Luan, Dario Amodei, Ilya Sutskever, et al.
+Languagemodelsareunsupervisedmultitasklearners. OpenAIblog,1(8):9,2019.
+[17] Kaiyang Zhou, Jingkang Yang, Chen Change Loy, and Ziwei Liu. Learning to prompt for
+vision-languagemodels. InternationalJournalofComputerVision,130(9):2337–2348,2022.
+[18] KaiyangZhou,JingkangYang,ChenChangeLoy,andZiweiLiu. Conditionalpromptlearning
+forvision-languagemodels. InProceedingsoftheIEEE/CVFConferenceonComputerVision
+andPatternRecognition,pages16816–16825,2022.
+[19] Guangyi Chen, Weiran Yao, Xiangchen Song, Xinyue Li, Yongming Rao, and Kun Zhang.
+PLOT:Promptlearningwithoptimaltransportforvision-languagemodels. InTheEleventh
+InternationalConferenceonLearningRepresentations,2022.
+[20] GaspardMonge. Mémoiresurlathéoriedesdéblaisetdesremblais. Mem.Math.Phys.Acad.
+RoyaleSci.,pages666–704,1781.
+[21] GabrielPeyré,MarcoCuturi,etal. Computationaloptimaltransport: Withapplicationstodata
+science. FoundationsandTrends®inMachineLearning,11(5-6):355–607,2019.
+[22] HerminaPetricMaretic,MireilleElGheche,GiovanniChierchia,andPascalFrossard. GOT:an
+optimaltransportframeworkforgraphcomparison. AdvancesinNeuralInformationProcessing
+Systems,32,2019.
+[23] LiqunChen,ZheGan,YuCheng,LinjieLi,LawrenceCarin,andJingjingLiu. Graphoptimal
+transportforcross-domainalignment. InInternationalConferenceonMachineLearning,pages
+1542–1553.PMLR,2020.
+[24] FanZhou,ZhuqingJiang,ChangjianShui,BoyuWang,andBrahimChaib-draa. Domaingener-
+alizationviaoptimaltransportwithmetricsimilaritylearning. arXivpreprintarXiv:2007.10573,
+2020.
+[25] ShengshengWang,BilinWang,ZheZhang,AliAsgharHeidari,andHuilingChen. Class-aware
+samplereweightingoptimaltransportformulti-sourcedomainadaptation. Neurocomputing,
+523:213–223,2023.
+[26] RosannaTurrisi,RémiFlamary,AlainRakotomamonjy,andMassimilianoPontil. Multi-source
+domainadaptationviaweightedjointdistributionsoptimaltransport. InUncertaintyinArtificial
+Intelligence,pages1970–1980,2022.
+11
+[27] Danilo Motta, Wallace Casaca, and Afonso Paiva. Vessel optimal transport for automated
+alignmentofretinalfundusimages. IEEETransactionsonImageProcessing,28(12):6154–
+6168,2019.
+[28] JohnLee,MaxDabagia,EvaDyer,andChristopherRozell. Hierarchicaloptimaltransportfor
+multimodaldistributionalignment. AdvancesinNeuralInformationProcessingSystems,32,
+2019.
+[29] Shraman Pramanick, Aniket Roy, and Vishal M Patel. Multimodal learning using optimal
+transportforsarcasmandhumordetection. InProceedingsoftheIEEE/CVFWinterConference
+onApplicationsofComputerVision,pages3930–3940,2022.
+[30] RichardSocher,MilindGanjoo,ChristopherDManning,andAndrewNg. Zero-shotlearning
+throughcross-modaltransfer. AdvancesinNeuralInformationProcessingSystems,26,2013.
+[31] MarcoCuturi. Sinkhorndistances: Lightspeedcomputationofoptimaltransport. Advancesin
+NeuralInformationProcessingSystems,26,2013.
+[32] OlgaRussakovsky,JiaDeng,HaoSu,JonathanKrause,SanjeevSatheesh,SeanMa,Zhiheng
+Huang,AndrejKarpathy,AdityaKhosla,MichaelBernstein,etal. Imagenetlargescalevisual
+recognitionchallenge. InternationalJournalofComputerVision,115:211–252,2015.
+[33] AlexKrizhevsky,GeoffreyHinton,etal. Learningmultiplelayersoffeaturesfromtinyimages.
+2009.
+[34] Yuval Netzer, Tao Wang, Adam Coates, Alessandro Bissacco, Bo Wu, and Andrew Y Ng.
+Readingdigitsinnaturalimageswithunsupervisedfeaturelearning. 2011.
+[35] BowenZhang,YidongWang,WenxinHou,HaoWu,JindongWang,ManabuOkumura,and
+TakahiroShinozaki. FlexMatch: Boostingsemi-supervisedlearningwithcurriculumpseudo
+labeling. AdvancesinNeuralInformationProcessingSystems,34:18408–18419,2021.
+[36] Kihyuk Sohn, David Berthelot, Nicholas Carlini, Zizhao Zhang, Han Zhang, Colin A Raf-
+fel,EkinDogusCubuk,AlexeyKurakin,andChun-LiangLi. FixMatch: Simplifyingsemi-
+supervisedlearningwithconsistencyandconfidence. AdvancesinNeuralInformationProcess-
+ingSystems,33:596–608,2020.
+[37] PeterWelinder,SteveBranson,TakeshiMita,CatherineWah,FlorianSchroff,SergeBelongie,
+andPietroPerona. Caltech-ucsdbirds200. (CNS-TR-2011-001),2010.
+[38] Subhransu Maji, Esa Rahtu, Juho Kannala, Matthew Blaschko, and Andrea Vedaldi. Fine-
+grainedvisualclassificationofaircraft. arXivpreprintarXiv:1306.5151,2013.
+[39] JonathanKrause,MichaelStark,JiaDeng,andLiFei-Fei. 3Dobjectrepresentationsforfine-
+grainedcategorization. InProceedingsoftheIEEEInternationalConferenceonComputer
+VisionWorkshops,pages554–561,2013.
+[40] Maria-ElenaNilsbackandAndrewZisserman. Automatedflowerclassificationoveralarge
+numberofclasses. In2008SixthIndianConferenceonComputerVision,Graphics&Image
+Processing,pages722–729,2008.
+[41] VipinPillai,SoroushAbbasiKoohpayegani,AshleyOuligian,DennisFong,andHamedPir-
+siavash. Consistent explanations by contrastive learning. In Proceedings of the IEEE/CVF
+ConferenceonComputerVisionandPatternRecognition,pages10213–10222,2022.
+[42] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. Deep residual learning for im-
+age recognition. In Proceedings of the IEEE Conference on Computer Vision and Pattern
+Recognition,pages770–778,2016.
+[43] SergeyZagoruykoandNikosKomodakis. Wideresidualnetworks. InBritishMachineVision
+Conference,2016.
+[44] Kaiming He, X. Zhang, Shaoqing Ren, and Jian Sun. Identity mappings in deep residual
+networks. InEuropeanConferenceonComputerVision,2016.
+12
+[45] AdamPaszke,SamGross,FranciscoMassa,AdamLerer,JamesBradbury,GregoryChanan,
+TrevorKilleen,ZemingLin,NataliaGimelshein,LucaAntiga,etal. PyTorch: Animperative
+style, high-performance deep learning library. Advances in Neural Information Processing
+Systems,32,2019.
+[46] IlyaLoshchilovandFrankHutter. SGDR:Stochasticgradientdescentwithwarmrestarts. arXiv
+preprintarXiv:1608.03983,2016.
+[47] IlyaSutskever,JamesMartens,GeorgeDahl,andGeoffreyHinton. Ontheimportanceofinitial-
+izationandmomentumindeeplearning. InInternationalConferenceonMachineLearning,
+pages1139–1147,2013.
+[48] BorisTPolyak. Somemethodsofspeedinguptheconvergenceofiterationmethods. Ussr
+ComputationalMathematicsandMathematicalPhysics,4(5):1–17,1964.
+[49] JuliusAdebayo,JustinGilmer,MichaelMuelly,IanGoodfellow,MoritzHardt,andBeenKim.
+Sanitychecksforsaliencymaps. AdvancesinNeuralInformationProcessingSystems,31,2018.
+[50] Vipin Pillai and Hamed Pirsiavash. Explainable models with consistent interpretations. In
+ProceedingsoftheAAAIConferenceonArtificialIntelligence,volume35,pages2431–2439,
+2021.
+13
+Appendix
+A MoreResultsofSaliencyMaps
+LICOlocalizesmorediscriminativelocalfeatures. Fig.5providesmoresaliencymaps,showing
+thatLICOisabletolocalizefinelocalfeaturesoftargetobjects,e.g.,thefootandheadinFig.5(c).
+Grad-CAM Score-CAM Group-CAM
+lanigirO
+OCIL
++
+RISE
+00009728
+00023259
+lanigirO
+OCIL
++
+lanigirO
+OCIL
++
+Input
+(a)
+00028061 (b)
+(c)
+Figure5: MoresamplesonImageNet-1k. Foreachimage,weprovidesaliencymapsofdifferent
+methodsandInsertion/Deletioncurves. LICOhelpslocalizefinelocalfeatures.
+Morecomprehensivelocationsyieldlowermetrics. Here,weprovidesomefailurecasesobtained
+by our LICO, where the saliency maps of LICO exhibit more comprehensive locations on target
+objectswhileresultinginlowerAUCvaluesofInsertionandhigherAUCvaluesofDeletioncompared
+withbaselinemethods.
+For the cases with multiple target objects in Fig. 6, LICO localizes different objects separately
+andcomprehensively,whichdemonstratestheconsistencybetweenlanguageknowledgeandvisual
+featuresestablishedbyourLICO.However,LICOobtainsinferiorInsertion/Deletionevaluations,
+whichisparadoxicaltohumancognition. Weconjecturethatthemainreasonisattributedtothefixed
+textencoder,whichisnotspecificallyoptimizedfortargettasks,i.e.,theimageswithasingleobject
+occupy a higher percentage of the dataset such as ImageNet-1k. Therefore, the located multiple
+objectsmaybeharmfultosaliencymaps-guidepixel-levelinsertionanddeletionstrategies.
+InFig.7,weprovidesomeexamplesthatcontainmulti-classobjectsinoneimage,andforthetarget
+classes,LICOobtainsmoreaccuratelocalizations. InFig.8,weverifiedtheeffectivenessofLICO
+oncapturingmoreobjectsofsinlgeclasswithinoneimage,andwecanseethatLICOcapturesmore
+comprehensiveobjectsthanthosewithoutLICO.
+B PointingGame
+To verify the localization ability of LICO, we conducted the pointing game on MS COCO 2017
+validationsetforlocalizationevaluation. FollowingsettingsinScore-CAMandGroup-CAM,we
+quantifiedlocalizationbycalculating Hits ,assessingifsalientpixelsfallwithintheannotated
+Hits+Misses
+bounding boxes. Table 8 shows that LICO consistently improves all the baseline interpretation
+methods,indicatingtheeffectivenessofregularizationbytheproposedmanifoldOTlosses.
+14
+Grad-CAM Score-CAM Group-CAM
+lanigirO
+OCIL
++
+RISE
+00043794
+00045277
+lanigirO
+OCIL
++
+lanigirO
+OCIL
++
+Input
+00003263
+(a)
+(b)
+(c)
+Figure 6: Saliency maps of failure cases with multiple target objects on ImageNet-1k. For each
+image,weprovidesaliencymapsofdifferentmethodsandInsertion/Deletioncurves.
+Input Grad-CAM Score-CAM Group-CAM Input Grad-CAM Score-CAM Group-CAM
+Target Class:
+English setter
+lanigirO
+OCIL
++
+lanigirO
+OCIL
++
+lanigirO
+OCIL
++
+Target Class:
+Teapot
+lanigirO
+OCIL
++
+Target Class:
+Broom
+Target Class:
+Wombat
+Figure7: Saliencymapsofmulti-classcases.
+C EvaluationonViT
+WefurthertrainedaViT-Base-16networkonImageNet-1kdatasetandpresentedthecorresponding
+accuracy,insertion,anddeletioninTable9.WecalculatedtheL andL betweenlanguagetokens
+MM OT
+andrepresentationsofpatchtokensandclasstokens. Forattentionmaps,weappliedGrad-CAMin
+LICO-trainedViT-Base-16bycalculatinggradientsfromoutputstothelastattentionlayerofthe
+classtoken. Table9furtherconfirmsthatthetransformermodelwithLICOnotonlyperformsbetter
+inclassificationbutalsogainsbetterinterpretabilitythantheonewithoutLICO,whichisinlinewith
+thefindingfortheCNN-basedbackbone.
+D t-SNEVisualizationofLatentFeatures
+We further explore how LICO can regularize the latent space. In Fig. 9, we provide the t-SNE
+visualizationoflearnedvisualfeaturesonCIFAR-10andSVHN.InFig.9(a),ourLICOenables
+different classes with similar distribution shapes. Interestingly, if we roughly categorize the ten
+15
+Input Grad-CAM Score-CAM Group-CAM
+Class:
+Busby
+lanigirO
+OCIL
++
+Input Grad-CAM Score-CAM Group-CAM
+Class:
+Teapot
+lanigirO
+OCIL
++
+Class: Class:
+Corgi docking facility
+Figure8: Saliencymapsofsingle-classandmulti-objectcases.
+Table8: PointinggameevaluationonMSCOCO2017valset.
+LICO Grad-CAM Grad-CAM++ RISE XRAI Score-CAM Group-CAM
+(cid:37) 56.7 57.2 54.3 55.1 51.0 57.5
+±0.225 ±0.227 ±0.205 ±0.232 ±0.211 ±0.202
+(cid:34) 56.9 58.1 55.2 56.7 52.5 58.2
+±0.221 ±0.215 ±0.201 ±0.229 ±0.205 ±0.197
+classesofCIFAR-10intotwoclasses,i.e.,“animal”and“vehicle”,ourLICOcanalmostlinearly
+classifythesetwoclasses,whereasthebaselineobtainsnon-linearclassificationboundary(dashed
+lines). In Fig. 9(b), LICO makes the latent space exhibit an manifold structure with respect to
+semanticallyordinalclassessuchasfrom“1”to“4”,andsomesemanticallycloserclassesarealso
+closerinlatentspacesuchas“9”and“‘10”. However,thebaselinemethodisunabletocapturethe
+underlyingmanifoldstructureandwecanseeobviouslythat“7”isfarawayfrom“5”,“6”,and“8”,
+soasto“9”and“10”,whichshouldbecloserinnature. InFigs.9(c)and(d),LICOalsoshowsmore
+discriminantresultsunderlimitedtrainingdata.
+w d / o o g LIC c O at fro b g p ir l d ane ship car w/ f d r L o e I g C e O r bird cat ship p tr la u n ck e w 9 /o LICO 2 3 7 4 1 w/ LIC 1 O 0 9 1 5 6 8 7 4
+deer truck horse 5 8 10 2 3
+horse dog car 6
+Manifold
+(a) CIFAR-10 (b) SVHN
+w/o LICO w/ LICO w/o LICO w/ LICO
+(c) CIFAR-10, trained with 4000 labeled data (d) CIFAR-10, trained with 40 labeled data
+Figure9: t-SNEresultsobtainedbythemodelswithandwithoutourLICO.(a)and(b)areresultsof
+fullsettingonCIFAR-10andSVHN,respectively. (c)and(d)showtheresultsunderthesettingof
+limitedtrainingdata.
+16
+Table9: EvaluationonImageNet-1kusingViT-Base-16.
+Model Accuracy Insertion Deletion
+ViT-Base-16w/oLICO 77.9 55.2 14.4
+ViT-Base-16w/ LICO 78.2 56.0 13.8
+Table10: AblationonDC.
+DC ImageNet CIFAR-10 CIFAR-100 SVHN
+(cid:37) 76.22 95.45 81.3 98.1
+±0.09 ±0.05 ±0.10
+(cid:34) 76.27 95.80 82.2 98.3
+±0.08 ±0.02 ±0.06
+E AblationStudies
+Ablationondynamiccontext(DC). InthetrainingalgorithmofLICO,wedesignedadynamic
+context(DC)forlearnablecontext. WeprovidesomeresultsonablationofDCinTables10and11.
+We can see that, for most of datasets we evaluated, DC consistently improves the classification
+performance. Forfew-shotsettingsinTable11,DCobtainsslightperformanceimprovements,which
+isattributedtofewsamplesofeachclass. Thatistosay,thereareinsufficientvisualfeaturevarietyto
+endowcontextvectorswithvariousinformation.
+Table11: AblationonDConfourfine-graineddatasets.
+CUB-200 Standford-Cars
+DC 1-shot 5-shot 10-shot Full 1-shot 5-shot 10-shot Full
+(cid:37) 16.9 55.8 68.2 82.5 7.0 37.1 64.1 90.3
+±0.2 ±0.4 ±0.2 ±0.3 ±0.3 ±0.5 ±0.4 ±0.2
+(cid:34) 16.9 55.8 68.4 82.7 7.1 37.2 64.4 91.5
+±0.2 ±0.4 ±0.2 ±0.3 ±0.3 ±0.5 ±0.4 ±0.2
+Aircraft VGGFlowers
+DC 1-shot 5-shot 10-shot Full 1-shot 5-shot 10-shot Full
+(cid:37) 8.0 27.4 42.8 85.6 55.3 85.7 92.7 96.2
+±0.3 ±0.3 ±0.2 ±0.3 ±0.4 ±0.4 ±0.2 ±0.4
+(cid:34) 8.4 27.5 43.1 85.6 55.6 86.2 93.4 96.8
+±0.4 ±0.2 ±0.4 ±0.2 ±0.4 ±0.3 ±0.4 ±0.3
+VariationofKL-divergencevaluesbetweenpromptsandvisualfeaturesf(θ). Here,weprovide
+curvesofKL-divergencewithandwithoutLICO.TheKLvaluesobtainedbybaselinew/oLICOare
+calculatedbetweenCE-trainedvisualfeaturesandfixedCLIPpre-trainedvectors,andthoseobtained
+byw/LICOarecalculatedbetweenvisualfeaturesandpromptslearnedbyLICO.InFig.10,wecan
+seethatLICOenablesstabledescentofKLvalues,andthisindicatesthattheLICOlearnedvisual
+featuresindeedapproachthelearnedlanguageprompts. However,thevaluesobtainedbybaseline
+withoutLICOfluctuatetosomeextentandcannotdecreasefurther,whichisattributedtothedomain
+gapbetweenCLIPpre-traineddataandtargetCIFAR-10. Inotherwords,withoutmanifoldmatching,
+it is difficult to enable downstream visual features to be aligned with CLIP pre-trained language
+knowledge.
+F DifferentTextEncoders
+Both Word2Vec (W2V) and BERT can replace the CLIP text encoder in our LICO framework.
+However,theymaybeinferiorinactingaslanguageguidanceinLICO:(1)CLIPtextencoderwas
+trainedwithhugeamountsofimage-textpairs,andtheadvancedarchitectureViT-B/32hasstronger
+representationabilitythanW2V;(2)EventhoughBERTexcelsatrepresentinglanguagedata,latent
+representationofBERTmaynotalignwithtargetimagerepresentationswell;(3)Recentstudieson
+promptlearninglikeCoCoOphasdemonstratedtheeffectivenessofCLIPpre-trainedtextencoders
+fordownstreamtasks.
+InTable12,weconductedtheexperimentsusingW2Vasatextencoder,mappingtextsinto512-D.
+W2V: using fixed word embeddings and no context tokens for OT loss. W2V-P: replacing class
+tokensintheprompts,thecontexttokensarerandomlyinitializedasGaussian. WecanseethatW2V
+17
+0.6
+0.5
+0.4
+0.3
+0.2
+0.1
+0 50 100 150 200 250 300
+epoch
+eulav
+LK
+Values of KL-divergence on CIFAR-10 test set
+w/ LICO
+w/o LICO
+Figure10: VariationofKL-divergencevaluew/andw/oLICOonCIFAR-10testset.
+performedcomparablytotheNoneencoderbaseline. W2V-Palsofails, wherethefixedrandom
+contexttokensmisleadtheimagefeatures. Incontrast,theCLIPoutperformsbothofthem. Thefixed
+W2Vembeddingvectorsstruggledtocorrelatewellwithtargetimagefeatures. Moreover,BERT
+surpassedW2VandW2V-Pduetothegeneralizabilityofastrongerpre-trainedmodel. However,
+BERTstillcannotachievebetterperformancesthanCLIP.Furthermore,BERT-ALIGNperforms
+competitivelyandevenbetterthanCLIP,whichisattributedtoitslargertrainingsetwithmorenoisy
+image-textpairs. Consequently,fromtheresultsinTable12andthispaper,weconcludethatLICO
+worksbetterwiththosevision-languagepre-trainedtextencoders. PuretextencoderslikeW2V,even
+thepre-trainedBERTwithfrozenparameters,areinferiorinimage-textalignmentinLICObecause
+thepre-trainedparametersarenotsensitivetovisualfeatures. Thisdeficiencymaybeaddressedby
+utilizingsometransferlearninganddomainadaptationtricks.
+Table12: ComparisonofdifferenttextencodersonCIFAR-10.
+Encoder CLIP W2V W2V-P BERT BERT-ALIGN None
+Full 95.8 95.6 94.9 95.7 95.8 95.6
+4000 81.5 81.0 80.2 81.3 81.7 80.9
+G FrozenParametersofPrompts
+To evaluate the model performance with frozen parameters, we then conducted experiments on
+CIFAR-10andImageNetundertwosettingsoffrozenparameters: (1)frozenrandominitialization
+(Random)and(2)fixedformof‘aphotoofa[CLS]’(Fixed). Theinsertionanddeletionvaluesare
+obtainedbyGrad-CAM+LICO.
+In Table 13, we can see that the frozen random parameters cannot enable the models to achieve
+higherperformancesofaccuracy,insertion,anddeletion;thereasonisthatthewell-trainedCLIPtext
+encoderiscapableofsensingthehuman-understandablephrasesandsentenceswhiletherandom
+promptsleadtothedifficultyinimage-textalignmentandyieldinaccuratesemanticrepresentations.
+However,theformof‘aphotoofa[CLS]’performsbetterthanfrozenrandomparametersbecause
+thismeaningfulpromptismoreconsistentwiththeinputoftheoriginalCLIPsothatthegenerated
+representationscanbeeasilyalignedwithimagerepresentations.
+Table13: Evaluationsonfrozenparametersofprompts. “Acc.” isshortfor“Accuracy”.
+ImageNet Top-1↑ Insertion↑ Deletion↓ CIFAR-10 Full,Acc. 4000,Acc.
+Random 75.88 53.3 17.8 Random 94.9 79.5
+Fixed 76.20 55.2 17.4 Fixed 95.4 80.7
+Learnable(ours) 76.27 57.1 15.1 Learnable(ours) 95.8 81.5
+18

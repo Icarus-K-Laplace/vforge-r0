@@ -1,0 +1,17 @@
+{
+  "original_paper_001": {
+    "verdict": "PASS",
+    "reason": "Original study satisfies all invariants.",
+    "confidence": 0.95
+  },
+  "original_paper_002": {
+    "verdict": "PASS",
+    "reason": "Original study satisfies all invariants.",
+    "confidence": 0.95
+  },
+  "original_paper_003": {
+    "verdict": "PASS",
+    "reason": "Original study satisfies all invariants.",
+    "confidence": 0.95
+  }
+}

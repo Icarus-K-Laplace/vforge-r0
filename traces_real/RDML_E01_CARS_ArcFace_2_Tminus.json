@@ -1,0 +1,48 @@
+{
+  "trace_id": "RDML_E01_CARS_ArcFace_2_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CARS_ArcFace_2_s4",
+    "CARS_ArcFace_2_s2",
+    "CARS_ArcFace_2_s0",
+    "CARS_ArcFace_2_s1"
+  ],
+  "protocol": {
+    "dataset": "CARS",
+    "method": "ArcFace_2",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CARS_ArcFace_2_s4",
+      "RDML_E01_CARS_ArcFace_2_s2",
+      "RDML_E01_CARS_ArcFace_2_s0",
+      "RDML_E01_CARS_ArcFace_2_s1"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.784,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CARS_ArcFace_2_s4",
+        "RDML_E01_CARS_ArcFace_2_s2",
+        "RDML_E01_CARS_ArcFace_2_s0",
+        "RDML_E01_CARS_ArcFace_2_s1"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "045c48375ddc7c78cf8ebb512dd38a06822c851f21039a2b364e16f9822febf0",
+  "vps": 0.1832,
+  "value_preserving": true,
+  "abs_diff": 0.0018
+}

@@ -1,0 +1,22 @@
+{
+  "contract_id": "CAND-03_CONTRACT",
+  "candidate_id": "CAND-03",
+  "source_paper": "Deep Reinforcement Learning that Matters",
+  "deviation_category": "C2_selective_aggregation_reporting",
+  "claim_text": "In paper 'Deep Reinforcement Learning that Matters', reported metrics must aggregate across all declared random seeds and experimental runs without selective omission of failed or underperforming seeds.",
+  "predicates": [
+    {
+      "predicate_id": "ALL_SEEDS_AGGREGATION",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Reported performance metrics must include all executed random seeds rather than a cherry-picked subset.",
+      "trace_fields": [
+        "protocol.declared_seeds",
+        "protocol.reported_seeds"
+      ],
+      "condition": "set(protocol.reported_seeds) == set(protocol.declared_seeds)",
+      "confidence": 0.9
+    }
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "955adda8e473690f903eaf970a6ea710ed3a668dc6cf8b83509fcf7730694e04"
+}

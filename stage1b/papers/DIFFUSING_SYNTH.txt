@@ -1,0 +1,533 @@
+Evaluating Text-to-Image Diffusion Models
+for Texturing Synthetic Data
+Thomas Lips1 and Francis wyffels1
+Abstract—Buildinggenericroboticmanipulationsystemsoften explore various design choices and pipelines for diffusion-
+requireslargeamountsofreal-worlddata,whichcanbedificultto based texturing. To generate the synthetic images, we first
+collect. Synthetic data generation offers a promising alternative,
+create a 3D scene and obtain the annotations for that scene.
+but limiting the sim-to-real gap requires significant engineering
+We then texture the scene by either adding random textures
+efforts.Toreducethisengineeringeffort,weinvestigatetheuseof
+pretrainedtext-to-imagediffusionmodelsfortexturingsynthetic to all elements or by using a diffusion model to generate the
+imagesandcomparethisapproachwithusingrandomtextures,a textures. The process is illustrated in Figure 1.
+commondomainrandomizationtechniqueinsyntheticdatagen-
+eration. We focus on generating object-centric representations, We focus on pixel-level representations that are often used
+suchaskeypointsandsegmentationmasks,whichareimportant in robotic manipulation: keypoints and segmentation masks.
+for robotic manipulation and require precise annotations. We These representations require precise annotations and there-
+evaluatetheefficacyofthetexturingmethodsbytrainingmodels
+fore we first create an explicit 3D scene instead of directly
+on the synthetic data and measuring their performance on real-
+generating images from text prompts using a text-to-image
+world datasets for three object categories: shoes, T-shirts, and
+mugs. Surprisingly, we find that texturing using a diffusion diffusion model: From the 3D scene, we can extract pixel-
+modelperformsonparwithrandomtextures,despitegenerating perfect annotations. In addition, we need to ensure that the
+seeminglymorerealisticimages.Ourresultssuggestthat,fornow, diffusion model does not alter the semantics of the scene
+using diffusion models for texturing does not benefit synthetic
+during texturing as this would invalidate the annotations. For
+data generation for robotics.
+example, the diffusion model cannot alter the shape of the
+The code, data and trained models are available at https:
+object or change its pose in the image. To accomplish this,
+//github.com/tlpss/diffusing-synthetic-data.git.
+we use a Controlnet [14] to condition on both a depth image
+of the scene and a prompt, as in [12], [15].
+I. INTRODUCTION
+We evaluated the efficacy of the data generation methods
+Building generic robotic manipulation systems often re- by measuring the downstream performance of models trained
+quires learning-based methods to deal with the diversity in on the data. We generated data for static scenes of 3 different
+environments and objects. The performance of these learned object categories lying on a table: shoes, T-shirts and mugs.
+models largely depends on the amount of data available The models were evaluated on real-world test datasets using
+to train them. Real-world (robot) data collection is time- common metrics for each representation: mean average pre-
+consuming [1]–[3]. Therefore, the amount of data is often cision (mAP) for segmentation and average keypoint distance
+a bottleneck to the creation of generic robotic manipulation (AKD) for keypoint detection.
+systems.Pretrainedfoundationmodelscanreducethisneedfor
+Surprisingly, we found that texturing using a diffusion
+task-specific data, but they cannot yet cover all use cases [4].
+modelperformssimilarlytousingrandomtextures.Inaseries
+A parallel approach to overcome this data bottleneck is to
+of additional experiments, we observed that both methods
+train the robot system on synthetically generated data instead
+exhibitlimitedscalingbehaviorandthatusingLLM-generated
+of real-world data. The main difficulty with synthetic data
+prompts resulted in the best performance for diffusion-based
+is to make sure that models trained on this synthetic data
+texturing.
+transfer well to the real-world, i.e., to limit the sim-to-real
+performancegap[5].Inpractice,thisoftenrequiressignificant To summarize, our contributions are as follows:
+amountsofmanualengineeringfor3Dassetgeneration,scene
+composition and texturing. [6]–[10]. In this work we focus on
+• We are the first to use text-to-image models to generate
+texturing,whichcanbesummarizedascreatingtheappearance
+synthetic data for keypoint detection, an important task
+of 3D objects and scenes by specifying the optical properties
+for robotic manipulation systems which requires fine-
+(colorbeingthemostimportantone)ofeachpartofanobject.
+grained annotations.
+Recently, researchers have sought to (partially) outsource this
+• We extensively compare diffusion-based synthetic data
+worktoneuralnetworks,forexample,bygeneratingsynthetic
+texturingagainstusingrandomtexturesandfindtheyper-
+images using text-to-image diffusion models [11]–[13].
+form similarly on both keypoint detection and semantic
+Inthiswork,wefurtherinvestigatetheuseoftext-to-image
+segmentation tasks.
+diffusion models to texture RGB images of a 3D scene and
+• We provide insight into the use of diffusion models
+compare this method against using random textures. We also
+for synthetic data generation by analyzing the scaling
+behavior of both methods and evaluating a number of
+1AIandRoboticsLab,GhentUniversity-imec
+design choices.
+Technologiepark126,9052Zwijnaarde,Belgium
+correspondingauthor:Thomas.Lips@UGent.be
+4202
+voN
+51
+]OR.sc[
+1v46101.1142:viXra
+Fig.1. Left:Inthiswork,wecomparetext-to-imagediffusionmodelsagainstrandomtexturesfortexturing3Dscenesinasyntheticdatagenerationpipeline.
+Right:Weevaluatetheefficacyofthesyntheticdataonreal-worlddataforbothkeypointdetectionandsegmentation.
+II. RELATEDWORK that directly training on the underlying dataset of the gen-
+erative model can outperform training on synthetic images
+A. Synthetic Data Generation
+generated by the diffusion model. [23], [28] have focused on
+Synthetic data generation offers a compelling alternative using textual inversion [29] to generate data of less-familiar
+to manual data collection for supervised machine learning: categories, which is an important limitation of using text-to-
+It provides arbitrary amounts of perfectly labeled data en- image models for synthetic data generation.
+abling the desired generalizations. The main challenge lies in
+Forsegmentation,apixel-perfectobjectmaskisrequiredin
+overcoming the sim-to-real gap to ensure models trained on
+addition to controlling the object category with a textual de-
+syntheticdatageneralizetoreal-worldscenarios[5].Common
+scription. [13], [26], [27] use the cross-attention between text
+strategies to overcome this gap include domain randomiza-
+and images in Stable Diffusion [30] to generate these masks
+tion [16], in which the appearance and shape of objects,
+automatically. [26] uses self-attention to further improve the
+or the composition of the scene is varied beyond what is
+generated masks and generates multi-class annotations.
+considered realistic, and domain adaptation [17], in which
+the differences between synthetic and real data are explicitly For pose estimation, [15] uses 3D meshes to generate edge
+learned. Despite these recipes, achieving strong sim-to-real maps and then renders images for these edge maps using
+performanceoftenrequiressignificanthumanefforttoimprove a Controlnet. They also report results for segmentation and
+the diversity and quality of assets (object shapes, materials) classification, improving on previous methods that do not use
+and scene compositions used for data generation [6]–[8]. explicit 3D control.
+Researchers have tried to reduce human effort using gen- For data augmentation, [11] augments robot trajectories by
+erative models. For instance, [18] uses a class-conditioned inpainting parts of the image. [12] first renders depth images
+GAN[19]totrainclassifiersonimagesgeneratedbytheGAN. of an object and then uses a Controlnet [14] to texture them,
+[20] goes beyond image-level semantics and trains a decoder after which they are used to augment the robot trajectories.
+on the latent codes of a GAN to obtain segmentation masks
+In [12], [15], Controlnet [14] is used to condition on both
+and keypoints for generated images automatically. However,
+textpromptsandrendersof3Dobjectstoincreasecontrolover
+the quality of the images generated by such GANs is limited.
+the semantics of the generated images.
+Furthermore,theseGANsneedtobeexplicitlytrainedoneach
+Various prompt strategies have been explored for the diffu-
+category. Recently, large, pretrained text-to-image diffusion
+sion models, including fixed templates [24], generated image
+models[21]havebeenexploredtoovercometheselimitations.
+captions[24],[27]andpromptsgeneratedbyLLMs[13],[15].
+In this work, we require precise, pixel-level annotations.
+B. Text-to-image diffusion models for synthetic data
+We, therefore, follow [12], [15] and condition on both text
+Text-to-image diffusion models [22] have been used to prompts and renders of 3D scenes using a Controlnet with
+generate synthetic data for image classification [15], [23]– Stable Diffusion. Our work is most related to [13], but they
+[25], semantic segmentation [13], [26], [27], 3D pose esti- do not consider keypoint detection. We also evaluate multi-
+mation [15] and augmentation of robot trajectories [11], [12]. stagepipelinesfordiffusionmodeltexturingandcomparewith
+For image classification, [24] show that diffusion-generated random textures on both objects and backgrounds, instead of
+syntheticdata doesnotscaleas wellasreal data.[25]showed only on the background.
+III. SYNTHETICDATAGENERATION 2) diffusion texturing: We use a depth-conditioned text-to-
+image diffusion model to texture the scene. More accurately,
+In this work, we generate synthetic images of static scenes
+texture the image of the 3D scene.
+containing an object on a table surface to enable generic
+We first generate a list of descriptions for both the object’s
+robotic manipulation of the object category.
+appearance and plausible scene backgrounds. We then sample
+The data generation process consists of two steps: In the descriptions and scenes, and pass the description to the dif-
+first step we gather 3D meshes, annotate these meshes and fusion model, together with a depth image of the scene. The
+usethemtogenerate3Dscenes.Inthesecondstep,wetexture diffusion model then outputs an RGB image of the scene.
+the scene to provide the desired visual diversity. Combining By also conditioning on a depth image, we make sure
+the annotations from the first step with the textured images that this texturing does not alter the semantics of the object,
+obtained after the second step, we obtain a diverse dataset for ensuringtheaccuracyofthepredeterminedsceneannotations.
+the object category with pixel-accurate labels. We use Controlnet [14] for this image conditioning and use
+For the second step, we compare different approaches to the Stable Diffusion 1.5 [22] text-to-image model throughout
+texture the scene, either using random textures, a common this work.
+technique in domain randomization, or by using text-to-image
+diffusion models. Both stages are described in more detail
+IV. EXPERIMENTS
+in the next sections. Figure 1 illustrates the data generation
+We evaluated the data generation procedures described in
+process used in this work.
+previous section on three object categories: mugs, shoes and
+T-shirts. We generated a dataset for each category and trained
+models for two object representations: keypoint detection and
+A. Scene Generation
+segmentation masks. We then reported the performance of
+For each object category that we want to create synthetic these models on our real-world test datasets. Section IV-A
+data for, we first need to acquire a set of meshes. The meshes providesmoredetailsaboutthesyntheticandrealdatasets.The
+do not need to be of a very high quality and in particular tasks and the metrics used to evaluate them are introduced in
+do not require accurate UV-maps, which are often hard to SectionIV-B.Theremainingsectionsdescribetheexperiments
+get. In addition to gathering the meshes, we also need to we conducted, comparing diffusion-based texturing against
+obtain the required annotations. In this work, these are the using random textures in Section IV-C and further exploring
+3D positions of the semantic keypoints and the object masks. different aspects of the diffusion-based texturing pipeline in
+The object masks require no additional labeling as they can Section IV-D.
+be obtained from the render engine. The keypoints can be
+manually annotated, but it is often possible to determine them
+A. Object categories & datasets
+automatically based on the mesh geometry.
+We evaluated three object categories: mugs, shoes, and T-
+Once we have the meshes and the required annotations, we
+shirts on a tabletop setting. For each category, we generated
+generate 3D scenes of the objects.To model the table surface,
+synthetic data using the methods described in Section III. For
+we simply use a 2D plane. To introduce the desired scene
+the mugs we gathered 100 meshes from the Objaverse [31]
+geometry variations, we randomize the table’s dimensions as
+dataset. 214 shoe meshes were obtained from the Google
+well as the object and camera pose.
+Scanned Objects dataset [32]. For the T-shirts, we used 250
+Inthesescenes,asweknowthecameraintrinsicsandextrin-
+meshes from [10]. For each category, 2500 distinct scenes
+sics,wecanprojectallannotationstothe2Dimages,obtaining
+were generated by varying the mesh pose, the size and
+pixel-perfectannotations.Togeneratevisualdiversity,wealso
+orientation of the table and the camera pose. Fig 1 shows a
+need to texture the scene, which is discussed next.
+numberofmeshesandgenerated3Dscenes.5000imageswere
+generated from these scenes by sampling different camera
+poses for each scene, which were then textured using one of
+B. Texturing
+the methods described in Section III-B. We used Blender [33]
+Totexture(animageof)thescene,wecomparetwodifferent to generate the scenes and random texture datasets. To create
+approaches: in the first approach, we simply apply random the diffusion textures, we used Huggingface Diffusers [34].
+textures to the elements of the scene. In the second, we use Using an NVIDIA RTX3090 GPU, it took about 3s to render
+a text-to-image diffusion model and condition it on a depth a512x512imagewithrandomtexturesusingCycles,Blender’s
+image of the 3D scene and a suitable prompt. Each approach physically-based renderer. Running inference on the diffusion
+is now discussed in more detail. model for texturing also takes around 3s per image.
+1) random textures: With this method, we apply a random We evaluated the performance on a real-world test dataset
+texturetothemeshesoftheobjectandthesurface.Inaddition and also provided a baseline dataset with real images to put
+we use a 360 image as scene background to further increase the results in perspective. For the T-shirts we used the aRTF
+visual diversity. We follow [10] and use textures and 360 dataset from [10], for the mugs and shoes we collected and
+images from PolyHaven1. annotated datasets manually: For the evaluation dataset we
+gathered a set of mugs and shoes and took pictures with a
+1https://polyhaven.com/ smartphone in various backgrounds. We gathered another set
+TABLEI TABLEII
+NUMBEROFIMAGESANDUNIQUEOBJECTSUSEDINTHEREAL-WORLD PERFORMANCEOFTHEDIFFERENTTEXTURINGMETHODSFORALL
+EVALUATIONANDBASELINEDATASETS. OBJECTCATEGORIESANDTASKS.RANDOMTEXTURESPERFORMSIMILAR
+TODIFFUSIONTEXTURES.BOTHOUTPERFORMTHEREALBASELINE.
+traindataset evaluationdataset
+keypointAKD(↓) segmAP(↑)
+category #images #objects #images #objects
+Trainingdataset Mugs Shoes Tshirts Mugs Shoes Tshirts
+Mugs 1500 21 350 15
+Shoes 2000 15 300 15 realdatabaseline 21.7 33.7 25.6 0.97 0.88 0.87
+Tshirts 210 15 400 20
+randomtextures 18.3 13.4 37.9 0.97 0.94 0.75
+diffusiontexturing 17.4 19.6 45.8 0.99 0.95 0.93
+ofmugsandshoesforthetrainingdataset,butthistimeuseda
+robottoauto-collectimagesfromvariousangles.Backgrounds common image metrics such as CLIP-score [41] to quantify
+and objects are distinct in the train and test splits, to properly thedatasetquality,butwefoundthesetocorrelateverypoorly
+measure generalization. All images were manually annotated. with the downstream task performance and therefore do not
+The dataset sizes and number of distinct objects are given in report them in this paper.
+Table I. The number of objects is similar to [1]. The number
+of training images is about an order of magnitude smaller and C. Comparing Texturing Methods
+more training images would likely increase the performance
+We now compare the performance of synthetic data gener-
+of the real-world baseline. Fig. 1 shows images from the real
+ated with random textures against data textured using a diffu-
+datasets on the right.
+sionmodel,asdescribedinSectionIII-B.Theperformanceof
+thesyntheticdatageneratedbythedifferenttexturingmethods
+B. Performance Evaluation is given in Table II. We also provide the performance of a
+real-worldtraindatasetasbaseline.Weobservedthatdiffusion
+We used two different tasks to evaluate the performance of
+texturesoftenperformbest,thoughtheirperformancewasvery
+the synthetic data: semantic keypoint detection and instance
+comparable to the random textures. Finally, we observed that
+segmentation. Both require precise annotations and are often
+both random textures and diffusion textures outperform the
+used in robotics [1], [10], [35]. For each task, we briefly
+real data baseline in most cases, confirming the efficacy of
+discuss the training setup and the metric used to evaluate per-
+our synthetic data pipelines.
+formancebelow.Werefertotheaccompanyingcoderepository
+for more details.
+1) KeypointDetection: Following[10],[36],weformulated D. Further Exploration of Diffusion Texturing
+keypointdetectionaspixel-wiseregressionoftargetheatmaps. Next to comparing the diffusion texturing methods against
+Each semantic category is mapped onto a different heatmap. random textures and a real baseline, we have performed a
+Ground truth heatmaps are generated from the annotations by number of additional experiments. With these experiments we
+creating a Gaussian blob around each ground truth keypoint. aim to validate some design choices and to provide additional
+The predicted heatmaps are regressed to the ground truth insight.
+heatmaps using a binary cross entropy loss. The model is We compared different strategies to generate prompts for
+a Unet [37]-like encoder-decoder, where the encoder is a the diffusion models, evaluated the scaling behavior of both
+pretrained MaxVIT [38] model. methods, explored multi-staged diffusion pipelines, compared
+To measure performance, we used the average keypoint the Controlnet with a regular diffusion model and ablated the
+distances (AKD) between the ground truth keypoints and the conditioningscaleparameterusedfortheControlnet.Allthese
+predicted keypoint with the highest probability. experiments and their results are reported in the remainder of
+For the T-shirts, we used the same 12 keypoints as in [10]. this section.
+For the shoes, we defined 3 keypoints on the nose, heel and 1) Prompting Strategy: In this experiment we compared
+tip. Finally, we defined three keypoints for the mugs on the three different prompting strategies.
+handle, bottom and top rim. These keypoints differ slightly The first, and simplest strategy, is to use a fixed caption for
+from [1], as we found it easier to annotate keypoints that are each category, e.g., A photo of a shoe.
+on the surface of the object. The keypoints are visualized in Tocreatediversepromptsandtherebymorediverseimages,
+Figure 1. we also used a BLIP [42] model to caption images from
+2) Instance Segmentation: For instance segmentation, we the real training sets for each category. We then used these
+usedYOLOv8[39].Allhyperparametersaresetattheirdefault captions as prompts for the diffusion model. This method
+value and we use the small model variant, pretrained on aims to match the prompts to the real (target) images. We
+the COCO dataset [40]. To measure the performance, we collectedapproximately3000promptsforeachcategoryusing
+report the mean average precision (mAP) over different IoU this strategy.
+thresholds ranging from 0.5 to 0.95, which is the default For the final strategy we queried an LLM (we used Google
+segmentation metric for COCO [40]. Gemini) to generate descriptions using following prompt for
+Inadditiontomeasuringtaskperformanceofmodelstrained each object as well as for the table surfaces that are used in
+on the synthetic data, which is expensive, we have tried thescene:provideadescriptionforX.Includecolor,patterns,
+TABLEIII
+COMPARISONOFDIFFERENTPROMPTINGSTRATEGIESFORTHE
+ONE-STAGEDATAGENERATIONPIPELINE.USINGPROMPTSGENERATED
+BYANLLMPRODUCEDTHEBESTRESULTS.
+AKD(↓) mAP(↑)
+strategy Mugs Shoes Tshirts Mugs Shoes Tshirts
+classname 22.8 23.4 66.4 0.98 0.90 0.77
+BLIPcaptions 16.3 25.2 45.9 0.99 0.94 0.90
+LLMprompts 17.4 19.6 45.8 0.99 0.95 0.93
+Fig.3. Illustrationoftheone-stageapproachissue:thebackgroundandobject
+promptareentangledinthevisualoutput.Thethree-stageapproachmanaged
+toseparatethem(thoughthetableperspectiveiswrong).
+3) multi-stage diffusion texturing: We have noticed two
+shortcomings with the diffusion texturing approach described
+in section III-B: the diffusion model tends to blend the
+description of the background with the description of the
+model on the one hand, and it sometimes alters the object
+whenitsapparentsizeintheimageissmall.Weillustratedthe
+formerinFigure3.Inanattempttoovercometheseissues,we
+Fig. 2. Scaling behavior of the different texturing approaches. For both also explored multi-stage pipelines in which we only texture
+diffusion textures and random textures, the performance improves with
+parts of the scene at each step. We describe our two- and
+increasingdata,thoughitstartstoplateauaround5,000images.
+three-step approach below, after which we compare it against
+the one-stage approach described in section III-B.
+materialsandothervisualcharacteristics.Werandomlycom- two-stage diffusion In the first stage, we condition a
+bined descriptions for the object and the table, obtaining a set diffusion model on a depth image and a prompt describing
+of 5000 prompts for each category. the object, but we now crop the depth image to the bounding
+For each prompting strategy, we generated 5000 images box of the object instead of the entire scene. In the second
+using the one-stage diffusion texturing pipeline and trained stage, we condition the diffusion model on the background
+models on these datasets for both tasks. The results are text prompt to inpaint the background of the image.
+providedinTableIII.Usingafixedtemplateperformedworse Though this effectively overcomes both issues with the
+than using BLIP captions or LLM-generated prompts. The single-stage approach, it introduces a new issue. During the
+LLM-prompts scored slightly better than the BLIP captions. inpainting stage, the diffusion model sometimes extends the
+In addition, using LLM-prompts does not require real target object, in an attempt to smoothen the foreground-background
+imagesmakingthisstrategymoreflexible.Therefore,weused transition. This changes the object semantics, hence reducing
+the LLM-generated prompts in all other experiments of the data quality. To mitigate this issue, as in [12], we apply a
+paper. dilation to the inpainting mask to create a ’buffer’.
+Our findings are in line with [24], where the authors also three-stage diffusion To completely eliminate the afore-
+found fixed templates inferior to BLIP captions. LLM-based mentioned issue, we also explore a three-stage approach. In
+prompts are a.o. used in [13], [15], but to the best of our this approach, we first texture the scene without the object, so
+knowledge, have not been compared explicitly against other with an empty table. We use the two-stage method described
+prompting strategies for synthetic data generation. before, where we now crop on the table. We then crop the
+2) Data Scaling Behavior: We have also explored the object mask and again condition a diffusion model on the
+scaling behavior of both texturing methods. To this end, we depth image and object prompt to texture the object, which is
+generated a dataset with 10,000 images using both random thenoverlayedontothetexturedimageoftheemptytable.This
+texturing and the one-stage diffusion texturing. We then cre- should enable the model to focus on the different elements
+ated dataset slits with various sizes and trained models for of the scene, while leaving the object semantics unchanged.
+both keypoint detection and segmentation on all datasets. The Figure 3 illustrates this.
+performance of these models can be seen in Figure 2. We We evaluated both approaches against the one-stage ap-
+observed that for both diffusion and random textures, the proach from section III-B. For each approach, we generated
+performance increased as the dataset size increases. However, 5000 images using the same set of prompts and 3D scenes
+around 5000 images, the performance starts to plateau, in- as in section IV-A. The results are presented in table IV.
+dicating that neither method was able to bridge the sim-to- We observed that the one-stage and three-stage approaches
+real gap completely and obtain optimal performance. Based significantly outperform the two-stage approach. The three-
+on this experiment, we have used a dataset size of 5000 for stageapproachperformedsimilarlytotheone-stageapproach.
+all experiments in this paper. However, it takes thrice as much time to produce each image.
+TABLEIV
+COMPARISONOFDIFFERENTDIFFUSIONTEXTURINGAPPROACHES.THE
+ONE-STAGEAPPROACHHASTHEBESTOVERALLPERFORMANCE.
+keypointAKD(↓) segmAP(↑)
+Approach Mugs Shoes Tshirts Mugs Shoes Tshirts
+one-stage 17.4 19.6 45.8 0.99 0.95 0.93
+two-stage 19.8 21.7 49.3 0.75 0.70 0.62
+three-stage 20.9 19.3 38.3 0.96 0.91 0.71
+TABLEV
+COMPARISONBETWEENUSINGACONTROLNETASINTHEONE-STAGE
+Fig. 4. Comparison of average keypoint distances for different values of
+PIPELINEFROMSECTIONIII-BANDINPAINTINGWITHASTABLE
+the Controlnet conditioning scale (CCS). The optimal value depends on the
+DIFFUSIONMODEL.THECONTROLNETSIGNIFICANTLYIMPROVESTHE
+category,but1.5(markedingreen)isasensibledefault.
+PERFORMANCE.
+AKD(↓) mAP(↑)
+V. DISCUSSION
+DataPipeline Mugs Shoes Tshirts Mugs Shoes Tshirts
+one-stage 17.4 19.6 45.8 0.99 0.95 0.93 In this work we have compared text-to-image diffusion
+inpainting 26.3 48.0 95.2 0.30 0.42 0.43 models against random textures for texturing synthetic data.
+We have observed that the diffusion-based texturing pipeline
+doesnotoutperformtherandomtextures.Thiswassurprising,
+as the diffusion-textured images appeared more realistic to
+Therefore, we used the one-stage approach in the remainder
+us, and therefore we expected them to reduce the sim-to-
+of this paper.
+real gap. We suspect this increased realistic appearance is
+4) Image Conditioning: With this experiment, we aimed countered both by the tendency of the diffusion network to
+to validate the use of image-conditioned Controlnets [14] for slightly alter the object semantics (e.g., change the shape of
+data generation instead of using inpainting of object masks the mug handle slightly), polluting the annotations, and by
+(which are also available from our 3D scenes) with vanilla the diffusion models leaving strong artifacts in the synthetic
+text-to-image diffusion models as in [11]. We compared the images on which the models can then overfit (e.g., blurring
+one-stagediffusionmethodfromSectionIII-Bagainstsequen- the background). Further research is required to test these
+tially inpainting the object mask and background mask. The hypotheses, but there seems to be a big difference between
+results are presented in Table V and confirm the necessity of appearing realistic and actually matching the distribution of
+Controlnet-style image conditioning. We observed that with real-world images.
+inpainting, the diffusion model tends to alter the object se-
+In addition to the performance, the data generation speed is
+mantics significantly, rendering the predetermined annotations
+also important. We have not optimized this in our paper, the
+invalid. Conditioning on (depth) images of the scenes using a
+single-stage diffusion pipeline and random textures pipeline
+Controlnet, reduces this problem.
+both took about 3 seconds to texture an image. Both can
+5) Controlnet Conditioning Scale: Controlnet [14] diffu- be sped up significantly and although diffusion models are
+sion models, have various hyperparameters that influence the becoming faster, we believe that the random textures pipeline
+inference process. In this paper, we set out to assess the out- will nonetheless be faster when fully optimized.
+of-the-box performance of diffusion models for generating Finally,wenotethattheperformanceofthediffusion-based
+synthetic data. Therefore, we have not performed rigorous pipeline stronglydepends on thesynthetic datacontext. There
+hyperparameter optimizations; instead, we used the default are limits to the semantic knowledge of a diffusion mode, im-
+values from the Diffusers library after validating them quali- posed by the dataset it was trained on. There exist techniques
+tatively. However, we found that the Controlnet conditioning to insert knowledge about new semantic categories [29], but
+scale(CCS),whichdetermineshowmuchimportanceisgiven these come with additional engineering and data collection
+to the input image (the depth image of the scene in our effort.Fordiffusion-basedtexturing,theperformancecanalso
+case), has a profound impact on the performance. Therefore depend on the camera angle. We observed for example how
+we compared the performance for different values of this images in which the mug handle was prominently visible
+parameter for all categories on the keypoint detection task. tended to be more realistic than images in which the mug
+TheresultsofthisexperimentareshowninFig.4.Theresults handle was occluded. This is in line with [15].
+confirmed the impact of this parameter and showed how the All in all, our diffusion-based texturing pipeline does not
+optimal value varies across the different categories. In this providemuchgainsinperformanceovertherandomtexturing
+paper we wanted to use the same hyperparameters for all approach and increases complexity. At the same time, neither
+categoriesand,basedontheresults,chose1.5asdefaultvalue method scales until it has a perfect performance, so better
+fortheremainderofthepaper.Toobtainoptimalperformance approachesarestillneeded.Improvinggenerativemodels,both
+for a single object category – which was not our goal – this text-to-imageandtext-to-3Dmodels,isthebestpathtoreduce
+parameter should be tuned carefully though. engineering effort in synthetic data generation and will result
+in diffusion-based texturing improving random textures. End- [11] T. Yu, T. Xiao, A. Stone, J. Tompson, A. Brohan, S. Wang, J. Singh,
+to-endsyntheticdatageneration,asin [13],reducescomplex- C.Tan,J.Peralta,B.Ichteretal.,“Scalingrobotlearningwithseman-
+ticallyimaginedexperience,”inRoboticsSienceandSystems,2023.
+ity but requires methods to annotate the keypoints afterwards,
+[12] Z. Chen, S. Kiami, A. Gupta, and V. Kumar, “Genaug: Retargeting
+which is even harder than for segmentation masks due to behaviors to unseen situations via generative augmentation,” in Pro-
+the increased precision and semantic granularity. In addition, ceedingsoftheRobotics:ScienceandSystemsConference,2023.
+[13] C. Ma, Y. Yang, C. Ju, F. Zhang, J. Liu, Y. Wang, Y. Zhang, and
+our explicit procedure offers controllability of the generation
+Y.Wang,“Diffusionseg:Adaptingdiffusiontowardsunsupervisedobject
+process, allowing to further steer the data distribution. discovery,”arXivpreprintarXiv:2303.09813,2023.
+[14] L. Zhang, A. Rao, and M. Agrawala, “Adding conditional control
+to text-to-image diffusion models,” in Proceedings of the IEEE/CVF
+VI. CONCLUSION InternationalConferenceonComputerVision,2023,pp.3836–3847.
+[15] W. Ma, Q. Liu, J. Wang, A. Wang, X. Yuan, Y. Zhang, Z. Xiao,
+Inthisworkweevaluatedtheuseoftext-to-imagediffusion
+G.Zhang,B.Lu,R.Duan,Y.Qi,A.Kortylewski,Y.Liu,andA.Yuille,
+models to generate synthetic data for keypoint detection and “Generatingimageswith3dannotationsusingdiffusionmodels,”2024.
+segmentation in the context of robotic manipulation. We have [Online].Available:https://arxiv.org/abs/2306.08103
+[16] J. Tremblay, A. Prakash, D. Acuna, M. Brophy, V. Jampani, C. Anil,
+validated several design choices of our diffusion-based textur-
+T. To, E. Cameracci, S. Boochoon, and S. Birchfield, “Training deep
+ingpipelineinSectionIV-Dtoensuretheyareappropriateand networks with synthetic data: Bridging the reality gap by domain
+to provide insight. Surprisingly, our diffusion-based pipeline randomization,” in Proceedings of the IEEE conference on computer
+visionandpatternrecognitionworkshops,2018,pp.969–977.
+does not outperform texturing the 3D scenes using random
+[17] D. Ho, K. Rao, Z. Xu, E. Jang, M. Khansari, and Y. Bai, “Retinagan:
+textures, which is a conceptually simpler approach that works Anobject-awareapproachtosim-to-realtransfer,”in2021IEEEInter-
+similarly out of the box for all objects and camera angles, un- nationalConferenceonRoboticsandAutomation(ICRA). IEEE,2021,
+pp.10920–10926.
+like the diffusion pipeline. Although using generative models
+[18] V.Besnier,H.Jain,A.Bursuc,M.Cord,andP.Pe´rez,“Thisdatasetdoes
+remains an interesting option to reduce engineering effort in not exist: training models from generated images,” in ICASSP 2020-
+synthetic data generation, it does not provide many gains for 2020 IEEE International Conference on Acoustics, Speech and Signal
+Processing(ICASSP). IEEE,2020,pp.1–5.
+synthetic image texturing at this time.
+[19] I. Goodfellow, J. Pouget-Abadie, M. Mirza, B. Xu, D. Warde-Farley,
+S.Ozair,A.Courville,andY.Bengio,“Generativeadversarialnetworks,”
+CommunicationsoftheACM,vol.63,no.11,pp.139–144,2020.
+ACKNOWLEDGMENTS
+[20] Y.Zhang,H.Ling,J.Gao,K.Yin,J.-F.Lafleche,A.Barriuso,A.Tor-
+This project is supported by the Research Foundation Flan- ralba, and S. Fidler, “Datasetgan: Efficient labeled data factory with
+minimalhumaneffort,”inProceedingsoftheIEEE/CVFConferenceon
+ders (FWO) under Grant numbers 1S56022N and by the
+ComputerVisionandPatternRecognition,2021,pp.10145–10155.
+euROBIn Project (EU grant number 101070596). The authors [21] J.Ho,A.Jain,andP.Abbeel,“Denoisingdiffusionprobabilisticmodels,”
+also thank Victor-Louis De Gusseme for his input. Advancesinneuralinformationprocessingsystems,vol.33,pp.6840–
+6851,2020.
+[22] R.Rombach,A.Blattmann,D.Lorenz,P.Esser,andB.Ommer,“High-
+REFERENCES resolutionimagesynthesiswithlatentdiffusionmodels,”inProceedings
+oftheIEEE/CVFconferenceoncomputervisionandpatternrecognition,
+[1] L.Manuelli,W.Gao,P.Florence,andR.Tedrake,“kpam:Keypointaf- 2022,pp.10684–10695.
+fordancesforcategory-levelroboticmanipulation,”inTheInternational [23] B.Trabucco,K.Doherty,M.Gurinas,andR.Salakhutdinov,“Effective
+SymposiumofRoboticsResearch. Springer,2019,pp.132–157. dataaugmentationwithdiffusionmodels,”inTheTwelfthInternational
+[2] S.Levine,P.Pastor,A.Krizhevsky,J.Ibarz,andD.Quillen,“Learning ConferenceonLearningRepresentations,2024.
+hand-eyecoordinationforroboticgraspingwithdeeplearningandlarge- [24] L.Fan,K.Chen,D.Krishnan,D.Katabi,P.Isola,andY.Tian,“Scaling
+scale data collection,” The International journal of robotics research, lawsofsyntheticimagesformodeltraining...fornow,”inProceedingsof
+vol.37,no.4-5,pp.421–436,2018. theIEEE/CVFConferenceonComputerVisionandPatternRecognition,
+[3] C. Lynch, A. Wahid, J. Tompson, T. Ding, J. Betker, R. Baruch, 2024,pp.7382–7392.
+T.Armstrong,andP.Florence,“Interactivelanguage:Talkingtorobots [25] S. Geng, C.-Y. Hsieh, V. Ramanujan, M. Wallingford, C.-L. Li, P. W.
+inrealtime,”IEEERoboticsandAutomationLetters,2023. Koh,andR.Krishna,“Theunmetpromiseofsynthetictrainingimages:
+[4] K.Kawaharazuka,T.Matsushima,A.Gambardella,J.Guo,C.Paxton, Usingretrievedrealimagesperformsbetter,”2024.[Online].Available:
+and A. Zeng, “Real-world robot applications of foundation models: a https://arxiv.org/abs/2406.05184
+review,”AdvancedRobotics,vol.38,no.18,pp.1232–1254,2024. [26] Q. Nguyen, T. Vu, A. Tran, and K. Nguyen, “Dataset diffusion:
+[5] K.ManandJ.Chahl,“Areviewofsyntheticimagedataanditsusein Diffusion-based synthetic data generation for pixel-level semantic seg-
+computervision,”JournalofImaging,vol.8,no.11,2022. mentation,”AdvancesinNeuralInformationProcessingSystems,vol.36,
+[6] T. Hodanˇ, V. Vineet, R. Gal, E. Shalev, J. Hanzelka, T. Connell, 2024.
+P.Urbina,S.N.Sinha,andB.Guenter,“Photorealisticimagesynthesis [27] W.Wu,Y.Zhao,M.Z.Shou,H.Zhou,andC.Shen,“Diffumask:Syn-
+forobjectinstancedetection,”in2019IEEEinternationalconferenceon thesizingimageswithpixel-levelannotationsforsemanticsegmentation
+imageprocessing(ICIP). IEEE,2019,pp.66–70. usingdiffusionmodels,”inProceedingsoftheIEEE/CVFInternational
+[7] E. Wood, T. Baltrusˇaitis, C. Hewitt, S. Dziadzio, T. J. Cashman, and ConferenceonComputerVision,2023,pp.1206–1217.
+J. Shotton, “Fake it till you make it: face analysis in the wild using [28] B. De Wilde, A. Saha, R. P. ten Broek, and H. Huisman, “Medical
+synthetic data alone,” in Proceedings of the IEEE/CVF international diffusiononabudget:textualinversionformedicalimagegeneration,”
+conferenceoncomputervision,2021,pp.3681–3691. arXivpreprintarXiv:2303.13430,2023.
+[8] F.Plum,R.Bulla,H.K.Beck,N.Imirzian,andD.Labonte,“replicant: [29] R.Gal,Y.Alaluf,Y.Atzmon,O.Patashnik,A.H.Bermano,G.Chechik,
+a pipeline for generating annotated images of animals in complex andD.Cohen-Or,“Animageisworthoneword:Personalizingtext-to-
+environments using unreal engine,” Nature Communications, vol. 14, imagegenerationusingtextualinversion,”inTheEleventhInternational
+no.1,p.7195,2023. ConferenceonLearningRepresentations,2023.
+[9] O.M.Andrychowicz,B.Baker,M.Chociej,R.Jozefowicz,B.McGrew, [30] R.Rombach,A.Blattmann,D.Lorenz,P.Esser,andB.Ommer,“High-
+J.Pachocki,A.Petron,M.Plappert,G.Powell,A.Rayetal.,“Learning resolutionimagesynthesiswithlatentdiffusionmodels,”inProceedings
+dexterousin-handmanipulation,”TheInternationalJournalofRobotics oftheIEEE/CVFconferenceoncomputervisionandpatternrecognition,
+Research,vol.39,no.1,pp.3–20,2020. 2022,pp.10684–10695.
+[10] T. Lips, V.-L. De Gusseme, and F. wyffels, “Learning keypoints for [31] M.Deitke,D.Schwenk,J.Salvador,L.Weihs,O.Michel,E.VanderBilt,
+robotic cloth manipulation using synthetic data,” IEEE Robotics and L. Schmidt, K. Ehsani, A. Kembhavi, and A. Farhadi, “Objaverse: A
+AutomationLetters,vol.9,no.7,pp.6528–6535,2024. universe of annotated 3d objects,” in Proceedings of the IEEE/CVF
+Conference on Computer Vision and Pattern Recognition, 2023, pp.
+13142–13153.
+[32] L.Downs,A.Francis,N.Koenig,B.Kinman,R.Hickman,K.Reymann,
+T. B. McHugh, and V. Vanhoucke, “Google scanned objects: A high-
+quality dataset of 3d scanned household items,” in 2022 International
+Conference on Robotics and Automation (ICRA). IEEE, 2022, pp.
+2553–2560.
+[33] Blender Online Community, “Blender - a 3d modelling and rendering
+package,”http://www.blender.org,BlenderFoundation.
+[34] P. von Platen, S. Patil, A. Lozhkov, P. Cuenca, N. Lambert, K. Rasul,
+M.Davaadorj,D.Nair,S.Paul,S.Liu,W.Berman,Y.Xu,andT.Wolf,
+“Diffusers: State-of-the-art diffusion models.” [Online]. Available:
+https://github.com/huggingface/diffusers
+[35] M. Vecerik, J.-B. Regli, O. Sushkov, D. Barker, R. Pevceviciute,
+T.Rotho¨rl,R.Hadsell,L.Agapito,andJ.Scholz,“S3k:Self-supervised
+semantickeypointsforroboticmanipulationviamulti-viewconsistency,”
+inConferenceonRobotLearning. PMLR,2021,pp.449–460.
+[36] X. Zhou, D. Wang, and P. Kra¨henbu¨hl, “Objects as points,” arXiv
+preprintarXiv:1904.07850,2019.
+[37] O.Ronneberger,P.Fischer,andT.Brox,“U-net:Convolutionalnetworks
+for biomedicalimage segmentation,”in Medical imagecomputing and
+computer-assisted intervention–MICCAI 2015: 18th international con-
+ference,Munich,Germany,October5-9,2015,proceedings,partIII18.
+Springer,2015,pp.234–241.
+[38] Z.Tu,H.Talebi,H.Zhang,F.Yang,P.Milanfar,A.Bovik,andY.Li,
+“Maxvit: Multi-axis vision transformer,” in European conference on
+computervision. Springer,2022,pp.459–479.
+[39] G. Jocher, A. Chaurasia, and J. Qiu, “Ultralytics yolov8,” 2023.
+[Online].Available:https://github.com/ultralytics/ultralytics
+[40] T.-Y. Lin, M. Maire, S. Belongie, J. Hays, P. Perona, D. Ramanan,
+P. Dolla´r, and C. L. Zitnick, “Microsoft coco: Common objects in
+context,”inComputerVision–ECCV2014:13thEuropeanConference,
+Zurich, Switzerland, September 6-12, 2014, Proceedings, Part V 13.
+Springer,2014,pp.740–755.
+[41] J.Hessel,A.Holtzman,M.Forbes,R.L.Bras,andY.Choi,“Clipscore:
+Areference-freeevaluationmetricforimagecaptioning,”arXivpreprint
+arXiv:2104.08718,2021.
+[42] J.Li,D.Li,C.Xiong,andS.Hoi,“Blip:Bootstrappinglanguage-image
+pre-trainingforunifiedvision-languageunderstandingandgeneration,”
+in International conference on machine learning. PMLR, 2022, pp.
+12888–12900.

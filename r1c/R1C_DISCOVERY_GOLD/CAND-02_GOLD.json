@@ -1,0 +1,11 @@
+{
+  "candidate_id": "CAND-02",
+  "paper_title": "A Metric Learning Reality Check",
+  "deviation_category": "C1_selection_evaluation_leakage",
+  "gold_source_type": "E_reproducibility_paper",
+  "gold_url": "https://github.com/KevinMusgrave/pytorch-metric-learning",
+  "gold_authority": "Musgrave, Serge-Alain, Belongie (ECCV 2020)",
+  "gold_text": "Prior metric learning papers evaluated test set recall at every training epoch and reported the maximum test accuracy across all epochs, effectively using the test set for early stopping / checkpoint selection.",
+  "pre_fix_ref": "Original papers (Proxy-NCA ICCV'17, Margin Loss ICCV'17 repos)",
+  "post_fix_ref": "RevisitDML validation-split early stopping protocol"
+}

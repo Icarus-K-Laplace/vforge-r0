@@ -1,0 +1,10 @@
+{
+  "candidate_id": "CAND-02",
+  "paper_title": "A Metric Learning Reality Check",
+  "venue_year": "ECCV 2020",
+  "deviation_category": "C1_selection_evaluation_leakage",
+  "blind_metadata": {
+    "declared_protocol_source": "Paper Methods section of A Metric Learning Reality Check",
+    "execution_target_repo": "https://github.com/KevinMusgrave/pytorch-metric-learning"
+  }
+}

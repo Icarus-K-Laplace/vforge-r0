@@ -1,0 +1,36 @@
+{
+  "trace_id": "DS_E04_prompts_blip_Tminus",
+  "paper": "diffusing_synth_2411.10164",
+  "repository": "tlpss/diffusing-synthetic-data",
+  "family": "E04",
+  "experiment": "prompts-blip",
+  "protocol": {
+    "declared_categories": [
+      "mug",
+      "shoe",
+      "tshirt"
+    ],
+    "reported_categories": [
+      "mug",
+      "shoe"
+    ],
+    "aggregation_rule": "mean",
+    "metric": "AKD"
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 20.7499,
+      "aggregation_rule": "mean",
+      "upstream_categories": [
+        "mug",
+        "shoe"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "contract_id": "DS_E04_CATEGORY_SUBGROUP",
+  "self_hash": "03cd5801d134cad4604acf39ae9af329d0b0ce7ef3e50a9ba09e0879ff002574",
+  "vps": 0.6764,
+  "value_preserving": false,
+  "abs_diff": 8.3976
+}

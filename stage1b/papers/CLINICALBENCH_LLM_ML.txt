@@ -1,0 +1,5056 @@
+ClinicalBench: Can LLMs Beat Traditional ML Models
+in Clinical Prediction?
+CanyuChen∗ JianYu∗ ShanChen
+DepartmentofComputerScience DepartmentofComputerScience MassGeneralBrighamandBoston
+NorthwesternUniversity UniversityofTexasatAustin Children’sHospital,HarvardMedical
+Evanston,USA Austin,USA School
+canyuchen@u.northwestern.edu jian.yu@utexas.edu Boston,USA
+schen73@bwh.harvard.edu
+CheLiu ZhongweiWan ShuangZhou
+DepartmentofComputerScience DepartmentofComputerScience MassachusettsGeneralHospital,
+ImperialCollegeLondon OhioStateUniversity HarvardMedicalSchool
+London,UK Columbus,USA Boston,USA
+che.liu21@imperial.ac.uk wan.512@osu.edu szhou18@mgh.harvard.edu
+YuanLuo RuiZhang DanielleS.Bitterman
+DepartmentofPreventiveMedicine, DivisionofComputationalHealth MassGeneralBrighamandBoston
+FeinbergSchoolofMedicine Sciences,DepartmentofSurgery Children’sHospital,HarvardMedical
+NorthwesternUniversity UniversityofMinnesota School
+Chicago,USA Minneapolis,USA Boston,USA
+yuan.luo@northwestern.edu ruizhang@umn.edu dbitterman@bwh.harvard.edu
+FeiWang KaiShu†
+DepartmentofPopulationHealth DepartmentofComputerScience
+Sciences,WeillCornellMedicine EmoryUniversity
+CornellUniversity Atlanta,USA
+NewYork,USA kai.shu@emory.edu
+few2001@med.cornell.edu
+Abstract strategies,stillcannotbeattraditionalMLmodelsinclinical
+LargeLanguageModels(LLMs)holdgreatpromisetorevolutionize prediction yet, shedding light on their potential deficiency in
+currentclinicalsystemsfortheirsuperiorcapacitiesonmedical clinicalreasoninganddecision-making.Wecallforcautionwhen
+text processing tasks and medical licensing exams. Meanwhile, practitionersadoptLLMsinclinicalapplications.ClinicalBench
+traditionalMLmodelssuchasSVMandXGBoosthavestillbeen canbeutilizedtobridgethegapbetweenLLMs’developmentfor
+mainlyadoptedinclinicalpredictiontasks.Anemergingquestionis: healthcareandreal-worldclinicalpractice.Extendedversionwith
+CanLLMsbeattraditionalMLmodelsinclinicalprediction?Thus,we amoredetailedappendix:https://arxiv.org/abs/2411.06469.Project
+buildanewbenchmarkClinicalBenchtocomprehensivelystudy website:https://clinicalbench.github.io/.Thecode:https://github.
+theclinicalpredictivemodelingcapacitiesofbothgeneral-purpose com/canyuchen/ClinicalBench.
+andmedicalLLMs,andcomparethemwithtraditionalMLmodels.
+CCSConcepts
+ClinicalBenchembracesthreecommonclinicalpredictiontasks,
+twodatabases,14general-purposeLLMs,8medicalLLMs,and11 •Appliedcomputing→Healthinformatics;•Computing
+traditionalMLmodels.Throughextensiveempiricalinvestigation, methodologies→Machinelearning.
+wediscoverthatbothgeneral-purposeandmedicalLLMs,even
+withdifferentmodelscales,diversepromptingorfine-tuning Keywords
+largelanguagemodels,clinicalprediction,electronichealthrecords
+∗Equalcontribution.WorkdonewhenC.C.iswithIllinoisInstituteofTechnology.
+†Correspondingauthor. ACMReferenceFormat:
+CanyuChen,JianYu,ShanChen,CheLiu,ZhongweiWan,ShuangZhou,
+YuanLuo,RuiZhang,DanielleS.Bitterman,FeiWang,andKaiShu.2026.
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPredic-
+ThisworkislicensedunderaCreativeCommonsAttribution4.0InternationalLicense. tion?.InProceedingsofthe32ndACMSIGKDDConferenceonKnowledge
+KDD’26,JejuIsland,RepublicofKorea
+DiscoveryandDataMiningV.2(KDD’26),August09–13,2026,JejuIsland,
+©2026Copyrightheldbytheowner/author(s).
+ACMISBN979-8-4007-2259-2/2026/08 RepublicofKorea.ACM,NewYork,NY,USA,62pages.https://doi.org/10.
+https://doi.org/10.1145/3770855.3818831 1145/3770855.3818831
+6202
+nuJ
+8
+]LC.sc[
+2v96460.1142:viXra
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+1 Introduction notenhancetheperformanceofLLMsinclinicalpredictionacross
+LargeLanguageModels(LLMs)haveshowngreatpotentialtorev- threetasksandtwodatasetsinanoticeableway.
+olutionizeexistingclinicalsystemsfortheirsuperiorcapacitieson ThethirdquestionisCanfine-tunedLLMsbeattraditionalML
+avarietyofmedicaltextprocessingtasksincludingdocumentclas- models? WecomparetheperformanceoftraditionalMLmodels
+sification,reportgenerationandsummarization,andinformation andLLMswiththesamedatasetsplitontraining,validationand
+extraction[9,27,84].Also,LLMscouldevenrivalhumanclinician testsets.Withthoroughinvestigationover2fine-tuningstrategies,
+performanceinmedicallicensingexams[19,61,62]andclinicalcase 4 LLMs, 3 clinical prediction tasks and 2 datasets, we find that
+challenges[35,49].However,traditionalmachinelearning(ML) fine-tuningisclearlyeffectiveforcertaintasksthoughthe
+modelssuchasLogisticRegression,SVM,XGBoost,andMLPhave effectivenessvariesacrossdifferentmodels.AsforLength-
+stillbeenpredominantlyadoptedforclinicalpredictiontasksin of-StayPredictionandMortalityPrediction,weobservethatfine-
+real-worldpractice[50,68],whichplayanessentialroleinmodern tuningcanevidentlyenhancetheclinicalpredictionperformance
+healthsystemstoimprovepatientoutcomesandsupportclinical ofLLMsthoughtheextentofimprovementdependsonmodels.As
+decision-making.Thus,consideringLLMs’profoundworldknowl- forReadmissionPrediction,wedonotnoticefine-tuningcanbring
+edgeandstrongreasoningcapacities,anemergingquestionis:Can anyenhancement.However,mostfine-tunedLLMsstillcannot
+LLMsbeattraditionalMLmodelsinclinicalprediction? surpasstypicaltraditionalMLmodelssuchasXGBoost,SVM,
+Inthispaper,weproposetobuildanewbenchmarkClinical- TransformerandRNN.
+Benchtocomprehensivelyandsystematicallyinvestigatetheca- Overall,thecontributionsofthispapercanbesummarizedas:
+• WebuiltanewbenchmarkClinicalBench,embracing14general-
+pacitiesofLLMsinclinicalpredictiontasks.Moreimportantly,we
+purposeLLMs,8medicalLLMs,11traditionalMLmodels,three
+comparetheperformanceofLLMswithdiversetraditionalMLmod-
+tasksandtwodatabases,whichmadethefirstattempttocompare
+elsinahead-to-headwaytoexplorethefeasibilityofadoptingLLMs
+the clinical prediction capacities of LLMs and traditional ML
+inreal-worldclinicalprediction.Specifically,followingprevious
+modelsinahead-to-headway.
+works[68,74],weadoptthreecommontasksincludingLength-of-
+• Wediscoverthatbothgeneral-purposeandmedicalLLMs,even
+StayPrediction,MortalityPredictionandReadmissionPrediction
+withdifferentmodelsizes,promptingorfine-tuningstrategies,
+andtworealclinicaldatabasesMIMIC-III[34]andMIMIC-IV[33].
+stillcannotbeattraditionalMLmodelsinclinicalpredictionyet.
+Asforthebenchmarkedmethods,ClinicalBenchembraces11tradi-
+• Ourfindingsdemonstratethepotentialdeficiencyofboth
+tionalMLmodelsand22LLMswithdifferentscales,whichinclude
+general-purposeandmedicalLLMsinreal-worldclinical
+14general-purposeLLMsand8medicalLLMs.
+reasoning and decision-making, which could have almost
+InClinicalBench,weaimtoanswerthreeresearchquestions
+clinician-levelperformanceinmedicallicensingexamsandclin-
+throughextensiveempiricalstudies.ThefirstquestionisCandi-
+icalcasechallenges.WecallforcautionwhenadoptingLLMs
+rectlypromptingLLMsbeattraditionalMLmodels? Asshownin
+inpracticalclinicalapplications.ClinicalBenchcouldbelever-
+Figure1,toeffectivelyleveragethelanguageunderstandingcapaci-
+agedtobridgethegapbetweenthedevelopmentofLLMsfor
+tiesofLLMs,wefirstconverttheoriginalclinicalcodesindatasets
+healthcareandreal-worldclinicalpractice.
+totextsandthenletLLMsoutputthepredictedlabeldirectly.Com-
+• Weopen-sourceourcodeandevaluationresultsforlastingassess-
+paring the performance of both 9 general-purpose LLMs and 6
+mentofbothgeneral-purposeandmedicalmodelsandtoinspire
+medicalLLMswitharound7BparameterstotraditionalMLmodels,
+moreeffectiveclinicalpredictionmethodsathttps://github.com/
+wediscoverthattraditionalMLmodelscanmostlyoutperform
+canyuchen/ClinicalBench.
+LLMswithamoderatescalebyalargemarginacrossthree
+tasksandtwodatasets.Comparinggeneral-purposeandmedical 2 ClinicalBench:BenchmarkingLLMsand
+LLMs,wealsofindthatthemedicalLLMsdonotnoticeably
+TraditionalMLModelsinClinicalPrediction
+surpassgeneral-purposeLLMswithasimilarscaleinclinical
+prediction.Wefurtherstudiedtheimpactofdecodingtemperature Clinical Prediction Tasks. Following previous works [68, 74],
+andmodelsizeonLLMs’predictivemodelingcapacities.Wefind wefocusonthreecommontasksincludingLength-of-StayPredic-
+thatthesefactorscouldpotentiallyinfluencetheclinicalprediction tion,MortalityPrediction,andReadmissionPrediction.Specifically,
+performanceinanegativeorpositivewayfordifferentLLMs.How- Length-of-StayPredictionissimplifiedasathree-classclassification
+ever,adjustingtemperaturesorscalingparametersofLLMs taskaimingtopredictthelengthofthecurrenthospitalvisitasless
+stillmaynotreachtheperformanceoftypicaltraditional thanoneweek,1~2weeks,ormorethantwoweeks.MortalityPre-
+MLmodelssuchasXGBoost,SVM,andRNN. dictionisabinaryclassificationtaskintendingtoestimatewhether
+ThesecondquestionisCanLLMswithpromptengineeringbeat thepatientwilldeceaseinthecurrentvisit.ReadmissionPrediction
+traditionalMLmodels? Westudiedtheefficacyoffourcommon isabinaryclassificationtaskdesignedtoidentifypatientswhoare
+promptingstrategiesincludingZero-shotChain-of-Thought[38], athighriskofbeingreadmittedtothehospitalwithinaspecific
+Self-Reflection[52],Role-Playing[8],andIn-ContextLearning[15] timeframe.FollowingPyHealth[79],eachtaskrequiresmodelsto
+onbothgeneral-purposeLLMsandmedicalLLMs.Ingeneral,we makepredictionsbasedonpatients’demographicfeatures(e.g.,gen-
+findthattheeffectivenessofdifferentpromptingstrategies derandage)andclinicalinformationincludingdiagnosis,medical
+isverylimited.ExcepttheimprovementbroughtbyIn-Context procedures,medicationsanddrugsforthecurrentvisit.
+LearningonLlama3-8B,Gemma2-9B,andInternist-7BforLength- DatasetProcessing. WeadoptMIMIC-III-v1.4[34]andMIMIC-IV-
+of-StayPrediction,theaforementionedpromptingstrategiesdo v2.2[33]inClinicalBench,whicharetwolargeandfreelyaccessi-
+bledatabasesandwidelyadoptedinthefieldsofhealthcaredata
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Clinical Prediction Tasks Datasets Dataset Preprocessing
+Length-of-Stay Prediction: Three-class Classification MIMIC-III Dataset Filtering: Only keep first-time visits, filter out individuals with age < 18 or missing values.
+Mortality Prediction: Binary Classification Dataset Division: Initial stratified split into Training, Validation and Test Sets; Under-sampling
+Readmission Prediction: Binary Classification MIMIC-IV on Training Set for label rebalancing; Validation and Test Sets are unchanged.
+Input Conversion Benchmarked Methods Evaluation
+(Macro) F1, AUROC
+Gender: Male Age: 69
+Patient Diagnosis (ICD-9 diagnosis codes): 038.0, … Standard Training Confusion Matrix
+Medical Procedures (ICD-9 procedure codes): 31.1, …
+Medications and Drugs (ATC codes): A03F, … Decision Tree SVM MLP
+Code-to-Text
+Conversion Gender: Male Age: 69 Directly Prompting Loss Curve
+Patient Diagnosis: Streptococcal septicemia, … Prompt Engineering:
+Medical Procedures: Temporary tracheostomy, … Chain-of-Thought, Self-Reflection,
+Role-Playing, In-Context Learning
+Medications and Drugs: propulsives, …
+General-purpose LLMs Medical LLMs Fine-Tuning
+Figure1:OverviewofClinicalBench.
+science.Theycontainde-identifieddataassociatedwithICUadmis- LLMs,asrawclinicalnoteswouldintroduceadditionalchallenges
+sionsattheBethIsraelDeaconessMedicalCenterduring2001-2012 includingnoise,abbreviations,andinconsistentdocumentationthat
+and2008-2019respectively.Moredetailsofdatasetprocessingare couldfurtherdisadvantagelanguagemodels.
+asfollows:(1)DatasetFilteringWegenerallyfollowthefiltering BenchmarkedMethods. WecomparemainstreamtraditionalML
+criteriainpreviousliterature[53,66,74,79].First,weonlykeep modelsandLLMsinClinicalBench.ThetraditionalMLmodelsem-
+thesamplesofthefirst-timevisitsforeachpatientsinceothervisits braceXGBoost,LogisticRegression,DecisionTree,RandomForest,
+requiretheconsiderationofpatients’history,whichdesiredifferent AdaBoost,SVM,NaiveBayesandneuralnetworkmodelssuchas
+predictionstrategiescomparedwithfirst-timevisits.Second,we MLP,TransformerandRNN.ForLLMs,wefirstinvestigateddirectly
+filteroutpatientswhoareyoungerthan18duetothesubstantial promptingbothgeneral-purposeandmedicalLLMswithdifferent
+differencesbetweenpediatricandadultphysiology.Third,wealso decodingtemperaturesandmodelscales.Then,weexploredthe
+didnotconsiderpatientswithmissingvaluesfollowingtheliter- effectivenessofdiversepromptingandfine-tuningstrategies.The
+ature.(2)DatasetDivisionFortraditionalMLmodels,wefirst examples of specific prompts for the different strategies are in
+adoptstratifiedsplittodividetheoriginaldatasetintotraining, AppendixD.Itisworthnotingthatweonlyadoptopen-source
+validationandtestsets.Duetothelabelimbalanceoftrainingsetfor LLMssinceclosed-sourcemodelssuchasGPT-4areprohibitedfor
+threetasks,weapplyunder-samplingtorebalancethetrainingset MIMIC-IIIandMIMIC-IVaccordingtotheirdatausepolicy1.
+butleavethevalidationandtestsetsunchanged,whichcanreflect
+thereal-worldclinicalpredictionperformanceofdifferentmodels. 3 CanDirectlyPromptingLLMsBeat
+Forprompting-basedmethods,wedirectlyassesstheperformance TraditionalMLModels?
+ofLLMsonthesametestset.Forfine-tuningbasedmethods,the
+In this section, we aim to investigate the question Can directly
+divisionisthesameastraditionalMLmodelsforfaircomparison.
+promptingLLMsbeattraditionalMLmodels?Wefirstcomparethe
+(3)Code-to-TextConversionItisworthnotingthattheinfor-
+performanceof9general-purposeand6medicalLLMswitharound
+mationofpatientdiagnosis,medicalprocedures,medicationsand
+7BparameterscaletoavarietyoftraditionalMLmodels.Then,we
+drugsinoriginalMIMIC-III(MIMIC-IV)datasetisstoredinthe
+furtherexploretheimpactofdecodingtemperaturesandparameter
+formofICD-9(ICD-10)diagnosiscodes,ICD-9(ICD-10)procedure
+scalingonLLMs’clinicalpredictionperformance.
+codesandATCcodesrespectively,introducingpotentialinconsis-
+MainResults. AsshowninTable1,redandorangerepresent
+tenciesindiagnosticgranularityandcodingcompletenessbetween
+theperformanceregarding(Macro)F1%andAUROC%respectively.
+datasets.Furthermore,temporaltrendsincodingpractices,par-
+Wecanclearlyobservethattheshadesofbothredandorangefor
+ticularlythetransitionperiodsurroundingICD-10adoption,may
+traditionalMLmodelsaredarkerthanthoseforLLMs.Itshowsthat
+affectcross-datasetcomparisons.Toeffectivelyleveragethenatu-
+rallanguageunderstandingandreasoningcapacitiesofLLMs,as 1 traditionalMLmodelsgenerallyoutperformbothgeneral-
+purposeandmedicalLLMswithamoderatescaleinclinical
+showninFigure1,wefirstconvertthecodesintotextsandthen
+prediction.Furthermore,wehavecalculatedtherangesofperfor-
+designthespecificpromptsforLLMs.WeacknowledgethatICD
+mancewith95%ConfidenceIntervalthroughthefive-runresults,
+codes,originallydesignedforbillingandadministrativepurposes,
+whichareshownasthenumbersinbracketinTable1.Thelower
+maynotfullycaptureclinicalnuance,asthecodescanbeincom-
+boundsoftraditionalMLmodels’rangesarestillmostlylargerthan
+plete, reflect upcoding practices, or omit clinically relevant but
+non-billableconditions.However,thislimitationappliesequally thehigherboundsofLLMs’ranges,indicatingthe 2 highstatisti-
+calsignificanceoftheadvantageoftraditionalMLmodels
+toallbenchmarkedmethods,andICD-basedfeaturesremainthe
+standardrepresentationinclinicalpredictionliterature[68].Fur-
+1https://physionet.org/about/licenses/physionet-credentialed-health-data-license-
+thermore, this conversion represents an optimistic scenario for
+150
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Method Length-of-StayPrediction MortalityPrediction ReadmissionPrediction
+MacroF1(%) AUROC(%) F1(%) AUROC(%) F1(%) AUROC(%)
+95%CI 95%CI 95%CI 95%CI 95%CI 95%CI
+Majority 23.37(23.37,23.37) 50.00(50.00,50.00) 0.00(0.00,0.00) 50.00(50.00,50.00) 0.00(0.00,0.00) 50.00(50.00,50.00)
+Minority 10.72(10.72,10.72) 50.00(50.00,50.00) 20.88(20.88,20.88) 50.00(50.00,50.00) 13.64(13.64,13.64) 50.00(50.00,50.00)
+TraditionalMLModels
+XGBoost 67.94(67.87,68.01) 93.83(93.78,93.88) 65.75(65.56,65.94) 95.97(95.93,96.01) 19.92(19.75,20.09) 69.24(68.75,69.73)
+LR 66.52(66.43,66.61) 93.09(92.99,93.19) 63.09(62.96,63.22) 94.59(94.53,94.65) 19.88(19.73,20.03) 69.19(68.85,69.53)
+DecisionTree 59.14(59.04,59.24) 85.22(85.14,85.30) 52.17(52.05,52.29) 84.18(83.93,84.43) 16.1(15.94,16.26) 57.57(57.05,58.09)
+RandomForest 61.14(61.09,61.19) 91.23(91.15,91.31) 54.23(54.10,54.36) 91.65(91.56,91.74) 18.78(18.64,18.92) 69.3(69.04,69.56)
+AdaBoost 66.6(66.48,66.72) 92.91(92.85,92.97) 61.19(60.99,61.39) 93.62(93.54,93.70) 17.92(17.75,18.09) 64.51(64.20,64.82)
+SVM 70.28(70.20,70.36) 94.77(94.71,94.83) 63.97(63.81,64.13) 95.69(95.65,95.73) 20.17(20.03,20.31) 71.74(71.36,72.12)
+NaiveBayes 42.93(42.84,43.02) 61.55(61.43,61.67) 23.43(23.41,23.45) 56.85(56.80,56.90) 16.86(16.77,16.95) 58.76(58.56,58.96)
+KNN 44.27(44.20,44.34) 73.72(73.59,73.85) 44.52(44.37,44.67) 85.39(85.34,85.44) 15.09(14.91,15.27) 59.45(58.73,60.17)
+MLP 63.54(63.47,63.61) 90.61(90.52,90.70) 59.32(59.16,59.48) 93.01(92.92,93.10) 18.86(18.69,19.03) 67.47(67.22,67.72)
+Transformer 63.56(63.45,63.67) 89.58(89.50,89.66) 57.38(57.06,57.70) 93.35(93.26,93.44) 18.97(18.81,19.13) 67.27(67.01,67.53)
+RNN 64.23(64.12,64.34) 90.08(90.01,90.15) 59.03(58.74,59.32) 91.97(91.89,92.05) 19.40(19.26,19.54) 69.32(69.12,69.52)
+General-purposeLargeLanguageModels
+Llama3-8B 25.78(25.72,25.84) 83.82(83.74,83.90) 25.81(25.78,25.84) 85.40(85.33,85.47) 13.64(13.64,13.64) 43.00(42.50,43.50)
+Mistral-v0.3-7B 11.59(11.57,11.61) 69.73(69.64,69.82) 38.11(38.06,38.16) 86.84(86.80,86.88) 13.44(13.38,13.50) 47.16(46.69,47.63)
+Gemma2-9B 17.30(17.26,17.34) 79.19(79.08,79.30) 43.03(42.96,43.10) 86.46(86.41,86.51) 13.66(13.66,13.66) 47.14(46.87,47.41)
+Qwen2-7B 12.17(12.14,12.20) 73.97(73.82,74.12) 34.98(34.81,35.15) 85.97(85.91,86.03) 2.14(1.88,2.40) 44.04(43.61,44.47)
+Yi-v1.5-9B 10.89(10.88,10.90) 74.51(74.41,74.61) 28.75(28.72,28.78) 76.05(75.96,76.14) 11.35(11.23,11.47) 45.02(44.76,45.28)
+Vicuna-v1.5-7B 22.05(22.01,22.09) 73.20(73.11,73.29) 20.91(20.91,20.91) 77.90(77.80,78.00) 13.64(13.64,13.64) 39.51(39.18,39.84)
+Phi3.5-mini-3.8B 13.17(13.14,13.20) 73.67(73.63,73.71) 26.45(26.43,26.47) 80.37(80.30,80.44) 12.40(12.30,12.50) 46.64(46.37,46.91)
+InternLM2.5-7B 11.53(11.52,11.54) 82.38(82.28,82.48) 33.89(33.57,34.21) 83.89(83.81,83.97) 0.00(0.00,0.00) 45.84(45.51,46.17)
+MiniCPM3-4B 22.25(22.21,22.29) 75.95(75.86,76.04) 24.01(24.00,24.02) 86.28(86.21,86.35) 13.36(13.31,13.41) 42.23(41.95,42.51)
+MedicalLargeLanguageModels
+Meditron-7B 33.43(33.39,33.47) 76.63(76.51,76.75) 20.88(20.88,20.88) 77.26(77.20,77.32) 13.64(13.64,13.64) 44.93(44.43,45.43)
+Medllama3-8B 14.88(14.85,14.91) 78.27(78.22,78.32) 24.12(24.11,24.13) 78.74(78.66,78.82) 13.64(13.64,13.64) 49.80(49.24,50.36)
+BioMistral-7B 21.96(21.89,22.03) 40.94(40.73,41.15) 30.53(30.45,30.61) 77.88(77.81,77.95) 13.37(13.28,13.46) 40.93(40.54,41.32)
+Med42-8B 12.82(12.80,12.84) 84.76(84.70,84.82) 28.02(27.98,28.06) 82.55(82.46,82.64) 13.62(13.60,13.64) 42.95(42.56,43.34)
+BioMedGPT-7B 14.11(14.11,14.11) 61.54(61.45,61.63) 22.55(22.54,22.56) 78.93(78.82,79.04) 13.72(13.65,13.79) 42.89(42.67,43.11)
+Internist-7B 11.71(11.68,11.74) 81.10(81.04,81.16) 37.97(37.92,38.02) 87.25(87.20,87.30) 12.07(11.90,12.24) 47.67(47.36,47.98)
+Table1:PerformanceofLLMsandTraditionalMLModelsonTypicalClinicalPredictionTasks,whichincludeLength-of-
+StayPrediction,MortalityPrediction,andReadmissionPrediction.ExperimentsareconductedinMIMIC-IIIdataset.More
+experimentresultsonMIMIC-IVdatasetareinAppendixB.1.MoreexperimentresultsoftraditionalMLmodelsondifferent
+scalesoftrainingsetareinAppendixB.2.(Macro)F1%andAUROC%areadoptedasmetricsconsideringlabelimbalance.
+Averageperformanceoverfiverunsisreported.Thedarkershadesofredandorangeindicatethatthescoresarecloserto100%.
+Thenumbersinbracketaretherangesofperformancewith95%ConfidenceInterval(95%CI),whicharecalculatedwiththe
+5-runscores.ResultsshouldbeinterpretedconsideringthatICD-basedfeaturesrepresentadministrativeratherthanpurely
+clinicaldata,andperformancemaydifferwhenusingricherclinicalrepresentations.
+(a) XGBoost (b) Transformer (c) Llama3-8B (d) Meditron-7B
+Figure2:ExamplesofConfusionMatrixofLLMsandTraditionalMLModelsonMortalityPrediction.Experimentsareconducted
+inMIMIC-IIIdataset.Thecompleteconfusionmatricesacrossdifferentmethods,tasksanddatasetsareinAppendixB.4.
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+overLLMs.Inaddition,wehaveevaluatedtheperformanceoftra-
+ditionalMLmodelswith5%,10%,20%,40%oftheoriginaltraining
+setinAppendixB.2andtheirperformanceisrelativelystableand
+SVM
+stillsurpassesLLMs,whichshows 3 theadvantageoftraditional XGBoost
+MLmodelsinlow-resourcescenarios. RNN
+Transformer SVM
+Also,wenoticethatthereisgenerallynonotabledifferencebe- XGBoost
+tween the performances of general-purpose and medical LLMs, 64.76 RNN
+Transformer
+and some medical LLMs can even underperform their general- 64.11
+purposecounterparts.Forexample,Med42-8B[12]isadaptedfrom SVM
+XGBoost
+Llama3-8Bthroughfine-tuningonmedicalcorpusandcanoutper- RNN
+formLlama3-8Binvariousmedicalknowledgebenchmarkssuch Transformer
+asMedQA[31]andMedMCQA[51](Themodeldownloadlinks
+areinAppendixA).However,thereisacleardropforLength-of-
+Stay Prediction and no substantial difference for the other two
+tasks when comparing Med42-8B to Llama3-8B regarding their
+clinicalpredictionperformance,whichillustratesthat 4 adapting
+general-purposeLLMstomedicaldomainmaynotimprove
+andcouldevenhurttheirclinicalreasoningcapacities.
+ItisnoteworthythattheperformanceofsomeLLMs(e.g.,Llama3-
+8BandMeditron-7BforMortalityPrediction)isevencomparableto
+thatof“Majority”or“Minority”method,whichreferstoselecting
+the“Majority”or“Minority”classasthepredictedlabeldirectly,
+whichfurthershowsLLMs’deficiencyinsomeclinicalprediction
+tasks.Inmoredetail,wealsoexploretheconfusionmatricesofthe
+predictionsofbothtraditionalMLmodelsandLLMs.Asshown
+Figure3:PerformanceComparisonBetweenLLMswithDif-
+inFigure2,wecanseethat 5 thepredictionpatternsofLLMs
+ferentTemperaturesandTraditionalMLModelsonLength-
+couldbedistinctfromthoseoftraditionalMLmodels.With
+of-StayPrediction.ExperimentsareconductedinMIMIC-III
+under-sampling on the training set, traditional ML models can
+dataset.MoreresultsonMortalityandReadmissionPredic-
+generallybalanceprecisionandrecall.However,thepredictionsof
+tionareinAppendixB.3.
+LLMscouldbeoverlybiased.Forexample,Llama3-8BandMeditron-
+7Bhaveahighrateoffalsepositives,whichresultsinthepoor
+andtwomedicalmodelseriesincludingMeditron[11]andMed42[12].
+performanceonprecisionandF1.
+ComparingLLMswithdifferentscalesinthesamemodelseries,
+TheImpactofDecodingTemperature. Sincedecodingtemperature we can observe that 8 the parameter scaling does not nec-
+isakeyhyperparameterandcouldhaveaconsiderableimpacton essarily lead to better clinical prediction performance. In
+LLMs’reasoningcapacities[54,56],weexplorewhetheradjusting MortalityPrediction,LLMswithalargerparameterscaleinthe
+temperaturescanenhanceLLMs’clinicalpredictionperformance. samemodelseriestendtoperformbetter.Forexample,theperfor-
+As shown in Figure 3, when the temperature increases, 6 the manceofQwen2seriesmodelsconsistentlyincreasesonMIMIC-III
+impactonLLMs’clinicalpredictionperformancecouldbe andMIMIC-IVdatasetsastheparameterscalesgrow.However,
+positiveornegativefordifferentLLMs.Forexample,whenthe thistendencydoesnotappearinLength-of-StayPredictionand
+temperatureishigher,theperformanceofInternist-7Bconstantly ReadmissionPrediction.Qwen2-1.5BoutperformsQwen2-0.5Band
+increasesbutthatofMeditron-7Bkeepsdecreasing.However, 7 Qwen2-7BforLength-of-StayPredictionandReadmissionPredic-
+onlyadjustingthedecodingtemperatureofLLMscannot tion.Wealsonoticethat 9 parameterscalingcouldevenhurt
+reachtheperformanceoftypicaltraditionalMLmodelssuch theclinicalpredictionperformance.Forexample,Yi-v1.5-6B
+asXGBoost,SVM,RNNandTransformer. performsmuchbetterthanYi-v1.5-9BandYi-v1.5-34BforLength-
+of-StayPredictiononbothMIMIC-IIIandMIMIC-IVdatasets.
+TheImpactofParameterScalinginLLMs. LLMswithmorepa-
+However,throughtheshadesofredcolor,wecanclearlyseethat
+rametersinthesamemodelseriesgenerallyperformbetteracross
+eventhoughtheperformanceofsomeLLMsisimprovedforcertain
+differenttasksowingtodeeperworldknowledgeandstrongerrea-
+tasks 10 astheparameterscalesexpand,theystillunderper-
+soningcapacities.Forexample,theperformanceondiversedatasets
+formtypicaltraditionalMLmodelssuchasXGBoost,SVM,
+suchasMMLU[24]andAGIEval[83]showsasteadygrowthas
+andRNN.Forexample,althoughtheperformanceissubstantially
+scalesexpandforYiseriesmodels[80].Thus,afterevaluatingthe
+enhancedforMeditron-70BcomparedtoMeditron-7BinMortality
+performanceofLLMswitharound7BparametersinTable1,weex-
+Prediction,thereisstillalargegapfromtraditionalMLmodels.
+ploredtheimpactofparameterscalingonLLMs’clinicalprediction
+performanceandinvestigatedwhetherLLMswithalargerscale
+Finding1:Directlypromptinggeneral-purposeandmedical
+couldbeattraditionalMLmodels.
+LLMs,evenwithdifferentdecodingtemperaturesorparameter
+AsshowninTable2,wehaveassessedthreegeneral-purpose
+scales,cannotbeattraditionalMLmodelsinclinicalprediction.
+modelseriesincludingLlama3[16],Qwen2[78],andYi-v1.5[80]
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Method Length-of-StayPrediction MortalityPrediction ReadmissionPrediction
+MIMIC-III MIMIC-IV MIMIC-III MIMIC-IV MIMIC-III MIMIC-IV
+TraditionalMLModels
+XGBoost 67.98 64.19 64.46 48.15 19.33 27.73
+SVM 70.63 66.43 63.10 46.27 18.85 28.27
+Transformer 64.11 54.97 56.46 42.81 17.80 26.40
+RNN 64.76 59.89 56.32 48.9 19.96 25.58
+General-purposeLargeLanguageModels
+Llama3-8B 25.38 17.73 26.06 15.12 13.64 25.05
+Llama3-70B 18.66 23.01 30.33 18.43 12.40 22.81
+Qwen2-0.5B 5.11 5.78 1.94 3.11 0.00 0.60
+Qwen2-1.5B 23.37 29.55 20.91 6.88 13.72 24.82
+Qwen2-7B 11.96 6.48 35.65 43.53 4.26 0.29
+Yi-v1.5-6B 25.81 30.18 28.35 18.26 13.69 24.66
+Yi-v1.5-9B 10.94 6.96 28.82 16.55 10.74 20.73
+Yi-v1.5-34B 18.92 18.42 41.78 33.63 13.46 24.12
+MedicalLargeLanguageModels
+Meditron-7B 33.46 26.90 20.88 6.70 13.64 24.92
+Meditron-70B 30.15 35.67 43.16 47.93 8.67 9.12
+Med42-8B 12.69 9.97 28.59 16.79 13.59 25.06
+Med42-70B 15.43 22.95 42.96 31.21 12.99 23.87
+Table2:PerformanceComparisonBetweenLLMswithDifferentScalesandTraditionalMLModelsonClinicalPredictionTasks.
+ExperimentsareconductedinMIMIC-IIIandMIMIC-IVdatasets.Consideringlabelimbalance,Length-of-StayPrediction
+adoptsMacroF1%andtheothertwotasksuseF1%asthemetric.Thedarkershadesofredindicatethatscoresarecloserto100%.
+4 CanLLMswithPromptingEngineeringBeat 5 CanFine-TunedLLMsBeatTraditionalML
+TraditionalMLModels? Models?
+Ithasbeenshownthatdifferentpromptingengineeringtechniques Fine-tuningisacommonparadigmtoadaptLLMstospecifictasks
+canexertanotableinfluenceonLLMs’performanceacrossvarious ordomains[46,81].OurresultsonmedicalLLMsinTable1have
+tasks[58,59].Thus,weinvestigatetheeffectivenessofdifferent shownthatonlyadaptinggeneral-purposeLLMstomedicaldomain
+promptingmethodsonbothgeneral-purposeandmedicalLLMs maynotimproveandcouldevendegradetheclinicalreasoning
+forclinicalprediction,andalsocomparethemwithtraditionalML capacities.Inthissection,weexploredwhetherdirectlyadapting
+modelsinthissection. general-purposeLLMstoclinicalpredictiontaskscanenhancetheir
+Westudiedfourtypicalpromptingengineeringtechniquesin- performanceandalsocomparethemwithtraditionalMLmodels.
+cludingZero-shotChain-of-Thought[38],Self-Reflection[52],Role- Forafaircomparison,weadoptedthesamedatasetdivisionof
+Playing[8],andIn-ContextLearning[15].Theexamplesofthe training,validationandtestsetsforfine-tuningLLMsandtraining
+specificpromptdesignfordifferentstrategiesacrossthreetasksare traditionalMLmodels.Thedetailsoffine-tuningdataconstruction
+showninAppendixD.AsshowninTable3,wecanobservethat 11 forthethreeclinicalpredictiontasksareinAppendixC.Consider-
+theeffectivenessofdifferentpromptingstrategiesisgener- ingtherelativelysmallscaleofthetrainingset,weadjustedtheorig-
+allyverylimitedthoughitmayvaryacrossmodelsandtasks. inalLoRA[25]intotwofine-tuningstrategiesnamedLoRA(Full)
+ExceptthatIn-ContextLearningcanexplicitlyenhancetheperfor- andLoRA(LastLayer).WesetthetrainingepochsforbothLLMs
+manceofLlama3-8B,-70B,andMeditron-70BonLength-of-Stay andtraditionalMLmodelsas20.Thelosscurvesoffine-tuning
+Prediction,otherstrategiesmaynotbringanotableimprovement inAppendixB.5showthatLLMscanmostlyconvergewithin20
+and could even degrade the original performance. More impor- epochsandweleveragedthevalidationsettoselecttheoptimal
+tantly,throughtheshadesofredcolor,wecanclearlyseethat 12 fine-tunedcheckpoint.
+traditionalMLmodelssuchasXGBoost,SVM,andRNNstill As shown in Figure 4, we can observe that 13 fine-tuning
+outperformLLMswithdifferentpromptingstrategies. canclearlyenhancetheclinicalpredictionperformanceof
+LLMs on Length-of-Stay Prediction and Mortality Predic-
+tion,thoughitmaynotimprovetheperformanceonReadmission
+Finding2:Theeffectivenessoftypicalpromptingengineering
+Prediction.Morespecifically,LoRA(Full)bringsamoreevident
+techniques is generally limited and they still cannot make
+improvement than LoRA (Last Layer) across different LLMs on
+general-purposeandmedicalLLMsbeattraditionalMLmodels.
+Length-of-StayPrediction.Theenhancementfromfine-tuningon
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Method Length-of-StayPrediction MortalityPrediction ReadmissionPrediction
+MIMIC-III MIMIC-IV MIMIC-III MIMIC-IV MIMIC-III MIMIC-IV
+TraditionalMLModels
+XGBoost 63.88 57.25 48.04 40.00 18.80 26.95
+SVM 66.16 59.08 56.47 36.59 18.48 26.52
+Transformer 61.49 53.39 51.85 29.13 17.32 23.21
+RNN 64.26 60.09 58.96 49.80 20.80 26.24
+General-purposeLargeLanguageModels
+Llama3-8B 26.36 16.14 25.84 14.35 13.78 25.40
++CoT 14.76 9.22 23.18 10.81 12.05 22.90
++Self-Reflection 25.88 17.53 24.10 14.29 15.70 22.80
++Role-Playing 27.44 17.30 25.44 14.11 13.78 24.87
++ICL 51.77 54.72 28.02 14.85 11.97 24.46
+Llama3-70B 18.88 21.76 29.82 17.80 13.72 22.03
++CoT 10.00 9.02 0.00 0.00 0.00 0.00
++Self-Reflection 25.70 26.28 21.13 7.28 13.81 25.13
++Role-Playing 11.68 11.37 23.34 11.68 13.83 24.95
++ICL 41.04 47.52 25.22 12.41 12.47 25.43
+MedicalLargeLanguageModels
+Meditron-7B 35.88 27.53 20.79 6.58 13.78 24.87
++CoT 16.04 12.58 13.90 5.95 12.83 24.34
++Self-Reflection 18.36 10.40 20.47 6.60 13.78 24.91
++Role-Playing 27.73 17.54 20.79 6.58 13.78 24.87
++ICL 14.09 14.62 23.72 11.37 11.64 23.27
+Meditron-70B 27.23 34.52 46.15 34.48 9.64 9.90
++CoT 9.39 6.92 4.24 0.43 11.34 18.66
++Self-Reflection 17.72 13.51 0.00 0.00 0.00 1.69
++Role-Playing 46.46 56.06 14.08 34.48 0.00 2.70
++ICL 55.40 50.79 27.40 11.26 8.56 19.35
+Table3:PerformanceComparisonBetweenLLMswithPromptEngineeringandTraditionalMLModelsonClinicalPrediction
+Tasks.ExperimentsareconductedinsampledMIMIC-IIIandMIMIC-IVdatasets.Length-of-StayPredictionadoptsMacroF1%
+andtheothertwotasksuseF1%asthemetricforlabelimbalance.Thedarkershadesofredindicatescoresarecloserto100%.
+MortalityPredictionisgenerallylessnotablethanthatonLength-of- LLMsmayhaveclinician-levelgeneralmedicalknowledge,itis
+StayPrediction.However, 14 mostfine-tunedLLMsstillcannot stillhighlyunder-exploredwhethertheycouldperformclinical
+surpasstypicaltraditionalMLmodelssuchasXGBoost,SVM, reasoninganddecision-makinginreal-worldcomplexscenarios.
+RNNandTransformer.Inparticular,evenwiththesubstantial ClinicalBenchmadethefirstattempttosystematicallyandcompre-
+improvement brought by fine-tuning on Length-of-Stay Predic- hensivelybenchmarktheclinicalpredictivemodelingcapacitiesof
+tion,thereisstillanexplicitgapbetweentheperformanceofmost bothgeneral-purposeandmedicalLLMsbasedonthreereal-world
+LLMsandtypicaltraditionalMLmodels.Althoughthefine-tuned clinicalpredictiontasks.Bycomparingtheirperformancewithtradi-
+Gemma2-9BwithLoRA(Full)hasbeendemonstratedtosurpass tionalMLmodels,wehaveshedlightonLLMs’potentialdeficiency
+threetraditionalMLmodelsonMIMIC-IVforMortalityPrediction, inperformingreal-worldclinicalreasoninganddecision-making.
+thesamefine-tuningstrategycannotbringasimilarimprovement Thishighlights 15 agapbetweenmedicalknowledgeandclin-
+toGemma2-9BonMIMIC-IIIforMortalityPrediction. icalreasoning:excellingatmedicalknowledgebenchmarks(e.g.,
+MedQA,USMLE)doesnotnecessarilytranslatetoeffectiveclinical
+Finding 3: Fine-tuning can clearly enhance LLMs’ perfor- predictivereasoningwithreal-worldpatientdata.Italsounder-
+manceoncertainclinicalpredictiontasksbutmostfine-tuned scores 16 safetyandreliabilityrisksinpracticaladoption,as
+LLMsstillcannotbeattraditionalMLmodelsyet. wellasthechallengesofintegratingLLMsintoclinicalwork-
+flows.OurdiscoveriesalsoechotherecentdiscussionsonLLMs’
+6 ImplicationsandHypothesis potentiallimitations[18,21,22,32,76].WehypothesizethatLLMs’
+limitedclinicalpredictivemodelingabilitiescouldbeattributed
+Ithasattractedincreasingattentiontotransformtheexistinghealth-
+to 17 thelackofrealisticandrelevantdatainbothofthe
+care systems withLLMs [43, 71, 84, 85]. While the highperfor-
+pre-trainingandpost-trainingstages,consideringthesensitive
+manceinmedicallicensingexamsandquestion-answeringbench-
+natureofpatients’information.Therecentemergingclinicaldigital
+markssuchasMedQA[31]andMedMCQA[51]hasshownthat
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+(cid:15)(cid:16)(cid:8)(cid:10)(cid:18) (cid:15)(cid:15)(cid:13)(cid:14)(cid:8)(cid:8)(cid:11)(cid:10)(cid:9)(cid:18)
+(cid:15)(cid:9)(cid:8)(cid:11)(cid:14)
+(cid:14)(cid:9)(cid:8)(cid:9)(cid:9) (cid:13)(cid:9)(cid:8)(cid:9)(cid:9) (cid:12)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:11)(cid:9)(cid:8)(cid:9)(cid:9) (cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9) (cid:23)(cid:35)(cid:30)(cid:36)(cid:30)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22) (cid:36)(cid:36)(cid:30)(cid:11)(cid:7)(cid:18)(cid:20) (cid:29)(cid:34)(cid:31)(cid:42)%(cid:30)(cid:7)(cid:43)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20)(cid:24)(cid:34)()(cid:39)(cid:30)(cid:35)(cid:7)(cid:43)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20) (cid:26)(cid:44) %(cid:11)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)(cid:3)(cid:38)(cid:39)(cid:31)(cid:30)(cid:24)
+(cid:25)(cid:38)(cid:3)(cid:21)(cid:34)% (cid:7)(cid:28)(cid:42)%(cid:34)%(cid:33) (cid:23)(cid:38)(cid:27)(cid:19)(cid:3)(cid:5)(cid:21)(cid:42)(cid:35)(cid:35)(cid:6) (cid:23)(cid:38)(cid:27)(cid:19)(cid:3)(cid:5)(cid:23)(cid:30)()(cid:3)(cid:23)(cid:30)- (cid:39)(cid:6)
+(cid:14)(cid:15)(cid:8)(cid:18)(cid:18) (cid:14)(cid:12)(cid:8)(cid:17)(cid:18) (cid:14)(cid:11)(cid:8)(cid:16)(cid:14)
+(cid:13)(cid:17)(cid:8)(cid:18)(cid:13) (cid:12)(cid:15)(cid:8)(cid:9) (cid:12)(cid:12)(cid:8)(cid:11)(cid:18) (cid:12)(cid:9)(cid:8)(cid:14)(cid:12) (cid:12)(cid:9)(cid:8)(cid:9)(cid:16) (cid:11)(cid:18)(cid:8)(cid:10)(cid:12) (cid:11)(cid:15)(cid:8)(cid:12)(cid:15) (cid:11)(cid:12)(cid:8)(cid:11)(cid:17) (cid:11)(cid:13)(cid:8)(cid:13)(cid:18)
+(cid:10)(cid:15)(cid:8)(cid:11)(cid:11) (cid:10)(cid:10)(cid:8)(cid:11) (cid:10)(cid:10)(cid:8)(cid:18)(cid:11) (a) Length-of-Stay Prediction (MIMIC-III) (b) Length-of-Stay Prediction (MIMIC-IV)
+(cid:14)(cid:17)(cid:8)(cid:18)(cid:15)
+(cid:14)(cid:15)(cid:8)(cid:13)(cid:16)
+(cid:14)(cid:10)(cid:8)(cid:17)(cid:14) (cid:13)(cid:17)(cid:8)(cid:9)(cid:13)
+(cid:13)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:12)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:11)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:23)(cid:34)(cid:29)(cid:35)(cid:29)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22)(cid:31)(cid:35)(cid:35)(cid:29)(cid:11)(cid:7)(cid:18)(cid:20) (cid:28)(cid:33)(cid:30))(cid:36)(cid:29)(cid:7)(cid:42)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20) (cid:24)(cid:33)(cid:39)((cid:38)(cid:29)(cid:34)(cid:7)(cid:42)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20)
+(c) Mortality Prediction (MIMIC-III) (d) Mortality Prediction (MIMIC-IV)
+(e) Readmission Prediction (MIMIC-III) (f) Readmission Prediction (MIMIC-IV)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)
+(cid:25)%(cid:3)(cid:21)(cid:33)(cid:36)(cid:31)(cid:7)(cid:27))(cid:36)(cid:33)(cid:36) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:21))(cid:34)(cid:34)(cid:6) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:23)(cid:29)(cid:39)((cid:3)(cid:23)(cid:29)(cid:43)(cid:31)(cid:38)(cid:6)
+RNN SVM XGBoost Transformer
+(cid:14)(cid:11)(cid:8)(cid:15)(cid:12) (cid:13)(cid:18)(cid:8)(cid:16)(cid:13) (cid:14)(cid:9)(cid:8)(cid:13)(cid:17)
+(cid:13)(cid:9)(cid:8)(cid:15) (cid:13) (cid:11) (cid:12)(cid:8)(cid:18)(cid:17) (cid:13)(cid:13)(cid:8)(cid:16)(cid:17) (cid:13)(cid:10)(cid:8)(cid:16)(cid:12) (cid:13)(cid:15)(cid:8)(cid:13)(cid:16) (cid:13)(cid:9)(cid:8)(cid:10)(cid:14)
+(cid:11)(cid:14)(cid:8)(cid:17)(cid:13)
+(cid:11)(cid:9)(cid:8)(cid:18) (cid:11)(cid:10)(cid:8)(cid:10)(cid:18)
+(cid:11)(cid:9)(cid:8)(cid:17)(cid:9)
+(cid:10)(cid:10)(cid:17)(cid:17)(cid:8)(cid:8)(cid:17)(cid:13)(cid:9)(cid:17) (cid:10)(cid:16)(cid:8)(cid:12)(cid:11)
+(cid:10)(cid:14)(cid:8)(cid:9)(cid:9)
+(cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:14)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9) (cid:23)(cid:34)(cid:29)(cid:35)(cid:29)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22)(cid:31)(cid:35)(cid:35)(cid:29)(cid:11)(cid:7)(cid:18)(cid:20) (cid:28)(cid:33)(cid:30))(cid:36)(cid:29)(cid:7)(cid:42)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20) (cid:24)(cid:33)(cid:39)((cid:38)(cid:29)(cid:34)(cid:7)(cid:42)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)
+(cid:25)%(cid:3)(cid:21)(cid:33)(cid:36)(cid:31)(cid:7)(cid:27))(cid:36)(cid:33)(cid:36) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:21))(cid:34)(cid:34)(cid:6) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:23)(cid:29)(cid:39)((cid:3)(cid:23)(cid:29)(cid:43)(cid:31)(cid:38)(cid:6)
+(cid:10)(cid:14)(cid:8)(cid:9)(cid:18)
+(cid:15) (cid:15) (cid:15)(cid:13) (cid:16) (cid:14)(cid:8) (cid:8) (cid:8)(cid:11) (cid:10) (cid:10)(cid:9) (cid:18) (cid:18) (cid:10)(cid:12)(cid:8)(cid:16) (cid:10) (cid:17) (cid:13)(cid:8)(cid:9) (cid:10) (cid:16) (cid:11)(cid:8)(cid:11)(cid:12) (cid:10)(cid:12)(cid:8)(cid:16)(cid:17) (cid:10)(cid:12)(cid:8)(cid:15)(cid:17) (cid:10)(cid:12)(cid:8)(cid:16) (cid:10) (cid:17) (cid:12)(cid:8)(cid:15) (cid:10) (cid:15) (cid:12)(cid:8)(cid:15)(cid:15) (cid:10)(cid:13)(cid:8)(cid:10) (cid:10) (cid:14) (cid:13)(cid:8)(cid:9) (cid:10) (cid:12) (cid:12)(cid:8)(cid:17)(cid:14) (cid:15)(cid:9)(cid:8)(cid:11)(cid:14)
+(cid:14)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:13)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:12)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:11)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:23)(cid:35)(cid:30)(cid:36)(cid:30)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22) (cid:36)(cid:36)(cid:30)(cid:11)(cid:7)(cid:18)(cid:20) (cid:29)(cid:34)(cid:31)(cid:42)%(cid:30)(cid:7)(cid:43)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20)(cid:24)(cid:34)()(cid:39)(cid:30)(cid:35)(cid:7)(cid:43)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20) (cid:26)(cid:44) %(cid:11)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)(cid:3)(cid:38)(cid:39)(cid:31)(cid:30)(cid:24)
+(cid:14)(cid:15)(cid:18)(cid:9)(cid:8)(cid:8)(cid:9)(cid:9)(cid:17)(cid:18)
+(cid:14)(cid:16)(cid:8)(cid:11)(cid:14) (cid:14)(cid:12)(cid:8)(cid:12)(cid:18)
+(cid:13)(cid:9)(cid:8)(cid:9)(cid:9) (cid:12)(cid:9)(cid:8)(cid:9)(cid:9) (cid:11)(cid:9)(cid:8)(cid:9)(cid:9) (cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9) (cid:23)(cid:34)(cid:29)(cid:35)(cid:29)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22)(cid:31)(cid:35)(cid:35)(cid:29)(cid:11)(cid:7)(cid:18)(cid:20) (cid:28)(cid:33)(cid:30))(cid:36)(cid:29)(cid:7)(cid:42)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20) (cid:24)(cid:33)(cid:39)((cid:38)(cid:29)(cid:34)(cid:7)(cid:42)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20)
+XGBoost RNN Transformer SVM
+(cid:25)(cid:38)(cid:3)(cid:21)(cid:34)% (cid:7)(cid:28)(cid:42)%(cid:34)%(cid:33) (cid:23)(cid:38)(cid:27)(cid:19)(cid:3)(cid:5)(cid:21)(cid:42)(cid:35)(cid:35)(cid:6) (cid:23)(cid:38)(cid:27)(cid:19)(cid:3)(cid:5)(cid:23)(cid:30)()(cid:3)(cid:23)(cid:30)- (cid:39)(cid:6)
+18.80 18.48
+(cid:14)(cid:15)(cid:8)(cid:18)(cid:18) (cid:14)(cid:12)(cid:8)(cid:17)(cid:18) (cid:14)(cid:11)(cid:8)(cid:16)(cid:14)
+(cid:13)(cid:17)(cid:8)(cid:18)(cid:13)
+(cid:12)(cid:15)(cid:8)(cid:9) (cid:12)(cid:12)(cid:8)(cid:11)(cid:18)
+(cid:12)(cid:9)(cid:8)(cid:14)(cid:12) (cid:12)(cid:9)(cid:8)(cid:9)(cid:16) (cid:11)(cid:18)(cid:8)(cid:10)(cid:12) (cid:11)(cid:15)(cid:8)(cid:12)(cid:15) (cid:11)(cid:12)(cid:8)(cid:11)(cid:17) (cid:11)(cid:13)(cid:8)(cid:13)(cid:18)
+(cid:10)(cid:15)(cid:8)(cid:11)(cid:11)
+(cid:10)(cid:10)(cid:8)(cid:11) (cid:10)(cid:10)(cid:8)(cid:18)(cid:11)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)(cid:3)%(cid:38)(cid:30)(cid:29)(cid:24)
+(cid:25)%(cid:3)(cid:21)(cid:33)(cid:36)(cid:31)(cid:7)(cid:27))(cid:36)(cid:33)(cid:36) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:21))(cid:34)(cid:34)(cid:6) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:23)(cid:29)(cid:39)((cid:3)(cid:23)(cid:29)(cid:43)(cid:31)(cid:38)(cid:6)
+(cid:14)(cid:16)(cid:8)(cid:15)(cid:13) (cid:13)(cid:18)(cid:8)(cid:9)(cid:13) (cid:14)(cid:14)(cid:8)(cid:10)(cid:13)
+(cid:13)(cid:9)(cid:8)(cid:12)(cid:16) (cid:15)(cid:16)(cid:8)(cid:10)(cid:18) (cid:12)(cid:12)(cid:8)(cid:10)(cid:13) (cid:15)(cid:15)(cid:13)(cid:14)(cid:8)(cid:8)(cid:11)(cid:10)(cid:9)(cid:18) (cid:11)(cid:16)(cid:8)(cid:15)(cid:15) (cid:15)(cid:9)(cid:8)(cid:11)(cid:14) (cid:11)(cid:9)(cid:8)(cid:17)(cid:13) (cid:11)(cid:10)(cid:8)(cid:15)(cid:15) (cid:11)(cid:13)(cid:8)(cid:10)(cid:10) (cid:11)(cid:11)(cid:8)(cid:13)(cid:18) (cid:10)(cid:15)(cid:8)(cid:10)(cid:13) (cid:10)(cid:11)(cid:8)(cid:14)(cid:12) (cid:14)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:13)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:12)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:11)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:23)(cid:35)(cid:30)(cid:36)(cid:30)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22) (cid:36)(cid:36)(cid:30)(cid:11)(cid:7)(cid:18)(cid:20) (cid:29)(cid:34)(cid:31)(cid:42)%(cid:30)(cid:7)(cid:43)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20)(cid:24)(cid:34)()(cid:39)(cid:30)(cid:35)(cid:7)(cid:43)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20) (cid:26)(cid:44) %(cid:11)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)(cid:3)(cid:38)(cid:39)(cid:31)(cid:30)(cid:24)
+(cid:25)(cid:38)(cid:3)(cid:21)(cid:34)% (cid:7)(cid:28)(cid:42)X%GB(cid:34)%oo(cid:33)st SVM RNN(cid:23)(cid:38)(cid:27)(cid:19)(cid:3)(cid:5)(cid:21)(cid:42)(cid:35)(cid:35)(cid:6) (cid:23)(cid:38)(cid:27)(cid:19)(cid:3)(cid:5)(cid:23)(cid:30)()(cid:3)(cid:23)(cid:30)- (cid:39)(cid:6)
+60.09 Transformer
+59.08
+57.25
+(cid:14)(cid:12)(cid:8)(cid:17)(cid:18) (cid:14)(cid:15)(cid:8)(cid:18)(cid:18) (cid:14)(cid:11)(cid:8)(cid:16)(cid:14) (cid:13)(cid:17)(cid:8)(cid:18)(cid:13)
+(cid:12)(cid:15)(cid:8)(cid:9)
+(cid:12)(cid:12)(cid:8)(cid:11)(cid:18) (cid:13)(cid:18)(cid:8)(cid:17)(cid:9) (cid:12)(cid:9)(cid:8)(cid:14)(cid:12) (cid:12)(cid:9)(cid:8)(cid:9)(cid:16) (cid:11)(cid:18)(cid:8)(cid:10)(cid:12)
+(cid:11)(cid:15)(cid:8)(cid:12)(cid:15)
+(cid:11)(cid:13)(cid:8)(cid:13)(cid:18) (cid:11)(cid:12)(cid:8)(cid:11)(cid:17) (cid:13)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:12)(cid:15)(cid:8)(cid:14)(cid:18) (cid:10)(cid:15)(cid:8)(cid:11)(cid:11) (cid:11)(cid:18)(cid:8)(cid:10)(cid:12) (cid:10)(cid:10)(cid:8)(cid:11) (cid:10)(cid:10)(cid:8)(cid:18)(cid:11)
+(cid:11)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:23)(cid:34)(cid:29)(cid:35)(cid:29)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22)(cid:31)(cid:35)(cid:35)(cid:29)(cid:11)(cid:7)(cid:18)(cid:20) (cid:28)(cid:33)(cid:30))(cid:36)(cid:29)(cid:7)(cid:42)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20) (cid:24)(cid:33)(cid:39)((cid:38)(cid:29)(cid:34)(cid:7)(cid:42)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)
+(cid:25)%(cid:3)(cid:21)(cid:33)(cid:36)(cid:31)(cid:7)(cid:27))(cid:36)(cid:33)(cid:36) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:21))(cid:34)(cid:34)(cid:6) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:23)(cid:29)(cid:39)((cid:3)(cid:23)(cid:29)(cid:43)(cid:31)(cid:38)(cid:6)
+RNN XGBoost (cid:13)(cid:16)(cid:8)(cid:10)(cid:18)
+SVM
+Transformer (cid:13)(cid:9)(cid:8)(cid:9)
+(cid:12)(cid:11)(cid:8)(cid:18)(cid:18) (cid:12)(cid:12)(cid:8)(cid:12)(cid:12) (cid:12)(cid:10)(cid:8)(cid:13)(cid:14) (cid:11)(cid:18)(cid:8)(cid:9)(cid:15)
+(cid:11)(cid:13)(cid:8)(cid:15)(cid:13)
+(cid:11)(cid:13)(cid:8)(cid:16)(cid:10)
+(cid:10)(cid:13)(cid:8)(cid:12)(cid:14) (cid:10)(cid:12)(cid:8)(cid:10)(cid:18)
+(cid:16)(cid:8)(cid:11)(cid:12) (cid:16)(cid:8)(cid:12)(cid:16)
+(cid:11)(cid:11)(cid:11)(cid:15)(cid:15)(cid:15)(cid:8)(cid:8)(cid:8)(cid:18)(cid:14)(cid:11)(cid:14)(cid:11)(cid:13) (cid:11)(cid:12)(cid:8)(cid:11)(cid:10)
+(cid:11)(cid:9)(cid:8)(cid:9)(cid:9) (cid:10)(cid:14)(cid:8)(cid:9)(cid:9)
+(cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:14)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9) (cid:23)(cid:34)(cid:29)(cid:35)(cid:29)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22)(cid:31)(cid:35)(cid:35)(cid:29)(cid:11)(cid:7)(cid:18)(cid:20) (cid:28)(cid:33)(cid:30))(cid:36)(cid:29)(cid:7)(cid:42)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20) (cid:24)(cid:33)(cid:39)((cid:38)(cid:29)(cid:34)(cid:7)(cid:42)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)
+(cid:25)%(cid:3)(cid:21)(cid:33)(cid:36)(cid:31)(cid:7)(cid:27))(cid:36)(cid:33)(cid:36) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:21))(cid:34)(cid:34)(cid:6) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:23)(cid:29)(cid:39)((cid:3)(cid:23)(cid:29)(cid:43)(cid:31)(cid:38)(cid:6)
+(cid:11)(cid:14)(cid:8)(cid:13) (cid:11) (cid:9) (cid:14)(cid:8)(cid:16) (cid:11) (cid:15) (cid:14)(cid:8)(cid:18)(cid:11) (cid:11)(cid:12)(cid:8)(cid:12) (cid:11) (cid:11) (cid:11)(cid:8)(cid:10) (cid:11) (cid:9) (cid:13)(cid:8)(cid:10)(cid:11) (cid:11)(cid:13)(cid:8)(cid:17) (cid:11) (cid:16) (cid:13)(cid:8)(cid:18) (cid:11) (cid:16) (cid:13)(cid:8)(cid:18)(cid:16) (cid:11)(cid:12)(cid:8)(cid:17)(cid:12) (cid:11)(cid:11)(cid:8)(cid:11)(cid:11)
+(cid:11)(cid:12)(cid:8)(cid:9)(cid:10)
+(cid:15)(cid:16)(cid:8)(cid:10)(cid:18)
+(cid:15)(cid:15)(cid:13)(cid:14)(cid:8)(cid:8)(cid:11)(cid:10)(cid:9)(cid:18) (cid:15)(cid:9)(cid:8)(cid:11)(cid:14)
+(cid:14)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:13)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:12)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:11)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:23)(cid:35)(cid:30)(cid:36)(cid:30)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22) (cid:36)(cid:36)(cid:30)(cid:11)(cid:7)(cid:18)(cid:20) (cid:29)(cid:34)(cid:31)(cid:42)%(cid:30)(cid:7)(cid:43)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20)(cid:24)(cid:34)()(cid:39)(cid:30)(cid:35)(cid:7)(cid:43)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20) (cid:26)(cid:44) %(cid:11)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)(cid:3)(cid:38)(cid:39)(cid:31)(cid:30)(cid:24)
+(cid:15)(cid:15)(cid:8)(cid:10)(cid:15) (cid:15)(cid:15)(cid:12)(cid:13)(cid:8)(cid:8)(cid:17)(cid:11)(cid:17)(cid:15)
+(cid:15)(cid:10)(cid:8)(cid:13)(cid:18)
+(cid:14)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:13)(cid:9)(cid:8)(cid:9)(cid:9) (cid:12)(cid:9)(cid:8)(cid:9)(cid:9) (cid:11)(cid:9)(cid:8)(cid:9)(cid:9) (cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9) (cid:23)(cid:34)(cid:29)(cid:35)(cid:29)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22)(cid:31)(cid:35)(cid:35)(cid:29)(cid:11)(cid:7)(cid:18)(cid:20) (cid:28)(cid:33)(cid:30))(cid:36)(cid:29)(cid:7)(cid:42)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20) (cid:24)(cid:33)(cid:39)((cid:38)(cid:29)(cid:34)(cid:7)(cid:42)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20)
+XGBoost
+26.95
+(cid:25)(cid:38)(cid:3)(cid:21)(cid:34)% (cid:7)(cid:28)(cid:42)%(cid:34)
+T
+%
+r
+(cid:33)
+ansformer
+(cid:23)(cid:38)(cid:27)(cid:19)(cid:3)(cid:5)R(cid:21)N(cid:42)N(cid:35)(cid:35)(cid:6) SVM(cid:23)(cid:38)(cid:27)(cid:19)(cid:3)(cid:5)(cid:23)(cid:30)()(cid:3)(cid:23)(cid:30)- (cid:39)(cid:6)
+26.52 23.21
+(cid:14)(cid:15)(cid:8)(cid:18)(cid:18) (cid:14)(cid:12)(cid:8)(cid:17)(cid:18) (cid:14)(cid:11)(cid:8)(cid:16)(cid:14)
+(cid:13)(cid:17)(cid:8)(cid:18)(cid:13)
+(cid:12)(cid:15)(cid:8)(cid:9)
+(cid:12)(cid:12)(cid:8)(cid:11)(cid:18) (cid:12)(cid:9)(cid:8)(cid:14)(cid:12) (cid:12)(cid:9)(cid:8)(cid:9)(cid:16) (cid:11)(cid:18)(cid:8)(cid:10)(cid:12) (cid:11)(cid:15)(cid:8)(cid:12)(cid:15)
+(cid:11)(cid:12)(cid:8)(cid:11)(cid:17) (cid:11)(cid:13)(cid:8)(cid:13)(cid:18) (cid:10)(cid:15)(cid:8)(cid:11)(cid:11)
+(cid:10)(cid:10)(cid:8)(cid:11) (cid:10)(cid:10)(cid:8)(cid:18)(cid:11)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)(cid:3)%(cid:38)(cid:30)(cid:29)(cid:24)
+(cid:25)%(cid:3)(cid:21)(cid:33)(cid:36)(cid:31)(cid:7)(cid:27))(cid:36)(cid:33)(cid:36) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:21))(cid:34)(cid:34)(cid:6) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:23)(cid:29)(cid:39)((cid:3)(cid:23)(cid:29)(cid:43)(cid:31)(cid:38)(cid:6)
+SVM 66.16 XGBoost RNN
+64.26 Transformer
+63.8(cid:15) (cid:15) (cid:15)8(cid:12) (cid:15) (cid:13)(cid:8) (cid:8) (cid:8)(cid:17) (cid:10) (cid:11)(cid:17) (cid:15) (cid:15)
+(cid:15)(cid:10)(cid:8)(cid:13)(cid:18) 61.49
+(cid:14)(cid:15)(cid:8)(cid:18)(cid:18) (cid:14)(cid:12)(cid:8)(cid:17)(cid:18) (cid:14)(cid:9)(cid:8)(cid:9)(cid:9) (cid:13)(cid:17)(cid:8)(cid:18)(cid:13)
+(cid:13)(cid:9)(cid:8)(cid:9)(cid:9) (cid:12)(cid:15)(cid:8)(cid:9) (cid:12)(cid:12)(cid:8)(cid:11)(cid:18) (cid:12)(cid:9)(cid:8)(cid:14)(cid:12) (cid:12)(cid:9)(cid:8)(cid:9)(cid:16) (cid:12)(cid:9)(cid:8)(cid:9)(cid:9) (cid:11)(cid:15)(cid:8)(cid:12)(cid:15) (cid:11)(cid:12)(cid:8)(cid:11)(cid:17) (cid:11)(cid:13)(cid:8)(cid:13)(cid:18) (cid:11)(cid:9)(cid:8)(cid:9)(cid:9) (cid:10)(cid:15)(cid:8)(cid:11)(cid:11) (cid:10)(cid:10)(cid:8)(cid:11) (cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9) (cid:23)(cid:34)(cid:29)(cid:35)(cid:29)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22)(cid:31)(cid:35)(cid:35)(cid:29)(cid:11)(cid:7)(cid:18)(cid:20) (cid:28)(cid:33)(cid:30))(cid:36)(cid:29)(cid:7)(cid:42)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20) (cid:24)(cid:33)(cid:39)((cid:38)(cid:29)(cid:34)(cid:7)(cid:42)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)(cid:3)%(cid:38)(cid:30)(cid:29)(cid:24)
+(cid:25)%(cid:3)(cid:21)(cid:33)(cid:36)(cid:31)(cid:7)(cid:27))(cid:36)(cid:33)(cid:36) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:21))(cid:34)(cid:34)(cid:6) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:23)(cid:29)(cid:39)((cid:3)(cid:23)(cid:29)(cid:43)(cid:31)(cid:38)(cid:6)
+(cid:15) (cid:15) (cid:15)(cid:12) (cid:15) (cid:13)(cid:8) (cid:8) (cid:8)(cid:17) (cid:10) (cid:11)(cid:17) (cid:15) (cid:15) (cid:14)(cid:15)(cid:8)(cid:18)(cid:18) (cid:14)(cid:12)(cid:8)(cid:17)(cid:18) (cid:15)(cid:10)(cid:8)(cid:13)(cid:18) (cid:13)(cid:17)(cid:8)(cid:18)(cid:13)
+(cid:14)(cid:9)(cid:8)(cid:9)(cid:9) (cid:12)(cid:15)(cid:8)(cid:9) (cid:12)(cid:12)(cid:8)(cid:11)(cid:18) (cid:12)(cid:9)(cid:8)(cid:14)(cid:12) (cid:12)(cid:9)(cid:8)(cid:9)(cid:16) (cid:13)(cid:9)(cid:8)(cid:9)(cid:9) (cid:11)(cid:15)(cid:8)(cid:12)(cid:15) (cid:11)(cid:12)(cid:8)(cid:11)(cid:17) (cid:11)(cid:13)(cid:8)(cid:13)(cid:18) (cid:12)(cid:9)(cid:8)(cid:9)(cid:9) (cid:10)(cid:15)(cid:8)(cid:11)(cid:11) (cid:10)(cid:10)(cid:8)(cid:11) (cid:11)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:10)(cid:9)(cid:8)(cid:9)(cid:9) (cid:9)(cid:8)(cid:9)(cid:9)
+(cid:23)(cid:34)(cid:29)(cid:35)(cid:29)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22)(cid:31)(cid:35)(cid:35)(cid:29)(cid:11)(cid:7)(cid:18)(cid:20) (cid:28)(cid:33)(cid:30))(cid:36)(cid:29)(cid:7)(cid:42)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20) (cid:24)(cid:33)(cid:39)((cid:38)(cid:29)(cid:34)(cid:7)(cid:42)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)(cid:3)%(cid:38)(cid:30)(cid:29)(cid:24)
+(cid:25)%(cid:3)(cid:21)(cid:33)(cid:36)(cid:31)(cid:7)(cid:27))(cid:36)(cid:33)(cid:36) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:21))(cid:34)(cid:34)(cid:6) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:23)(cid:29)(cid:39)((cid:3)(cid:23)(cid:29)(cid:43)(cid:31)(cid:38)(cid:6)
+(cid:15) (cid:15)(cid:15)(cid:12) (cid:15)(cid:13)(cid:8) (cid:8)(cid:8)(cid:17) (cid:10)(cid:11)(cid:17) (cid:15)(cid:15)
+(cid:15)(cid:10)(cid:8)(cid:13)(cid:18)
+(cid:14)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:14)(cid:15)(cid:8)(cid:18)(cid:18) (cid:14)(cid:12)(cid:8)(cid:17)(cid:18)
+(cid:13)(cid:9)(cid:8)(cid:9)(cid:9) (cid:13)(cid:17)(cid:8)(cid:18)(cid:13) (cid:12)(cid:9)(cid:8)(cid:9)(cid:9) (cid:12)(cid:15)(cid:8)(cid:9) (cid:12)(cid:12)(cid:8)(cid:11)(cid:18) (cid:11)(cid:9)(cid:8)(cid:9)(cid:9) (cid:12)(cid:9)(cid:8)(cid:14)(cid:12) (cid:12)(cid:9)(cid:8)(cid:9)(cid:16) (cid:11)(cid:15)(cid:8)(cid:12)(cid:15) (cid:11)(cid:12)(cid:8)(cid:11)(cid:17) (cid:11)(cid:13)(cid:8)(cid:13)(cid:18) (cid:10)(cid:9)(cid:8)(cid:9)(cid:9) (cid:10)(cid:15)(cid:8)(cid:11)(cid:11)
+(cid:9)(cid:8)(cid:9)(cid:9) (cid:10)(cid:10)(cid:8)(cid:11) (cid:23)(cid:34)(cid:29)(cid:35)(cid:29)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22)(cid:31)(cid:35)(cid:35)(cid:29)(cid:11)(cid:7)(cid:18)(cid:20) (cid:28)(cid:33)(cid:30))(cid:36)(cid:29)(cid:7)(cid:42)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20) (cid:24)(cid:33)(cid:39)((cid:38)(cid:29)(cid:34)(cid:7)(cid:42)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)(cid:3)%(cid:38)(cid:30)(cid:29)(cid:24)
+(cid:25)%(cid:3)(cid:21)(cid:33)(cid:36)(cid:31)(cid:7)(cid:27))(cid:36)(cid:33)(cid:36) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:21))(cid:34)(cid:34)(cid:6) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:23)(cid:29)(cid:39)((cid:3)(cid:23)(cid:29)(cid:43)(cid:31)(cid:38)(cid:6)
+SVM 66.16 XGBoost RNN
+64.26 Transformer
+63.8(cid:15) (cid:15)(cid:15)8(cid:12) (cid:15)(cid:13)(cid:8) (cid:8)(cid:8)(cid:17) (cid:10)(cid:11)(cid:17) (cid:15)(cid:15)
+(cid:15)(cid:10)(cid:8)(cid:13)(cid:18) 61.49
+(cid:14)(cid:15)(cid:8)(cid:18)(cid:18) (cid:14)(cid:12)(cid:8)(cid:17)(cid:18) (cid:14)(cid:9)(cid:8)(cid:9)(cid:9) (cid:13)(cid:17)(cid:8)(cid:18)(cid:13)
+(cid:13)(cid:9)(cid:8)(cid:9)(cid:9) (cid:12)(cid:15)(cid:8)(cid:9) (cid:12)(cid:12)(cid:8)(cid:11)(cid:18) (cid:12)(cid:9)(cid:8)(cid:14)(cid:12) (cid:12)(cid:9)(cid:8)(cid:9)(cid:16) (cid:12)(cid:9)(cid:8)(cid:9)(cid:9) (cid:11)(cid:15)(cid:8)(cid:12)(cid:15) (cid:11)(cid:12)(cid:8)(cid:11)(cid:17) (cid:11)(cid:13)(cid:8)(cid:13)(cid:18) (cid:11)(cid:9)(cid:8)(cid:9)(cid:9) (cid:10)(cid:15)(cid:8)(cid:11)(cid:11) (cid:10)(cid:10)(cid:8)(cid:11) (cid:10)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:9)(cid:8)(cid:9)(cid:9) (cid:23)(cid:34)(cid:29)(cid:35)(cid:29)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22)(cid:31)(cid:35)(cid:35)(cid:29)(cid:11)(cid:7)(cid:18)(cid:20) (cid:28)(cid:33)(cid:30))(cid:36)(cid:29)(cid:7)(cid:42)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20) (cid:24)(cid:33)(cid:39)((cid:38)(cid:29)(cid:34)(cid:7)(cid:42)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)(cid:3)%(cid:38)(cid:30)(cid:29)(cid:24)
+(cid:25)%(cid:3)(cid:21)(cid:33)(cid:36)(cid:31)(cid:7)(cid:27))(cid:36)(cid:33)(cid:36) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:21))(cid:34)(cid:34)(cid:6) (cid:23)%(cid:26)(cid:19)(cid:3)(cid:5)(cid:23)(cid:29)(cid:39)((cid:3)(cid:23)(cid:29)(cid:43)(cid:31)(cid:38)(cid:6)
+(cid:15) (cid:15)(cid:15)(cid:12) (cid:15)(cid:13)(cid:8) (cid:8)(cid:8)(cid:17) (cid:10)(cid:11)(cid:17) (cid:15)(cid:15) (cid:14)(cid:15)(cid:8)(cid:18)(cid:18) (cid:14)(cid:12)(cid:8)(cid:17)(cid:18) (cid:15)(cid:10)(cid:8)(cid:13)(cid:18) (cid:13)(cid:17)(cid:8)(cid:18)(cid:13)
+(cid:14)(cid:9)(cid:8)(cid:9)(cid:9) (cid:12)(cid:15)(cid:8)(cid:9) (cid:12)(cid:12)(cid:8)(cid:11)(cid:18) (cid:12)(cid:9)(cid:8)(cid:14)(cid:12) (cid:12)(cid:9)(cid:8)(cid:9)(cid:16) (cid:13)(cid:9)(cid:8)(cid:9)(cid:9) (cid:11)(cid:15)(cid:8)(cid:12)(cid:15) (cid:11)(cid:12)(cid:8)(cid:11)(cid:17) (cid:11)(cid:13)(cid:8)(cid:13)(cid:18) (cid:12)(cid:9)(cid:8)(cid:9)(cid:9) (cid:10)(cid:15)(cid:8)(cid:11)(cid:11) (cid:10)(cid:10)(cid:8)(cid:11) (cid:11)(cid:9)(cid:8)(cid:9)(cid:9)
+(cid:10)(cid:9)(cid:8)(cid:9)(cid:9) (cid:9)(cid:8)(cid:9)(cid:9) (cid:23)(cid:34)(cid:29)(cid:35)(cid:29)(cid:12)(cid:7)(cid:17)(cid:20) (cid:22)(cid:31)(cid:35)(cid:35)(cid:29)(cid:11)(cid:7)(cid:18)(cid:20) (cid:28)(cid:33)(cid:30))(cid:36)(cid:29)(cid:7)(cid:42)(cid:10)(cid:8)(cid:14)(cid:7)(cid:16)(cid:20) (cid:24)(cid:33)(cid:39)((cid:38)(cid:29)(cid:34)(cid:7)(cid:42)(cid:9)(cid:8)(cid:12)(cid:7)(cid:16)(cid:20)
+(cid:6)(cid:4)(cid:5)(cid:3)(cid:10)(cid:21)(cid:3)%(cid:38)(cid:30)(cid:29)(cid:24)
+(cid:25)%(cid:3)(cid:21)(cid:33)(cid:36)(cid:31)(cid:7)(cid:27))(cid:36)(cid:33)(cid:36) (cid:23)% X (cid:26) G (cid:19)(cid:3) B (cid:5)(cid:21) o ) o (cid:34)(cid:34) s (cid:6) t RNN(cid:23)%(cid:26)(cid:19)(cid:3)S(cid:5)(cid:23)V(cid:29)M(cid:39)((cid:3)(cid:23)(cid:29)(cid:43)(cid:31)(cid:38)(cid:6)
+Transformer
+(cid:14)(cid:15)(cid:8)(cid:18)(cid:18) (cid:14)(cid:12)(cid:8)(cid:17)(cid:18)
+(cid:13)(cid:17)(cid:8)(cid:18)(cid:13) (cid:12)(cid:15)(cid:8)(cid:9) (cid:12)(cid:12)(cid:8)(cid:11)(cid:18) (cid:12)(cid:9)(cid:8)(cid:14)(cid:12) (cid:12)(cid:9)(cid:8)(cid:9)(cid:16) (cid:11)(cid:15)(cid:8)(cid:12)(cid:15) (cid:11)(cid:12)(cid:8)(cid:11)(cid:17) (cid:11)(cid:13)(cid:8)(cid:13)(cid:18) (cid:10)(cid:15)(cid:8)(cid:11)(cid:11) (cid:10)(cid:10)(cid:8)(cid:11)
+Figure4:PerformanceComparisonBetweenFine-tunedLLMsandTraditionalMLModels.Length-of-StayPredictionadopts
+MacroF1%andtheothersuseF1%asthemetric. (Full)and(LastLayer)refertoapplyingLoRAtofulllayersandonlylastlayer.
+twin[14,37,64]anddatasynthesis[4,45,65]techniquescould supportingclinicaldecision-making[55].Length-of-StayPredic-
+beexploredinthefuturetoaddressthischallenge.ClinicalBench tion[63],MortalityPrediction[28],andReadmissionPrediction[3]
+couldbeadoptedtofacilitatetheprogressinenhancingLLMs’clin- areamongthemostcommonones.WhiletraditionalMLmodels
+icalreasoninganddecision-making,andminimizethegapbetween suchasXGBoost,SVM,andRNNhavestillbeenwidelyadoptedin
+thedevelopmentofLLMsforhealthcareandclinicalpracticeinthe thesetasks[50,68],manyadvancedmodelshavealsobeendevel-
+realworld. opedforclinicalpredictivemodeling[73].Forexample,[77]pro-
+posedtoleveragehypergraphtransformerswithpatientsashyper-
+7 RelatedWork
+edgesandmedicalcodesasnodesforpredictivetasks.[30]leveraged
+ClinicalPrediction. Clinicalpredictiontasksplayacriticalrolein personalizedknowledgegraphsandattention-augmentedgraph
+currenthealthcaresystemswithmultifacetedsignificanceincluding neuralnetworksforenhancingthepredictionperformance.[13]
+improvingpatientoutcomes,optimizinghospitalresources,and
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+conducteddiffusion-baseddataaugmentationtofurtherimprove MIMICdatabasesfromasingleacademicmedicalcenter(BethIs-
+healthriskprediction.AlthoughtheemergingLLMsmayhavebeen raelDeaconessMedicalCenter).MIMIC’sICU-centricpopulation
+demonstratedtoperformwellonmedicalquestion-answeringand skewstowardhigheracuitypatients,andinstitutionalcodingprac-
+holdgreatpromisetotransformhealthcaresystems,theircapacities tices,patientdemographics,andcarepatternsmaynotgeneralizeto
+onclinicalpredictiontasksarelargelyunder-explored.Clinical- communityhospitals,outpatientsettings,orinternationalcontexts.
+BenchshowsthatLLMscannotbeattraditionalMLmodelsyet, ExternalvalidationondatabasessuchasinstitutionalEHRsystems
+suggestingtheircriticallimitationsinclinicalapplications. wouldstrengthenthegeneralizabilityofourfindings.Third,our
+code-to-textconversionusesstandardizedcodedescriptions,which
+ClinicalBenchmarksforLLMs. Themajorityofexistingclinical maydiffersubstantiallyfromhowcliniciansnaturallydocument
+benchmarksforLLMscangenerallybecategorizedfromtwoper- patientconditionsinfree-textnotes.Thisdesignchoice,whilenec-
+spectives.ThefirstoneaimstoassessLLMs’capacitiesinclin- essaryforreproducibility,mayunderestimateLLMs’potentialwhen
+ical text processing tasks [9, 17, 23, 27, 47, 70]. For example, processingauthenticclinicalnarratives.
+[27]hascomprehensivelyevaluatedfourLLMsindifferenttyp- FutureworkshouldextendClinicalBenchalongseveraldimen-
+icalbiomedicaltexttasks(e.g.,namedentityrecognition,relation sions:(1)incorporatingmulti-centerdatabasestoassessgeneral-
+extraction,entitylinking,textclassificationandtextsummariza- izability;(2)evaluatingperformanceonrawclinicalnotesrather
+tionwithbiomedicaltexts).Thesecondoneintendstoevaluate thancode-derivedtext;(3)examiningwhetherknowledgegraph
+LLMs’performanceinclinicalquestion-answeringtasks.Be- augmentationapproachescanbridgethegapbetweenLLMsand
+sidesMedQA[31]andMedMCQA[51],manyrecentbenchmarks traditionalmodels;(4)exploringtask-specificfine-tuningonclinical
+havebeenbuilttotestthemedicalknowledgeofLLMsindifferent predictionobjectivesratherthangeneralmedicalknowledge.
+aspects[7,39,60,69].Forexample,[10]and[72]havedeveloped Weacknowledgetheimportanceofdataprivacyinclinicalre-
+QAbenchmarkstoassessthediagnosticperformanceofLLMsin searchandfollowedthedatauseguidelinesoftheMIMICdatasets.
+rarediseases.[40],[36],[57],[2],[5],[75],and[42,44]designed
+QAbenchmarkswithlanguagesbeyondEnglishsuchasKorean, AuthorContributions
+Japanese,PolishandChinese.However,benchmarksonLLMs’clin-
+ThisworkrepresentsacollaborativeeffortacrossAI,clinicalin-
+icalreasoningcapacitieswithreal-worldcomplexscenariosare
+formatics,andcomputationalhealthresearch.C.C.,J.Y.ledthe
+relativelylacking.ClinicalBenchfilledthegapthroughacompre-
+projectandconductedthebenchmarkdesign,experiments,and
+hensiveinvestigationinvolvingthreecommonclinicalprediction
+resultanalysis.S.Z.,Y.L.,R.Z.,D.B.,andF.W.providedclinical
+tasks,twodatabases,14general-purposeLLMs,8medicalLLMs
+domainexpertiseandresearchsupervision.C.C.,J.Y.draftedthe
+andhasprovidedvaluableinsights.
+manuscriptwithfeedbackandrevisionsfromallauthors.K.S.is
+thecorrespondingauthorandsupervisedthiswork.
+8 Conclusion
+Acknowledgments
+Inthispaper,wehavebuiltanewbenchmarkClinicalBenchto
+comprehensively and systematically compare the effectiveness ThismaterialisbaseduponworksupportedbyNSFawards(IIS-
+oftraditionalMLmodelsandLLMsintypicalclinicalprediction 2506643 and POSE-2346158), a Cisco Research Award, and NSF
+tasksincludingLength-of-StayPrediction,MortalityPrediction, NAIRRPilotAward#260038.Theviewsandconclusionscontained
+andReadmissionPrediction.Withextensiveempiricalevidence,we inthisdocumentarethoseoftheauthorsandshouldnotbein-
+findthatgeneral-purposeandmedicalLLMs,evenwithdifferent terpretedasnecessarilyrepresentingtheofficialpolicies,either
+scalesofparameters,diversepromptingorfine-tuningstrategies, expressedorimplied,oftheNationalScienceFoundation.
+stillcannotbeattraditionalMLmodelsinclinicalpredictionyet.
+GenAIDisclosure
+OurfindingshavedemonstratedthepotentiallimitationsofLLMs
+inperformingreal-worldclinicalreasoninganddecision-makingin WeherebydisclosethatLLMsareutilizedsolelyforthepurposes
+complexscenarios.Weurgepractitionerstoexercisecautionwhen ofgrammarcorrectionandtextualrefinement.
+adoptingLLMsinreal-worldclinicalapplications.
+LimitationsandEthicalConsiderations
+Ourstudyhasseverallimitationsthatwarrantdiscussion.First,
+ourbenchmarkreliesonICDcodesconvertedtotextualdescrip-
+tions.ICDcodesareprimarilyadministrativeartifactsoptimized
+forbillingratherthanclinicalaccuracy,potentiallyintroducing
+systematicbiases,includingunder-codingofchronicconditions,
+over-codingofacutediagnoses,andvariationincodingpractices
+acrossinstitutionsandtimeperiods.Whilethisaffectsallmod-
+elsequallyandrepresentsstandardpracticeinclinicalprediction
+research,futureworkshouldevaluateLLMsonricherclinicalrep-
+resentationsincludingrawclinicalnotes,structuredflowsheetdata,
+andmultimodalinputs.Second,ClinicalBenchexclusivelyuses
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+References
+[20] Maxime Griot, Coralie Hemptinne, Jean Vanderdonckt, and Demet Yuksel.
+[1] MarahAbdin,SamAdeJacobs,AmmarAhmadAwan,JyotiAneja,Ahmed 2024.Impactofhigh-quality,mixed-domaindataontheperformanceofmed-
+Awadallah,HanyAwadalla,NguyenBach,AmitBahree,ArashBakhtiari,Harki- icallanguagemodels. JournaloftheAmericanMedicalInformaticsAssoci-
+ratBehl,etal.2024. Phi-3technicalreport:Ahighlycapablelanguagemodel ation31,9(2024),1875–1883. arXiv:https://academic.oup.com/jamia/article-
+locallyonyourphone.ArXivpreprintabs/2404.14219(2024). https://arxiv.org/ pdf/31/9/1875/58868289/ocae120.pdfdoi:10.1093/jamia/ocae120
+abs/2404.14219 [21] PaulHager,FriederikeJungmann,RobbieHolland,KunalBhagat,IngaHubrecht,
+[2] IñigoAlonso,MaiteOronoz,andRodrigoAgerri.2024.MedExpQA:Multilingual ManuelKnauer,JakobVielhauer,MarcusMakowski,RickmerBraren,Georgios
+BenchmarkingofLargeLanguageModelsforMedicalQuestionAnswering.ArXiv Kaissis,etal.2024.Evaluationandmitigationofthelimitationsoflargelanguage
+preprintabs/2404.05590(2024). https://arxiv.org/abs/2404.05590 modelsinclinicaldecision-making.Naturemedicine30,9(2024),2613–2622.
+[3] ArkaitzArtetxe,AndoniBeristain,andManuelGrana.2018.Predictivemodels [22] TessaHan,AounonKumar,ChiragAgarwal,andHimabinduLakkaraju.2024.
+forhospitalreadmissionrisk:Asystematicreviewofmethods.Computermethods Towardssafeandalignedlargelanguagemodelsformedicine.ArXivpreprint
+andprogramsinbiomedicine164(2018),49–64. abs/2403.03744(2024). https://arxiv.org/abs/2403.03744
+[4] AndréBauer,SimonTrapp,MichaelStenger,RobertLeppich,SamuelKounev, [23] JoshuaHarris,TimothyLaurence,LeoLoman,FanGrayson,TobyNonnenmacher,
+MarkLeznik,KyleChard,andIanFoster.2024. Comprehensiveexploration HarryLong,LoesWalsGriffith,AmyDouglas,HollyFountain,SteliosGeorgiou,
+ofsyntheticdatageneration:Asurvey. ArXivpreprintabs/2401.02524(2024). etal.2024.EvaluatingLargeLanguageModelsforPublicHealthClassification
+https://arxiv.org/abs/2401.02524 andExtractionTasks.ArXivpreprintabs/2405.14766(2024). https://arxiv.org/
+[5] YanCai,LinlinWang,YeWang,GerarddeMelo,YaZhang,YanfengWang, abs/2405.14766
+andLiangHe.2024.Medbench:Alarge-scalechinesebenchmarkforevaluating [24] Dan Hendrycks, Collin Burns, Steven Basart, Andy Zou, Mantas Mazeika,
+medicallargelanguagemodels.InProceedingsoftheAAAIConferenceonArtificial DawnSong,andJacobSteinhardt.2021. MeasuringMassiveMultitaskLan-
+Intelligence,Vol.38.17709–17717. guageUnderstanding.In9thInternationalConferenceonLearningRepresenta-
+[6] ZhengCai,MaosongCao,HaojiongChen,KaiChen,KeyuChen,XinChen,Xun tions,ICLR2021,VirtualEvent,Austria,May3-7,2021.OpenReview.net. https:
+Chen,ZehuiChen,ZhiChen,PeiChu,etal.2024.Internlm2technicalreport. //openreview.net/forum?id=d7KBjmI3GmQ
+ArXivpreprintabs/2403.17297(2024). https://arxiv.org/abs/2403.17297 [25] EdwardJ.Hu,YelongShen,PhillipWallis,ZeyuanAllen-Zhu,YuanzhiLi,Shean
+[7] HanjieChen,ZhouxiangFang,YashSingla,andMarkDredze.2024.Benchmark- Wang,LuWang,andWeizhuChen.2022. LoRA:Low-RankAdaptationof
+ingLargeLanguageModelsonAnsweringandExplainingChallengingMedical LargeLanguageModels.InTheTenthInternationalConferenceonLearning
+Questions.ArXivpreprintabs/2402.18060(2024). https://arxiv.org/abs/2402.18060 Representations,ICLR2022,VirtualEvent,April25-29,2022.OpenReview.net.
+[8] JiangjieChen,XintaoWang,RuiXu,SiyuYuan,YikaiZhang,WeiShi,JianXie, https://openreview.net/forum?id=nZeVKeeFYf9
+ShuangLi,RuihanYang,TinghuiZhu,etal.2024.Frompersonatopersonalization: [26] ShengdingHu,YugeTu,XuHan,ChaoqunHe,GanquCui,XiangLong,Zhi
+Asurveyonrole-playinglanguageagents.ArXivpreprintabs/2404.18231(2024). Zheng,YeweiFang,YuxiangHuang,WeilinZhao,etal.2024.Minicpm:Unveiling
+https://arxiv.org/abs/2404.18231 thepotentialofsmalllanguagemodelswithscalabletrainingstrategies.ArXiv
+[9] QingyuChen,JingchengDu,YanHu,VipinaKuttichiKeloth,XueqingPeng, preprintabs/2404.06395(2024). https://arxiv.org/abs/2404.06395
+KalpanaRaja,RuiZhang,ZhiyongLu,andHuaXu.2023.Largelanguagemodels [27] IsratJahan,MdTahmidRahmanLaskar,ChunPeng,andJimmyXiangjiHuang.
+inbiomedicalnaturallanguageprocessing:benchmarks,baselines,andrecom- 2024. Acomprehensiveevaluationoflargelanguagemodelsonbenchmark
+mendations.ArXivpreprintabs/2305.16326(2023). https://arxiv.org/abs/2305. biomedicaltextprocessingtasks.Computersinbiologyandmedicine171(2024),
+16326 108189.
+[10] XuanzhongChen,XiaohaoMao,QihanGuo,LunWang,ShuyangZhang,and [28] JacobCJentzer,AnthonyHKashou,FranciscoLopez-Jimenez,ZachiIAttia,
+TingChen.2024.RareBench:CanLLMsServeasRareDiseasesSpecialists?.In SurajKapa,PaulAFriedman,andPeterANoseworthy.2021. Mortalityrisk
+Proceedingsofthe30thACMSIGKDDConferenceonKnowledgeDiscoveryand stratificationusingartificialintelligence-augmentedelectrocardiogramincardiac
+DataMining.4850–4861. intensivecareunitpatients.EuropeanHeartJournalAcuteCardiovascularCare
+[11] ZemingChen,AlejandroHernándezCano,AngelikaRomanou,AntoineBonnet, 10,5(2021),532–541.
+KyleMatoba,FrancescoSalvi,MatteoPagliardini,SiminFan,AndreasKöpf, [29] AlbertQJiang,AlexandreSablayrolles,ArthurMensch,ChrisBamford,De-
+AmirkeivanMohtashami,etal.2023.Meditron-70b:Scalingmedicalpretraining vendraSinghChaplot,DiegodelasCasas,FlorianBressand,GiannaLengyel,
+forlargelanguagemodels.ArXivpreprintabs/2311.16079(2023). https://arxiv. GuillaumeLample,LucileSaulnier,etal.2023. Mistral7B. ArXivpreprint
+org/abs/2311.16079 abs/2310.06825(2023). https://arxiv.org/abs/2310.06825
+[12] ClémentChristophe,PraveenKKanithi,TathagataRaha,ShadabKhan,and [30] PengchengJiang,CaoXiao,AdamRichardCross,andJimengSun.2024.Graph-
+MarcoAFPimentel.2024. Med42-v2:Asuiteofclinicalllms. ArXivpreprint Care:EnhancingHealthcarePredictionswithPersonalizedKnowledgeGraphs.
+abs/2408.06142(2024). https://arxiv.org/abs/2408.06142 InTheTwelfthInternationalConferenceonLearningRepresentations. https:
+[13] SuhanCui,JiaqiWang,YuanZhong,HanLiu,TingWang,andFenglongMa.2024. //openreview.net/forum?id=tVTN7Zs0ml
+Automatedfusionofmultimodalelectronichealthrecordsforbettermedical [31] DiJin,EileenPan,NassimOufattole,Wei-HungWeng,HanyiFang,andPeter
+predictions.InProceedingsofthe2024SIAMInternationalConferenceonData Szolovits.2021.Whatdiseasedoesthispatienthave?alarge-scaleopendomain
+Mining(SDM).SIAM,361–369. questionansweringdatasetfrommedicalexams.AppliedSciences11,14(2021),
+[14] TrishaDas,ZifengWang,andJimengSun.2023.Twin:Personalizedclinicaltrial 6421.
+digitaltwingeneration.InProceedingsofthe29thACMSIGKDDConferenceon [32] QiaoJin,FangyuanChen,YiliangZhou,ZiyangXu,JustinMCheung,Robert
+KnowledgeDiscoveryandDataMining.402–413. Chen,RonaldMSummers,JustinFRousseau,PeiyunNi,MarcJLandsman,etal.
+[15] QingxiuDong,LeiLi,DamaiDai,CeZheng,ZhiyongWu,BaobaoChang,Xu 2024. Hiddenflawsbehindexpert-levelaccuracyofgpt-4visioninmedicine.
+Sun,JingjingXu,andZhifangSui.2023.Asurveyonin-contextlearning.ArXiv ArXivpreprintabs/2401.08396(2024). https://arxiv.org/abs/2401.08396
+preprintabs/2301.00234(2023). https://arxiv.org/abs/2301.00234 [33] AlistairJohnson,LucasBulgarelli,TomPollard,StevenHorng,LeoAnthonyCeli,
+[16] AbhimanyuDubey,AbhinavJauhri,AbhinavPandey,AbhishekKadian,Ahmad andRogerMark.2020.Mimic-iv.PhysioNet.Availableonlineat:https://physionet.
+Al-Dahle,AieshaLetman,AkhilMathur,AlanSchelten,AmyYang,AngelaFan, org/content/mimiciv/1.0/(accessedAugust23,2021)(2020),49–55.
+etal.2024. Thellama3herdofmodels. ArXivpreprintabs/2407.21783(2024). [34] AlistairEWJohnson,TomJPollard,LuShen,Li-weiHLehman,MenglingFeng,
+https://arxiv.org/abs/2407.21783 MohammadGhassemi,BenjaminMoody,PeterSzolovits,LeoAnthonyCeli,and
+[17] HuiFeng,FrancescoRonzano,JudeLaFleur,MatthewGarber,RodrigodeOliveira, RogerGMark.2016.MIMIC-III,afreelyaccessiblecriticalcaredatabase.Scientific
+KathrynRough,KatharineRoth,JayNanavati,KhaldounZineElAbidine,and data3,1(2016),1–9.
+ChristinaMack.2024.EvaluationofLargeLanguageModelPerformanceonthe [35] ZahirKanjee,ByronCrowe,andAdamRodman.2023.Accuracyofagenerative
+BiomedicalLanguageUnderstandingandReasoningBenchmark:Comparative artificialintelligencemodelinacomplexdiagnosticchallenge.Jama330,1(2023),
+Study.medRxiv(2024),2024–05. 78–80.
+[18] JackGallifant,ShanChen,PedroMoreira,NikolajMunch,MingyeGao,Jackson [36] JungoKasai,YuheiKasai,KeisukeSakaguchi,YutaroYamada,andDragomir
+Pond,LeoAnthonyCeli,HugoAerts,ThomasHartvigsen,andDanielleBitterman. Radev.2023.Evaluatinggpt-4andchatgptonjapanesemedicallicensingexami-
+2024.LanguageModelsareSurprisinglyFragiletoDrugNamesinBiomedical nations.ArXivpreprintabs/2303.18027(2023). https://arxiv.org/abs/2303.18027
+Benchmarks.ArXivpreprintabs/2406.12066(2024). https://arxiv.org/abs/2406. [37] EvangeliaKatsoulakis,QiWang,HuanmeiWu,LeiliShahriyari,RichardFletcher,
+12066 JinweiLiu,LukeAchenie,HongfangLiu,PamelaJackson,YingXiao,etal.2024.
+[19] AidanGilson,ConradWSafranek,ThomasHuang,VimigSocrates,LingChi, Digitaltwinsforhealth:ascopingreview.NPJDigitalMedicine7,1(2024),77.
+RichardAndrewTaylor,DavidChartash,etal.2023.HowdoesChatGPTperform [38] TakeshiKojima,ShixiangShaneGu,MachelReid,YutakaMatsuo,andYusuke
+ontheUnitedStatesMedicalLicensingExamination(USMLE)?Theimplications Iwasawa.2022. Largelanguagemodelsarezero-shotreasoners. Advancesin
+oflargelanguagemodelsformedicaleducationandknowledgeassessment.JMIR neuralinformationprocessingsystems35(2022),22199–22213.
+medicaleducation9,1(2023),e45312. [39] KarolinaKorgul,AndrewMBean,FelixKrones,RobertMcCraith,andAdam
+Mahdi.2023.Exploringthelandscapeoflargelanguagemodelsinmedicalques-
+tionanswering:Observationsandopenquestions.ArXivpreprintabs/2310.07225
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+(2023). https://arxiv.org/abs/2310.07225 [61] KaranSinghal,ShekoofehAzizi,TaoTu,SSaraMahdavi,JasonWei,HyungWon
+[40] SunjunKweon,ByungjinChoi,MinkyuKim,RaeWoongPark,andEdwardChoi. Chung,NathanScales,AjayTanwani,HeatherCole-Lewis,StephenPfohl,etal.
+2024.KorMedMCQA:Multi-ChoiceQuestionAnsweringBenchmarkforKorean 2023.Largelanguagemodelsencodeclinicalknowledge.Nature620,7972(2023),
+HealthcareProfessionalLicensingExaminations.ArXivpreprintabs/2403.01469 172–180.
+(2024). https://arxiv.org/abs/2403.01469 [62] KaranSinghal,TaoTu,JurajGottweis,RorySayres,ElleryWulczyn,LeHou,
+[41] YanisLabrak,AdrienBazoge,EmmanuelMorin,Pierre-AntoineGourraud,Mick- KevinClark,StephenPfohl,HeatherCole-Lewis,DarleneNeal,etal.2023.To-
+aelRouvier,andRichardDufour.2024.Biomistral:Acollectionofopen-sourcepre- wardsexpert-levelmedicalquestionansweringwithlargelanguagemodels.
+trainedlargelanguagemodelsformedicaldomains.ArXivpreprintabs/2402.10373 ArXivpreprintabs/2305.09617(2023). https://arxiv.org/abs/2305.09617
+(2024). https://arxiv.org/abs/2402.10373 [63] KieranStone,ReyerZwiggelaar,PhilJones,andNeilMacParthaláin.2022. A
+[42] JunlingLiu,PeilinZhou,YiningHua,DadingChong,ZhongyuTian,AndrewLiu, systematicreviewofthepredictionofhospitallengthofstay:Towardsaunified
+HelinWang,ChenyuYou,ZhenhuaGuo,LeiZhu,etal.2024.Benchmarkinglarge framework.PLOSDigitalHealth1,4(2022),e0000017.
+languagemodelsoncmexam-acomprehensivechinesemedicalexamdataset. [64] TianzeSun,XiwangHe,andZhonghaiLi.2023.Digitaltwininhealthcare:Recent
+AdvancesinNeuralInformationProcessingSystems36(2024). updatesandchallenges.DigitalHealth9(2023),20552076221149651.
+[43] LeiLiu,XiaoyanYang,JunchiLei,XiaoyangLiu,YueShen,ZhiqiangZhang, [65] ZhenTan,AlimohammadBeigi,SongWang,RuochengGuo,AmritaBhattachar-
+PengWei,JinjieGu,ZhixuanChu,ZhanQin,etal.2024.ASurveyonMedical jee,BohanJiang,MansoorehKarami,JundongLi,LuCheng,andHuanLiu.2024.
+LargeLanguageModels:Technology,Application,Trustworthiness,andFuture LargeLanguageModelsforDataAnnotation:ASurvey.arXiv:2402.13446[cs.CL]
+Directions.ArXivpreprintabs/2406.03712(2024).https://arxiv.org/abs/2406.03712 [66] ShengpuTang,ParmidaDavarmanesh,YanmengSong,DanaiKoutra,MichaelW
+[44] MianxinLiu,JinruDing,JieXu,WeiguoHu,XiaoyangLi,LifengZhu,Zhian Sjoding,andJennaWiens.2020.DemocratizingEHRanalyseswithFIDDLE:a
+Bai,XiaomingShi,BenyouWang,HaitaoSong,etal.2024.MedBench:ACom- flexibledata-drivenpreprocessingpipelineforstructuredclinicaldata.Journal
+prehensive,Standardized,andReliableBenchmarkingSystemforEvaluating oftheAmericanMedicalInformaticsAssociation27,12(2020),1921–1934.
+ChineseMedicalLargeLanguageModels.ArXivpreprintabs/2407.10990(2024). [67] GemmaTeam,MorganeRiviere,ShreyaPathak,PierGiuseppeSessa,Cassidy
+https://arxiv.org/abs/2407.10990 Hardin,SuryaBhupatiraju,LéonardHussenot,ThomasMesnard,BobakShahriari,
+[45] RuiboLiu,JerryWei,FangyuLiu,ChengleiSi,YanzheZhang,JinmengRao, AlexandreRamé,etal.2024.Gemma2:Improvingopenlanguagemodelsata
+StevenZheng,DaiyiPeng,DiyiYang,DennyZhou,andAndrewM.Dai.2024. practicalsize.ArXivpreprintabs/2408.00118(2024). https://arxiv.org/abs/2408.
+BestPracticesandLessonsLearnedonSyntheticData.InFirstConferenceon 00118
+LanguageModeling. https://openreview.net/forum?id=OJaWBhh61C [68] RobinvandeWater,HendrikNilsAurelSchmidt,PaulElbers,PatrickThoral,Bert
+[46] RenzeLou,KaiZhang,andWenpengYin.2024.LargeLanguageModelInstruction Arnrich,andPatrickRockenschaub.2024.YetAnotherICUBenchmark:AFlexible
+Following:ASurveyofProgressesandChallenges.ComputationalLinguistics Multi-CenterFrameworkforClinicalML.InTheTwelfthInternationalConference
+(2024),1–10. onLearningRepresentations. https://openreview.net/forum?id=ox2ATRM90I
+[47] XudongLuo,ZhiqiDeng,BinxiaYang,andMichaelYLuo.2024. Pre-trained [69] JurajVladika,PhillipSchneider,andFlorianMatthes.2024.MedREQAL:Examin-
+languagemodelsinmedicine:Asurvey.ArtificialIntelligenceinMedicine(2024), ingMedicalKnowledgeRecallofLargeLanguageModelsviaQuestionAnswering.
+102904. ArXivpreprintabs/2406.05845(2024). https://arxiv.org/abs/2406.05845
+[48] YizhenLuo,JiahuanZhang,SiqiFan,KaiYang,YushuaiWu,MuQiao,andZaiqing [70] BenyouWang,QianqianXie,JiahuanPei,ZhihongChen,PrayagTiwari,ZhaoLi,
+Nie.2023.Biomedgpt:Openmultimodalgenerativepre-trainedtransformerfor andJieFu.2023.Pre-trainedlanguagemodelsinbiomedicaldomain:Asystematic
+biomedicine.ArXivpreprintabs/2308.09442(2023). https://arxiv.org/abs/2308. survey.Comput.Surveys56,3(2023),1–52.
+09442 [71] ChongWang,MengyaoLi,JunjunHe,ZhongruoWang,ErfanDarzi,ZanChen,
+[49] DanielMcDuff,MikeSchaekermann,TaoTu,AnilPalepu,AmyWang,Jake JinYe,TianbinLi,YanzhouSu,JingKe,etal.2024.ASurveyforLargeLanguage
+Garrison,KaranSinghal,YashSharma,ShekoofehAzizi,KavitaKulkarni,etal. ModelsinBiomedicine.ArXivpreprintabs/2409.00133(2024). https://arxiv.org/
+2023.Towardsaccuratedifferentialdiagnosiswithlargelanguagemodels.ArXiv abs/2409.00133
+preprintabs/2312.00164(2023). https://arxiv.org/abs/2312.00164 [72] GuanchuWang,JunhaoRan,RuixiangTang,Chia-YuanChang,Yu-NengChuang,
+[50] SobhanMoazemi,SaharVahdati,JasonLi,SebastianKalkhoff,LuisJVCastano, ZiruiLiu,VladimirBraverman,ZhandongLiu,andXiaHu.2024.Assessingand
+BastianDewitz,RomanBibo,ParisaSabouniaghdam,MohammadSTootooni, EnhancingLargeLanguageModelsinRareDiseaseQuestion-answering.ArXiv
+RalphABundschuh,etal.2023.Artificialintelligenceforclinicaldecisionsupport preprintabs/2408.08422(2024). https://arxiv.org/abs/2408.08422
+formonitoringpatientsincardiovascularICUs:asystematicreview.Frontiersin [73] JiaqiWang,JunyuLuo,MuchaoYe,XiaochenWang,YuanZhong,AofeiChang,
+Medicine10(2023),1109411. Guanjie Huang, Ziyi Yin, Cao Xiao, Jimeng Sun, et al. 2024. Recent Ad-
+[51] AnkitPal,LogeshKumarUmapathi,andMalaikannanSankarasubbu.2022. vancesinPredictiveModelingwithElectronicHealthRecords.ArXivpreprint
+Medmcqa:Alarge-scalemulti-subjectmulti-choicedatasetformedicaldomain abs/2402.01077(2024). https://arxiv.org/abs/2402.01077
+questionanswering.InConferenceonhealth,inference,andlearning.PMLR,248– [74] ShirlyWang,MatthewBAMcDermott,GeetickaChauhan,MarzyehGhassemi,
+260. MichaelCHughes,andTristanNaumann.2020.Mimic-extract:Adataextraction,
+[52] LiangmingPan,MichaelSaxon,WendaXu,DeepakNathani,XinyiWang,and preprocessing,andrepresentationpipelineformimic-iii.InProceedingsofthe
+WilliamYangWang.2023. Automaticallycorrectinglargelanguagemodels: ACMconferenceonhealth,inference,andlearning.222–235.
+Surveyingthelandscapeofdiverseself-correctionstrategies. ArXivpreprint [75] XidongWang,GuimingHardyChen,DingjieSong,ZhiyiZhang,Zhihong
+abs/2308.03188(2023). https://arxiv.org/abs/2308.03188 Chen,QingyingXiao,FengJiang,JianquanLi,XiangWan,BenyouWang,etal.
+[53] SanjayPurushotham,ChuizhengMeng,ZhengpingChe,andYanLiu.2018.Bench- 2023. Cmb:Acomprehensivemedicalbenchmarkinchinese. ArXivpreprint
+markingdeeplearningmodelsonlargehealthcaredatasets.Journalofbiomedical abs/2308.08833(2023). https://arxiv.org/abs/2308.08833
+informatics83(2018),112–134. [76] ZifengWang,HanyinWang,BenjaminDanek,YingLi,ChristinaMack,Hoifung
+[54] Zi-HaoQiu,SiqiGuo,MaoXu,TuoZhao,LijunZhang,andTianbaoYang.2024. Poon,YajunWang,PranavRajpurkar,andJimengSun.2024. APerspective
+ToCoolornottoCool?TemperatureNetworkMeetsLargeFoundationModels forAdaptingGeneralistAItoSpecializedMedicalAIApplicationsandTheir
+viaDRO.ArXivpreprintabs/2404.04575(2024). https://arxiv.org/abs/2404.04575 Challenges.arXivpreprintarXiv:2411.00024(2024).
+[55] AlvinRajkomar,JeffreyDean,andIsaacKohane.2019. Machinelearningin [77] RanXu,MohammedKAli,JoyceCHo,andCarlYang.2023. Hypergraph
+medicine.NewEnglandJournalofMedicine380,14(2019),1347–1358. transformersforehr-basedclinicalpredictions.AMIASummitsonTranslational
+[56] MatthewRenzeandErhanGuven.2024.Theeffectofsamplingtemperatureon ScienceProceedings2023(2023),582.
+problemsolvinginlargelanguagemodels.ArXivpreprintabs/2402.05201(2024). [78] AnYang,BaosongYang,BinyuanHui,BoZheng,BowenYu,ChangZhou,Cheng-
+https://arxiv.org/abs/2402.05201 pengLi,ChengyuanLi,DayihengLiu,FeiHuang,etal.2024.Qwen2technical
+[57] MaciejRosoł,JakubSGąsior,JonaszŁaba,KacperKorzeniewski,andMarcel report.ArXivpreprintabs/2407.10671(2024). https://arxiv.org/abs/2407.10671
+Młyńczak.2023. EvaluationoftheperformanceofGPT-3.5andGPT-4onthe [79] ChaoqiYang,ZhenbangWu,PatrickJiang,ZhenLin,JunyiGao,Benjamin
+PolishMedicalFinalExamination.ScientificReports13,1(2023),20512. Danek,andJimengSun.2023.PyHealth:ADeepLearningToolkitforHealth-
+[58] PranabSahoo,AyushKumarSingh,SriparnaSaha,VinijaJain,SamratMondal, carePredictiveModeling.InProceedingsofthe27thACMSIGKDDInterna-
+andAmanChadha.2024.Asystematicsurveyofpromptengineeringinlarge tionalConferenceonKnowledgeDiscoveryandDataMining(KDD)2023. https:
+languagemodels:Techniquesandapplications.ArXivpreprintabs/2402.07927 //github.com/sunlabuiuc/PyHealth
+(2024). https://arxiv.org/abs/2402.07927 [80] AlexYoung,BeiChen,ChaoLi,ChengenHuang,GeZhang,GuanweiZhang,
+[59] SanderSchulhoff,MichaelIlie,NishantBalepur,KonstantineKahadze,Amanda HengLi,JiangchengZhu,JianqunChen,JingChang,etal.2024. Yi:Open
+Liu,ChengleiSi,YinhengLi,AayushGupta,HyoJungHan,SevienSchulhoff, foundationmodelsby01.ai.ArXivpreprintabs/2403.04652(2024). https://arxiv.
+etal.2024.ThePromptReport:ASystematicSurveyofPromptingTechniques. org/abs/2403.04652
+ArXivpreprintabs/2406.06608(2024). https://arxiv.org/abs/2406.06608 [81] ShengyuZhang,LinfengDong,XiaoyaLi,SenZhang,XiaofeiSun,ShuheWang,
+[60] OfirBenShohamandNadavRappoport.2024.MedConceptsQA–OpenSource JiweiLi,RunyiHu,TianweiZhang,FeiWu,etal.2023. Instructiontuning
+MedicalConceptsQABenchmark.ArXivpreprintabs/2405.07348(2024). https: forlargelanguagemodels:Asurvey. ArXivpreprint abs/2308.10792(2023).
+//arxiv.org/abs/2405.07348 https://arxiv.org/abs/2308.10792
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+[82] LianminZheng,Wei-LinChiang,YingSheng,SiyuanZhuang,ZhanghaoWu,
+YonghaoZhuang,ZiLin,ZhuohanLi,DachengLi,EricXing,etal.2023.Judging
+llm-as-a-judgewithmt-benchandchatbotarena.AdvancesinNeuralInformation
+ProcessingSystems36(2023),46595–46623.
+[83] WanjunZhong,RuixiangCui,YiduoGuo,YaoboLiang,ShuaiLu,YanlinWang,
+AminSaied,WeizhuChen,andNanDuan.2023. Agieval:Ahuman-centric
+benchmarkforevaluatingfoundationmodels. ArXivpreprintabs/2304.06364
+(2023). https://arxiv.org/abs/2304.06364
+[84] HongjianZhou,BoyangGu,XinyuZou,YiruLi,SamSChen,PeilinZhou,Junling
+Liu,YiningHua,ChengfengMao,XianWu,etal.2023.Asurveyoflargelan-
+guagemodelsinmedicine:Progress,application,andchallenge.ArXivpreprint
+abs/2311.05112(2023). https://arxiv.org/abs/2311.05112
+[85] ShuangZhou,ZiduXu,MianZhang,ChunpuXu,YawenGuo,ZaifuZhan,Sirui
+Ding,JiashuoWang,KaishuaiXu,YiFang,etal.2024.LargeLanguageModels
+forDiseaseDiagnosis:AScopingReview.ArXivpreprintabs/2409.00097(2024).
+https://arxiv.org/abs/2409.00097
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+ContentofAppendix
+A ReproducibilityStatement 14
+B MoreExperimentResults 15
+B.1 ResultsofTraditionalMLModelsandDirectlyPromptingLLMsonMIMIC-IV 15
+B.2 ResultsofTraditionalMLModelsonDifferentScalesofTrainingSet 16
+B.3 ResultsofLLMswithDifferentTemperaturesofDecoding 20
+B.4 ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMs 21
+B.5 LossCurvesofFine-tuningLLMs 33
+C MoreDetailsofFine-TuningDataConstructionforLLMs 36
+D ExamplesofLLM-BasedClinicalPrediction 38
+D.1 Length-of-StayPrediction 38
+D.1.1 DirectlyPrompting 38
+D.1.2 Chain-of-ThoughtPrompting 39
+D.1.3 Self-ReflectionPrompting 41
+D.1.4 Role-PlayingPrompting 43
+D.1.5 In-ContextLearning 44
+D.2 MortalityPrediction 47
+D.2.1 DirectlyPrompting 47
+D.2.2 Chain-of-ThoughtPrompting 48
+D.2.3 Self-ReflectionPrompting 50
+D.2.4 Role-PlayingPrompting 52
+D.2.5 In-ContextLearning 53
+D.3 ReadmissionPrediction 55
+D.3.1 DirectlyPrompting 55
+D.3.2 Chain-of-ThoughtPrompting 56
+D.3.3 Self-ReflectionPrompting 58
+D.3.4 Role-PlayingPrompting 60
+D.3.5 In-ContextLearning 61
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+A ReproducibilityStatement
+We conducted the experiments on eight NVIDIA RTX A6000 GPUs. Our code is based on PyHealth (https://github.com/sunlabuiuc/
+PyHealth)[79]andHuggingFaceTransformersframework(https://huggingface.co/docs/transformers/en/index).Inallexperimentsexcept
+thestudyon“TheImpactofDecodingTemperature”,theinferenceofLLMsissetasGreedyDecoding(i.e.,temperature=0,do_sample
+=False)toensurethereproducibilityofourresults.Wealsoreleasethecodeandresultsforverificationandreproductionintheproject
+websitehttps://clinicalbench.github.io/.
+Wehavebenchmarked14general-pruposeLLMsincludingLlama3-8B[16],Llama3-70B[16],Mistral-v0.3-7B[29],Gemma2-9B[67],
+Qwen2-0.5B[78],Qwen2-1.5B[78],Qwen2-7B[78],Yi-v1.5-6B[80],Yi-v1.5-9B[80],Yi-v1.5-34B[80],Vicuna-v1.5-7B[82],Phi3.5-mini-
+3.8B [1], InternLM2.5-7B [6], MiniCPM3-4B [26] and 8 medical LLMs including Meditron-7B [11], Meditron-70B [11], Medllama3-8B,
+BioMistral-7B[41],Med42-8B[12],Med42-70B[12],BioMedGPT-7B[48]andInternist-7B[20].Themodelcheckpointsaredownloadedfrom
+https://huggingface.co/.Thespecificdownloadlinksareasfollows:
+• Llama3-8B:https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct
+• Llama3-70B:https://huggingface.co/meta-llama/Meta-Llama-3-70B-Instruct
+• Mistral-v0.3-7B:https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3
+• Gemma2-9B:https://huggingface.co/google/gemma-2-9b-it
+• Qwen2-0.5B:https://huggingface.co/Qwen/Qwen2-0.5B-Instruct
+• Qwen2-1.5B:https://huggingface.co/Qwen/Qwen2-1.5B-Instruct
+• Qwen2-7B:https://huggingface.co/Qwen/Qwen2-7B-Instruct
+• Yi-v1.5-6B:https://huggingface.co/01-ai/Yi-1.5-6B-Chat
+• Yi-v1.5-9B:https://huggingface.co/01-ai/Yi-1.5-9B-Chat
+• Yi-v1.5-34B:https://huggingface.co/01-ai/Yi-1.5-34B-Chat
+• Vicuna-v1.5-7B:https://huggingface.co/lmsys/vicuna-7b-v1.5
+• Phi3.5-mini-3.8B:https://huggingface.co/microsoft/Phi-3.5-mini-instruct
+• InternLM2.5-7B:https://huggingface.co/internlm/internlm2_5-7b-chat
+• MiniCPM3-4B:https://huggingface.co/openbmb/MiniCPM3-4B
+• Meditron-7B:https://huggingface.co/epfl-llm/meditron-7b
+• Meditron-70B:https://huggingface.co/epfl-llm/meditron-70b
+• Medllama3-8B:https://huggingface.co/ProbeMedicalYonseiMAILab/medllama3-v20
+• BioMistral-7B::https://huggingface.co/BioMistral/BioMistral-7B
+• Med42-8B:https://huggingface.co/m42-health/Llama3-Med42-8B
+• Med42-70B:https://huggingface.co/m42-health/Llama3-Med42-70B
+• BioMedGPT-7B:https://huggingface.co/PharMolix/BioMedGPT-LM-7B
+• Internist-7B:https://huggingface.co/internistai/base-7b-v0.2
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+B MoreExperimentResults
+B.1 ResultsofTraditionalMLModelsandDirectlyPromptingLLMsonMIMIC-IV
+Method Length-of-StayPrediction MortalityPrediction ReadmissionPrediction
+MacroF1(%) AUROC(%) F1(%) AUROC(%) F1(%) AUROC(%)
+95%CI 95%CI 95%CI 95%CI 95%CI 95%CI
+Majority 29.56 50.00 0.00 50.00 0.00 50.00
+(29.56,29.56) (50.00,50.00) (0.00,0.00) (50.00,50.00) (0.00,0.00) (50.00,50.00)
+Minority 4.56 50.00 6.70 50.00 24.92 50.00
+(4.56,4.56) (50.00,50.00) (6.70,6.70) (50.00,50.00) (24.92,24.92) (50.00,50.00)
+TraditionalMLModels
+XGBoost 63.30 95.53 48.95 98.27 27.54 60.58
+(63.18,63.42) (95.49,95.57) (48.77,49.13) (98.24,98.30) (27.42,27.66) (60.42,60.74)
+LR 61.81 94.50 51.10 98.22 26.55 58.69
+(61.77,61.85) (94.47,94.53) (51.02,51.18) (98.19,98.25) (26.38,26.72) (58.45,58.93)
+DecisionTree 55.48 89.10 32.98 88.19 26.15 56.43
+(55.18,55.78) (89.00,89.20) (32.69,33.27) (87.85,88.53) (26.07,26.23) (56.29,56.57)
+RandomForest 57.54 92.21 33.35 95.34 28.07 61.21
+(57.43,57.65) (92.14,92.28) (33.16,33.54) (95.27,95.41) (28.00,28.14) (61.09,61.33)
+AdaBoost 62.17 93.23 47.66 96.98 26.86 58.86
+(62.05,62.29) (93.16,93.30) (47.32,48.00) (96.95,97.01) (26.74,26.98) (58.66,59.06)
+SVM 65.94 96.18 46.63 98.18 28.62 62.49
+(65.86,66.02) (96.12,96.24) (46.43,46.83) (98.17,98.19) (28.49,28.75) (62.32,62.66)
+NaiveBayes 48.03 66.52 18.83 82.05 25.51 52.95
+(47.98,48.08) (66.32,66.72) (18.62,19.04) (81.82,82.28) (25.47,25.55) (52.88,53.02)
+KNN 46.72 74.96 45.01 90.70 25.07 55.30
+(46.58,46.86) (74.80,75.12) (44.78,45.24) (90.58,90.82) (24.93,25.21) (55.07,55.53)
+MLP 59.51 92.43 47.07 97.78 25.45 56.80
+(59.46,59.56) (92.36,92.50) (46.87,47.27) (97.75,97.81) (25.30,25.60) (56.56,57.04)
+Transformer 56.51 91.00 45.87 98.07 26.04 57.25
+(56.34,56.68) (90.91,91.09) (45.34,46.40) (98.05,98.09) (25.90,26.18) (57.03,57.47)
+RNN 59.93 92.44 49.75 97.48 25.08 55.94
+(59.87,59.99) (92.37,92.51) (49.56,49.94) (97.44,97.52) (24.96,25.20) (55.68,56.20)
+General-purposeLargeLanguageModels
+LLama3-8B 18.08 91.72 14.97 95.45 25.1 49.6
+(18.02,18.14) (91.64,91.8) (14.95,14.99) (95.4,95.5) (25.09,25.11) (49.48,49.72)
+Mistral-v0.3-7B 12.29 86.1 28.97 95.64 24.7 51.22
+(12.22,12.36) (86.07,86.13) (28.89,29.05) (95.6,95.68) (24.6,24.8) (51.06,51.38)
+Gemma2-9B 19.83 89.68 32.91 95.82 24.83 49.92
+(19.79,19.87) (89.6,89.76) (32.86,32.96) (95.78,95.86) (24.81,24.85) (49.79,50.05)
+Qwen2-7B 6.57 83.46 48.05 95.46 0.23 48.83
+(6.54,6.6) (83.28,83.64) (47.63,48.47) (95.42,95.5) (0.21,0.25) (48.72,48.94)
+Yi-v1.5-9B 6.97 84.35 16.87 88.89 19.14 50.33
+(6.96,6.98) (84.3,84.4) (16.82,16.92) (88.79,88.99) (19.0,19.28) (50.23,50.43)
+Vicuna-v1.5-7B 23.25 81.12 7.22 88.39 24.92 51.92
+(23.17,23.33) (80.99,81.25) (7.22,7.22) (88.33,88.45) (24.92,24.92) (51.87,51.97)
+Phi3.5-mini-3.8B 11.56 82.84 16.72 93.55 21.52 50.87
+(11.51,11.61) (82.70,82.98) (16.68,16.76) (93.50,93.60) (21.40,21.64) (50.73,51.01)
+InternLM2.5-7B 11.40 90.42 40.68 95.29 0.00 49.05
+(11.35,11.45) (90.31,90.53) (40.39,40.97) (95.25,95.33) (0.00,0.00) (48.89,49.21)
+MiniCPM3-4B 17.80 86.41 12.28 94.54 22.93 49.90
+(17.71,17.89) (86.29,86.53) (12.26,12.30) (94.47,94.61) (22.89,22.97) (49.80,50.00)
+MedicalLargeLanguageModels
+Meditron-7B 28.08 86.17 6.7 91.95 24.92 48.92
+(27.96,28.2) (86.03,86.31) (6.7,6.7) (91.9,92.0) (24.92,24.92) (48.75,49.09)
+Medllama3-8B 8.31 80.73 12.86 91.48 24.92 48.22
+(8.27,8.35) (80.57,80.89) (12.84,12.88) (91.46,91.5) (24.92,24.92) (48.04,48.4)
+BioMistral-7B 13.53 39.12 22.81 91.89 22.03 48.54
+(13.46,13.6) (38.99,39.25) (22.75,22.87) (91.81,91.97) (21.94,22.12) (48.45,48.63)
+Med42-8B 9.95 90.86 16.7 93.62 25.61 50.78
+(9.9,10.0) (90.76,90.96) (16.67,16.73) (93.56,93.68) (25.55,25.67) (50.67,50.89)
+BioMedGPT-7B 7.65 70.48 12.01 93.51 23.97 50.35
+(7.65,7.65) (70.22,70.74) (12.00,12.02) (93.49,93.53) (23.92,24.02) (50.30,50.40)
+Internist-7B 14.24 89.39 28.81 96.57 15.72 50.59
+(14.18,14.30) (89.32,89.46) (28.75,28.87) (96.54,96.60) (15.59,15.85) (50.43,50.75)
+Table4:PerformanceofLLMsandTraditionalMLModelsonTypicalClinicalPredictionTasks.Experimentsareconductedin
+MIMIC-IVdataset.Thenumbersinbracketaretherangesofperformancewith95%ConfidenceInterval(95%CI),whichare
+calculatedwiththe5-runscores.
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+B.2 ResultsofTraditionalMLModelsonDifferentScalesofTrainingSet
+Method Length-of-StayPrediction MortalityPrediction ReadmissionPrediction
+MacroF1(%) AUROC(%) F1(%) AUROC(%) F1(%) AUROC(%)
+95%CI 95%CI 95%CI 95%CI 95%CI 95%CI
+Majority 23.37 50.00 0.00 50.00 0.00 50.00
+(23.37,23.37) (50.00,50.00) (0.00,0.00) (50.00,50.00) (0.00,0.00) (50.00,50.00)
+Minority 10.72 50.00 20.88 50.00 13.64 50.00
+(10.72,10.72) (50.00,50.00) (20.88,20.88) (50.00,50.00) (13.64,13.64) (50.00,50.00)
+TraditionalMLModelswith40%ofOriginalTrainingSetfromMIMIC-III
+XGBoost 63.99 91.53 62.16 94.67 17.69 64.23
+(63.84,64.14) (91.45,91.61) (62.03,62.29) (94.63,94.71) (17.59,17.79) (64.04,64.42)
+LR 62.44 90.61 60.24 92.91 18.32 66.06
+(62.28,62.60) (90.47,90.75) (60.14,60.34) (92.88,92.94) (18.10,18.54) (65.68,66.44)
+DecisionTree 56.14 83.16 48.41 81.17 14.95 53.61
+(55.99,56.29) (82.98,83.34) (48.20,48.62) (80.89,81.45) (14.86,15.04) (53.31,53.91)
+RandomForest 61.06 90.88 53.11 90.78 18.34 66.40
+(60.96,61.16) (90.78,90.98) (52.96,53.26) (90.70,90.86) (18.09,18.59) (65.95,66.85)
+AdaBoost 62.54 89.38 57.04 90.94 16.26 59.77
+(62.34,62.74) (89.09,89.67) (56.76,57.32) (90.78,91.10) (16.09,16.43) (59.27,60.27)
+SVM 65.05 91.71 60.51 94.04 17.97 66.84
+(64.90,65.20) (91.63,91.79) (60.30,60.72) (93.99,94.09) (17.70,18.24) (66.48,67.20)
+NaiveBayes 45.57 62.48 24.86 59.10 16.63 58.05
+(45.48,45.66) (62.28,62.68) (24.81,24.91) (59.02,59.18) (16.51,16.75) (57.81,58.29)
+KNN 45.34 74.43 42.17 83.75 15.25 59.80
+(45.24,45.44) (74.28,74.58) (41.90,42.44) (83.59,83.91) (15.14,15.36) (59.38,60.22)
+MLP 59.92 87.99 57.00 90.77 18.25 65.71
+(59.75,60.09) (87.81,88.17) (56.85,57.15) (90.70,90.84) (18.07,18.43) (65.38,66.04)
+Transformer 58.73 87.22 56.05 91.74 18.21 65.49
+(58.45,59.01) (87.02,87.42) (55.81,56.29) (91.71,91.77) (18.04,18.38) (65.19,65.79)
+RNN 61.07 88.08 58.77 90.08 19.02 67.38
+(60.88,61.26) (87.94,88.22) (58.60,58.94) (89.96,90.20) (18.86,19.18) (67.11,67.65)
+TraditionalMLModelswith20%ofOriginalTrainingSetfromMIMIC-III
+XGBoost 61.95 90.89 57.37 92.86 16.55 61.33
+(61.81,62.09) (90.78,91.00) (57.07,57.67) (92.78,92.94) (16.35,16.75) (60.79,61.87)
+LR 60.78 89.71 56.55 91.57 16.69 63.59
+(60.55,61.01) (89.52,89.90) (56.24,56.86) (91.47,91.67) (16.45,16.93) (63.19,63.99)
+DecisionTree 54.8 79.85 44.23 77.20 15.01 56.25
+(54.64,54.96) (79.65,80.05) (43.66,44.80) (76.99,77.41) (14.86,15.16) (55.94,56.56)
+RandomForest 60.48 90.59 52.00 90.15 16.90 63.09
+(60.28,60.68) (90.48,90.70) (51.85,52.15) (90.05,90.25) (16.77,17.03) (62.93,63.25)
+AdaBoost 60.51 87.97 53.76 88.92 15.75 58.43
+(60.32,60.70) (87.76,88.18) (53.60,53.92) (88.77,89.07) (15.50,16.00) (58.01,58.85)
+SVM 63.05 91.10 57.35 92.72 17.41 64.88
+(62.92,63.18) (91.02,91.18) (57.01,57.69) (92.64,92.80) (17.20,17.62) (64.58,65.18)
+NaiveBayes 43.82 62.88 25.63 60.44 16.71 58.02
+(43.77,43.87) (62.70,63.06) (25.57,25.69) (60.34,60.54) (16.54,16.88) (57.67,58.37)
+KNN 44.49 74.31 42.39 82.91 15.04 58.93
+(44.33,44.65) (74.14,74.48) (42.21,42.57) (82.77,83.05) (14.94,15.14) (58.47,59.39)
+MLP 58.66 87.28 53.54 89.98 17.08 62.81
+(58.41,58.91) (87.05,87.51) (53.24,53.84) (89.84,90.12) (16.80,17.36) (62.39,63.23)
+Transformer 58.69 88.18 53.02 90.74 17.04 61.73
+(58.44,58.94) (87.96,88.40) (52.84,53.20) (90.56,90.92) (16.88,17.20) (61.37,62.09)
+RNN 61.16 88.74 55.77 89.13 17.85 64.03
+(60.89,61.43) (88.51,88.97) (55.36,56.18) (88.89,89.37) (17.66,18.04) (63.78,64.28)
+Table5:PerformanceofTraditionalMLModelsonTypicalClinicalPredictionTaskswithDifferentScalesofTrainingSet.
+ExperimentsareconductedinMIMIC-IIIdataset.Thetrainingsetisobtainedthroughstratifiedsamplingfromtheoriginal
+trainingsetinTable1.Thenumbersinbracketaretherangesofperformancewith95%ConfidenceInterval(95%CI),whichare
+calculatedwiththe5-runscores.
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Method Length-of-StayPrediction MortalityPrediction ReadmissionPrediction
+MacroF1(%) AUROC(%) F1(%) AUROC(%) F1(%) AUROC(%)
+95%CI 95%CI 95%CI 95%CI 95%CI 95%CI
+Majority 23.37 50.00 0.00 50.00 0.00 50.00
+(23.37,23.37) (50.00,50.00) (0.00,0.00) (50.00,50.00) (0.00,0.00) (50.00,50.00)
+Minority 10.72 50.00 20.88 50.00 13.64 50.00
+(10.72,10.72) (50.00,50.00) (20.88,20.88) (50.00,50.00) (13.64,13.64) (50.00,50.00)
+TraditionalMLModelswith10%ofOriginalTrainingSetfromMIMIC-III
+XGBoost 61.35 90.16 51.62 89.93 17.05 61.43
+(61.18,61.52) (90.05,90.27) (51.37,51.87) (89.82,90.04) (16.81,17.29) (60.79,62.07)
+LR 60.79 90.25 53.92 90.49 17.71 62.21
+(60.64,60.94) (90.10,90.40) (53.64,54.20) (90.39,90.59) (17.54,17.88) (61.85,62.57)
+DecisionTree 53.07 77.11 41.43 74.65 15.32 55.75
+(52.98,53.16) (76.77,77.45) (41.16,41.70) (74.43,74.87) (15.17,15.47) (55.36,56.14)
+RandomForest 60.39 90.61 50.00 88.72 17.47 63.51
+(60.25,60.53) (90.54,90.68) (49.75,50.25) (88.63,88.81) (17.35,17.59) (63.32,63.70)
+AdaBoost 60.3 87.55 50.07 85.78 16.03 57.48
+(60.23,60.37) (87.40,87.70) (49.63,50.51) (85.61,85.95) (15.80,16.26) (57.07,57.89)
+SVM 62.33 90.73 52.51 90.97 17.01 52.28
+(62.2,62.46) (90.66,90.8) (52.17,52.85) (90.86,91.08) (16.81,17.21) (50.47,54.09)
+NaiveBayes 41.54 63.82 26.48 62.18 14.87 54.25
+(41.39,41.69) (63.65,63.99) (26.32,26.64) (61.81,62.55) (14.79,14.95) (54.11,54.39)
+KNN 42.37 73.74 41.26 82.37 14.30 57.96
+(42.23,42.51) (73.49,73.99) (41.13,41.39) (82.31,82.43) (14.23,14.37) (57.27,58.65)
+MLP 58.65 87.51 51.55 89.57 15.95 59.23
+(58.39,58.91) (87.32,87.70) (51.17,51.93) (89.48,89.66) (15.83,16.07) (59.00,59.46)
+Transformer 58.94 89.43 50.19 89.43 15.76 58.34
+(58.63,59.25) (89.25,89.61) (49.81,50.57) (89.31,89.55) (15.52,16.00) (57.91,58.77)
+RNN 61.81 89.20 54.62 89.00 13.97 61.82
+(61.54,62.08) (89.04,89.36) (54.32,54.92) (88.88,89.12) (13.55,14.39) (61.65,61.99)
+TraditionalMLModelswith5%ofOriginalTrainingSetfromMIMIC-III
+XGBoost 59.21 89.16 48.60 87.67 16.40 58.90
+(59.00,59.42) (89.00,89.32) (48.39,48.81) (87.58,87.76) (16.18,16.62) (58.49,59.31)
+LR 59.90 89.92 52.87 89.50 15.51 58.96
+(59.74,60.06) (89.74,90.10) (52.63,53.11) (89.36,89.64) (15.37,15.65) (58.50,59.42)
+DecisionTree 52.35 76.17 39.02 70.48 15.90 56.24
+(52.17,52.53) (75.98,76.36) (38.44,39.60) (69.96,71.00) (15.77,16.03) (56.01,56.47)
+RandomForest 60.89 90.34 52.10 89.15 15.75 60.29
+(60.74,61.04) (90.26,90.42) (51.83,52.37) (88.99,89.31) (15.58,15.92) (59.84,60.74)
+AdaBoost 56.63 86.61 45.37 83.13 15.41 59.09
+(56.35,56.91) (86.43,86.79) (45.06,45.68) (82.77,83.49) (15.33,15.49) (58.89,59.29)
+SVM 61.33 90.10 52.58 90.04 15.95 49.55
+(61.20,61.46) (90.00,90.20) (52.24,52.92) (89.93,90.15) (15.73,16.17) (47.98,51.12)
+NaiveBayes 42.91 66.12 29.89 66.44 14.06 53.30
+(42.71,43.11) (65.90,66.34) (29.72,30.06) (66.25,66.63) (13.82,14.30) (53.02,53.58)
+KNN 39.98 71.55 40.70 83.04 14.26 55.74
+(39.91,40.05) (71.39,71.71) (40.43,40.97) (82.93,83.15) (14.23,14.29) (55.13,56.35)
+MLP 57.97 87.22 50.27 87.92 14.91 57.36
+(57.79,58.15) (87.03,87.41) (50.04,50.50) (87.77,88.07) (14.82,15.00) (57.01,57.71)
+Transformer 58.23 88.73 48.67 87.88 14.04 54.06
+(57.95,58.51) (88.54,88.92) (48.51,48.83) (87.68,88.08) (13.72,14.36) (53.55,54.57)
+RNN 60.94 88.19 52.84 88.04 11.92 59.50
+(60.74,61.14) (88.03,88.35) (52.61,53.07) (87.85,88.23) (11.21,12.63) (59.16,59.84)
+Table6:PerformanceofTraditionalMLModelsonTypicalClinicalPredictionTaskswithDifferentScalesofTrainingSet.
+ExperimentsareconductedinMIMIC-IIIdataset.Thetrainingsetisobtainedthroughstratifiedsamplingfromtheoriginal
+trainingsetinTable1.Thenumbersinbracketaretherangesofperformancewith95%ConfidenceInterval(95%CI),whichare
+calculatedwiththe5-runscores.
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Method Length-of-StayPrediction MortalityPrediction ReadmissionPrediction
+MacroF1(%) AUROC(%) F1(%) AUROC(%) F1(%) AUROC(%)
+95%CI 95%CI 95%CI 95%CI 95%CI 95%CI
+Majority 29.56 50.0 0.0 50.0 0.0 50.0
+(29.56,29.56) (50.0,50.0) (0.0,0.0) (50.0,50.0) (0.0,0.0) (50.0,50.0)
+Minority 4.56 50.0 6.7 50.0 24.92 50.0
+(4.56,4.56) (50.0,50.0) (6.7,6.7) (50.0,50.0) (24.92,24.92) (50.0,50.0)
+TraditionalMLModelswith40%ofOriginalTrainingSetfromMIMIC-IV
+XGBoost 61.81 94.51 44.06 97.36 26.87 58.86
+(61.70,61.92) (94.46,94.56) (43.66,44.46) (97.31,97.41) (26.77,26.97) (58.69,59.03)
+LR 60.60 93.64 47.10 97.63 26.24 58.01
+(60.41,60.79) (93.58,93.70) (46.86,47.34) (97.59,97.67) (26.15,26.33) (57.84,58.18)
+DecisionTree 53.07 86.57 30.97 85.31 25.33 54.97
+(52.76,53.38) (86.50,86.64) (30.42,31.52) (85.00,85.62) (25.05,25.61) (54.84,55.10)
+RandomForest 57.86 92.06 34.24 95.18 27.08 59.52
+(57.78,57.94) (91.97,92.15) (33.77,34.71) (95.04,95.32) (27.00,27.16) (59.35,59.69)
+AdaBoost 60.64 92.50 43.14 95.29 26.17 56.45
+(60.53,60.75) (92.45,92.55) (42.75,43.53) (95.11,95.47) (26.11,26.23) (56.29,56.61)
+SVM 64.50 95.48 42.79 97.51 28.32 60.85
+(64.39,64.61) (95.42,95.54) (42.41,43.17) (97.47,97.55) (28.22,28.42) (60.70,61.00)
+NaiveBayes 42.47 70.00 16.13 77.47 25.25 52.79
+(42.37,42.57) (69.84,70.16) (15.99,16.27) (77.36,77.58) (25.14,25.36) (52.58,53.00)
+KNN 43.54 71.62 38.66 90.02 23.11 53.63
+(43.31,43.77) (71.35,71.89) (38.15,39.17) (89.83,90.21) (22.78,23.44) (53.35,53.91)
+MLP 58.70 90.83 42.41 97.17 25.81 56.94
+(58.62,58.78) (90.75,90.91) (42.14,42.68) (97.14,97.20) (25.65,25.97) (56.76,57.12)
+Transformer 57.66 91.56 40.94 97.38 25.33 56.36
+(57.44,57.88) (91.47,91.65) (40.48,41.40) (97.33,97.43) (25.27,25.39) (56.27,56.45)
+RNN 61.63 91.74 46.56 96.89 25.56 56.74
+(61.53,61.73) (91.69,91.79) (46.37,46.75) (96.85,96.93) (25.47,25.65) (56.60,56.88)
+TraditionalMLModelswith20%ofOriginalTrainingSetfromMIMIC-IV
+XGBoost 60.05 93.49 38.80 96.21 25.16 56.43
+(59.97,60.13) (93.41,93.57) (38.51,39.09) (96.15,96.27) (25.05,25.27) (56.21,56.65)
+LR 59.51 92.87 42.81 96.91 25.27 56.00
+(59.31,59.71) (92.71,93.03) (42.55,43.07) (96.84,96.98) (25.16,25.38) (55.89,56.11)
+DecisionTree 52.15 84.08 27.27 83.42 21.39 52.87
+(51.83,52.47) (83.91,84.25) (26.49,28.05) (83.04,83.80) (20.78,22.00) (52.66,53.08)
+RandomForest 57.70 91.85 34.77 95.14 26.55 58.08
+(57.55,57.85) (91.75,91.95) (34.30,35.24) (95.01,95.27) (26.46,26.64) (57.85,58.31)
+AdaBoost 57.76 91.66 38.77 94.49 24.88 54.71
+(57.58,57.94) (91.58,91.74) (38.60,38.94) (94.27,94.71) (24.80,24.96) (54.62,54.80)
+SVM 63.14 94.88 39.96 96.53 26.62 58.14
+(63.06,63.22) (94.82,94.94) (39.57,40.35) (96.46,96.60) (26.45,26.79) (57.93,58.35)
+NaiveBayes 39.13 70.63 14.53 75.68 24.66 53.69
+(39.00,39.26) (70.41,70.85) (14.40,14.66) (75.44,75.92) (24.46,24.86) (53.48,53.90)
+KNN 44.05 72.61 38.87 87.61 22.96 53.41
+(43.75,44.35) (72.43,72.79) (38.39,39.35) (87.30,87.92) (22.78,23.14) (53.23,53.59)
+MLP 57.34 89.89 39.84 96.59 24.37 54.71
+(57.16,57.52) (89.76,90.02) (39.51,40.17) (96.53,96.65) (24.29,24.45) (54.58,54.84)
+Transformer 57.39 91.72 35.91 96.46 24.35 54.57
+(57.19,57.59) (91.57,91.87) (35.18,36.64) (96.38,96.54) (24.24,24.46) (54.43,54.71)
+RNN 60.27 90.79 42.13 96.20 24.77 55.31
+(60.07,60.47) (90.62,90.96) (41.87,42.39) (96.13,96.27) (24.67,24.87) (55.23,55.39)
+Table7:PerformanceofTraditionalMLModelsonTypicalClinicalPredictionTaskswithDifferentScalesofTrainingSet.
+ExperimentsareconductedinMIMIC-IVdataset.Thetrainingsetisobtainedthroughstratifiedsamplingfromtheoriginal
+trainingsetinTable1.Thenumbersinbracketaretherangesofperformancewith95%ConfidenceInterval(95%CI),whichare
+calculatedwiththe5-runscores.
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Method Length-of-StayPrediction MortalityPrediction ReadmissionPrediction
+MacroF1(%) AUROC(%) F1(%) AUROC(%) F1(%) AUROC(%)
+95%CI 95%CI 95%CI 95%CI 95%CI 95%CI
+Majority 29.56 50.0 0.0 50.0 0.0 50.0
+(29.56,29.56) (50.0,50.0) (0.0,0.0) (50.0,50.0) (0.0,0.0) (50.0,50.0)
+Minority 4.56 50.0 6.7 50.0 24.92 50.0
+(4.56,4.56) (50.0,50.0) (6.7,6.7) (50.0,50.0) (24.92,24.92) (50.0,50.0)
+TraditionalMLModelswith10%ofOriginalTrainingSetfromMIMIC-IV
+XGBoost 56.22 91.79 33.59 94.67 24.84 54.70
+(56.14,56.30) (91.69,91.89) (33.07,34.11) (94.53,94.81) (24.69,24.99) (54.42,54.98)
+LR 57.96 92.13 40.20 96.25 24.49 54.82
+(57.80,58.12) (92.00,92.26) (39.65,40.75) (96.18,96.32) (24.36,24.62) (54.58,55.06)
+DecisionTree 49.48 80.08 26.82 80.25 24.23 53.16
+(49.12,49.84) (79.75,80.41) (26.23,27.41) (79.76,80.74) (23.78,24.68) (52.91,53.41)
+RandomForest 57.15 91.66 35.29 95.16 25.42 56.09
+(56.97,57.33) (91.54,91.78) (34.67,35.91) (94.97,95.35) (25.20,25.64) (55.81,56.37)
+AdaBoost 54.47 90.96 39.87 95.36 23.13 52.50
+(54.31,54.63) (90.80,91.12) (39.48,40.26) (95.29,95.43) (22.95,23.31) (52.33,52.67)
+SVM 62.02 94.09 36.53 95.80 24.72 50.87
+(61.87,62.17) (94.01,94.17) (36.12,36.94) (95.66,95.94) (24.51,24.93) (50.10,51.64)
+NaiveBayes 36.28 71.22 13.66 75.26 24.06 53.51
+(36.20,36.36) (71.14,71.30) (13.58,13.74) (75.19,75.33) (23.90,24.22) (53.39,53.63)
+KNN 40.62 70.57 34.72 85.06 22.31 52.84
+(40.34,40.90) (70.17,70.97) (34.03,35.41) (84.81,85.31) (22.20,22.42) (52.62,53.06)
+MLP 56.07 88.97 36.12 95.75 23.86 53.71
+(55.96,56.18) (88.87,89.07) (35.78,36.46) (95.71,95.79) (23.74,23.98) (53.54,53.88)
+Transformer 55.37 89.94 30.94 95.21 24.18 53.91
+(55.24,55.50) (89.82,90.06) (30.54,31.34) (95.12,95.30) (24.05,24.31) (53.75,54.07)
+RNN 59.04 89.39 39.13 95.64 24.37 54.44
+(58.94,59.14) (89.27,89.51) (38.77,39.49) (95.58,95.70) (24.26,24.48) (54.26,54.62)
+TraditionalMLModelswith5%ofOriginalTrainingSetfromMIMIC-IV
+XGBoost 54.47 89.99 25.04 90.50 24.39 53.80
+(54.38,54.56) (89.76,90.22) (24.52,25.56) (90.33,90.67) (24.25,24.53) (53.53,54.07)
+LR 57.20 91.51 34.45 94.75 23.96 53.57
+(57.03,57.37) (91.35,91.67) (33.87,35.03) (94.62,94.88) (23.78,24.14) (53.22,53.92)
+DecisionTree 49.15 75.08 22.11 78.31 22.53 52.28
+(48.75,49.55) (73.98,76.18) (21.63,22.59) (77.88,78.74) (21.91,23.15) (52.01,52.55)
+RandomForest 57.40 91.53 34.35 94.07 24.94 54.40
+(57.28,57.52) (91.35,91.71) (33.68,35.02) (93.88,94.26) (24.76,25.12) (53.97,54.83)
+AdaBoost 50.14 90.59 37.37 92.59 23.44 52.27
+(49.93,50.35) (90.47,90.71) (36.54,38.20) (92.34,92.84) (23.28,23.60) (51.99,52.55)
+SVM 60.63 93.00 32.92 93.75 24.75 50.00
+(60.36,60.90) (92.86,93.14) (32.52,33.32) (93.61,93.89) (24.52,24.98) (49.23,50.77)
+NaiveBayes 34.42 70.08 12.74 73.99 23.14 52.19
+(34.32,34.52) (69.74,70.42) (12.58,12.90) (73.69,74.29) (23.04,23.24) (52.07,52.31)
+KNN 38.72 67.40 24.09 79.08 22.13 52.32
+(38.33,39.11) (67.07,67.73) (23.40,24.78) (78.66,79.50) (21.89,22.37) (52.13,52.51)
+MLP 54.25 86.36 32.24 94.16 23.68 53.13
+(54.10,54.40) (86.17,86.55) (31.75,32.73) (94.05,94.27) (23.61,23.75) (52.86,53.40)
+Transformer 54.50 88.37 22.59 91.43 23.99 52.83
+(54.35,54.65) (88.09,88.65) (22.04,23.14) (91.19,91.67) (23.87,24.11) (52.58,53.08)
+RNN 57.88 87.51 17.32 92.38 24.09 53.77
+(57.70,58.06) (87.14,87.88) (16.98,17.66) (92.25,92.51) (23.96,24.22) (53.48,54.06)
+Table8:PerformanceofTraditionalMLModelsonTypicalClinicalPredictionTaskswithDifferentScalesofTrainingSet.
+ExperimentsareconductedinMIMIC-IVdataset.Thetrainingsetisobtainedthroughstratifiedsamplingfromtheoriginal
+trainingsetinTable1.Thenumbersinbracketaretherangesofperformancewith95%ConfidenceInterval(95%CI),whichare
+calculatedwiththe5-runscores.
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+B.3 ResultsofLLMswithDifferentTemperaturesofDecoding
+XGBoost
+RNN
+XGBoost
+SVM
+Transformer
+SVM
+56.46
+56.32
+Transformer
+RNN
+(a) Mortality Prediction (b) Readmission Prediction
+Figure5:PerformanceComparisonBetweenLLMswithDifferentTemperaturesandTraditionalMLModelsonMortality
+PredictionandReadmissionPrediction.ExperimentsareconductedinMIMIC-IIIdataset.
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+B.4 ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMs
+Figure6:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforLength-of-StayPredictiononMIMIC-III
+Dataset.
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+1800
+1814 527 59 1600 1400
+1200
+270 687 236 1000
+800
+600
+27 197 628 400
+200
+0 1 2
+Predicted labels
+(a)XGBoost
+slebal
+eurT
+0
+1
+2
+1750
+1836 505 59 1500
+1250
+303 627 263 1000
+750
+500
+29 201 622
+250
+0 1 2
+Predicted labels
+(b)LR
+slebal
+eurT
+0
+1
+2
+1600
+1715 525 160 1400
+1200
+1000 364 531 298
+800
+600
+102 216 534 400
+200
+(c)DecisionTree
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+1750
+1951 275 174
+1500
+1250
+444 375 374 1000
+750
+500 74 104 674
+250
+0 1 2
+Predicted labels
+(d)RandomForest
+slebal
+eurT
+0
+1
+2
+1600
+1769 576 55
+1400
+1200
+1000 287 684 222 800
+600
+30 188 634 400
+200
+0 1 2
+Predicted labels
+(e)AdaBoost
+slebal
+eurT
+0
+1
+2
+1750
+1883 477 40
+1500
+1250
+245 723 225 1000
+750
+500 24 185 643
+250
+(f)SVM
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+2000
+2088 229 83 1750
+1500
+1250 878 238 77
+1000
+750
+438 240 174 500
+250
+0 1 2
+Predicted labels
+(g)NaiveBayes
+slebal
+eurT
+0
+1
+2
+2267 133 0 2000
+1500
+900 273 20
+1000
+500 427 283 142
+0 0 1 2
+Predicted labels
+(h)KNN
+slebal
+eurT
+0
+1
+2
+1600 1788 515 97
+1400
+1200
+317 580 296 1000
+800
+600
+38 211 603 400
+200
+(i)MLP
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+1600
+1745 547 108 1400
+1200
+1000
+278 608 307
+800
+600
+34 192 626 400
+200
+0 1 2
+Predicted labels
+(j)Transformer
+slebal
+eurT
+0
+1
+2
+1750
+1890 422 88 1500
+1250
+379 547 267 1000
+750
+500 52 184 616
+250
+0 1 2
+Predicted labels
+(k)RNN
+slebal
+eurT
+0
+1
+2
+1400
+0 1551 849 1200
+1000
+0 456 737 800
+600
+400 0 76 776
+200
+0
+(l)Llama3-8B
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+2000 14 131 2255
+1500
+0 3 1190 1000
+500
+0 0 852
+0 0 1 2
+Predicted labels
+(m)Mistral-v0.3-7B
+slebal
+eurT
+0
+1
+2
+1600
+21 746 1633 1400
+1200
+1000
+0 127 1066 800
+600
+400
+0 9 843
+200
+0 0 1 2
+Predicted labels
+(n)Gemma2-9b
+slebal
+eurT
+0
+1
+2
+2000 0 236 2164 1750
+1500
+1250
+0 16 1177 1000
+750
+500
+0 3 849
+250
+0
+(o)Qwen2-7B
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Figure7:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforLength-of-StayPredictiononMIMIC-III
+Dataset.
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+5 6 2389 2000
+1500
+0 1 1192 1000
+0 0 852 500
+0 0 1 2
+Predicted labels
+(a)Yi-v1.5-9B
+slebal
+eurT
+0
+1
+2
+1750
+435 59 1906
+1500
+1250
+95 2 1096 1000 750
+500 31 3 818
+250
+0 1 2
+Predicted labels
+(b)Vicuna-v1.5-7b
+slebal
+eurT
+0
+1
+2
+2000
+17 298 2085 1750
+1500
+1250
+5 25 1163 1000 750
+500 0 9 843
+250
+0
+(c)Phi3.5-mini-3.8B
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+28 22 2350 2000
+1500
+1 1 1191 1000
+0 0 852 500
+0 0 1 2
+Predicted labels
+(d)InternLM2.5-7b
+slebal
+eurT
+0
+1
+2
+1200
+1 1188 1211 1000
+800
+0 329 864 600
+400
+0 57 795 200
+0 0 1 2
+Predicted labels
+(e)MiniCPM3-4B
+slebal
+eurT
+0
+1
+2
+1400 269 1564 567
+1200
+1000
+62 610 521 800
+600
+400 28 229 595
+200
+(f)Meditron-7B
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+0 2395 5 2000
+1500
+0 1187 6
+1000
+0 838 14 500
+0 0 1 2
+Predicted labels
+(g)Medllama3-8B
+slebal
+eurT
+0
+1
+2
+1400
+122 1415 863 1200
+1000
+123 584 486 800
+600
+188 379 285 400
+200
+0 1 2
+Predicted labels
+(h)BioMistral-7B
+slebal
+eurT
+0
+1
+2
+1 414 1985 1750
+1500
+1250
+0 24 1169 1000
+750
+500 0 1 851
+250
+0
+(i)Med42-8B
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+0 2400 0 2000
+1500
+0 1193 0
+1000
+0 852 0 500
+0 0 1 2
+Predicted labels
+(j)BioMedGPT-7B
+slebal
+eurT
+0
+1
+2
+2000
+21 130 2249
+1750
+1500
+1250
+0 6 1187
+1000
+750
+500 0 0 852
+250
+0
+(k)Internist-7B
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Figure8:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforMortalityPredictiononMIMIC-III
+Dataset.
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+4000
+3500
+4021 525 3000
+2500
+2000
+1500
+65 535 1000
+500
+0 1
+Predicted labels
+(a)XGBoost
+slebal
+eurT
+0
+1
+3500
+3971 575 3000
+2500
+2000
+1500
+75 525 1000
+500
+0 1
+Predicted labels
+(b)LR
+slebal
+eurT
+0
+1
+3500
+3811 735 3000
+2500
+2000
+1500
+124 476 1000
+500
+(c)DecisionTree
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+3500
+3780 766 3000
+2500
+2000
+1500
+103 497 1000
+500
+0 1
+Predicted labels
+(d)RandomForest
+slebal
+eurT
+0
+1
+3500
+3935 611 3000
+2500
+2000
+1500
+90 510 1000
+500
+0 1
+Predicted labels
+(e)AdaBoost
+slebal
+eurT
+0
+1
+3500
+3981 565 3000
+2500
+2000
+1500
+63 537 1000
+500
+(f)SVM
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+3000
+1077 3469 2500
+2000
+1500
+52 548 1000
+500
+0 1
+Predicted labels
+(g)NaiveBayes
+slebal
+eurT
+0
+1
+3500
+3000
+3514 1032 2500
+2000
+1500
+131 469 1000
+500
+0 1
+Predicted labels
+(h)KNN
+slebal
+eurT
+0
+1
+3500
+3888 658 3000 2500
+2000
+1500
+75 525 1000
+500
+(i)MLP
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+3500
+3796 750 3000
+2500
+2000
+1500
+69 531 1000
+500
+0 1
+Predicted labels
+(j)Transformer
+slebal
+eurT
+0
+1
+3500
+3799 747 3000
+2500
+2000
+1500
+72 528 1000
+500
+0 1
+Predicted labels
+(k)RNN
+slebal
+eurT
+0
+1
+3000
+1174 3372 2500
+2000
+1500
+5 595 1000
+500
+(l)Llama3-8B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+2500
+2833 1713
+2000
+1500
+1000
+49 551
+500
+0 1
+Predicted labels
+(m)Mistral-v0.3-7B
+slebal
+eurT
+0
+1
+3000
+3322 1224 2500
+2000
+1500
+105 495 1000
+500
+0 1
+Predicted labels
+(n)Gemma2-9b
+slebal
+eurT
+0
+1
+4000
+4436 110 3500
+3000
+2500
+2000
+1500
+446 154
+1000
+500
+(o)Qwen2-7B
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Figure9:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforMortalityPredictiononMIMIC-III
+Dataset.
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+2000 2067 2451
+1500
+1000
+82 514
+500
+0 1
+Predicted labels
+(a)Yi-v1.5-9B
+slebal
+eurT
+0
+1
+4000
+12 4534
+3000
+2000
+0 600 1000
+0 0 1
+Predicted labels
+(b)Vicuna-v1.5-7B
+slebal
+eurT
+0
+1
+3000
+1359 3187 2500
+2000
+1500
+1000
+18 582
+500
+(c)Phi3.5-mini-3.8B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+4000
+4394 152 3500
+3000
+2500
+2000
+1500
+456 144 1000
+500
+0 1
+Predicted labels
+(d)InternLM2.5-7B
+slebal
+eurT
+0
+1
+3500
+779 3767 3000
+2500
+2000
+1500
+2 598 1000
+500
+0 1
+Predicted labels
+(e)MiniCPM3-4B
+slebal
+eurT
+0
+1
+4000
+0 4546
+3000
+2000
+0 600 1000
+0
+(f)Meditron-7B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+3500
+3000
+827 3719
+2500
+2000
+1500
+10 590 1000
+500
+0 1
+Predicted labels
+(g)Medllama3-8B
+slebal
+eurT
+0
+1
+2250
+2000
+2266 2280 1750
+1500
+1250
+1000
+750 67 533
+500
+250
+0 1
+Predicted labels
+(h)BioMistral-7B
+slebal
+eurT
+0
+1
+2500
+1680 2866
+2000
+1500
+1000 22 578
+500
+(i)Med42-8B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+4000
+3500
+483 4063 3000
+2500
+2000
+1500
+5 595 1000
+500
+0 1
+Predicted labels
+(j)BioMedGPT-7B
+slebal
+eurT
+0
+1
+2500
+2767 1779 2000
+1500
+1000
+43 557
+500
+(k)Internist-7B
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Figure10:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforReadmissionPredictiononMIMIC-III
+Dataset.
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+500
+593 407
+400
+300
+200
+27 52
+100
+0 1
+Predicted labels
+(a)XGBoost
+slebal
+eurT
+0
+1
+500
+588 412
+400
+300
+200
+27 52
+100
+0 1
+Predicted labels
+(b)LR
+slebal
+eurT
+0
+1
+500
+442 558
+400
+300
+200
+30 49
+100
+(c)DecisionTree
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+500
+526 474 400
+300
+200
+23 56
+100
+0 1
+Predicted labels
+(d)RandomForest
+slebal
+eurT
+0
+1
+500
+570 430
+400
+300
+200
+30 49
+100
+0 1
+Predicted labels
+(e)AdaBoost
+slebal
+eurT
+0
+1
+500
+560 440
+400
+300
+200
+25 54
+100
+(f)SVM
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+500
+528 472 400
+300
+200
+29 50
+100
+0 1
+Predicted labels
+(g)NaiveBayes
+slebal
+eurT
+0
+1
+700
+600
+288 712
+500
+400
+300
+9 70 200
+100
+0 1
+Predicted labels
+(h)KNN
+slebal
+eurT
+0
+1
+600
+500
+605 395
+400
+300
+33 46 200
+100
+(i)MLP
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+500 598 402
+400
+300
+32 47 200
+100
+0 1
+Predicted labels
+(j)Transformer
+slebal
+eurT
+0
+1
+600
+619 381 500
+400
+300
+28 51 200
+100
+0 1
+Predicted labels
+(k)RNN
+slebal
+eurT
+0
+1
+1000
+0 1000 800
+600
+400
+0 79
+200
+0
+(l)Llama3-8B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+800 39 961
+600
+400
+6 73
+200
+0 1
+Predicted labels
+(m)Mistral-7B
+slebal
+eurT
+0
+1
+1000
+0 1000 800
+600
+400
+0 79
+200
+0 0 1
+Predicted labels
+(n)Gemma2-9b
+slebal
+eurT
+0
+1
+800 987 13
+600
+400
+77 2
+200
+(o)Qwen2-7B
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Figure11:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforReadmissionPredictiononMIMIC-III
+Dataset.
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+500
+427 573
+400
+300
+200
+42 37
+100
+0 1
+Predicted labels
+(a)Yi-1.5-9B
+slebal
+eurT
+0
+1
+1000
+0 1000 800
+600
+400
+0 79 200
+0 0 1
+Predicted labels
+(b)Vicuna-7b-v1.5
+slebal
+eurT
+0
+1
+700
+258 742 600
+500
+400
+300
+27 52 200
+100
+(c)Phi-3.5
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+1000
+1000 0 800
+600
+400
+79 0
+200
+0 0 1
+Predicted labels
+(d)internlm-7b
+slebal
+eurT
+0
+1
+800
+105 895 700
+600
+500
+400
+300
+11 68
+200
+100
+0 1
+Predicted labels
+(e)MiniCPM3
+slebal
+eurT
+0
+1
+1000
+0 1000 800
+600
+400
+0 79
+200
+0
+(f)meditron-7b
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+1000
+0 1000 800
+600
+400
+0 79 200
+0 0 1
+Predicted labels
+(g)Medllama3-8B
+slebal
+eurT
+0
+1
+800
+700 175 825 600
+500
+400
+300
+17 62 200
+100
+0 1
+Predicted labels
+(h)BioMistral-7B
+slebal
+eurT
+0
+1
+800 9 991
+600
+400
+1 78 200
+(i)Med42-8B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+800
+85 915
+600
+400
+6 73
+200
+0 1
+Predicted labels
+(j)BioMedGPT-7B
+slebal
+eurT
+0
+1
+500
+452 548
+400
+300
+200
+41 38
+100
+(k)Internist-7B
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Figure12:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforLength-of-StayPredictiononMIMIC-IV
+Dataset.
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+3000
+3202 715 83 2500
+2000
+109 395 147 1500
+1000
+17 81 271 500
+0 1 2
+Predicted labels
+(a)XGBoost
+slebal
+eurT
+0
+1
+2
+3000
+3230 681 89 2500
+2000
+131 352 168 1500
+1000
+13 95 261 500
+0 1 2
+Predicted labels
+(b)LR
+slebal
+eurT
+0
+1
+2
+3000
+3076 855 69 2500
+2000
+165 400 86 1500
+1000
+29 148 192 500
+(c)DecisionTree
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+3000
+3359 470 171
+2500
+2000
+227 241 183 1500
+1000
+48 64 257 500
+0 1 2
+Predicted labels
+(d)RandomForest
+slebal
+eurT
+0
+1
+2
+3000
+3202 713 85
+2500
+2000
+133 397 121 1500
+1000
+22 92 255 500
+0 1 2
+Predicted labels
+(e)AdaBoost
+slebal
+eurT
+0
+1
+2
+3000
+3242 722 36
+2500
+2000
+102 433 116 1500
+1000
+15 99 255 500
+(f)SVM
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+2852 894 254 2500
+2000
+232 296 123 1500
+1000
+50 170 149 500
+0 1 2
+Predicted labels
+(g)NaiveBayes
+slebal
+eurT
+0
+1
+2
+3500 3894 104 2
+3000
+2500
+533 113 5 2000
+1500
+1000
+229 94 46 500
+0 1 2
+Predicted labels
+(h)KNN
+slebal
+eurT
+0
+1
+2
+3000
+3160 700 140
+2500
+2000
+147 332 172 1500
+1000
+13 99 257 500
+(i)MLP
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+2918 817 265 2500
+2000
+109 308 234 1500
+1000
+10 79 280 500
+0 1 2
+Predicted labels
+(j)Transformer
+slebal
+eurT
+0
+1
+2
+3000
+3123 740 137 2500
+2000
+135 341 175 1500
+1000
+12 90 267 500
+0 1 2
+Predicted labels
+(k)RNN
+slebal
+eurT
+0
+1
+2
+3 3478 519 3000
+2500
+2000
+0 273 378 1500
+1000
+0 45 324 500
+0
+(l)Llama3-8B
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+2500
+377 944 2679
+2000
+1500 0 7 644
+1000
+1 2 366 500
+0 0 1 2
+Predicted labels
+(m)Mistral-v0.3-7B
+slebal
+eurT
+0
+1
+2
+1750
+616 1958 1426
+1500
+1250
+1 90 560 1000
+750
+500
+0 12 357
+250
+0 0 1 2
+Predicted labels
+(n)Gemma2-9B
+slebal
+eurT
+0
+1
+2
+2500
+0 1218 2782
+2000
+0 18 633 1500
+1000
+0 5 364 500
+0
+(o)Qwen2-7B
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Figure13:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforLength-of-StayPredictiononMIMIC-IV
+Dataset.
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+3500
+131 79 3790
+3000
+2500
+0 1 650 2000
+1500
+1000
+0 0 369 500
+0 0 1 2
+Predicted labels
+(a)Yi-v1.5-9B
+slebal
+eurT
+0
+1
+2
+1249 466 2285 2000
+1500
+46 10 595
+1000
+15 1 353 500
+0 1 2
+Predicted labels
+(b)Vicuna-v1.5-7B
+slebal
+eurT
+0
+1
+2
+227 1473 2300 2000
+1500
+8 35 608
+1000
+5 11 353 500
+(c)Phi3.5-mini-3.8B
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+3000 386 274 3340
+2500
+2000
+0 3 648 1500
+1000
+0 1 368 500
+0 0 1 2
+Predicted labels
+(d)InternLM2.5-7B
+slebal
+eurT
+0
+1
+2
+3000
+114 3132 754 2500
+2000
+0 257 394 1500
+1000
+0 71 298 500
+0 0 1 2
+Predicted labels
+(e)MiniCPM3
+slebal
+eurT
+0
+1
+2
+693 2846 461 2500
+2000
+42 307 302 1500
+1000
+14 108 247 500
+(f)Meditron-7B
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+0 3999 1 3500
+3000
+2500
+0 650 1 2000
+1500
+1000
+0 367 2 500
+0 0 1 2
+Predicted labels
+(g)Medllama3-8B
+slebal
+eurT
+0
+1
+2
+2500
+264 2523 1213
+2000
+1500
+88 280 283
+1000
+132 122 115 500
+0 1 2
+Predicted labels
+(h)BioMistral-7B
+slebal
+eurT
+0
+1
+2
+113 1911 1976 1750
+1500
+1250
+0 35 616 1000
+750
+500
+0 8 361 250
+0
+(i)Med42-8B
+0 1 2
+Predicted labels
+slebal
+eurT
+0
+1
+2
+4000
+0 4000 0 3500
+3000
+2500
+0 651 0 2000
+1500
+1000
+0 369 0
+500
+0 0 1 2
+Predicted labels
+(j)BioMedGPT-7B
+slebal
+eurT
+0
+1
+2
+2500
+531 815 2654
+2000
+1500
+5 6 640
+1000
+4 0 365 500
+0
+(k)Internist-7B
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Figure14:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforMortalityPredictiononMIMIC-IV
+Dataset.
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+5000
+5172 396 4000
+3000
+2000
+11 189
+1000
+0 1
+Predicted labels
+(a)XGBoost
+slebal
+eurT
+0
+1
+5000
+5228 340 4000
+3000
+2000
+18 182
+1000
+0 1
+Predicted labels
+(b)LR
+slebal
+eurT
+0
+1
+5000
+5042 526 4000
+3000
+2000
+40 160
+1000
+(c)DecisionTree
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+4000
+4823 745
+3000
+2000
+16 184
+1000
+0 1
+Predicted labels
+(d)RandomForest
+slebal
+eurT
+0
+1
+5000
+5163 405 4000
+3000
+2000
+18 182
+1000
+0 1
+Predicted labels
+(e)AdaBoost
+slebal
+eurT
+0
+1
+5000
+5130 438 4000
+3000
+2000
+8 192
+1000
+(f)SVM
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+4000
+3500
+4156 1412 3000
+2500
+2000
+1500
+47 153 1000
+500
+0 1
+Predicted labels
+(g)NaiveBayes
+slebal
+eurT
+0
+1
+5000
+5247 321 4000
+3000
+2000
+55 145 1000
+0 1
+Predicted labels
+(h)KNN
+slebal
+eurT
+0
+1
+5000
+5147 421 4000
+3000
+2000
+10 190 1000
+(i)MLP
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+5000
+5052 516 4000
+3000
+2000
+5 195
+1000
+0 1
+Predicted labels
+(j)Transformer
+slebal
+eurT
+0
+1
+5000
+5184 384 4000
+3000
+2000
+11 189
+1000
+0 1
+Predicted labels
+(k)RNN
+slebal
+eurT
+0
+1
+3000
+3322 2246 2500
+2000
+1500
+0 200 1000
+500
+0
+(l)Llama3-8B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+4000
+4659 909
+3000
+2000
+8 192
+1000
+0 1
+Predicted labels
+(m)Mistral-v0.3-7B
+slebal
+eurT
+0
+1
+4000
+4866 702
+3000
+2000
+21 179
+1000
+0 1
+Predicted labels
+(n)Gemma2-9B
+slebal
+eurT
+0
+1
+5000
+5502 66 4000
+3000
+2000
+126 74
+1000
+(o)Qwen2-7B
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Figure15:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforMortalityPredictiononMIMIC-IV
+Dataset.
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+3500
+3763 1784 3000
+2500
+2000
+1500
+20 179 1000
+500
+0 1
+Predicted labels
+(a)Yi-v1.5-9B
+slebal
+eurT
+0
+1
+5000
+436 5132 4000
+3000
+2000
+0 200
+1000
+0 0 1
+Predicted labels
+(b)Vicuna-v1.5-7B
+slebal
+eurT
+0
+1
+3500
+3000 3597 1971
+2500
+2000
+1500
+1 199 1000
+500
+(c)Phi3.5-mini-3.8B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+5000
+5518 50 4000
+3000
+2000
+137 63
+1000
+0 1
+Predicted labels
+(d)InternLM2.5-7B
+slebal
+eurT
+0
+1
+2500
+2708 2860 2000
+1500
+1000
+1 199
+500
+0 1
+Predicted labels
+(e)MiniCPM3
+slebal
+eurT
+0
+1
+5000
+0 5568 4000
+3000
+2000
+0 200
+1000
+0
+(f)Meditron-7B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+2500
+2866 2702
+2000
+1500
+1000
+1 199
+500
+0 1
+Predicted labels
+(g)Medllama3-8B
+slebal
+eurT
+0
+1
+4000
+3500
+4348 1220
+3000
+2500
+2000
+1500
+14 186 1000
+500
+0 1
+Predicted labels
+(h)BioMistral-7B
+slebal
+eurT
+0
+1
+3500
+3000
+3629 1939
+2500
+2000
+1500
+4 196 1000
+500
+(i)Med42-8B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+2500
+2637 2931
+2000
+1500
+1000
+0 200
+500
+0 0 1
+Predicted labels
+(j)BioMedGPT-7B
+slebal
+eurT
+0
+1
+4000
+4623 945
+3000
+2000
+7 193 1000
+(k)Internist-7B
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Figure16:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforReadmissionPredictiononMIMIC-IV
+Dataset.
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+2000
+1750
+2086 1914
+1500
+1250
+1000
+249 415 750
+500
+250 0 1
+Predicted labels
+(a)XGBoost
+slebal
+eurT
+0
+1
+2000
+2220 1780 1750
+1500
+1250
+1000
+280 384 750
+500
+0 1
+Predicted labels
+(b)LR
+slebal
+eurT
+0
+1
+2000
+1802 2198 1750
+1500
+1250
+1000
+232 432 750
+500
+250
+(c)DecisionTree
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+2250
+2000
+1698 2302 1750 1500
+1250
+1000
+192 472 750
+500
+250
+0 1
+Predicted labels
+(d)RandomForest
+slebal
+eurT
+0
+1
+2000
+1800
+2010 1990 1600 1400
+1200
+1000
+800 238 426
+600
+400
+0 1
+Predicted labels
+(e)AdaBoost
+slebal
+eurT
+0
+1
+2000
+1750
+2040 1960 1500
+1250
+1000
+232 432 750
+500
+250
+(f)SVM
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+3000
+2500 978 3022
+2000
+1500
+126 538 1000
+500
+0 1
+Predicted labels
+(g)NaiveBayes
+slebal
+eurT
+0
+1
+2250
+2000 2385 1615
+1750
+1500
+1250
+1000 358 306 750
+500
+0 1
+Predicted labels
+(h)KNN
+slebal
+eurT
+0
+1
+2000
+2174 1826 1750
+1500
+1250
+1000
+280 384 750
+500
+(i)MLP
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+2000
+1800
+1961 2039 1600
+1400
+1200
+1000
+800 253 411
+600
+400
+0 1
+Predicted labels
+(j)Transformer
+slebal
+eurT
+0
+1
+2000
+1800
+2032 1968 1600
+1400
+1200
+1000
+278 386 800
+600
+400
+0 1
+Predicted labels
+(k)RNN
+slebal
+eurT
+0
+1
+3500
+96 3904 3000
+2500
+2000
+1500
+10 654 1000
+500
+(l)Llama3-8B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+2500
+1190 2810
+2000
+1500
+1000
+197 467
+500
+0 1
+Predicted labels
+(m)Mistral-v0.3-7B
+slebal
+eurT
+0
+1
+3500
+238 3762 3000
+2500
+2000
+1500
+42 622 1000
+500
+0 1
+Predicted labels
+(n)Gemma2-9B
+slebal
+eurT
+0
+1
+3500
+3985 15 3000
+2500
+2000
+1500
+663 1 1000
+500
+(o)Qwen2-7B
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Figure17:ConfusionMatrixofTraditionalMLModelsandDirectlyPromptingLLMsforReadmissionPredictiononMIMIC-IV
+Dataset.
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+2500
+2710 1290 2000
+1500
+1000
+438 226
+500
+0 1
+Predicted labels
+(a)Yi-v1.5-9B
+slebal
+eurT
+0
+1
+4000
+3500
+0 4000 3000
+2500
+2000
+1500
+0 664 1000
+500
+0 0 1
+Predicted labels
+(b)Vicuna-v1.5-7B
+slebal
+eurT
+0
+1
+2250
+2000
+2414 1586 1750
+1500
+1250
+1000
+404 260 750
+500
+(c)Phi3.5-mini-3.8B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+4000
+3500
+4000 0 3000
+2500
+2000
+1500
+664 0 1000
+500
+0 0 1
+Predicted labels
+(d)InternLM2.5-7B
+slebal
+eurT
+0
+1
+2000
+1803 2197 1750
+1500
+1250
+1000
+291 373 750
+500
+0 1
+Predicted labels
+(e)MiniCPM3
+slebal
+eurT
+0
+1
+4000
+3500
+0 4000 3000
+2500
+2000
+1500
+0 664 1000
+500
+0
+(f)Meditron-7B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+4000
+3500
+0 4000 3000
+2500
+2000
+1500
+0 664 1000
+500
+0 0 1
+Predicted labels
+(g)Medllama3-8B
+slebal
+eurT
+0
+1
+2000
+1800
+1922 2078 1600
+1400
+1200
+1000
+338 326 800
+600
+400 0 1
+Predicted labels
+(h)BioMistral-7B
+slebal
+eurT
+0
+1
+3000
+685 3315 2500
+2000
+1500
+94 570 1000
+500
+(i)Med42-8B
+0 1
+Predicted labels
+slebal
+eurT
+0
+1
+2500
+1329 2671 2000
+1500
+1000 208 456
+500
+0 1
+Predicted labels
+(j)BioMedGPT-7B
+slebal
+eurT
+0
+1
+3000
+3177 823 2500
+2000
+1500
+550 114 1000
+500
+(k)Internist-7B
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+B.5 LossCurvesofFine-tuningLLMs
+Figure18:LossCurvesofLoRA(full)forLength-of-StayPredictiononMIMIC-III.
+1.4
+1.2
+1.0
+0.8
+0.6
+0.4
+25 50 75 100 125 150 175 200
+Training Steps
+ssoL noitaulavE
+Original 1.4 Smoothed
+1.2
+1.0
+0.8
+0.6
+0.4
+25 50 75 100 125 150 175 200
+Training Steps
+(a)Llama3-8B
+ssoL noitaulavE
+Original Smoothed 1.0
+0.8
+0.6
+0.4
+0.2
+25 50 75 100 125 150 175 200
+Training Steps
+(b)Gemma2-9B
+ssoL noitaulavE
+Original 0.9 Smoothed
+0.8
+0.7 0.6
+0.5
+0.4
+0.3
+0.2
+25 50 75 100 125 150 175 200
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL noitaulavE
+Original Smoothed
+(d)Vicuna-v1.5-7B
+Figure19:LossCurvesofLoRA(lastlayer)forLength-of-StayPredictiononMIMIC-III.
+2.0
+1.8
+1.6
+1.4
+1.2
+1.0
+0.8
+0.6
+0.4
+25 50 75 100 125 150 175 200
+Training Steps
+ssoL
+noitaulavE
+Original 7
+Smoothed 6
+5
+4
+3
+2
+1
+0
+25 50 75 100 125 150 175 200
+Training Steps
+(a)Llama3-8B
+ssoL
+noitaulavE
+7 Original
+Smoothed 6
+5
+4
+3
+2
+1
+0
+25 50 75 100 125 150 175 200
+Training Steps
+(b)Gemma2-9B
+ssoL
+noitaulavE
+Original 1.2
+Smoothed
+1.0
+0.8
+0.6
+0.4
+0.2
+25 50 75 100 125 150 175 200
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL
+noitaulavE
+Original
+Smoothed
+(d)Vicuna-v1.5-7B
+Figure20:LossCurvesofLoRA(full)forMortalityPredictiononMIMIC-III.
+1.6
+1.4
+1.2
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+10 20 30 40 50 60 70 80
+Training Steps
+ssoL
+noitaulavE
+5
+Original
+Smoothed 4
+3
+2
+1
+0
+10 20 30 40 50 60 70 80
+Training Steps
+(a)Llama3-8B
+ssoL
+noitaulavE
+Original 0.5
+Smoothed
+0.4
+0.3
+0.2
+0.1
+10 20 30 40 50 60 70 80
+Training Steps
+(b)Gemma2-9B
+ssoL
+noitaulavE
+0.7
+0.6
+0.5
+0.4
+0.3
+0.2
+Original 0.1 Smoothed
+10 20 30 40 50 60 70 80
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL
+noitaulavE
+Original
+Smoothed
+(d)Vicuna-v1.5-7B
+Figure21:LossCurvesofLoRA(lastlayer)forMortalityPredictiononMIMIC-III.
+2.5
+2.0
+1.5
+1.0
+0.5
+0.0
+10 20 30 40 50 60 70 80
+Training Steps
+ssoL
+noitaulavE
+Original 8 Smoothed 7
+6
+5
+4
+3
+2
+1
+0
+10 20 30 40 50 60 70 80
+Training Steps
+(a)Llama3-8B
+ssoL
+noitaulavE
+O Sm rig o i o n t a h l ed 6
+5
+4
+3
+2
+1
+0
+10 20 30 40 50 60 70 80
+Training Steps
+(b)Gemma2-9B
+ssoL
+noitaulavE
+Original 0.7 Smoothed
+0.6
+0.5
+0.4
+0.3
+10 20 30 40 50 60 70 80
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL
+noitaulavE
+Original Smoothed
+(d)Vicuna-v1.5-7B
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Figure22:LossCurvesofLoRA(full)forReadmissionPredictiononMIMIC-III.
+1.75
+1.50
+1.25
+1.00
+0.75
+0.50
+0.25
+5 10 15 20 25 30 35 40
+Training Steps
+ssoL
+noitaulavE
+Original 8 Smoothed 7
+6
+5
+4
+3
+2
+1
+0
+5 10 15 20 25 30 35 40
+Training Steps
+(a)Llama3-8B
+ssoL
+noitaulavE
+O Sm rig o i o n t a h l ed 6
+5
+4
+3
+2
+1
+0
+5 10 15 20 25 30 35 40
+Training Steps
+(b)Gemma2-9B
+ssoL
+noitaulavE
+Original Smoothed 0.9
+0.8
+0.7
+0.6
+0.5
+0.4
+0.3
+5 10 15 20 25 30 35 40
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL
+noitaulavE
+Original Smoothed
+(d)Vicuna-v1.5-7B
+Figure23:LossCurvesofLoRA(lastlayer)forReadmissionPredictiononMIMIC-III.
+2.00
+1.75
+1.50
+1.25
+1.00
+0.75
+0.50
+0.25
+5 10 15 20 25 30 35 40
+Training Steps
+ssoL
+noitaulavE
+Original 8
+Smoothed 7
+6
+5
+4
+3
+2
+1
+0
+5 10 15 20 25 30 35 40
+Training Steps
+(a)Llama3-8B
+ssoL
+noitaulavE
+Original
+Smoothed 8
+6
+4
+2
+0
+5 10 15 20 25 30 35 40
+Training Steps
+(b)Gemma2-9B
+ssoL
+noitaulavE
+Original
+Smoothed 0.9
+0.8
+0.7
+0.6
+0.5
+5 10 15 20 25 30 35 40
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL
+noitaulavE
+Original
+Smoothed
+(d)Vicuna-v1.5-7B
+Figure24:LossCurvesofLoRA(full)forLength-of-StayPredictiononMIMIC-IV.
+1.6
+1.4
+1.2
+1.0
+0.8
+0.6
+0.4
+0.2
+10 20 30 40 50 60 70 80
+Training Steps
+ssoL
+noitaulavE
+Original 5
+Smoothed
+4
+3
+2
+1
+0
+10 20 30 40 50 60 70 80
+Training Steps
+(a)Llama3-8B
+ssoL
+noitaulavE
+Original
+Smoothed 2.0
+1.5
+1.0
+0.5
+0.0
+10 20 30 40 50 60 70 80
+Training Steps
+(b)Gemma2-9B
+ssoL
+noitaulavE
+1.4 Original
+Smoothed 1.2
+1.0
+0.8
+0.6
+0.4
+0.2
+10 20 30 40 50 60 70 80
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL
+noitaulavE
+Original
+Smoothed
+(d)Vicuna-v1.5-7B
+Figure25:LossCurvesofLoRA(lastlayer)forLength-of-StayPredictiononMIMIC-IV.
+2.5
+2.0
+1.5
+1.0
+0.5
+10 20 30 40 50 60 70 80
+Training Steps
+ssoL
+noitaulavE
+Original 7
+Smoothed
+6
+5
+4
+3
+2
+1
+0
+10 20 30 40 50 60 70 80
+Training Steps
+(a)Llama3-8B
+ssoL
+noitaulavE
+Original 8
+Smoothed
+6
+4
+2
+0
+10 20 30 40 50 60 70 80
+Training Steps
+(b)Gemma2-9B
+ssoL
+noitaulavE
+Original 1.4
+Smoothed
+1.2
+1.0
+0.8
+0.6
+0.4
+10 20 30 40 50 60 70 80
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL
+noitaulavE
+Original
+Smoothed
+(d)Vicuna-v1.5-7B
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Figure26:LossCurvesofLoRA(full)forMortalityPredictiononMIMIC-IV.
+1.8
+1.6
+1.4
+1.2
+1.0
+0.8
+0.6
+0.4
+0.2
+2 5 8 10 12 15 18 20
+Training Steps
+ssoL
+noitaulavE
+Original 7
+Smoothed 6
+5
+4
+3
+2
+1
+0
+2 5 8 10 12 15 18 20
+Training Steps
+(a)Llama3-8B
+ssoL
+noitaulavE
+Original
+Smoothed 4
+3
+2
+1
+0
+2 5 8 10 12 15 18 20
+Training Steps
+(b)Gemma2-9B
+ssoL
+noitaulavE
+Original 0.8
+Smoothed
+0.7
+0.6
+0.5
+0.4
+0.3
+0.2
+2 5 8 10 12 15 18 20
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL
+noitaulavE
+Original
+Smoothed
+(d)Vicuna-v1.5-7B
+Figure27:LossCurvesofLoRA(lastlayer)forMortalityPredictiononMIMIC-IV.
+1.8
+1.6
+1.4
+1.2
+1.0
+0.8
+0.6
+0.4
+0.2
+2 5 8 10 12 15 18 20
+Training Steps
+ssoL
+noitaulavE
+7
+Original
+Smoothed
+6
+5
+4
+3
+2 5 8 10 12 15 18 20
+Training Steps
+(a)Llama3-8B
+ssoL
+noitaulavE
+Original
+Smoothed 4.0
+3.5
+3.0
+2.5
+2.0
+1.5
+1.0
+2 5 8 10 12 15 18 20
+Training Steps
+(b)Gemma2-9B
+ssoL
+noitaulavE
+Original
+Smoothed 0.78
+0.76
+0.74
+0.72
+0.70
+0.68
+0.66
+2 5 8 10 12 15 18 20
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL
+noitaulavE
+Original
+Smoothed
+(d)Vicuna-v1.5-7B
+Figure28:LossCurvesofLoRA(full)forReadmissionPredictiononMIMIC-IV.
+1.2
+1.0
+0.8
+0.6
+0.4
+20 40 60 80 100
+Training Steps
+ssoL
+noitaulavE
+Original
+Smoothed 3.0
+2.5
+2.0
+1.5
+1.0
+0.5
+20 40 60 80 100
+Training Steps
+(a)Llama3-8B
+ssoL
+noitaulavE
+Original
+Smoothed 0.7
+0.6
+0.5
+0.4
+0.3
+0.2
+20 40 60 80 100
+Training Steps
+(b)Gemma2-9B
+ssoL
+noitaulavE
+Original
+Smoothed 0.25
+0.24
+0.23
+0.22
+60 70 80 90 100
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL
+noitaulavE
+Original
+Smoothed
+(d)Vicuna-v1.5-7B
+Figure29:LossCurvesofLoRA(lastlayer)forReadmissionPredictiononMIMIC-IV.
+1.2
+1.0
+0.8
+0.6
+20 40 60 80 100
+Training Steps
+ssoL
+noitaulavE
+Original 7
+Smoothed 6
+5
+4
+3
+2
+1
+0
+20 40 60 80 100
+Training Steps
+(a)Llama3-8B
+ssoL
+noitaulavE
+Original 6
+Smoothed 5
+4
+3
+2
+1
+0
+20 40 60 80 100
+Training Steps
+(b)Gemma2-9B
+ssoL
+noitaulavE
+Original
+Smoothed 0.7
+0.6
+0.5
+0.4
+0.3
+20 40 60 80 100
+Training Steps
+(c)Mistral-v0.3-7B
+ssoL
+noitaulavE
+Original
+Smoothed
+(d)Vicuna-v1.5-7B
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+C MoreDetailsofFine-TuningDataConstructionforLLMs
+Table9:ExampleofFine-TuningDataConstructionforLength-of-StayPrediction
+Instruction:
+Giventhepatientinformation,predictthenumberofweeksofstayinhospital.
+Answer1ifnomorethanoneweek,
+Answer2ifmorethanoneweekbutnotmorethantwoweeks,
+Answer3ifmorethantwoweeks.
+Answerwithonlythenumber
+Input:
+Patientinformation:
+Age:78
+Gender:male
+Conditions:Coronaryatherosclerosisofnativecoronaryartery,Chronictotalocclusionofcoronaryartery,Malignantneoplasmofrectum,
+Personalhistoryofantineoplasticchemotherapy,Personboardingoralightingapedalcycleinjuredincollisionwithrailwaytrainorrailway
+vehicle
+Procedures:Percutaneoustransluminalcoronaryangioplasty[PTCA],Insertionofnon-drug-elutingcoronaryarterystent(s),Leftheart
+cardiaccatheterization,Coronaryarteriographyusingtwocatheters,Insertionoftwovascularstents,Procedureontwovessels
+UsingDrugs:otheranalgesicsandantipyretics,lipidmodifyingagents,plain,antithromboticagents,i.v.solutionadditives,antidepressants,
+potassium,viralvaccines,vasodilatorsusedincardiacdiseases,belladonnaandderivatives,plain
+Answer:
+Output:
+1
+Table10:ExampleofFine-TuningDataConstructionforMortalityPrediction
+Instruction:
+Giventhepatientinformation,predictthemortalityofthepatient.
+Answer1ifthepatientwilldie,answer0otherwise.
+Answerwithonlythenumber
+Input:
+Patientinformation:
+Age:64
+Gender:female
+Conditions: Osteoarthrosis, localized, not specified whether primary or secondary, lower leg, Other and unspecified angina pectoris,
+Unspecifiedessentialhypertension,Mitralvalvedisorders,Psoriaticarthropathy
+Procedures:Totalkneereplacement
+UsingDrugs:selectivecalciumchannelblockerswithmainlyvasculareffects,betablockingagents,lipidmodifyingagents,plain,vitamin
+aandd,incl.combinationsofthetwo,antihistaminesforsystemicuse,othernutrients,macrolides,lincosamidesandstreptogramins,
+anticholinergicagents,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),drugsforconstipation,opioids,antidepressants,
+otheranalgesicsandantipyretics,i.v.solutions,antivaricosetherapy,antiemeticsandantinauseants,antiinflammatoryandantirheumatic
+products,non-steroids,antacids,calcium,angiotensiniireceptorblockers(arbs),plain,antithromboticagents
+Willthepatientdiebecauseoftheabovesituation?
+Answer:
+Output:
+0
+Table11:ExampleofFine-TuningDataConstructionforReadmissionPrediction
+Instruction:
+Continuedonnextpage
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Table11–Continuedfrompreviouspage
+Giventhepatientinformation,predictthereadmissionofthepatient.
+Answer1ifthepatientwillbereadmittedtothehospitalwithintwoweeks,answer0otherwise.
+Answerwithonlythenumber
+Input:
+Patientinformation:
+Age:91
+Gender:female
+Conditions:Openwoundofforehead,withoutmentionofcomplication,Hyposmolalityand/orhyponatremia,Openwoundofknee,leg
+[exceptthigh],andankle,withoutmentionofcomplication,Contusionofthigh,Contusionofscapularregion,Openwoundofscalp,without
+mentionofcomplication,Unspecifiedessentialhypertension,Insomnia,unspecified,Unspecifieddeficiencyanemia,Acquiredabsenceof
+bothcervixanduterus,Acquiredabsenceofintestine(large)(small),Personalhistoryofmalignantmelanomaofskin,Fallfromother
+slipping,tripping,orstumbling
+Procedures:Closureofskinandsubcutaneoustissueofothersites
+UsingDrugs:selectivecalciumchannelblockerswithmainlyvasculareffects,vitaminaandd,incl.combinationsofthetwo,antidepressants,
+otheranalgesicsandantipyretics,betablockingagents,drugsforconstipation,antithromboticagents,antacids,calcium,i.v.solutionadditives
+Willthepatientbereadmittedtothehospitalwithintwoweeks?
+Answer:
+Output:
+0
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+D ExamplesofLLM-BasedClinicalPrediction
+D.1 Length-of-StayPrediction
+D.1.1 DirectlyPrompting.
+Table12:ExampleofLLMswithDirectlyPromptingforLength-of-StayPrediction.
+Input:
+Patientinformation:
+Age:62
+Gender:male
+Conditions:Streptococcalsepticemia,Pressureulcer,lowerback,Acuteosteomyelitis,pelvicregionandthigh,UnknownDiagnosis,Cocaine
+abuse,unspecified,Acutekidneyfailure,unspecified,Hemorrhagecomplicatingaprocedure,Hyperpotassemia,Chronicosteomyelitis,pelvic
+regionandthigh,Sepsis,Paraplegia,Unspecifiedessentialhypertension,Colostomystatus,Otherartificialopeningofurinarytractstatus,
+Anemiaofotherchronicdisease,Otheriatrogenichypotension,Candidiasisofotherurogenitalsites,Lateeffectsofinjurypurposelyinflicted
+byotherperson
+Procedures:Localexcisionoflesionortissueofbone,otherbones,Localexcisionoflesionortissueofbone,femur,Nonexcisionaldebridement
+ofwound,infectionorburn,Venouscatheterization,notelsewhereclassified,Transfusionofpackedcells
+UsingDrugs:anesthetics,general,i.v.solutionadditives,otherantibacterials,anteriorpituitarylobehormonesandanalogues,antithrombotic
+agents, other analgesics and antipyretics, drugs for constipation, drugs for peptic ulcer and gastro-oesophageal reflux disease (gord),
+antisepticsanddisinfectants,antiinfectivesandantiseptics,excl.combinationswithcorticosteroids,othernutrients,opioids,otherbeta-
+lactamantibacterials,othermineralsupplements,otherdiagnosticagents,antipsychotics,i.v.solutions,antivaricosetherapy,beta-lactam
+antibacterials,penicillins
+Predictthenumberofweeksofstayinhospital.
+Answer1ifnomorethanoneweek,
+Answer2ifmorethanoneweekbutnotmorethantwoweeks,
+Answer3ifmorethantwoweeks.
+Answerwithonlythenumber.Answer:
+OutputforLlama3-8B:
+3
+OutputforGemma2-9B:
+3
+OutputforMeditron-7B:
+3
+OutputforInternist-7B:
+3
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+D.1.2 Chain-of-ThoughtPrompting.
+Table13:ExampleofLLMswithChainofThoughtforLength-of-StayPrediction.
+Input:
+Patientinformation:
+Age:73
+Gender:female
+Conditions:Closedfractureofsurgicalneckofhumerus,Otheremphysema,Closedfractureofotherfacialbones,Closedfractureofmalar
+andmaxillarybones,Hematomacomplicatingaprocedure,Iatrogenicpulmonaryembolismandinfarction,Acuteposthemorrhagicanemia,
+Pneumonia,organismunspecified,Fallfromotherslipping,tripping,orstumbling,Diabetesmellituswithoutmentionofcomplication,type
+IIorunspecifiedtype,notstatedasuncontrolled,Otherspecifiedsurgicaloperationsandprocedurescausingabnormalpatientreaction,or
+latercomplication,withoutmentionofmisadventureattimeofoperation,Personalhistoryofotherdiseasesofcirculatorysystem,Other
+andunspecifiedhyperlipidemia,Unspecifiedessentialhypertension
+Procedures:Partialshoulderreplacement,Transfusionofpackedcells
+UsingDrugs:i.v.solutionadditives,opioids,selectivecalciumchannelblockerswithmainlyvasculareffects,betablockingagents,high-ceiling
+diuretics,antithromboticagents,lipidmodifyingagents,plain,insulinsandanalogues,bloodglucoseloweringdrugs,excl.insulins,other
+analgesicsandantipyretics,antiemeticsandantinauseants,i.v.solutions,antivaricosetherapy,otherbeta-lactamantibacterials,antipsychotics,
+anxiolytics,adrenergics,inhalants,otherdrugsforobstructiveairwaydiseases,inhalants,otherantibacterials,corticosteroidsforsystemic
+use,plain,otherdiagnosticagents,vitaminb12andfolicacid,vitaminb1,plainandincombinationwithvitaminb6andb12,othermineral
+supplements,quinoloneantibacterials,antidepressants,potassium,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),drugs
+forconstipation
+Pleaseprovideyourconcisereasoningstepsfortheprediction(nomorethan3steps),andfinallyanswer1ifthepatientwillstaynomore
+thanoneweek,answer2ifmorethanoneweekbutnotmorethantwoweeks,answer3ifmorethantwoweeks.
+OutputforLlama3-8B:
+Pleasenotethatthepatient’sconditionisquitecomplexandthepredictionmaynotbeaccurate.Thisisahypotheticalscenarioandnota
+realpatient.
+Answer:3
+Reasoningsteps:
+1.Thepatienthasaclosedfractureofthesurgicalneckofhumerus,whichisaseriousinjurythatrequiressurgicalintervention.This
+suggeststhatthepatientwillrequireasignificantamountofcareandtreatmentinthehospital.
+2.Thepatientalsohasanumberofotherconditions,includingpneumonia,acuteposthemorrhagicanemia,andiatrogenicpulmonaryem-
+bolismandinfarction,whichareallseriousandpotentiallylife-threatening.Thissuggeststhatthepatientwillrequireongoingmedical
+careandmonitoringinthehospital.
+3.Giventhecomplexityofthepatient’sconditionandtheneedforongoingmedicalcareandmonitoring,itislikelythatthepatientwill
+requiremorethantwoweeksofhospitalization.
+Note:Thisisahypotheticalscenarioandnotarealpatient.Theactuallengthofstaymayvarydependingonavarietyoffactors,including
+thepatient’sresponsetotreatment,theseverityoftheircondition,andtheavailabilityofhospitalresources.
+OutputforGemma2-9B:
+**Reasoning:**
+1.**SeverityofConditions:**Thepatienthasmultipleseriousconditionsincludingcongestiveheartfailure,mitralvalvedisorders,atrial
+fibrillation,chronickidneydisease,anddiabetes.Theserequiresignificantmedicalmanagement.
+2.**ComplexProcedures:**Thepatientunderwentmajorsurgerieslikemitralvalvereplacement,coronarybypass,andtransvenouslead
+insertion.Recoveryfromtheseprocedurestakesconsiderabletime.
+3.**Post-OperativeCare:**Thepatientreceivedmultipletransfusions,medicationsforvariousconditions,andlikelyrequiredintensive
+monitoringpost-surgery.Thisindicatesaprolongedhospitalstayforrecoveryandmanagement.
+**Answer:**3
+OutputforMeditron-7B:
+Continuedonnextpage
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Table13–continuedfrompreviouspage
+","##Prediction
+##Prediction
+##Prediction
+##Prediction
+##Prediction
+##Prediction
+##Prediction
+##Prediction
+OutputforInternist-7B:
+Reasoning:
+1.Analyzethepatient’sconditionsandprocedures:-Thepatienthasmultiplefracturesandinjuries,indicatingahighlikelihoodofapro-
+longedhospitalstay.-Thepatienthasahistoryofdiabetesandhyperlipidemia,whichmayrequireclosemonitoringandmanagement.-
+Thepatienthasundergoneapartialshoulderreplacement,whichisasurgicalprocedurethattypicallyrequiresalongerrecoveryperiod.
+2.Considerthepatient’smedicationsanddrughistory:-Thepatientistakingmultiplemedications,includingopioids,beta-blockers,and
+antithromboticagents.-Thesemedicationsmayrequireclosemonitoringandadjustmentduringthehospitalstay.
+3.Evaluatethepatient’soverallhealthandriskfactors:-Thepatienthasahistoryofdiabetesandhyperlipidemia,whichmayincreasethe
+riskofcomplicationsandprolongthehospitalstay.-Thepatienthasahistoryofotherdiseasesofthecirculatorysystem,whichmayalso
+contributetoalongerhospitalstay.
+Basedontheaboveanalysis,itislikelythatthepatientwillrequirealongerhospitalstay.Therefore,theansweris3,indicatingastay
+ofmorethantwoweeks.Itisimportanttonotethatthispredictionisbasedontheinformationprovidedandmayvarydependingon
+thespecificcircumstancesandprogressofthepatient’scondition.Regularmonitoringandassessmentbyhealthcareprofessionalswillbe
+necessarytodeterminetheactualdurationofthehospitalstay.
+Pleasenotethatthisisapredictionbasedonthegiveninformationandmaynotbeaccurateinallcases.Itisimportanttoconsiderindividual
+patientfactorsandconsultwithhealthcareprofessionalsforamoreaccurateassessment.
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+D.1.3 Self-ReflectionPrompting.
+Table14:ExampleofLLMswithSelfReflectionforLength-of-StayPrediction.
+Input:
+Patientinformation:
+Age:73
+Gender:female
+Conditions:Closedfractureofsurgicalneckofhumerus,Otheremphysema,Closedfractureofotherfacialbones,Closedfractureofmalar
+andmaxillarybones,Hematomacomplicatingaprocedure,Iatrogenicpulmonaryembolismandinfarction,Acuteposthemorrhagicanemia,
+Pneumonia,organismunspecified,Fallfromotherslipping,tripping,orstumbling,Diabetesmellituswithoutmentionofcomplication,type
+IIorunspecifiedtype,notstatedasuncontrolled,Otherspecifiedsurgicaloperationsandprocedurescausingabnormalpatientreaction,or
+latercomplication,withoutmentionofmisadventureattimeofoperation,Personalhistoryofotherdiseasesofcirculatorysystem,Other
+andunspecifiedhyperlipidemia,Unspecifiedessentialhypertension
+Procedures:Partialshoulderreplacement,Transfusionofpackedcells
+UsingDrugs:i.v.solutionadditives,opioids,selectivecalciumchannelblockerswithmainlyvasculareffects,betablockingagents,high-ceiling
+diuretics,antithromboticagents,lipidmodifyingagents,plain,insulinsandanalogues,bloodglucoseloweringdrugs,excl.insulins,other
+analgesicsandantipyretics,antiemeticsandantinauseants,i.v.solutions,antivaricosetherapy,otherbeta-lactamantibacterials,antipsychotics,
+anxiolytics,adrenergics,inhalants,otherdrugsforobstructiveairwaydiseases,inhalants,otherantibacterials,corticosteroidsforsystemic
+use,plain,otherdiagnosticagents,vitaminb12andfolicacid,vitaminb1,plainandincombinationwithvitaminb6andb12,othermineral
+supplements,quinoloneantibacterials,antidepressants,potassium,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),drugs
+forconstipation
+Answer1ifnomorethanoneweek,
+Answer2ifmorethanoneweekbutnotmorethantwoweeks,
+Answer3ifmorethantwoweeks.
+Firstanswerwithanumber.Thenconductaconcisereflection.Finallyoutputyouransweragainwithanumber.
+OutputforLlama3-8B:
+Answer:3
+Reflection:Thepatienthasacomplexmedicalhistorywithmultipleconditions,includingaclosedfractureofthesurgicalneckofhumerus,
+pneumonia,andiatrogenicpulmonaryembolism.Theyhaveundergoneapartialshoulderreplacementandhavereceivedmultiplemedica-
+tions.Giventheseverityoftheirconditionsandtheneedforongoingmedicalcare,itislikelythattheywillrequireaprolongedhospital
+stayofmorethantwoweeks.
+Answer:3
+“‘python
+......
+OutputforGemma2-9B:
+**Answer:**3
+**Reflection:**
+The patient presents with multiple severe injuries, including a closed fracture of the surgical neck of the humerus, facial bones, and a
+hematomacomplicatingaprocedure.Theseinjuriesnecessitatesurgicalintervention(partialshoulderreplacement)andextensivepost-op-
+erativecare.Thepatientalsohasahistoryofdiabetes,emphysema,andhypertension,whichcancomplicaterecovery.Thepresenceof
+pneumoniaandacuteposthemorrhagicanemiafurthersuggestsaprolongedhospitalstay.
+**Answer:**3
+OutputforMeditron-7B:
+Continuedonnextpage
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Table14–continuedfrompreviouspage
+Answer1
+Answer2
+Answer3
+Answer1
+Answer2
+Answer3
+Answer1
+Answer2
+Answer3
+Answer1
+Answer2
+Answer3
+Answer1
+Answer2
+Answer3
+OutputforInternist-7B:
+Reasoning:Topredictthenumberofweeksofstayinhospital,weneedtoanalyzethepatient’sconditions,procedures,andmedications.
+1. Conditions: The patient has multiple conditions, including a closed fracture of the surgical neck of the humerus, other emphysema,
+closedfracturesofotherfacialbones,closedfracturesofthemalarandmaxillarybones,hematomacomplicatingaprocedure,iatrogenic
+pulmonaryembolismandinfarction,acuteposthemorrhagicanemia,pneumonia,andfallfromotherslipping,tripping,orstumbling.These
+conditionsindicatethatthepatientmayrequirealongerstayinthehospital.
+2.Procedures:Thepatienthasundergoneapartialshoulderreplacementandatransfusionofpackedcells.Theseproceduresmayrequire
+alongerrecoveryperiodandmaycontributetoalongerhospitalstay.
+3.Medications:Thepatientisusingvariousmedications,includingi.v.solutionadditives,opioids,selectivecalciumchannelblockerswith
+mainlyvasculareffects,betablockingagents,high-ceilingdiuretics,antithromboticagents,lipidmodifyingagents,insulinsandanalogues,
+bloodglucoseloweringdrugs,otheranalgesicsandantipyretics,antiemeticsandantinauseants,i.v.solutions,antivaricosetherapy,other
+beta-lactamantibacterials,antipsychotics,anxiolytics,adrenergics,inhalants,otherdrugsforobstructiveairwaydiseases,inhalants,other
+antibacterials,corticosteroidsforsystemicuse,plain,otherdiagnosticagents,vitaminb12andfolicacid,vitaminb1,plainandincombina-
+tionwithvitaminb6andb12,othermineralsupplements,quinoloneantibacterials,antidepressants,potassium,drugsforpepticulcerand
+gastro-oesophagealrefluxdisease(gord),drugsforconstipation.Thesemedicationsmayalsocontributetoalongerhospitalstay.
+Basedonthepatient’sconditions,procedures,andmedications,itislikelythatthepatientwillrequirealongerstayinthehospital.Therefore,
+thecorrectansweris3,indicatingastayofmore......
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+D.1.4 Role-PlayingPrompting.
+Table15:ExampleofLLMswithRole-PlayingforLength-of-StayPrediction.
+Input:
+Imaginethatyouareadoctor.Today,you’reseeingapatientwiththefollowingprofile:
+Patientinformation:
+Age:62
+Gender:male
+Conditions:Streptococcalsepticemia,Pressureulcer,lowerback,Acuteosteomyelitis,pelvicregionandthigh,UnknownDiagnosis,Cocaine
+abuse,unspecified,Acutekidneyfailure,unspecified,Hemorrhagecomplicatingaprocedure,Hyperpotassemia,Chronicosteomyelitis,pelvic
+regionandthigh,Sepsis,Paraplegia,Unspecifiedessentialhypertension,Colostomystatus,Otherartificialopeningofurinarytractstatus,
+Anemiaofotherchronicdisease,Otheriatrogenichypotension,Candidiasisofotherurogenitalsites,Lateeffectsofinjurypurposelyinflicted
+byotherperson
+Procedures:Localexcisionoflesionortissueofbone,otherbones,Localexcisionoflesionortissueofbone,femur,Nonexcisionaldebridement
+ofwound,infectionorburn,Venouscatheterization,notelsewhereclassified,Transfusionofpackedcells
+UsingDrugs:anesthetics,general,i.v.solutionadditives,otherantibacterials,anteriorpituitarylobehormonesandanalogues,antithrombotic
+agents, other analgesics and antipyretics, drugs for constipation, drugs for peptic ulcer and gastro-oesophageal reflux disease (gord),
+antisepticsanddisinfectants,antiinfectivesandantiseptics,excl.combinationswithcorticosteroids,othernutrients,opioids,otherbeta-
+lactamantibacterials,othermineralsupplements,otherdiagnosticagents,antipsychotics,i.v.solutions,antivaricosetherapy,beta-lactam
+antibacterials,penicillins
+Predictthenumberofweeksofstayinhospital.
+Answer1ifnomorethanoneweek,
+Answer2ifmorethanoneweekbutnotmorethantwoweeks,
+Answer3ifmorethantwoweeks.
+Answerwithonlythenumber.Answer:
+OutputforLlama3-8B:
+3
+OutputforGemma2-9B:
+3
+OutputforMeditron-7B:
+3
+OutputforInternist-7B:
+3
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+D.1.5 In-ContextLearning.
+Table16:ExampleofLLMswithInContextLearningforLength-of-StayPrediction.
+Input:
+Patientinformation:
+Age:74
+Gender:male
+Conditions:Subendocardialinfarction,initialepisodeofcare,IntestinalinfectionduetoClostridiumdifficile,Congestiveheartfailure,un-
+specified,Coronaryatherosclerosisofnativecoronaryartery,Unspecifiedessentialhypertension,Purehypercholesterolemia,Abdominal
+aneurysmwithoutmentionofrupture,Percutaneoustransluminalcoronaryangioplastystatus,Personalhistoryofmalignantneoplasmof
+largeintestine
+Procedures:UnknownProcedure,Combinedrightandleftheartcardiaccatheterization,Coronaryarteriographyusingtwocatheters
+UsingDrugs:i.v.solutionadditives,cardiacstimulantsexcl.cardiacglycosides,othernutrients,antithromboticagents,potassium,expec-
+torants,excl.combinationswithcoughsuppressants,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),hypnoticsand
+sedatives,otheranalgesicsandantipyretics,opioids,lipidmodifyingagents,plain,belladonnaandderivatives,plain,othermineralsupple-
+ments,otherdiagnosticagents,agentsagainstamoebiasisandotherprotozoaldiseases,anxiolytics,quinoloneantibacterials,aceinhibitors,
+plain,betablockingagents,otherantibacterials
+Predictthenumberofweeksofstayinhospital.
+Answer1ifnomorethanone,
+Answer2ifmorethanoneweekbutnotmorethantwoweeks,
+Answer3ifmorethantwoweeks.
+Answerwithonlythenumber.Answer:1
+Patientinformation:
+Age:36
+Gender:male
+Conditions:Thoracicaneurysmwithoutmentionofrupture,Aorticvalvedisorders,Congenitalinsufficiencyofaorticvalve,Cardiaccom-
+plications,notelsewhereclassified,Otherspecifiedcardiacdysrhythmias,Unspecifiedessentialhypertension
+Procedures:Openandotherreplacementofaorticvalve,Resectionofvesselwithreplacement,thoracicvessels,Otheroperationsonvessels
+ofheart,Extracorporealcirculationauxiliarytoopenheartsurgery
+UsingDrugs:drugsforfunctionalgastrointestinaldisorders,antiarrhythmics,classiandiii,drugsforconstipation,drugsforpepticulcerand
+gastro-oesophagealrefluxdisease(gord),otheranalgesicsandantipyretics,antiinflammatoryandantirheumaticproducts,non-steroids,opi-
+oids,othernutrients,anesthetics,general,antiinfectivesandantiseptics,excl.combinationswithcorticosteroids,calcium,arteriolarsmooth
+muscle,agentsactingon,cardiacstimulantsexcl.cardiacglycosides,i.v.solutionadditives,otherbeta-lactamantibacterials,insulinsand
+analogues,propulsives,hypnoticsandsedatives,othermineralsupplements,otherdiagnosticagents,betablockingagents,high-ceiling
+diuretics,potassium,antithromboticagents,antacids,urologicals,throatpreparations,aceinhibitors,plain,angiotensiniireceptorblockers
+(arbs),plain
+Predictthenumberofweeksofstayinhospital.
+Answer1ifnomorethanoneweek,
+Answer2ifmorethanoneweekbutnotmorethantwoweeks,
+Answer3ifmorethantwoweeks.
+Answerwithonlythenumber.Answer:2
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Table17:ExampleofLLMswithInContextLearningforLength-of-StayPrediction(Cont.).
+Input(Cont.):
+Patientinformation:
+Age:73
+Gender:male
+Conditions:Closedfractureofshaftoffemur,Acuteposthemorrhagicanemia,Subendocardialinfarction,initialepisodeofcare,Otherpost-
+operativeinfection,Unspecifiedsepticemia,Severesepsis,Septicshock,UnknownDiagnosis,Cardiogenicshock,Cardiaccomplications,
+notelsewhereclassified,Paroxysmalventriculartachycardia,Ventricularfibrillation,Congestiveheartfailure,unspecified,Atrialfibrilla-
+tion,UnknownDiagnosis,Pneumonia,organismunspecified,Unspecifiedfall,Coronaryatherosclerosisofnativecoronaryartery,Cardiac
+pacemakerinsitu
+Procedures:Openreductionoffracturewithinternalfixation,femur,Closedreductionoffracturewithoutinternalfixation,femur,Left
+heartcardiaccatheterization,Coronaryarteriographyusingtwocatheters,Continuousinvasivemechanicalventilationfor96consecutive
+hoursormore,Venouscatheterization,notelsewhereclassified,Enteralinfusionofconcentratednutritionalsubstances
+UsingDrugs:i.v.solutionadditives,opioids,otheranalgesicsandantipyretics,betablockingagents,selectivecalciumchannelblockers
+with direct cardiac effects, antithrombotic agents, vasodilators used in cardiac diseases, agents for treatment of hemorrhoids and anal
+fissuresfortopicaluse,angiotensiniireceptorblockers(arbs),plain,antidepressants,drugsforconstipation,drugsforpepticulcerandgas-
+tro-oesophagealrefluxdisease(gord),anti-dementiadrugs,lipidmodifyingagents,plain,antipsychotics,antipruritics,incl.antihistamines,
+anesthetics,etc.,anxiolytics,antiarrhythmics,classiandiii,quinoloneantibacterials,antacids,urologicals,expectorants,excl.combinations
+withcoughsuppressants,antiinfectivesandantiseptics,excl.combinationswithcorticosteroids,calcium,otherbeta-lactamantibacterials,
+i.v.solutions,antivaricosetherapy,othermineralsupplements,otherdiagnosticagents,high-ceilingdiuretics,anesthetics,general,muscle
+relaxants,peripherallyactingagents,otherantibacterials,othernutrients,hypnoticsandsedatives,beta-lactamantibacterials,penicillins,
+cardiacstimulantsexcl.cardiacglycosides,anteriorpituitarylobehormonesandanalogues,otherdrugsforobstructiveairwaydiseases,
+inhalants,adrenergics,inhalants,potassium,antifungalsfortopicaluse,aceinhibitors,plain
+Predictthenumberofweeksofstayinhospital.
+Answer1ifnomorethanoneweek,
+Answer2ifmorethanoneweekbutnotmorethantwoweeks,
+Answer3ifmorethantwoweeks.
+Answerwithonlythenumber.Answer:3
+Patientinformation:
+Age:73
+Gender:female
+Conditions:Closedfractureofsurgicalneckofhumerus,Otheremphysema,Closedfractureofotherfacialbones,Closedfractureofmalar
+andmaxillarybones,Hematomacomplicatingaprocedure,Iatrogenicpulmonaryembolismandinfarction,Acuteposthemorrhagicanemia,
+Pneumonia,organismunspecified,Fallfromotherslipping,tripping,orstumbling,Diabetesmellituswithoutmentionofcomplication,type
+IIorunspecifiedtype,notstatedasuncontrolled,Otherspecifiedsurgicaloperationsandprocedurescausingabnormalpatientreaction,or
+latercomplication,withoutmentionofmisadventureattimeofoperation,Personalhistoryofotherdiseasesofcirculatorysystem,Other
+andunspecifiedhyperlipidemia,Unspecifiedessentialhypertension
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Table18:ExampleofLLMswithInContextLearningforLength-of-StayPrediction(Cont.).
+Input(Cont.):
+Procedures:Partialshoulderreplacement,Transfusionofpackedcells
+UsingDrugs:i.v.solutionadditives,opioids,selectivecalciumchannelblockerswithmainlyvasculareffects,betablockingagents,high-ceiling
+diuretics,antithromboticagents,lipidmodifyingagents,plain,insulinsandanalogues,bloodglucoseloweringdrugs,excl.insulins,other
+analgesicsandantipyretics,antiemeticsandantinauseants,i.v.solutions,antivaricosetherapy,otherbeta-lactamantibacterials,antipsychotics,
+anxiolytics,adrenergics,inhalants,otherdrugsforobstructiveairwaydiseases,inhalants,otherantibacterials,corticosteroidsforsystemic
+use,plain,otherdiagnosticagents,vitaminb12andfolicacid,vitaminb1,plainandincombinationwithvitaminb6andb12,othermineral
+supplements,quinoloneantibacterials,antidepressants,potassium,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),drugs
+forconstipation
+Predictthenumberofweeksofstayinhospital.
+Answer1ifnomorethanoneweek,
+Answer2ifmorethanoneweekbutnotmorethantwoweeks,
+Answer3ifmorethantwoweeks.
+Answerwithonlythenumber.Answer:
+OutputforLlama3-8B:
+2
+OutputforGemma2-9B:
+2
+OutputforMeditron-7B:
+2
+OutputforInternist-7B:
+1
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+D.2 MortalityPrediction
+D.2.1 DirectlyPrompting.
+Table19:ExampleofLLMswithDirectlyPromptingforMortalityPrediction.
+Input:
+Patientinformation:
+Age:73
+Gender:female
+Conditions:Closedfractureofsurgicalneckofhumerus,Otheremphysema,Closedfractureofotherfacialbones,Closedfractureofmalar
+andmaxillarybones,Hematomacomplicatingaprocedure,Iatrogenicpulmonaryembolismandinfarction,Acuteposthemorrhagicanemia,
+Pneumonia,organismunspecified,Fallfromotherslipping,tripping,orstumbling,Diabetesmellituswithoutmentionofcomplication,type
+IIorunspecifiedtype,notstatedasuncontrolled,Otherspecifiedsurgicaloperationsandprocedurescausingabnormalpatientreaction,or
+latercomplication,withoutmentionofmisadventureattimeofoperation,Personalhistoryofotherdiseasesofcirculatorysystem,Other
+andunspecifiedhyperlipidemia,Unspecifiedessentialhypertension
+Procedures:Partialshoulderreplacement,Transfusionofpackedcells
+UsingDrugs:i.v.solutionadditives,opioids,selectivecalciumchannelblockerswithmainlyvasculareffects,betablockingagents,high-ceiling
+diuretics,antithromboticagents,lipidmodifyingagents,plain,insulinsandanalogues,bloodglucoseloweringdrugs,excl.insulins,other
+analgesicsandantipyretics,antiemeticsandantinauseants,i.v.solutions,antivaricosetherapy,otherbeta-lactamantibacterials,antipsychotics,
+anxiolytics,adrenergics,inhalants,otherdrugsforobstructiveairwaydiseases,inhalants,otherantibacterials,corticosteroidsforsystemic
+use,plain,otherdiagnosticagents,vitaminb12andfolicacid,vitaminb1,plainandincombinationwithvitaminb6andb12,othermineral
+supplements,quinoloneantibacterials,antidepressants,potassium,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),drugs
+forconstipation
+Willthepatientdiebecauseoftheabovesituation?
+Answer1ifyes,0ifno.Answerwithonlythenumber.
+Answer:
+OutputforLlama3-8B:
+1
+OutputforGemma2-9B:
+0
+OutputforMeditron-7B:
+1
+OutputforInternist-7B:
+0
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+D.2.2 Chain-of-ThoughtPrompting.
+Table20:ExampleofLLMswithChainofThoughtforLength-of-StayPrediction.
+Input:
+Patientinformation:
+Age:61
+Gender:male
+Conditions:Unspecifiedsepticemia,Acutepancreatitis,Alcoholabuse,unspecified,Acutekidneyfailure,unspecified,Acuteandsubacute
+necrosisofliver,Acidosis,Defibrinationsyndrome,Shock,unspecified,UnknownDiagnosis,Unspecifiedprotein-caloriemalnutrition,Acute
+respiratoryfailure,Severesepsis,Anemia,unspecified,Acutealcoholichepatitis,Personalhistoryofnoncompliancewithmedicaltreatment,
+presentinghazardstohealth,Diabetesmellituswithoutmentionofcomplication,typeIIorunspecifiedtype,notstatedasuncontrolled,
+Long-term(current)useofinsulin,Abdominalpain,otherspecifiedsite
+Procedures: Continuous invasive mechanical ventilation for less than 96 consecutive hours, Insertion of endotracheal tube, Arterial
+catheterization,Venouscatheterization,notelsewhereclassified,Transfusionofpackedcells
+UsingDrugs:insulinsandanalogues,othernutrients,i.v.solutionadditives,otherbeta-lactamantibacterials,anxiolytics,anteriorpituitary
+lobehormonesandanalogues,quinoloneantibacterials,otherantibacterials,vitaminb1,plainandincombinationwithvitaminb6andb12,
+otherdiagnosticagents,vitaminb12andfolicacid,vitaminkandotherhemostatics,othermineralsupplements,beta-lactamantibacterials,
+penicillins,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),hypnoticsandsedatives,anesthetics,general,posterior
+pituitarylobehormones,calcium,cardiacstimulantsexcl.cardiacglycosides
+Willthepatientdiebecauseoftheabovesituation?
+Pleaseprovideyourconcisereasoningstepsfortheprediction(nomorethan3steps),andfinallyanswer1ifthepatientwilldieand0
+otherwise."
+Pleaseprovideyourconcisereasoningstepsfortheprediction(nomorethan3steps),andfinallyanswer1ifthepatientwilldieand0
+otherwise
+OutputforLlama3-8B:
+Hereisthereasoningsteps:
+Step1:Thepatienthasseveresepsis,acutekidneyfailure,andliverfailure,whicharealllife-threateningconditions.
+Step2:Thepatientalsohasahistoryofnon-compliancewithmedicaltreatment,whichmayworsenthepatient’scondition.
+Step3:Giventheseverityofthepatient’sconditionsandthepotentialfornon-compliancewithtreatment,itislikelythatthepatientwill
+die.
+Answer:1
+OutputforGemma2-9B:
+**Reasoning:**
+1. **Severe Sepsis and Multi-Organ Failure:** The patient presents with severe sepsis, a life-threatening condition, and multiple organ
+failures(pancreas,liver,kidneys,respiratorysystem).
+2.**ComplicatingFactors:**Alcoholabuse,diabetes,andmalnutritionfurtherweakenthepatient’simmunesystemandabilitytofight
+infection.
+3.**AggressiveTreatment:**Thepatientisreceivingintensivecareinterventions(ventilation,transfusions,multiplemedications),indicat-
+ingacriticalconditionrequiringurgentmedicalattention.
+**Answer:**1
+**Disclaimer:**IamanAIchatbotandcannotprovidemedicaladvice.Thispredictionisbasedontheinformationprovidedandshouldnot
+beconsideredadefinitiveprognosis.Thepatient’sactualoutcomedependsonvariousfactorsandindividualmedicalmanagement.
+OutputforMeditron-7B:
+Continuedonnextpage
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Table20–continuedfrompreviouspage
+##1.Thepatientis83yearsold.
+##2.Thepatienthaspneumonia.
+##3.Thepatienthasorganismunspecified.
+##4.Thepatienthaspostinflammatorypulmonaryfibrosis.
+##5.Thepatienthasatrialfibrillation.
+##6.Thepatienthascongestiveheartfailure,unspecified.
+##7.Thepatienthasacuterespiratoryfailure.
+##8.Thepatienthascoronaryatherosclerosisofnativecoronaryartery.
+##9.Thepatienthasesophagealreflux.
+##10.Thepatientisusingmacrolides,lincosamidesandstreptogramins.
+##11.Thepatientisusingotherbeta-lactamantibacterials.
+##12.Thepatientisusingexpectorants,excl.combinationswithcoughsuppressants.
+OutputforInternist-7B:
+Reasoning:
+1.Assessthepatient’soverallcondition:Thepatienthasmultiplecomorbidities,includingsepticemia,acutepancreatitis,alcoholabuse,
+acutekidneyfailure,acuteandsubacutenecrosisofliver,acidosis,defibrinationsyndrome,shock,unspecified,unknowndiagnosis,unspec-
+ifiedprotein-caloriemalnutrition,acuterespiratoryfailure,severesepsis,anemia,unspecified,acutealcoholichepatitis,personalhistory
+of noncompliance with medical treatment, presenting hazards to health, diabetes mellitus without mention of complication, type II or
+unspecifiedtype,notstatedasuncontrolled,long-term(current)useofinsulin,andabdominalpain.
+2.Considerthepatient’smedicalhistoryandcurrentcondition:Thepatienthasahistoryofnoncompliancewithmedicaltreatment,present-
+inghazardstohealth,andlong-termuseofinsulin.Thepatientalsohasmultiplecomorbidities,includingsepticemia,acutepancreatitis,
+alcoholabuse,acutekidneyfailure,acuteandsubacutenecrosisofliver,acidosis,defibrinationsyndrome,shock,unspecified,unknown
+diagnosis,unspecifiedprotein-caloriemalnutrition,acuterespiratoryfailure,severesepsis,anemia,unspecified,acutealcoholichepatitis,
+diabetesmellituswithoutmentionofcomplication,typeIIorunspecifiedtype,notstatedasuncontrolled,andabdominalpain.
+3.Evaluatethepatient’scurrenttreatmentandprocedures:Thepatienthasundergonecontinuousinvasivemechanicalventilationfor
+lessthan96consecutivehours,insertionofanendotrachealtube,arterialcatheterization,venouscatheterization,notelsewhereclassified,
+transfusionofpackedcells,andhasbeenusingvariousmedications,includinginsulinsandanalogues,othernutrients,i.v.solutionadditives,
+otherbeta-lactamantibacterials,anxiolytics,anteriorpituitarylobehormonesandanalogues,quinoloneantibacterials,otherantibacterials,
+vitaminb1,plainandincombinationwithvitaminb.....
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+D.2.3 Self-ReflectionPrompting.
+Table21:ExampleofLLMswithSelfReflectionforMortalityPrediction.
+Input:
+Patientinformation:
+Age:61
+Gender:male
+Conditions:Unspecifiedsepticemia,Acutepancreatitis,Alcoholabuse,unspecified,Acutekidneyfailure,unspecified,Acuteandsubacute
+necrosisofliver,Acidosis,Defibrinationsyndrome,Shock,unspecified,UnknownDiagnosis,Unspecifiedprotein-caloriemalnutrition,Acute
+respiratoryfailure,Severesepsis,Anemia,unspecified,Acutealcoholichepatitis,Personalhistoryofnoncompliancewithmedicaltreatment,
+presentinghazardstohealth,Diabetesmellituswithoutmentionofcomplication,typeIIorunspecifiedtype,notstatedasuncontrolled,
+Long-term(current)useofinsulin,Abdominalpain,otherspecifiedsite
+Procedures: Continuous invasive mechanical ventilation for less than 96 consecutive hours, Insertion of endotracheal tube, Arterial
+catheterization,Venouscatheterization,notelsewhereclassified,Transfusionofpackedcells
+UsingDrugs:insulinsandanalogues,othernutrients,i.v.solutionadditives,otherbeta-lactamantibacterials,anxiolytics,anteriorpituitary
+lobehormonesandanalogues,quinoloneantibacterials,otherantibacterials,vitaminb1,plainandincombinationwithvitaminb6andb12,
+otherdiagnosticagents,vitaminb12andfolicacid,vitaminkandotherhemostatics,othermineralsupplements,beta-lactamantibacterials,
+penicillins,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),hypnoticsandsedatives,anesthetics,general,posterior
+pituitarylobehormones,calcium,cardiacstimulantsexcl.cardiacglycosides
+Willthepatientdiebecauseoftheabovesituation?
+Answer1ifyes,0ifno.
+Firstanswerwithanumber.Thenconductaconcisereflection.Finallyoutputyouransweragainwithanumber.
+OutputforLlama3-8B:
+Answer:1
+Reflection:Thepatienthasamultitudeofsevereconditions,includingsepticemia,acutepancreatitis,andacutekidneyfailure,whichare
+alllife-threatening.Additionally,thepatienthasahistoryofnoncompliancewithmedicaltreatment,whichmayhavecontributedtothe
+severityoftheircondition.Thepatientisalsoreceivingmultiplemedications,includingantibiotics,insulin,andothertreatments,which
+maybehelpingtomanagetheircondition.However,thepatient’soverallprognosisispoor,anditislikelythattheywilldieduetothe
+severityoftheircondition.
+Answer:1
+“‘python
+#Definethepatientinformationasadictionary
+patient_info={
+""age"":61,
+......
+OutputforGemma2-9B:
+0
+Itisimpossibletodeterminewithcertaintywhetherapatientwilldiebasedsolelyontheprovidedinformation.Whilethepatientpresents
+withamultitudeofsevereandlife-threateningconditions,includingsepticemia,pancreatitis,kidneyfailure,livernecrosis,andshock,the
+courseoftheseconditionsandtheeffectivenessoftreatmentarecrucialfactors.Thepatient’sage,medicalhistory,andresponsetoin-
+terventions all play a role in the prognosis. A definitive answer requires a comprehensive medical evaluation and ongoing monitoring.
+0
+OutputforMeditron-7B:
+Continuedonnextpage
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Table21–continuedfrompreviouspage
+##1
+##2
+##3
+##4
+##5
+##6
+##7
+##8
+##9
+##10
+##11
+##12
+##13
+##14
+OutputforInternist-7B:
+Reasoning:Thepatientinthisscenariohasmultiplemedicalconditionsandhasundergoneseveralprocedures.Thequestionasksifthe
+patientwilldiebecauseofthesefactors.
+Todeterminetheanswer,weneedtoconsiderthepatient’smedicalhistory,currentconditions,andtheprocedurestheyhaveundergone.
+Thepatienthasahistoryofalcoholabuse,acutepancreatitis,acutekidneyfailure,acuteandsubacutenecrosisoftheliver,acidosis,defibri-
+nationsyndrome,shock,unspecifiedprotein-caloriemalnutrition,acuterespiratoryfailure,severesepsis,anemia,acutealcoholichepatitis,
+andapersonalhistoryofnoncompliancewithmedicaltreatment.
+Thepatienthasalsoundergoneseveralprocedures,includingcontinuousinvasivemechanicalventilationforlessthan96consecutivehours,
+insertionofanendotrachealtube,arterialcatheterization,venouscatheterization,andtransfusionofpackedcells.
+Giventhepatient’smultiplemedicalconditionsandtheprocedurestheyhaveundergone,itislikelythatthepatient’soverallhealthis
+compromised.Thecombinationofthesefactorsincreasestheriskofcomplicationsandpotentiallydeath.
+Therefore,theansweris1,indicatingthatthepatientmaydieduetotheabovesituation.
+Reflectingontheanswer,itisimportanttoconsiderthepatient’smedicalhistory,currentconditions,andtheprocedurestheyhaveunder-
+gone.Thecombinationofthesefactorsincreasestheriskofcomplicationsandpotentiallydeath.Itiscrucialtoprovideappropriatemedical
+careandsupporttothepatienttoimprovetheirchancesofsurvival.
+Outputtingtheansweragainwithanumber,theanswerisstill1,indicatingthatthepatientmaydieduetotheabovesituation.
+Insummary,basedonthepatient’smedicalhistory,currentconditions,andtheprocedurestheyhaveundergone,thereisahighriskof
+complicationsandpotentiallydeath.Itisimportanttoprovideappropriatemedicalcareandsupporttothepatienttoimprovetheirchances
+ofsurvival.Theansweris1.
+Note:Itisimportanttoconsiderthepatient’soverallhealthandmedicalhistorywhendeterminingthelikelihoodofdeath.Thisansweris
+basedontheinformationprovidedinthescenarioandmayvaryinreal-lifesituations.Alwaysconsultwithahealthcareprofessionalfor
+accuratemedical......
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+D.2.4 Role-PlayingPrompting.
+Table22:ExampleofLLMswithRole-PlayingforMortalityPrediction.
+Input:
+Imaginethatyouareadoctor.Today,you’reseeingapatientwiththefollowingprofile:
+Patientinformation:
+Age:73
+Gender:female
+Conditions:Closedfractureofsurgicalneckofhumerus,Otheremphysema,Closedfractureofotherfacialbones,Closedfractureofmalar
+andmaxillarybones,Hematomacomplicatingaprocedure,Iatrogenicpulmonaryembolismandinfarction,Acuteposthemorrhagicanemia,
+Pneumonia,organismunspecified,Fallfromotherslipping,tripping,orstumbling,Diabetesmellituswithoutmentionofcomplication,type
+IIorunspecifiedtype,notstatedasuncontrolled,Otherspecifiedsurgicaloperationsandprocedurescausingabnormalpatientreaction,or
+latercomplication,withoutmentionofmisadventureattimeofoperation,Personalhistoryofotherdiseasesofcirculatorysystem,Other
+andunspecifiedhyperlipidemia,Unspecifiedessentialhypertension
+Procedures:Partialshoulderreplacement,Transfusionofpackedcells
+UsingDrugs:i.v.solutionadditives,opioids,selectivecalciumchannelblockerswithmainlyvasculareffects,betablockingagents,high-ceiling
+diuretics,antithromboticagents,lipidmodifyingagents,plain,insulinsandanalogues,bloodglucoseloweringdrugs,excl.insulins,other
+analgesicsandantipyretics,antiemeticsandantinauseants,i.v.solutions,antivaricosetherapy,otherbeta-lactamantibacterials,antipsychotics,
+anxiolytics,adrenergics,inhalants,otherdrugsforobstructiveairwaydiseases,inhalants,otherantibacterials,corticosteroidsforsystemic
+use,plain,otherdiagnosticagents,vitaminb12andfolicacid,vitaminb1,plainandincombinationwithvitaminb6andb12,othermineral
+supplements,quinoloneantibacterials,antidepressants,potassium,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),drugs
+forconstipation
+Willthepatientdiebecauseoftheabovesituation?
+Answer1ifyes,0ifno.Answerwithonlythenumber.
+Answer:
+OutputforLlama3-8B:
+1
+OutputforGemma2-9B:
+1
+OutputforMeditron-7B:
+1
+OutputforInternist-7B:
+1
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+D.2.5 In-ContextLearning.
+Table23:ExampleofLLMswithInContextLearningforMortalityPrediction.
+Input:
+Patientinformation:
+Age:43
+Gender:female
+Conditions:Coronaryatherosclerosisofnativecoronaryartery,Intermediatecoronarysyndrome,Diabetesmellituswithoutmentionof
+complication,typeI[juveniletype],notstatedasuncontrolled,Unspecifiedessentialhypertension,Purehypercholesterolemia,Tobacco
+usedisorder
+Procedures:(Aorto)coronarybypassoftwocoronaryarteries,Leftheartcardiaccatheterization,Extracorporealcirculationauxiliarytoopen
+heartsurgery,Coronaryarteriographyusingtwocatheters,Angiocardiographyofleftheartstructures
+Using Drugs: other analgesics and antipyretics, antipsychotics, vasodilators used in cardiac diseases, antacids, urologicals, anxiolytics,
+antidepressants, potassium, iron preparations, lipid modifying agents, plain, beta blocking agents, drugs for peptic ulcer and gastro-oe-
+sophagealrefluxdisease(gord),dopaminergicagents,thyroidpreparations,opioids,othernutrients,cardiacstimulantsexcl.cardiacglyco-
+sides,drugsforconstipation,i.v.solutionadditives,calcium,propulsives,antiinflammatoryandantirheumaticproducts,non-steroids,other
+antibacterials,high-ceilingdiuretics,antithromboticagents,otherbeta-lactamantibacterials,othermineralsupplementsWillthepatient
+diebecauseoftheabovesituation?
+Answer1ifyes,0ifno.Answerwithonlythenumber.
+Answer:0
+Patientinformation:
+Age:86
+Gender:male
+Conditions:Intracerebralhemorrhage,Pneumonitisduetoinhalationoffoodorvomitus,Unspecifiedessentialhypertension,Aortocoronary
+bypassstatus,Coronaryatherosclerosisofunspecifiedtypeofvessel,nativeorgraft
+Procedures:Continuousinvasivemechanicalventilationforlessthan96consecutivehours
+UsingDrugs:betablockingagents,vitaminb1,plainandincombinationwithvitaminb6andb12,i.v.solutionadditives,antiepileptics,
+quinoloneantibacterials,otherantibacterials,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),othermineralsupple-
+ments,otherdiagnosticagents,anxiolytics,anesthetics,general,opioids,antiemeticsandantinauseants,hypnoticsandsedatives
+Willthepatientdiebecauseoftheabovesituation?
+Answer1ifyes,0ifno.Answerwithonlythenumber.
+Answer:1
+Patientinformation:
+Age:73
+Gender:female
+Conditions:Closedfractureofsurgicalneckofhumerus,Otheremphysema,Closedfractureofotherfacialbones,Closedfractureofmalar
+andmaxillarybones,Hematomacomplicatingaprocedure,Iatrogenicpulmonaryembolismandinfarction,Acuteposthemorrhagicanemia,
+Pneumonia,organismunspecified,Fallfromotherslipping,tripping,orstumbling,Diabetesmellituswithoutmentionofcomplication,type
+IIorunspecifiedtype,notstatedasuncontrolled,Otherspecifiedsurgicaloperationsandprocedurescausingabnormalpatientreaction,or
+latercomplication,withoutmentionofmisadventureattimeofoperation,Personalhistoryofotherdiseasesofcirculatorysystem,Other
+andunspecifiedhyperlipidemia,Unspecifiedessentialhypertension
+Procedures:Partialshoulderreplacement,Transfusionofpackedcells
+UsingDrugs:i.v.solutionadditives,opioids,selectivecalciumchannelblockerswithmainlyvasculareffects,betablockingagents,high-ceiling
+diuretics,antithromboticagents,lipidmodifyingagents,plain,insulinsandanalogues,bloodglucoseloweringdrugs,excl.insulins,other
+analgesicsandantipyretics,antiemeticsandantinauseants,i.v.solutions,antivaricosetherapy,otherbeta-lactamantibacterials,antipsychotics,
+anxiolytics,adrenergics,inhalants,otherdrugsforobstructiveairwaydiseases,inhalants,otherantibacterials,corticosteroidsforsystemic
+use,plain,otherdiagnosticagents,vitaminb12andfolicacid,vitaminb1,plainandincombinationwithvitaminb6andb12,othermineral
+supplements,quinoloneantibacterials,antidepressants,potassium,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),drugs
+forconstipation
+Willthepatientdiebecauseoftheabovesituation?
+Answer1ifyes,0ifno.Answerwithonlythenumber.
+Answer:
+Continuedonnextpage
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Table23–continuedfrompreviouspage
+OutputforLlama3-8B:
+1
+OutputforGemma2-9B:
+1
+OutputforMeditron-7B:
+1
+OutputforInternist-7B:
+1
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+D.3 ReadmissionPrediction
+D.3.1 DirectlyPrompting.
+Table24:ExampleofLLMswithDirectlyPromptingforReadmissionPrediction.
+Input:
+Patientinformation:
+Age:76
+Gender:female
+Conditions:Otherspecifiedintestinalobstruction,Malignantneoplasmofanus,unspecifiedsite,Stenosisofrectumandanus,Unknown
+Diagnosis,Coronaryatherosclerosisofnativecoronaryartery,Esophagealreflux,Unspecifiedessentialhypertension,Personalhistoryof
+malignantneoplasmofrectum,rectosigmoidjunction,andanus
+Procedures:Temporarycolostomy,Combinedrightandleftheartcardiaccatheterization,Coronaryarteriographyusingtwocatheters,
+Venouscatheterization,notelsewhereclassified
+UsingDrugs:opioids,antithromboticagents,antiinfectivesandantiseptics,excl.combinationswithcorticosteroids,drugsforpepticulcer
+andgastro-oesophagealrefluxdisease(gord),otherantibacterials,otherbeta-lactamantibacterials,betablockingagents,othermineral
+supplements,i.v.solutionadditives,otherdiagnosticagents,othernutrients,otheranalgesicsandantipyretics,belladonnaandderivatives,
+plain,i.v.solutions,antivaricosetherapy,antiemeticsandantinauseants,drugsforconstipation
+Willthepatientbereadmittedtothehospitalwithintwoweeks?
+Answer1foryes,0forno.Answerwithonlythenumber.
+Answer:
+OutputforLlama3-8B:
+1
+OutputforGemma2-9B:
+1
+OutputforMeditron-7B:
+1
+OutputforInternist-7B:
+1
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+D.3.2 Chain-of-ThoughtPrompting.
+Table25:ExampleofLLMswithChainofThoughtforReadmissionPrediction.
+Input:
+Patientinformation:
+Age:68
+Gender:male
+Conditions:Malignantneoplasmofotherspecifiedsitesofbladder,Hemorrhagecomplicatingaprocedure
+Procedures:Othertransurethralexcisionordestructionoflesionortissueofbladder,Controlof(postoperative)hemorrhageofbladder
+UsingDrugs:antiemeticsandantinauseants,opioids,belladonnaandderivatives,plain,antipsychotics,antihistaminesforsystemicuse,
+quinoloneantibacterials,i.v.solutions,antivaricosetherapy,hypnoticsandsedatives,otheranalgesicsandantipyretics,urologicals,other
+mineralsupplements,i.v.solutionadditives,otherdiagnosticagents
+Willthepatientbereadmittedtothehospitalwithintwoweeks?
+Pleaseprovideyourconcisereasoningstepsfortheprediction(nomorethan3steps),andfinallyanswer1ifthepatientwilldieand0
+otherwise
+OutputforLlama3-8B:
+Hereisthesolution:
+Step1:Thepatienthasundergoneatransurethralexcisionordestructionoflesionortissueofbladder,whichisasurgicalprocedure.This
+increasesthelikelihoodofcomplicationsandreadmission.
+Step2:Thepatienthasahistoryofhemorrhagecomplicatingaprocedure,whichisasignificantcomplicationthatmayrequirefurther
+treatmentandhospitalization.
+Step3:Thepatientistakingavarietyofmedications,includingopioids,antihistamines,andantipsychotics,whichmayincreasetheriskof
+adversereactionsandcomplications.
+Answer:1(Thepatientwillbereadmittedtothehospitalwithintwoweeks)
+Note:Thispredictionisbasedonthepatient’smedicalhistoryandprocedures,andmaynotbeaccurateinallcases.Amoredetailedreview
+ofthepatient’smedicalrecordsandcurrentconditionwouldbenecessarytomakeamoreaccurateprediction.
+OutputforGemma2-9B:
+**Reasoning:**
+1.**Procedure:**Thepatientunderwentaprocedureforbladdercancer(""Othertransurethralexcisionordestructionoflesionortissueof
+bladder"")andexperiencedpostoperativehemorrhage.
+2.**Complications:**Postoperativehemorrhageisapotentialcomplicationofbladdercancerproceduresandcanrequirefurtherinterven-
+tion.
+3.**DrugUsage:**Thepatientisonavarietyofmedications,includingopioidsandantiemetics,whichareoftenusedforpainmanagement
+andnauseaaftersurgery.Thissuggestsongoingrecoveryandpotentialneedforfurthercare.
+**Answer:**1
+OutputforMeditron-7B:
+##1.Thepatientismale.
+##2.Thepatientis68yearsold.
+##3.Thepatienthasamalignantneoplasmofotherspecifiedsitesofbladder.
+##4.Thepatienthasahemorrhagecomplicatingaprocedure.
+##5.Thepatienthasothertransurethralexcisionordestructionoflesionortissueofbladder.
+##6.Thepatienthascontrolof(postoperative)hemorrhageofbladder.
+##7.Thepatienthasantiemeticsandantinauseants.
+##8.Thepatienthasopioids.
+##9.Thepatienthasbelladonnaandderivatives.
+##10.Thepatienthasplain.......
+OutputforInternist-7B:
+Continuedonnextpage
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Table25–continuedfrompreviouspage
+Reasoning:
+1.Assessthepatient’scondition:Thepatientisa68-year-oldmalewithamalignantneoplasmofotherspecifiedsitesofthebladderand
+hemorrhagecomplicatingaprocedure.Thisindicatesthatthepatienthasundergoneaprocedurerelatedtothebladderandisexperiencing
+bleedingasacomplication.
+2.Considertheproceduresandmedications:Thepatienthasundergoneatransurethralexcisionordestructionoflesionortissueofthe
+bladderandcontrolofpostoperativehemorrhageofthebladder.Thepatientisalsousingvariousmedications,includingantiemeticsand
+antinauseants,opioids,belladonnaandderivatives,antipsychotics,antihistamines,quinoloneantibacterials,i.v.solutions,antivaricosether-
+apy,hypnoticsandsedatives,otheranalgesicsandantipyretics,urologicals,othermineralsupplements,i.v.solutionadditives,andother
+diagnosticagents.
+3.Evaluatetheriskfactors:Thepatient’sage,gender,andmedicalhistoryareimportantfactorstoconsider.Thepatientis68yearsold,
+whichmayincreasetheriskofcomplicationsandreadmission.Thepatient’sgenderandmedicalhistoryarealsorelevant,astheymay
+contributetotheoverallriskassessment.
+4.Analyzethelikelihoodofreadmission:Basedonthepatient’scondition,procedures,medications,andriskfactors,itisimportanttoassess
+thelikelihoodofreadmissionwithintwoweeks.Thismayinvolveconsideringtheseverityofthepatient’scondition,theeffectivenessof
+theproceduresandmedications,andthepotentialforcomplicationsorrecurrenceofthebleeding.
+5.Maketheprediction:Basedontheanalysis,ifthelikelihoodofreadmissionwithintwoweeksishigh,theanswerwouldbe1.Ifthe
+likelihoodislow,theanswerwouldbe0.
+Inthiscase,thepatient’scondition,procedures,medications,andriskfactorssuggestahighlikelihoodofreadmissionwithintwoweeks.
+Therefore,theansweris1.
+Note:Itisimportanttoconsiderthespecificpatient’scondition,procedures,medications,andriskfactorswhenmakingaprediction.This
+explanationisageneralguideandmaynotapplytoeveryindividualcase.
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+D.3.3 Self-ReflectionPrompting.
+Table26:ExampleofLLMswithSelfReflectionforReadmissionPrediction.
+Input:
+Patientinformation:
+Age:68
+Gender:male
+Conditions:Malignantneoplasmofotherspecifiedsitesofbladder,Hemorrhagecomplicatingaprocedure
+Procedures:Othertransurethralexcisionordestructionoflesionortissueofbladder,Controlof(postoperative)hemorrhageofbladder
+UsingDrugs:antiemeticsandantinauseants,opioids,belladonnaandderivatives,plain,antipsychotics,antihistaminesforsystemicuse,
+quinoloneantibacterials,i.v.solutions,antivaricosetherapy,hypnoticsandsedatives,otheranalgesicsandantipyretics,urologicals,other
+mineralsupplements,i.v.solutionadditives,otherdiagnosticagents
+Willthepatientbereadmittedtothehospitalwithintwoweeks?
+Answer1foryes,0forno.
+Firstanswerwithanumber.Thenconductaconcisereflection.Finallyoutputyouransweragainwithanumber.
+OutputforLlama3-8B:
+Pleaseenteryouranswer.
+“‘
+1
+“‘
+Reflection:Basedonthepatient’sconditionsandprocedures,itislikelythatthepatientwillbereadmittedtothehospitalwithintwoweeks.
+Thepatienthasamalignantneoplasmofthebladder,whichmayrequirefurthertreatmentormonitoring.Additionally,thepatienthas
+undergoneatransurethralexcisionordestructionoflesionortissueofthebladder,whichmayleadtocomplicationsorsideeffectsthat
+requirehospitalization.Thepatientisalsotakinganumberofmedications,whichmayincreasetheriskofreadmission.
+Answer:
+“‘
+1
+“‘“‘1
+“‘“‘1
+“‘“‘1
+“‘“‘1
+“‘“‘1
+“‘“‘1
+“‘“‘1
+“‘“‘1
+“‘“‘1
+“‘“‘1"
+OutputforGemma2-9B:
+**Reflection:**
+Thepatientunderwentaprocedureforamalignantbladdertumorandexperiencedpost-operativehemorrhage.Thissuggestsapotentially
+complexrecoveryandahigherriskofcomplications.Theuseofvariousmedications,includingopioidsandantiemetics,pointstowards
+ongoingpainmanagementandpotentialnausea/vomiting.
+Whileit’simpossibletosayforcertainwithoutmoreinformation,thepatient’sconditionandthenatureoftheprocedureincreasethe
+likelihoodofreadmissionwithintwoweeks.
+**Answer:**1
+OutputforMeditron-7B:
+Continuedonnextpage
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+Table26–continuedfrompreviouspage
+##1
+##2
+##3
+##4
+##5
+##6
+##7
+##8
+##9
+##10
+##11
+##12
+##13
+##14
+##15
+OutputforInternist-7B:
+Reasoning:Thepatientinthisscenarioisa68-year-oldmalewithamalignantneoplasmofotherspecifiedsitesofthebladderandhemor-
+rhagecomplicatingaprocedure.Thepatienthasundergoneatransurethralexcisionordestructionoflesionortissueofthebladderand
+controlofpostoperativehemorrhageofthebladder.Thepatientisalsousingvariousmedications,includingantiemeticsandantinauseants,
+opioids,belladonnaandderivatives,antipsychotics,antihistaminesforsystemicuse,quinoloneantibacterials,i.v.solutions,antivaricose
+therapy, hypnotics and sedatives, other analgesics and antipyretics, urologicals, other mineral supplements, i.v. solution additives, and
+otherdiagnosticagents.
+Basedonthisinformation,weneedtodetermineifthepatientwillbereadmittedtothehospitalwithintwoweeks.Todothis,weneedto
+considerthepatient’scondition,theproceduresperformed,andthemedicationsbeingused.
+First,thepatienthasamalignantneoplasmofotherspecifiedsitesofthebladder,whichindicatesaseriousunderlyingcondition.This
+suggeststhatthepatientmayrequireongoingmedicalmanagementandfollow-up.
+Second,thepatienthasexperiencedhemorrhagecomplicatingaprocedure.Thisindicatesthatthepatientmayhaveexperiencedbleeding
+duringthetransurethralexcisionordestructionoflesionortissueofthebladder.Thiscomplicationmayrequirefurtherinterventionor
+monitoring.
+Third,thepatientisusingvariousmedications,includingantiemeticsandantinauseants,opioids,belladonnaandderivatives,antipsychotics,
+antihistaminesforsystemicuse,quinoloneantibacterials,i.v.solutions,antivaricosetherapy,hypnoticsandsedatives,otheranalgesicsand
+antipyretics,urologicals,othermineralsupplements,i.v.solutionadditives,andotherdiagnosticagents.Thesemedicationsmayhaveside
+effectsorinteractionsthatcouldpotentiallyleadtocomplicationsortheneedforfurthermedicalattention.
+Consideringallofthesefactors,itislikelythatthepatientmayrequirereadmissiontothehospitalwithintwoweeks......
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+D.3.4 Role-PlayingPrompting.
+Table27:ExampleofLLMswithRole-PlayingforReadmissionPrediction.
+Input:
+Imaginethatyouareadoctor.Today,you’reseeingapatientwiththefollowingprofile:
+Patientinformation:
+Age:68
+Gender:male
+Conditions:Malignantneoplasmofotherspecifiedsitesofbladder,Hemorrhagecomplicatingaprocedure
+Procedures:Othertransurethralexcisionordestructionoflesionortissueofbladder,Controlof(postoperative)hemorrhageofbladder
+UsingDrugs:antiemeticsandantinauseants,opioids,belladonnaandderivatives,plain,antipsychotics,antihistaminesforsystemicuse,
+quinoloneantibacterials,i.v.solutions,antivaricosetherapy,hypnoticsandsedatives,otheranalgesicsandantipyretics,urologicals,other
+mineralsupplements,i.v.solutionadditives,otherdiagnosticagents
+Willthepatientbereadmittedtothehospitalwithintwoweeks?Answer1foryes,0forno.Answerwithonlythenumber.
+Answer:
+OutputforLlama3-8B:
+1
+OutputforGemma2-9B:
+1
+OutputforMeditron-7B:
+1
+OutputforInternist-7B:
+1
+ClinicalBench:CanLLMsBeatTraditionalMLModelsinClinicalPrediction? KDD’26,August09–13,2026,JejuIsland,RepublicofKorea
+D.3.5 In-ContextLearning.
+Table28:ExampleofLLMswithInContextLearningforReadmissionPrediction.
+Input:
+Patientinformation:
+Age:31
+Gender:female
+Conditions:Acuterespiratoryfailure,Myastheniagraviswith(acute)exacerbation,Otherspecifiedcardiacdysrhythmias,Diarrhea,Unspeci-
+fiedessentialhypertension,Irondeficiencyanemia,unspecified
+Procedures:Continuousinvasivemechanicalventilationfor96consecutivehoursormore,Insertionofendotrachealtube,Injectionor
+infusionofimmunoglobulin,Non-invasivemechanicalventilation,Enteralinfusionofconcentratednutritionalsubstances,Transfusionof
+packedcells
+UsingDrugs:immunosuppressants,corticosteroidsforsystemicuse,plain,drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),
+othernutrients,i.v.solutions,antivaricosetherapy,anticholinergicagents,betablockingagents,anesthetics,general,parasympathomimetics,
+otherantidiarrheals,calcium,otheranalgesicsandantipyretics,antithromboticagents,antacids,potassium,i.v.solutionadditives,sulfon-
+amidesandtrimethoprim,aceinhibitors,plain,antipropulsives,antidepressants,belladonnaandderivatives,plain,anxiolytics,hypnotics
+andsedatives,othercardiacpreparations,antisepticsanddisinfectants,antiepileptics
+Willthepatientbereadmittedtothehospitalwithintwoweeks?
+Answer1foryes,0forno.Answerwithonlythenumber.
+Answer:0
+Patientinformation:
+Age:62
+Gender:male
+Conditions:Acutemyocardialinfarctionofunspecifiedsite,initialepisodeofcare,Congestiveheartfailure,unspecified,UnknownDiagnosis,
+Acutekidneyfailurewithlesionoftubularnecrosis,Otherandunspecifiedcomplicationsofmedicalcare,notelsewhereclassified,Pneumonia,
+organismunspecified,Lateeffectsofcerebrovasculardisease,hemiplegiaaffectingunspecifiedside,Unspecifiedpleuraleffusion,Unknown
+Diagnosis,Anticoagulantscausingadverseeffectsintherapeuticuse,Diabetesmellituswithoutmentionofcomplication,typeIIorunspecified
+type,notstatedasuncontrolled,Anemia,unspecified,Atrialfibrillation,Attentiontotracheostomy,Unspecifiedessentialhypertension,Pure
+hypercholesterolemia,Coronaryatherosclerosisofunspecifiedtypeofvessel,nativeorgraft,Aortocoronarybypassstatus
+Procedures:Thoracentesis,Enteralinfusionofconcentratednutritionalsubstances,Infusionofdrotrecoginalfa(activated),Continuous
+invasivemechanicalventilationforlessthan96consecutivehours
+UsingDrugs:antithromboticagents,betablockingagents,antiarrhythmics,classiandiii,othernutrients,lipidmodifyingagents,plain,
+drugsforpepticulcerandgastro-oesophagealrefluxdisease(gord),otheranalgesicsandantipyretics,otherbeta-lactamantibacterials,other
+antibacterials,i.v.solutionadditives,hypnoticsandsedatives,anesthetics,general,agentsagainstamoebiasisandotherprotozoaldiseases,
+quinoloneantibacterials,aceinhibitors,plain,high-ceilingdiuretics,otherantidiarrheals,antacids,insulinsandanalogues,decongestantsand
+othernasalpreparationsfortopicaluse,intestinalantiinfectives,calcium,antifungalsfortopicaluse,anxiolytics,beta-lactamantibacterials,
+penicillins,adrenergics,inhalants,antidepressants,potassium
+Willthepatientbereadmittedtothehospitalwithintwoweeks?
+Answer1foryes,0forno.Answerwithonlythenumber.
+Answer:1
+Patientinformation:
+Age:68
+Gender:male
+Conditions:Malignantneoplasmofotherspecifiedsitesofbladder,Hemorrhagecomplicatingaprocedure
+Procedures:Othertransurethralexcisionordestructionoflesionortissueofbladder,Controlof(postoperative)hemorrhageofbladder
+UsingDrugs:antiemeticsandantinauseants,opioids,belladonnaandderivatives,plain,antipsychotics,antihistaminesforsystemicuse,
+quinoloneantibacterials,i.v.solutions,antivaricosetherapy,hypnoticsandsedatives,otheranalgesicsandantipyretics,urologicals,other
+mineralsupplements,i.v.solutionadditives,otherdiagnosticagents
+Willthepatientbereadmittedtothehospitalwithintwoweeks?Answer1foryes,0forno.Answerwithonlythenumber.
+Answer:
+OutputforLlama3-8B:
+0
+Continuedonnextpage
+KDD’26,August09–13,2026,JejuIsland,RepublicofKorea Chenetal.
+Table28–continuedfrompreviouspage
+OutputforGemma2-9B:
+0
+OutputforMeditron-7B:
+0
+OutputforInternist-7B:
+0

@@ -1,0 +1,17 @@
+{
+  "status": "STRONG_GO",
+  "naturalistic_cases": 8,
+  "independent_papers": 8,
+  "naturalistic_violation_recall": 1.0,
+  "strongest_baseline_recall": 0.0,
+  "epitrace_gain": 1.0,
+  "paired_corrections": 8,
+  "npcr": 1.0,
+  "cia": 1.0,
+  "tos": 1.0,
+  "witness_accuracy": 1.0,
+  "e02_real_world_status": "TRACE_INSUFFICIENT",
+  "value_preserving_naturalistic_cases": 2,
+  "gold_leakage": "NO",
+  "novelty_status": "CLEAR_CANDIDATE"
+}

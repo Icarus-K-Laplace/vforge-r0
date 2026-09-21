@@ -1,0 +1,22 @@
+{
+  "contract_id": "CAND-01_CONTRACT",
+  "candidate_id": "CAND-01",
+  "source_paper": "Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting",
+  "deviation_category": "C1_selection_evaluation_leakage",
+  "claim_text": "In paper 'Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting', test data and validation/evaluation splits must be strictly disjoint, and model selection / early stopping must be performed exclusively on validation splits without test set leakage or lookahead.",
+  "predicates": [
+    {
+      "predicate_id": "DISJOINT_TEST_SELECTION",
+      "principle": "P1_STRICT_SPLIT_DISJOINTNESS",
+      "natural_language": "Test split data must never be used for hyperparameter tuning, early stopping, or checkpoint selection.",
+      "trace_fields": [
+        "protocol.split_disjointness",
+        "protocol.selection_target"
+      ],
+      "condition": "protocol.split_disjointness == True and protocol.selection_target != 'test'",
+      "confidence": 0.95
+    }
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "c349011587ac1ccf64be7b641d2aef151d8cfe223991e14335e779260272a52f"
+}

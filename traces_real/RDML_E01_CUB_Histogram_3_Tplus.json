@@ -1,0 +1,48 @@
+{
+  "trace_id": "RDML_E01_CUB_Histogram_3_Tplus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CUB_Histogram_3_s0",
+    "CUB_Histogram_3_s1",
+    "CUB_Histogram_3_s2",
+    "CUB_Histogram_3_s3",
+    "CUB_Histogram_3_s4"
+  ],
+  "protocol": {
+    "dataset": "CUB",
+    "method": "Histogram_3",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CUB_Histogram_3_s0",
+      "RDML_E01_CUB_Histogram_3_s1",
+      "RDML_E01_CUB_Histogram_3_s2",
+      "RDML_E01_CUB_Histogram_3_s3",
+      "RDML_E01_CUB_Histogram_3_s4"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.5884,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CUB_Histogram_3_s0",
+        "RDML_E01_CUB_Histogram_3_s1",
+        "RDML_E01_CUB_Histogram_3_s2",
+        "RDML_E01_CUB_Histogram_3_s3",
+        "RDML_E01_CUB_Histogram_3_s4"
+      ]
+    }
+  },
+  "is_counterfactual": false,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "ac6f2392f443b3a7ff42981a55ce48794c797e39609d094fcdf470e6e128451a"
+}

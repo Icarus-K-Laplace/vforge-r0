@@ -1,0 +1,25 @@
+{
+  "contract_id": "CONTRACT_E06-02",
+  "source_paper": "E06-02",
+  "family": "E06",
+  "paper_text_hash": "257f4659317e695fe6bf3867f1f608c794b5df6d5cb0576a42140fae7cc2ddf0",
+  "source_span": "The proposed method and the two baselines are matched on training steps.",
+  "predicates": [
+    {
+      "predicate_id": "P3_BUDGET",
+      "principle": "P3_SYMMETRY",
+      "natural_language": "Compared methods must be matched on the declared training/compute budget.",
+      "trace_fields": [
+        "comparator_budgets"
+      ],
+      "condition": "max(budget_value across comparator_budgets) - min(budget_value across comparator_budgets) == 0",
+      "source_span": "The proposed method and the two baselines are matched on training steps.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P3_SYMMETRY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "cd6e0cdbab0cbcb2331444d9d171c985051a3af24dfb5f32ff76944865b1df3e"
+}

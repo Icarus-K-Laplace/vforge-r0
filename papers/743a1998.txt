@@ -1,0 +1,562 @@
+Zero-shot Knowledge Transfer via
+Adversarial Belief Matching
+PaulMicaelli AmosStorkey
+UniversityofEdinburgh UniversityofEdinburgh
+{paul.micaelli}@ed.ac.uk {a.storkey}@ed.ac.uk
+Abstract
+Performingknowledgetransferfromalargeteachernetworktoasmallerstudent
+isapopulartaskinmoderndeeplearningapplications. However,duetogrowing
+dataset sizes and stricter privacy regulations, it is increasingly common not to
+have access to the data that was used to train the teacher. We propose a novel
+method which trains a student to match the predictions of its teacher without
+usinganydataormetadata. Weachievethisbytraininganadversarialgenerator
+tosearchforimagesonwhichthestudentpoorlymatchestheteacher,andthen
+using them to train the student. Our resulting student closely approximates its
+teacherforsimpledatasetslikeSVHN,andonCIFAR10weimproveonthestate-
+of-the-artforfew-shotdistillation(with100imagesperclass),despiteusingno
+data. Finally,wealsoproposeametrictoquantifythedegreeofbeliefmatching
+betweenteacherandstudentinthevicinityofdecisionboundaries,andobserve
+asignificantlyhighermatchbetweenourzero-shotstudentandtheteacher,than
+between a student distilled with real data and the teacher. Code is available at:
+https://github.com/polo5/ZeroShotKnowledgeTransfer
+1 Introduction
+Largeneuralnetworksareubiquitousinmoderndeeplearningapplications,includingcomputervision
+(Heetal.,2015),speechrecognition(vandenOordetal.,2016)andnaturallanguageunderstanding
+(Devlinetal.,2018). Whiletheirsizeallowslearningfrombigdatasets,itisalimitationforusers
+withouttheappropriatehardware,orforinternet-of-thingsapplications. Assuch,thedeeplearning
+communityhasseenafocusonmodelcompressiontechniques, includingknowledgedistillation
+(BaandCaruana,2014;Hintonetal.,2015),networkpruning(Lietal.,2016;Hanetal.,2016)and
+quantization(Guptaetal.,2015;Hubaraetal.,2016).
+Thesemethodstypicallyrelyonlabeleddatadrawnfromthetrainingdistributionofthemodelthat
+needscompressed. Distillationdoessobyconstruction,andpruningorquantizationneedtofine-tune
+networksontrainingdatatogetgoodperformance. Wearguethatthisisastronglimitationbecause
+pretrainedmodelsareoftenreleasedwithouttrainingdata,anincreasinglycommontrendthathas
+beengroundsforcontroversyinthedeeplearningcommunity(Radfordetal.,2019). Weidentify
+fourmainreasonswhydatasetsaren’treleased: privacy,property,size,andtransience. Respective
+examplesincludeFacebook’sDeepFacenetworktrainedonfourmillionconfidentialuserimages
+(Taigmanetal.,2014),Google’sNeuralMachineTranslationSystemtrainedoninternaldatasets(Wu
+etal.,2016)andregardedasintellectualproperty,theJFT-300datasetwhichcontains300million
+imagesacrossmorethan18kclasses(Sunetal.,2017),andfinallythefieldofpolicydistillationin
+reinforcementlearning(Rusuetal.,2016),whereonerequiresobservationsfromtheoriginaltraining
+environmentwhichmaynotexistanymore. Onecouldarguethatmissingdatasetscanbeemulated
+withproxydatafordistillation,butinpracticethatisproblematicfortworeasons. First,thereisa
+correlationbetweendatathatisnotpubliclyreleasedanddatathatishardtoemulate,suchasmedical
+33rdConferenceonNeuralInformationProcessingSystems(NeurIPS2019),Vancouver,Canada.
+datasetsofvariousdiseasesBurtonetal.(2015),ordatasetscontainingseveralthousandclasseslike
+JFT.Secondly,ithasbeenshowninthesemisupervisedsettingthatout-of-distributionsamplescan
+causesignificantperformancedropwhenusedfortraining(Oliveretal.,2018).
+Assuch,webelievethatafocusonzero-shotknowledgetransferisjustified,andourpapermakesthe
+followingcontributions: 1)weproposeanoveladversarialalgorithmthatdistillsalargeteacherinto
+asmallerstudentwithoutanydataormetadata,2)weshowitseffectivenessontwocommondatasets,
+and3)wedefineameasureofbeliefmatchbetweentwonetworksinthevicinityofone’sdecision
+boundaries,anddemonstratethatourzero-shotstudentcloselymatchesitsteacher.
+Figure1: Asimplifiedversionofourmethodonathree-classtoyproblem. Theteacherandstudent
+decision boundaries are shown in the top and bottom rows respectively. The knowledge transfer
+unfoldslefttorightandneverusestherealdatapoints,whichareshownforvisualizationpurposes.
+Weinitializerandompseudopoints(yellow/blackcrosses)awayfromthedatamanifold,andtrain
+themtomaximizetheKLdivergencebetweenthestudentandteacher. Atthesametimewetrainthe
+studenttoachievetheopposite. Notehowpseudopointsusethedecisionboundariesaschannelsto
+exploretheinputspace,butcanalsoexploreregionsawayfromthemsuchasthetwoisolatedgreen
+andbluepockets. Afterafewstepsthestudentandteacherdecisionboundariesareindistinguishable.
+2 Relatedwork
+Inducingpointmethodsanddatasetdistillation. Inducingpointmethods(SnelsonandGhahra-
+mani,2005)wereintroducedtomakeGaussianProcesses(GP)moretractable. Theideaistochoose
+asetofinducingpointsthatissmallerthantheinputdataset,inordertoreduceinferencecost. While
+earlytechniquesusedasubsetofthetrainingdataasinducingpoints(CandelaandRasmussen,2005),
+creating pseudo data using variational techniques was later shown more efficient (Titsias, 2009).
+Datasetdistillationisrelatedtothisidea,andusesabi-leveloptimizationschemetolearnasmall
+subsetofpseudoimages,suchthattrainingonthoseimagesyieldsrepresentationsthatgeneralize
+welltorealdata(Wangetal.,2018). Themaindifferencewiththesemethodsandoursisthatwedo
+notneedthetrainingdatatogeneratepseudodata,butwerelyonapretrainedteacherinstead.
+Knowledge distillation. The idea of using the outputs of a network to train another was first
+proposedbyBuciluaˇ etal.(2006)asawaytocompressalargeensembleintoasinglenetwork,and
+was later made popular by Ba and Caruana (2014) and then Hinton et al. (2015), who proposed
+smoothingtheteacher’sprobabilityoutputs. Sincethen,thefocushasmostlybeenonimproving
+distillationefficiencybydesigningbetterstudents(Romeroetal.,2015;Crowleyetal.,2018),or
+gettingsmallperformancegainswithextralossterms,suchasattentiontransfer(AT)(Zagoruyko
+andKomodakis,2016a). Sincethetermknowledgedistillation(KD)hasbecomeintertwinedwiththe
+lossfunctionintroducedbyHintonetal.(2015),werefertoourtaskmoregenerallyaszero-shot
+knowledgetransfer(KT)forclarity.
+2
+Privacy attacks. There are a few approaches to making privacy attacks that are related to our
+method. Inmodelextraction(Tramèretal.,2016)wehaveaccesstotheprobabilitypredictionsofa
+black-boxmodelandtheaimistoextractanequivalentmodel. Thelimitationofblack-boxaccess
+makesthistaskharderandoftenlimitedtosimpledatasets. Inmodelinversion(Fredriksonetal.,
+2014,2015)wehavewhite-boxaccesstoapretrainedmodel,andwewishtorecreatetrainingimages
+fromtheweightsalone. Thisisadifferentaimfromthatofourtask,becausewewishtoproduce
+imagesthatarerelevantfortrainingregardlessofwhetherornottheyresemblethetrainingdata.
+Zero-shot learning. In zero-shot learning (Larochelle et al., 2008; Socher et al., 2013), we are
+typicallygiventrainingimageswithlabelsandsomeadditionalintermediatesemanticrepresentation
+T,suchastextualdescriptions. Thetaskisthentoclassifyimagesattesttimethatarerepresentedin
+T butwhoseclasseswereneverobservedduringtraining. Inourmodel,theadditionalintermediate
+informationcanbeconsideredtobetheteacher,butnoneoftheclassesareformallyobservedduring
+trainingbecausenosamplesfromthetrainingsetareused.
+Zeroandfew-shotdistillation. Morerecently,therelationshipbetweendataquantityanddistilla-
+tionperformancehasstartedbeingaddressed. Inthefew-shotsetting,Lietal.(2018)obtainastudent
+bypruningateacher,andalignbothnetworkswith1x1convolutionsusingafewsamples. Kimura
+etal.(2018)distillaGPtoaneuralnetworkbyadversariallylearningpseudodata. Intheirsetting
+however,theteacheritselfhasaccesstolittledataandisaddedtoguidethestudent. Concurrenttoour
+work,Ahnetal.(2019)formulatedknowledgetransferasvariationalinformationdistillation(VID)
+andtothebestofourknowledgeobtainedstate-of-the-artinfew-shotperformance. Weshowthatour
+methodgetsbetterperformancethantheydoevenwhentheyuseanextra100imagesperclasson
+CIFAR-10. Thezero-shotsettinghasbeenalotmorechallenging: mostmethodsintheliteratureuse
+sometypeofmetadataandarelimitedtosimpledatasetslikeMNIST.Lopesetal.(2017)showed
+thattrainingimagescouldbereconstructedfromarecordoftheteacher’strainingactivations,butin
+practicereleasingtrainingactivationsinsteadofdataisunlikely. Concurrenttoourwork,Nayaketal.
+(2019)synthesizepseudodatafromtheweightsoftheteacheraloneanduseittotrainastudentin
+zero-shot. Theirmodelisnottrainedend-to-end,andonCIFAR-10weobtainaperformance17%
+higherthantheydoforacomparablesizedteacherandstudent.
+3 Zero-shotknowledgetransfer
+3.1 Algorithm
+LetT(x)beapretrainedteachernetwork,whichmapssomeinputimagextoaprobabilityvector
+t. Similarly, S(x;θ)isastudentnetworkparameterizedbyweightsθ, whichoutputsprobability
+vectors. LetG(z;φ)beageneratorparameterizedbyweightsφ,whichproducespseudodatax
+p
+fromanoisevectorz ∼N(0,I). ThemainlossfunctionweuseistheforwardKullback–Leibler
+(KL)divergencebetweentheoutputsoftheteacherandstudentnetworksonpseudodata,namely
+D (T(x )||S(x ))= (cid:80) t(i)log(t(i)/s(i))whereicorrespondstoimageclasses.
+KL p p i p p p
+Ourzero-shottrainingalgorithmisdescribedinAlgorithm1. ForN iterationswesampleonebatch
+ofz,andtaken gradientupdatesonthegeneratorwithlearningrateη,suchthatitproducespseudo
+G
+samplesx thatmaximizeD (T(x ) || S(x )). Wethentaken gradientstepsonthestudent
+p KL p p S
+withx fixed,suchthatitmatchestheteacher’spredictionsonx . Theideaoftakingseveralsteps
+p p
+onthetwoadversarieshasproveneffectiveinbalancingtheirrelativestrengths. Inpracticeweuse
+n > n , whichgivesmoretimetothestudenttomatchtheteacheronx , andencouragesthe
+S G p
+generatortoexploreotherregionsoftheinputspaceatthenextiteration.
+3.2 Extralossfunctions
+Using the forward KL divergence as the main loss function encourages the student to spread its
+densityovertheinputspaceandgivesnon-zeroclassprobabilitiesforallimages. Thishighstudent
+entropyisavitalcomponenttoourmethodsinceitmakesithardforthegeneratortofoolthestudent
+tooeasily;weobservesignificantdropsinstudenttestaccuracywhenusingthereverseKLdivergence
+orJensen–Shannondivergence. Inpractice,manystudent-teacherpairshavesimilarblockstructures,
+3
+andsowecanaddanattentiontermtothestudentloss:
+(cid:13) (cid:13)
+L S =D KL (T(x p )||S(x p ))+β (cid:88)
+NL (cid:13)
+(cid:13) (cid:13)(cid:13)
+f(A(
+l
+t))
+(cid:13) − (cid:13)
+f(A(
+l
+s))
+(cid:13)
+(cid:13)
+(cid:13) (cid:13) (1)
+(cid:13)(cid:13)f(A(t))(cid:13) (cid:13)f(A(s))(cid:13) (cid:13)
+l (cid:13)(cid:13) l (cid:13) (cid:13) l (cid:13) (cid:13)
+2 2 2
+where β is a hyperparameter. We take the sum over some subset of N layers. Here, A(t) and
+L l
+A(s) aretheteacherandstudentactivationblocksforlayerl , bothmadeupofN channels. If
+l Al
+we denote by a the cth channel of activation block A , then we use the spatial attention map
+lc l
+f(A ) = (1/N ) (cid:80) a2 assuggestedbytheauthorsofAT(ZagoruykoandKomodakis,2016a).
+l Al c lc
+Wedon’tuseattentionforthegeneratorlossL becauseitmakesittooeasytofoolthestudent.
+G
+Manyotherlosstermswereinvestigatedbutdidnothelpperformance,includingsamplediversity,
+sampleconsistency,andteacherorstudententropy(seeSupplementaryMaterial1). Theselosses
+seektopromotepropertiesofthegeneratorthatalreadyoccurintheplainmodeldescribedabove.
+ThisisanimportantdifferencewithcompetingmodelssuchasthatofKimuraetal.(2018)where
+authorsmustincludehanddesignedlosseslikecarboncopymemoryreplay(whichfreezessome
+pseudosamplesintime),orfidelity(Dehghanietal.,2017).
+Algorithm1:Zero-shotKT(Section3.1) Algorithm2:Computetransitioncurvesofnetworks
+AandB,whensteppingacrossdecisionboundariesof
+pretrain: T(·)
+networkA(Section4.4)
+initialize: G(·;φ)
+initialize: S(·;θ) pretrain: net A
+pretrain: net
+for1,2,...,N do B
+forx∈X do
+z ∼N(0,I) test
+i ≡classofxaccordingtonet
+A A
+for1,2,...,n G do i B ≡classofxaccordingtonet B
+x p ←G(z;φ) ifi A =i B =ithen
+L G ←−D KL (T(x p )||S(x p )) x 0 ←x
+φ←φ−η
+∂L
+G
+forj (cid:54)=ido
+∂φ x adv ←x 0
+end for1,2,...,K do
+y ,y ←net (x ),net (x )
+for1,2,...,n do A B A adv B adv
+S
+L ←D (T(x )||S(x )) ∂L (y ,j)
+S KL p p x ←x −ξ CE A
+θ ←θ−η ∂L S sa a v d e v : y ,y adv ∂x adv
+∂θ A B
+end
+end
+decayη
+end
+end
+end end
+3.3 Toyexperiment
+ThedynamicsofouralgorithmisillustratedinFigure1,whereweusetwolayerMLPsforboththe
+teacherandstudent,andlearnthepseudopointsdirectly(nogenerator). Theseareinitializedaway
+fromtherealdatamanifold,becauseweassumethatnoinformationaboutthedatasetisknownin
+practice. Duringtraining,pseudopointscanbeseentoexploretheinputspace,typicallyrunning
+alongdecisionboundarieswherethestudentismostlikelytomatchtheteacherpoorly. Atthesame
+time,thestudentistrainedtomatchtheteacheronthepseudopoints,andsotheymustkeepchanging
+locations. Whenthedecisionboundariesbetweenstudentandteacherarewellaligned,somepseudo
+pointswillnaturallydepartfromthemandsearchfornewhighteachermismatchregions,which
+allowsdisconnecteddecisionboundariestobeexploredaswell.
+4
+3.4 Potentialconceptualconcerns
+Hereweaddressanumberofpotentialconceptualconcernswhendealingwiththeapplicationofthis
+approachtohigherdimensionalinputspaces.
+Focus. ThefirstpotentialconcernisthatG(z;φ)isnotconstrainedtoproducerealorbounded
+images,andsoitmayprefertoexplorethelargerregionofspacewheretheteacherhasnotbeen
+trained. Assumingthattheteacher’soutputsoutsideofrealimagesisirrelevantfortheclassification
+task,thestudentwouldneverreceiveusefulsignal. Inpracticeweobservethatthisassumptiondoes
+nothold. OnMNISTforinstance,preliminaryexperimentsshowedthatasimplestudentcanachieve
+90%testaccuracywhentrainedtomatchateacheronrandomnoise. Onmorediversedatasetslike
+CIFAR-10,weobservethatuniformnoiseismostlyclassifiedasthesameclassacrossnetworks(see
+SupplementaryMaterial2). Thissuggeststhatthedensityofdecisionboundariesissmalleroutside
+oftherealimagemanifold,andsoG(z;φ)maystruggletofoolthestudentinthatspaceduetothe
+teacherbeingtoopredictable.
+Adversaries. AnotherpotentialconcernisthatG(z;φ)couldsimplyiterateoveradversarialexam-
+ples,whichinthiscontextcorrespondstoimagesthatareallverysimilarinpixelspaceandyetare
+classifieddifferentlybytheteacher. HerewereferthereadertorecentworkbyIlyasetal.(2019),
+whoisolateadversarialfeaturesandshowthattheyareenoughtolearnclassifiersthatgeneralize
+welltorealdata. Thebottomlineisthatnon-robustfeatures,inahumansense,stillcontainmost
+ofthetask-relevantknowledge. Therefore,thissuggeststhatourgeneratorcanproduceadversarial
+examples(inpractice,weobservethatitdoes)whilestillfeedingusefulsignaltothestudent.
+100
+90
+80
+70
+60
+50
+40
+30
+20
+10
+0
+0 20 40 60 80 100
+M
+)%(ycaruccatset
+SVHN CIFAR-10
+Noteacher
+KD+AT
+KD+ATfulldata
+Ours
+VID(Ahnetal.2019)
+0 20 40 60 80 100
+M
+Figure2: PerformanceofourmodelforaWRN-40-2teacherandWRN-16-1student,ontheSVHN
+andCIFAR-10datasets,forM imagesperclass. Wecomparethistothestudentwhentrainedfrom
+scratch(noteacher),thestudentwhentrainedwithknowledgedistillationandattentiontransferfrom
+theteacher(KD+AT),andtheperformanceofAhnetal.(2019)(81.59%forM =100). Ourmethod
+reaches83.69+0.58%withoutusinganyrealdata,andincreasesto85.91+0.24%whenfinetuned
+− −
+withM =100imagesperclass.
+4 Experiments
+Inthefew-shotsetting,researchershavetypicallyreliedonvalidationdatatotunehyperparameters.
+Since our method is zero-shot, assuming that validation data exists is problematic. In order to
+demonstratezero-shotKTwethusfindcoarsehyperparametersinonesetting(CIFAR-10,WRN-40-2
+teacher,WRN-16-1student)andusethesameparametersforallotherexperimentsofthispaper. In
+practice,wefindthatthismakestheotherexperimentsonlyslightlysuboptimal,becauseourmethod
+isveryrobusttohyperparametersanddatasetchange: infact,wefindthathalvingordoublingmost
+ofourhyperparametershasnoeffectonstudentperformance. Foreachexperimentwerunthree
+seeds and report the mean with one standard deviation. When applicable, seeds cover networks
+initialization,orderoftrainingimages,andthesubsetofM imagesperclassinfew-shot.
+5
+4.1 CIFAR-10andSVHN
+We focus our experiments on two common datasets, SVHN (Netzer et al., 2011) and CIFAR-10
+(Krizhevsky,2009). SVHNcontainsover73ktrainingimagesof10digitstakenfromhousenumbers
+inGoogleStreetimages. Itisinterestingforourtaskbecausemostimagescontainseveraldigits,the
+groundtruthbeingthemostcentralone,andsoambiguousimagesareeasilygenerated. CIFAR-10
+contains50ktrainingimagesacross10classes,andissubstantiallymorediversethanSVHN,which
+makesthepredictionsoftheteacherhardertomatch. ForbothdatasetsweuseWideResNet(WRN)
+architectures(ZagoruykoandKomodakis,2016b)sincetheyareubiquitousinthedistillationliterature
+andeasilyallowchangingthedepthandparametercount.
+Our distillation results are shown in Figure 2 for a WRN-40-2 teacher and WRN-16-1 student,
+whenusingL asdefinedinEquation1. Weincludethefew-shotperformanceofourmethodasa
+S
+comparison,bynaivelyfinetuningourzero-shotmodelwithM samplesperclass. Asbaselineswe
+showthestudentperformancewhentrainedfromscratch(noteachersupervision),andthestudent
+performancewhentrainedwithbothknowledgedistillationandattentiontransfer, sincethatwas
+observedtobebetterthaneithertechniquesalone. WealsoplottheequivalentresultofVID(Ahn
+etal.,2019);tothebestofourknowledge,theyarethestate-of-the-artinthefew-shotsettingatthe
+timeofwriting. OnCIFAR-10,weobtainatestaccuracyof83.69+0.58%ifweusethestudentloss
+−
+describedinEquation1,whichis2%betterthanVID’sperformancewhenitusesanextraM =100
+imagesperclass. ByfinetuningourmodelwithM =100ouraccuracyincreasesto85.91+0.24%,
+−
+pushingthepreviousfew-shotstate-of-the-artbymorethan4%. Ifwedonotuseattention(β =0)
+weobserveanaveragedropof2%acrossallthearchitecturesinTable1.
+UsingallthesamesettingsonSVHNyieldsatestaccuracyof94.06±0.27%. Thisisquitecloseto
+95.88±0.15%,theaccuracyobtainedwhenusingthefull73kimagesduringKD+ATdistillation,
+eventhoughthehyperparametersandgeneratorarchitectureweretunedonCIFAR-10. Thisshows
+thatourmodelcanbeusedonnewdatasetswithoutneedingahyperparametersearcheverytime,
+whichisdesirableforzero-shottaskswherevalidationdatamaynotbeavailable. Ifhyperparameters
+aretunedonSVHNspecifically,ourzero-shotperformanceisonparwithfulldatadistillation.
+Implementationdetails. Forthezero-shotexperiments,wechoosethenumberofiterationsN to
+matchtheoneusedwhentrainingtheteachersonSVHNandCIFAR-10fromscratch,namely50k
+and80krespectively.Foreachiterationwesetn =1andn =10.Weuseagenericgeneratorwith
+G S
+onlythreeconvolutionallayers,andourinputnoisezhas100dimensions. WeuseAdam(Kingma
+andBa,2015)withcosineannealing,withaninitiallearningrateof2×10−3. Wesetβ =250unless
+otherwisestated. Forourbaselines,wechoosethesamesettingsusedtotraintheteacherandstudent
+intheliterature,namelySGDwithmomentum0.9,andweightdecay5×10−4. Wescalethenumber
+ofepochssuchthatthenumberofiterationsisthesameforallM. Theinitiallearningrateissetto
+0.1andisdividedby5at30%,60%,and80%oftherun.
+Table 1: Zero shot performance on various WRN teacher and student pairs for CIFAR-10. Our
+zero-shottechnique(M =0)isonparwithKD+ATdistillationwhenit’sperformedwithM =200
+imagesperclass. TeacherscratchandstudentscratcharetrainedwithM =5000. Wereportmean
+andstandarddeviationover3seeds.
+Teacher Student Teacher Student KD+AT Ours
+(#params) (#params) scratch scratch M =200 M =0
+WRN-16-2(0.7M) WRN-16-1(0.2M) 93.97+−0.11 91.04+−0.04 84.54+−0.21 82.44+−0.21
+WRN-40-1(0.6M) WRN-16-1(0.2M) 93.18+−0.08 91.04+−0.04 81.71+−0.25 79.93+−1.11
+WRN-40-2(2.2M) WRN-16-1(0.2M) 94.73+−0.02 91.04+−0.04 81.25+−0.67 83.69+−0.58
+WRN-40-1(0.6M) WRN-16-2(0.7M) 93.18+−0.08 93.97+−0.11 85.74+−0.47 86.60+−0.56
+WRN-40-2(2.2M) WRN-16-2(0.7M) 94.73+−0.02 93.97+−0.11 86.39+−0.33 89.71+−0.10
+WRN-40-2(2.2M) WRN-40-1(0.6M) 94.73+−0.02 93.18+−0.08 87.35+−0.12 86.60+−1.79
+4.2 Architecturedependence
+Whileourmodelisrobusttothechoiceofhyperparametersandgenerator,weobservethatsome
+teacher-student pairs tend to work better than others, as is the case for few-shot distillation. We
+6
+compareourzero-shotperformancewithM =200KD+ATdistillationacrossarangeofnetwork
+depthsandwidths. TheresultsareshowninTable1. Thespecificfactorsthatmakeforagoodmatch
+betweenteacherandstudentaretobeexploredinfuturework. Inzero-shot,deepstudentswithmore
+parametersdon’tnecessarilyhelp: theWRN-40-2teacherdistills3.1%bettertoWRN-16-2thanto
+WRN-40-1,eventhoughWRN-16-2haslessthanhalfthenumberoflayers,andasimilarparameter
+countthanWRN-40-1. Furthermore,thepairsthatarestrongestforfew-shotknowledgedistillation
+arenotthesameasforzero-shot. Finally,notethatconcurrentworkbyNayaketal.(2019)obtains
+69.56%forM =0onCIFAR-10,despiteusingahand-designedteacher/studentpairthathasmore
+parametersthantheWRN-40-1/WRN-16-2pairweuse. Ourmethodthusyieldsa17%improvement,
+butthisisinpartattributedtothedifferenceofefficiencyinthearchitectureschosen.
+4.3 Natureofthepseudodata
+SamplesfromG(z;φ)duringtrainingareshowninFigure3. Wenoticethatearlyintrainingthe
+sampleslooklikecoarsetextures,andarereasonablydiverse. Textureshavelongbeenunderstood
+to have a particular value in training neural networks, and have recently been shown to be more
+informativethanshapes(Geirhosetal.,2018). Afterabout10%ofthetrainingrun,mostimages
+producedbyG(z;φ)looklikehighfrequencypatternsthathavelittlemeaningtohumans.
+Duringtraining,theaverageprobabilityoftheclasspredictedbytheteacherisabout0.8. Onthe
+otherhand,themostlikelyclassaccordingtostudenthasanaverageprobabilityofaround0.3. These
+confidencelevelssuggestthatthegeneratorfocusesonpseudodatathatisclosetotheboundary
+decisionsofthestudent,whichiswhatweobservedinthetoyexperimentofFigure1. Finally,we
+alsoobservethattheclassesofpseudosamplesareclosetouniformlydistributedduringtraining,for
+boththeteacherandstudent. Againthisisnotsurprising: thegeneratorseekstomaketheteacher
+lesspredictableonthepseudodatainordertofoolthestudent,andspreadingitsmassacrossallthe
+classesavailableistheoptimalsolution.
+Figure3: Pseudoimagessampledfromthegeneratoracrossseveralseedsandhyperparameters. As
+thetrainingprogresses(lefttoright),pseudodatagoesfromcoarseanddiversetexturestocomplex
+highfrequencypatterns. Notethattimeisnottoscaleandmostimageslooklikethelastfourcolumns.
+4.4 Measuringbeliefmatchneardecisionboundaries
+Ourunderstandingoftheadversarialdynamicsatplaysuggeststhatthestudentisimplicitlytrainedto
+matchtheteacher’spredictionsclosetodecisionboundaries. Togaindeeperinsightintoourmethod,
+wewouldliketoverifythatthisisindeedthecase,inparticularfordecisionboundariesnearreal
+images. LetL bethecrossentropyloss. InAlgorithm2,weproposeawaytoprobethedifference
+CE
+betweenthebeliefsofnetworkAandBnearthedecisionboundariesofA. First,wesampleareal
+imagexfromthetestsetX suchthatnetworkAandB bothgivethesameclasspredictioni.
+test
+Then,foreachclassj (cid:54)=iweupdatexbytakingK adversarialstepsonnetworkA,withlearning
+rateξ,togofromclassitoclassj. TheprobabilitypAofxbelongingtoclassiaccordingtonetwork
+i
+Aquicklyreduces,withaconcurrentincreaseinpA. Duringthisprocess,wealsorecordpB,the
+j j
+probabilitythatxbelongstoclassjaccordingtonetworkB,andcancomparepAandpB. Inessence,
+j j
+weareaskingthefollowingquestion: asweperturbxtomovefromclassitoj accordingtonetwork
+A,towhatdegreedowealsomovefromclassitoj accordingtonetworkB?
+7
+1.00
+0.75
+0.50
+0.25
+0.00
+NHVS
+jp
+Studentzero-shot StudentKD+AT
+teacher
+studentzero-shot
+studentKD+AT
+1.00
+0.75
+0.50
+0.25
+0.00
+0 10 20 30
+k
+01-RAFIC
+jp
+0 10 20 30
+k
+Figure4: Averagetransitioncurvesover9classesand1000imagesforbothSVHNandCIFAR-10.
+LEFT, taking adversarial steps w.r.t. the zero shot student model, and RIGHT, w.r.t. the normal
+distilledstudentmodel. Wenotethattheaverageofp ismuchmoresimilarbetweenteacherand
+j
+studentwhentargetingthezero-shotboundarythanwhentargetingtheboundaryofthestudentlearnt
+vianormalKD+ATdistillation. Linethicknessshows±2timesthestandarderrorofthemean.
+Werefertop curvesastransitioncurves. ForadatasetofC classes,weobtainC −1transition
+j
+curvesforeachimagex∈X ,andforeachnetworkAandB. Weshowtheaveragetransition
+test
+curvesinFigure4,inthecasewherenetworkBistheteacher,andnetworkAiseitherourzero-shot
+studentorastandardstudentdistilledwithKD+AT.Weobservethat,onaverage,updatingimagesto
+movefromclassitoclassj onourzero-shotstudentalsocorrespondstomovingfromclassitoclass
+j accordingtotheteacher. Thisistruetoamuchlesserextentforastudentdistilledfromtheteacher
+withKD+AT,whichweobservedtohaveflatp =0curvesforseveralimages. Thisisparticularly
+j
+surprisingbecausetheKD+ATstudentwastrainedonrealdata,andthetransitioncurvesarealso
+calculatedforrealdata.
+WecanmoreexplicitlyquantifythebeliefmatchbetweennetworksAandB aswetakestepsto
+cross the decision boundaries of network A. We define the Mean Transition Error (MTE) as the
+absoluteprobabilitydifferencebetweenpA andpB,averagedoverK steps,N testimagesand
+j j test
+C−1classes:
+MTE(net A ,net B )= N 1 N (cid:88)test C 1 −1 C (cid:88) −1 K 1 (cid:88) K (cid:12) (cid:12)pA j −pB j (cid:12) (cid:12) (2)
+test
+n c k
+ThemeantransitionerrorsarereportedinTable2. Ourzero-shotstudenthasmuchlowertransition
+errors,withanaverageofonly0.09probabilitydisparitywiththeteacheronSVHNasstepsaretaken
+fromclassitoj onthestudent. ThisisinlinewiththeobservationsmadeinFigure4. Notethat
+weusedthevaluesK = 100andξ = 1sincetheygaveenoughtimeformosttransitioncurvesto
+convergeinpractice. OthervaluesofK andξ givethesametrendbutdifferentMTEmagnitudes,
+andmustbereportedclearlywhenusingthismetric.
+Table2: MeanTransitionerrors(MTE)forSVHNandCIFAR-10,betweenourzero-shotstudentand
+theteacher,andbetweenastudentdistilledwithKD+ATandtheteacher. Ourstudentmatchesthe
+transitioncurvesoftheteachertoamuchgreaterextentonbothdatasets.
+Zero-shot(Ours) KD+AT
+SVHN 0.09 0.64
+CIFAR-10 0.22 0.68
+8
+5 Conclusion
+Inthisworkwedemonstratethatzero-shotknowledgetransfercanbeachievedinasimpleadversarial
+fashion,bytrainingageneratortoproduceimageswherethestudentdoesnotmatchtheteacheryet,
+andtrainingthatstudenttomatchtheteacheratthesametime. OnsimpledatasetslikeSVHN,even
+whenthetrainingsetislarge,weobtainstudentswhoseperformanceisclosetodistillationwiththe
+fulltrainingset. OnmorediversedatasetslikeCIFAR-10,weobtaincompellingzeroandfew-shot
+distillationresults,whichsignificantlyimproveonthepreviousstate-of-theart. Wehopethatthis
+workwillpavethewayformoredata-freeknowledgetransfertechniques,asprivatedatasetslikely
+becomeincreasinglycommoninthefuture.
+Acknowledgements. The authors would like to thank Benjamin Rhodes, Miguel Jaques, Luke
+Darlow, Antreas Antoniou, Elliot Crowley, Joseph Mellor and Etienne Toussaint for their useful
+feedbackthroughoutthisproject. OurworkwassupportedinpartbytheEPSRCCentreforDoctoral
+TraininginDataScience,fundedbytheUKEngineeringandPhysicalSciencesResearchCouncil
+(grantEP/L016427/1)andtheUniversityofEdinburghaswellasaHuaweiDDMPLabInnovation
+ResearchGrant. Theopinionsexpressedandargumentsemployedhereindonotnecessarilyreflect
+theofficialviewsofthesefundingbodies.
+References
+Ahn,S.,Hu,S.X.,Damianou,A.C.,Lawrence,N.D.,andDai,Z.(2019). Variationalinformation
+distillationforknowledgetransfer. CoRR,abs/1904.05835.
+Ba,J.andCaruana,R.(2014). Dodeepnetsreallyneedtobedeep? InGhahramani,Z.,Welling,
+M.,Cortes,C.,Lawrence,N.D.,andWeinberger,K.Q.,editors,AdvancesinNeuralInformation
+ProcessingSystems27,pages2654–2662.CurranAssociates,Inc.
+Buciluaˇ,C.,Caruana,R.,andNiculescu-Mizil,A.(2006). Modelcompression. InProceedingsofthe
+12thACMSIGKDDInternationalConferenceonKnowledgeDiscoveryandDataMining,KDD
+’06,pages535–541,NewYork,NY,USA.ACM.
+Burton, P. R., Murtagh, M. J., Boyd, A., Williams, J. B., Dove, E. S., Wallace, S. E., Tassé, A.-
+M., Little, J., Chisholm, R. L., Gaye, A., Hveem, K., Brookes, A. J., Goodwin, P., Fistein, J.,
+Bobrow,M.,andKnoppers,B.M.(2015). DataSafeHavensinhealthresearchandhealthcare.
+Bioinformatics,31(20):3241–3248.
+Candela,J.Q.andRasmussen,C.E.(2005). AunifyingviewofsparseapproximateGaussianprocess
+regression. JournalofMachineLearningResearch,6:1939–1959.
+Crowley,E.J.,Gray,G.,andStorkey,A.(2018). Moonshine: Distillingwithcheapconvolutions. In
+AdvancesinNeuralInformationProcessingSystems.
+Dehghani,M.,Mehrjou,A.,Gouws,S.,Kamps,J.,andSchölkopf,B.(2017). Fidelity-weighted
+learning. CoRR,abs/1711.02799.
+Devlin,J.,Chang,M.,Lee,K.,andToutanova,K.(2018). BERT:pre-trainingofdeepbidirectional
+transformersforlanguageunderstanding. CoRR,abs/1810.04805.
+Fredrikson,M.,Jha,S.,andRistenpart,T.(2015). Modelinversionattacksthatexploitconfidence
+informationandbasiccountermeasures. InProceedingsofthe22NdACMSIGSACConferenceon
+ComputerandCommunicationsSecurity,CCS’15,pages1322–1333,NewYork,NY,USA.ACM.
+Fredrikson,M.,Lantz,E.,Jha,S.,Lin,S.,Page,D.,andRistenpart,T.(2014). Privacyinpharmaco-
+genetics: Anend-to-endcasestudyofpersonalizedwarfarindosing. InProceedingsofthe23rd
+USENIXConferenceonSecuritySymposium,SEC’14,pages17–32,Berkeley,CA,USA.USENIX
+Association.
+Geirhos, R., Rubisch, P., Michaelis, C., Bethge, M., Wichmann, F. A., and Brendel, W. (2018).
+Imagenet-trainedcnnsarebiasedtowardstexture;increasingshapebiasimprovesaccuracyand
+robustness. CoRR,abs/1811.12231.
+9
+Gupta,S.,Agrawal,A.,Gopalakrishnan,K.,andNarayanan,P.(2015). Deeplearningwithlimited
+numericalprecision. CoRR,abs/1502.02551.
+Han,S.,Mao,H.,andDally,W.J.(2016). Deepcompression: Compressingdeepneuralnetwork
+withpruning,trainedquantizationandhuffmancoding. CoRR,abs/1510.00149.
+He,K.,Zhang,X.,Ren,S.,andSun,J.(2015). Deepresiduallearningforimagerecognition. CoRR,
+abs/1512.03385.
+Hinton,G.,Vinyals,O.,andDean,J.(2015). Distillingtheknowledgeinaneuralnetwork. arXiv
+preprintarXiv:1503.02531.
+Hubara, I., Courbariaux, M., Soudry, D., El-Yaniv, R., and Bengio, Y. (2016). Quantized neu-
+ral networks: Training neural networks with low precision weights and activations. CoRR,
+abs/1609.07061.
+Ilyas, A., Santurkar, S., Tsipras, D., Engstrom, L., Tran, B., and Madry, A. (2019). Adversarial
+ExamplesAreNotBugs,TheyAreFeatures. arXive-prints,pagearXiv:1905.02175.
+Kimura,A.,Ghahramani,Z.,Takeuchi,K.,Iwata,T.,andUeda,N.(2018).Few-shotlearningofneural
+networksfromscratchbypseudoexampleoptimization. arXive-prints,pagearXiv:1802.03039.
+Kingma,D.P.andBa,J.(2015). Adam: Amethodforstochasticoptimization. In3rdInternational
+Conference on Learning Representations, ICLR 2015, San Diego, CA, USA, May 7-9, 2015,
+ConferenceTrackProceedings.
+Krizhevsky,A.(2009). Learningmultiplelayersoffeaturesfromtinyimages.
+Larochelle,H.,Erhan,D.,andBengio,Y.(2008). Zero-datalearningofnewtasks. InProceedingsof
+theTwenty-ThirdAAAIConferenceonArtificialIntelligence,AAAI2008,Chicago,Illinois,USA,
+July13-17,2008,pages646–651.
+Li, H., Kadav, A., Durdanovic, I., Samet, H., andGraf, H.P.(2016). Pruningfiltersforefficient
+convnets. CoRR,abs/1608.08710.
+Li, T., Li, J., Liu, Z., and Zhang, C. (2018). Knowledge distillation from few samples. CoRR,
+abs/1812.01839.
+Lopes, R. G., Fenu, S., and Starner, T. (2017). Data-free knowledge distillation for deep neural
+networks. CoRR,abs/1710.07535.
+Nayak,G.K.,Mopuri,K.R.,Shaj,V.,Babu,R.V.,andChakraborty,A.(2019). Zero-shotknowledge
+distillationindeepnetworks. InInternationalConferenceonMachineLearning(ICML).
+Netzer, Y., Wang, T., Coates, A., Bissacco, A., Wu, B., andNg, A.Y.(2011). Reading digitsin
+natural images with unsupervised feature learning. In NIPS Workshop on Deep Learning and
+UnsupervisedFeatureLearning2011.
+Oliver,A.,Odena,A.,Raffel,C.,Cubuk,E.D.,andGoodfellow,I.J.(2018). Realisticevaluationof
+deepsemi-supervisedlearningalgorithms. CoRR,abs/1804.09170.
+Radford,A.,Wu,J.,Child,R.,Luan,D.,Amodei,D.,andSutskever,I.(2019). Languagemodelsare
+unsupervisedmultitasklearners.
+Romero,A.,Ballas,N.,Kahou,S.E.,Chassang,A.,Gatta,C.,andBengio,Y.(2015). Fitnets: Hints
+forthindeepnets. In3rdInternationalConferenceonLearningRepresentations,ICLR2015,San
+Diego,CA,USA,May7-9,2015,ConferenceTrackProceedings.
+Rusu,A.A.,Colmenarejo,S.G.,Gülçehre,Ç.,Desjardins,G.,Kirkpatrick,J.,Pascanu,R.,Mnih,V.,
+Kavukcuoglu,K.,andHadsell,R.(2016). Policydistillation. In4thInternationalConferenceon
+LearningRepresentations,ICLR2016,SanJuan,PuertoRico,May2-4,2016,ConferenceTrack
+Proceedings.
+10
+Snelson,E.andGhahramani,Z.(2005). SparseGaussianprocessesusingpseudo-inputs. InAdvances
+inNeuralInformationProcessingSystems18[NeuralInformationProcessingSystems,NIPS2005,
+December5-8,2005,Vancouver,BritishColumbia,Canada],pages1257–1264.
+Socher,R.,Ganjoo,M.,Manning,C.D.,andNg,A.Y.(2013). Zero-shotlearningthroughcross-
+modaltransfer.InAdvancesinNeuralInformationProcessingSystems26:27thAnnualConference
+onNeuralInformationProcessingSystems2013.ProceedingsofameetingheldDecember5-8,
+2013,LakeTahoe,Nevada,UnitedStates.,pages935–943.
+Sun,C.,Shrivastava,A.,Singh,S.,andGupta,A.(2017). Revisitingunreasonableeffectivenessof
+dataindeeplearningera. CoRR,abs/1707.02968.
+Taigman,Y.,Yang,M.,Ranzato,M.,andWolf,L.(2014). Deepface: Closingthegaptohuman-level
+performance in face verification. In 2014 IEEE Conference on Computer Vision and Pattern
+Recognition,pages1701–1708.
+Titsias, M. K. (2009). Variational learning of inducing variables in sparse Gaussian processes.
+InProceedingsoftheTwelfthInternationalConferenceonArtificialIntelligenceandStatistics,
+AISTATS2009,ClearwaterBeach,Florida,USA,April16-18,2009,pages567–574.
+Tramèr,F.,Zhang,F.,Juels,A.,Reiter,M.K.,andRistenpart,T.(2016). Stealingmachinelearning
+modelsviapredictionapis. CoRR,abs/1609.02943.
+vandenOord,A.,Dieleman,S.,Zen,H.,Simonyan,K.,Vinyals,O.,Graves,A.,Kalchbrenner,N.,
+Senior,A.W.,andKavukcuoglu,K.(2016). Wavenet: Agenerativemodelforrawaudio. CoRR,
+abs/1609.03499.
+Wang,T.,Zhu,J.,Torralba,A.,andEfros,A.A.(2018). Datasetdistillation. CoRR,abs/1811.10959.
+Wu,Y.,Schuster,M.,Chen,Z.,Le,Q.V.,Norouzi,M.,Macherey,W.,Krikun,M.,Cao,Y.,Gao,
+Q.,Macherey,K.,Klingner,J.,Shah,A.,Johnson,M.,Liu,X.,Kaiser,L.,Gouws,S.,Kato,Y.,
+Kudo,T.,Kazawa,H.,Stevens,K.,Kurian,G.,Patil,N.,Wang,W.,Young,C.,Smith,J.,Riesa,
+J., Rudnick, A., Vinyals, O., Corrado, G., Hughes, M., and Dean, J. (2016). Google’s neural
+machinetranslationsystem: Bridgingthegapbetweenhumanandmachinetranslation. CoRR,
+abs/1609.08144.
+Zagoruyko, S. and Komodakis, N. (2016a). Paying more attention to attention: Improving the
+performanceofconvolutionalneuralnetworksviaattentiontransfer. CoRR,abs/1612.03928.
+Zagoruyko,S.andKomodakis,N.(2016b). Wideresidualnetworks. CoRR,abs/1605.07146.
+11

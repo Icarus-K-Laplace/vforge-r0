@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E04-05",
+  "source_paper": "E04-05",
+  "family": "E04",
+  "paper_text_hash": "a9d38761cdefb93627059493e37e2ca3cd65572bdd2b6ae95039836e01ecf6da",
+  "source_span": "We report results across all five tissue types.",
+  "predicates": [
+    {
+      "predicate_id": "P7_SUBGROUPS",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "All declared subgroups must appear in the reported outputs.",
+      "trace_fields": [
+        "protocol",
+        "declared_subgroups",
+        "protocol",
+        "reported_subgroups"
+      ],
+      "condition": "set(protocol.reported_subgroups) == set(protocol.declared_subgroups)",
+      "source_span": "We report results across all five tissue types.",
+      "confidence": 0.85
+    }
+  ],
+  "universal_principles": [
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "52afabbbda813ca7becf9291e51de9a24659c1eccf6f5fb482b45eb0dad473ec"
+}

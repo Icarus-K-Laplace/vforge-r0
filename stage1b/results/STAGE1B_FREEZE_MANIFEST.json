@@ -1,0 +1,90 @@
+{
+  "frozen_time": "2026-09-20T23:57:13.725163",
+  "files": [
+    {
+      "path": "stage1b/results/R1B1_REAL_TRACE_PAIRS.jsonl",
+      "sha256": "b011e403f0d615e4ab8df2efb358febc46451eab5d71b067d692377ad1b3e140",
+      "size": 54468
+    },
+    {
+      "path": "stage1b/results/R1B1_ABLATIONS.csv",
+      "sha256": "93ffbd6e17d1c7d6ddb7cb25994be9ea42901145cc14079abb5389a21e8caee0",
+      "size": 2575
+    },
+    {
+      "path": "stage1b/results/R1B1_VPVD.csv",
+      "sha256": "39efae1483548a94ab8f3bd0170373b024b9dde839062f451b8ec1e037091843",
+      "size": 792
+    },
+    {
+      "path": "stage1b/results/R1B1_TRACE_OBSERVABILITY.csv",
+      "sha256": "0ed12e1ae8ab7a09a0490d7e914504c73d09f7befdef9c6b0e0567d41b1d5127",
+      "size": 988
+    },
+    {
+      "path": "stage1b/results/R1B1_CONTRACT_AUDIT.csv",
+      "sha256": "c47ba28bc719be7416d5b72abc2e12e124022131b3a26a7eff610a8936010db8",
+      "size": 898
+    },
+    {
+      "path": "stage1b/results/R1B1_CROSS_PAPER_SOURCE_METRICS.json",
+      "sha256": "a2f46c2ca3e19be0e5c316c33b808b5feef6c7b466fa7eaa3a13fab3df49429f",
+      "size": 2149
+    },
+    {
+      "path": "stage1b/results/R1B1_ABLATIONS.json",
+      "sha256": "eedaa99a6df71bec30a6ae723e8565a8d715b82aa974c3d1a62a53cc1d022b8b",
+      "size": 130
+    },
+    {
+      "path": "stage1b\\contracts_freeze\\CB_E01_BOOTSTRAP_AGG.json",
+      "sha256": "91b2a961500a9a88725b2ae7727307aefe09adc6527832e89ec8d3c911738486",
+      "size": 1203
+    },
+    {
+      "path": "stage1b\\contracts_freeze\\CB_E04_CATEGORY_INTERACTION.json",
+      "sha256": "d89359b0df8938a0b552f463ef760e812085e77171d1f6f8c1dc2c232cf9fba2",
+      "size": 1195
+    },
+    {
+      "path": "stage1b\\contracts_freeze\\CB_E06_CROSS_MODEL_ASYM.json",
+      "sha256": "451c9d57c9f0afd5934b4a1618cdd5e628b271dfe0da5f08fb0213581064d9b1",
+      "size": 1244
+    },
+    {
+      "path": "stage1b\\contracts_freeze\\DA_E01_CROSS_METHOD_AGG.json",
+      "sha256": "e4f34abbbb98a43e0ed8410a995679c4eaa16b089aa921a298ab3f3b9344352f",
+      "size": 1185
+    },
+    {
+      "path": "stage1b\\contracts_freeze\\DA_E06_BUDGET_SYMMETRY.json",
+      "sha256": "c02e54e9e0863af0b5caadcdebb427a517defbd4109c775ad0b1e61132b150df",
+      "size": 1473
+    },
+    {
+      "path": "stage1b\\contracts_freeze\\DS_E01_CROSS_CAT_AGG.json",
+      "sha256": "dc33c7407b9738aeac18dc639d8b6251e91f8dfef1c5b3f23652ba73dd52e6a5",
+      "size": 1323
+    },
+    {
+      "path": "stage1b\\contracts_freeze\\DS_E04_CATEGORY_SUBGROUP.json",
+      "sha256": "e0e6a067840470d4b1461f77a12f772599f1013df108ad6de3c8658e51de746b",
+      "size": 1156
+    },
+    {
+      "path": "stage1b\\contracts_freeze\\DS_E06_RESOURCE_ASYM.json",
+      "sha256": "dff21db31691f963efcddb596b2705a576d29e48382ef55b64c2811348e5dda9",
+      "size": 1216
+    },
+    {
+      "path": "stage1b\\contracts_freeze\\STAGE1B_FREEZE_MANIFEST.json",
+      "sha256": "92c74ff37e3c31f2fba588882c5f35a448f99e14a11e7f77b8c3d05f065e7827",
+      "size": 2212
+    },
+    {
+      "path": "stage1b/contracts_freeze/STAGE1B_FREEZE_MANIFEST.json",
+      "sha256": "92c74ff37e3c31f2fba588882c5f35a448f99e14a11e7f77b8c3d05f065e7827",
+      "size": 2212
+    }
+  ]
+}

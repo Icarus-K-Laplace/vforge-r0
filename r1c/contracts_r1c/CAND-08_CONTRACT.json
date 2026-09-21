@@ -1,0 +1,22 @@
+{
+  "contract_id": "CAND-08_CONTRACT",
+  "candidate_id": "CAND-08",
+  "source_paper": "Objects as Points (CenterNet)",
+  "deviation_category": "C5_runtime_protocol_mismatch",
+  "claim_text": "In paper 'Objects as Points (CenterNet)', actual runtime execution configuration (data augmentation, strides, evaluation options) must identically match the declared protocol in the paper text.",
+  "predicates": [
+    {
+      "predicate_id": "RUNTIME_PROTOCOL_FIDELITY",
+      "principle": "P3_EXECUTION_PROTOCOL_MATCH",
+      "natural_language": "Runtime evaluation flags and options must be identical to those declared in the paper methods.",
+      "trace_fields": [
+        "protocol.declared_options",
+        "protocol.runtime_options"
+      ],
+      "condition": "protocol.runtime_options == protocol.declared_options",
+      "confidence": 0.9
+    }
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "1d9e1aa03a7753b52b7026b4e97e1b487514c8ea74141ad2866a6111b535a7f1"
+}

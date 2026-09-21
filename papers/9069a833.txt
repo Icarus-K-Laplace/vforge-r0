@@ -1,0 +1,1891 @@
+End-to-End differentiable construction
+of molecular mechanics force fields
+YuanqingWang(ORCID:0000-0003-4403-2015)1,3,4,JoshFass(ORCID:0000-0003-3719-266X)1,2‡,
+BenjaminKaminow(ORCID:0000-0002-2266-3353)1,2,JohnE.Herr(ORCID:0000-0001-5639-1520)1,Dominic
+Rufa(ORCID:0000-0003-0930-9445)1,IvyZhang(ORCID:0000-0003-0628-6276)1,2,Iván
+Pulido(ORCID:0000-0002-7178-8136)1,MikeHenry(ORCID:0000-0002-3870-9993)1,
+JohnD.Chodera(ORCID:0000-0003-0542-119X)1
+1ComputationalandSystemsBiologyProgram,SloanKetteringInstitute,MemorialSloanKetteringCancerCenter,New
+York,NY10065;2Tri-InstitutionalPhDPrograminComputationalBiologyandMedicine,WeillCornellMedicalCollege,
+CornellUniversity,NewYork,NY10065;3Physiology,Biophysics,andSystemBiologyPh.D.Program,WeillCornell
+MedicalCollege,CornellUniversity,NewYork,NY10065;4MFA.PrograminCreativeWriting,DivisionofHumanitiesand
+Arts,theCityCollegeofNewYork,theCityUniversityofNewYork,NewYork,NY10031
+*Forcorrespondence:
+yuanqing.wang@choderalab.org(YW);john.chodera@choderalab.org(JDC)
+Presentaddress:§RelayTherapeutics,Cambridge,MA02139
+Abstract Molecularmechanics(MM)potentialshavelongbeenaworkhorseofcomputationalchemistry.
+Leveragingaccuracyandspeed,thesefunctionalformsfinduseinawidevarietyofapplicationsinbiomolec-
+ularmodelinganddrugdiscovery,fromrapidvirtualscreeningtodetailedfreeenergycalculations. Tradi-
+tionally,MMpotentialshavereliedonhuman-curated,inflexible,andpoorlyextensiblediscretechemical
+perceptionrules(atomtypes)forapplyingparameterstosmallmoleculesorbiopolymers,makingitdifficult
+tooptimizebothtypesandparameterstofitquantumchemicalorphysicalpropertydata. Here,wepro-
+poseanalternativeapproachthatusesgraphneuralnetworkstoperceivechemicalenvironments,produc-
+ingcontinuousatomembeddingsfromwhichvalenceandnonbondedparameterscanbepredictedusing
+invariance-preservinglayers. Sinceallstagesarebuiltfromsmoothneuralfunctions,theentireprocess—
+spanning chemical perception to parameter assignment—is modular and end-to-end differentiable with
+respecttomodelparameters,allowingnewforcefieldstobeeasilyconstructed,extended,andappliedto
+arbitrarymolecules.Weshowthatthisapproachisnotonlysufficientlyexpressivetoreproducelegacyatom
+types,butthatitcanlearntoaccuratelyreproduceandextendexistingmolecularmechanicsforcefields.
+Trainedwitharbitrarylossfunctions,itcanconstructentirelynewforcefieldsself-consistentlyapplicableto
+bothbiopolymersandsmallmoleculesdirectlyfromquantumchemicalcalculations,withsuperiorfidelity
+than traditional atom or parameter typing schemes. When adapted to simultaneously fit partial charge
+models,espalomadelivershigh-qualitypartialatomicchargesordersofmagnitudefasterthancurrentbest-
+practiceswithlittleinaccuracy.Whentrainedonthesamequantumchemicalsmallmoleculedatasetused
+toparameterizetheOpenForceField("Parsley")openff-1.2.0smallmoleculeforcefieldaugmentedwitha
+peptidedataset,theresultingespalomamodelshowssuperioraccuracyvis-à-visexperimentsincomputing
+relativealchemicalfreeenergycalculationsforapopularbenchmarkset.Thisapproachisimplementedin
+thefreeandopensourcepackageespaloma,availableathttps://github.com/choderalab/espaloma.
+Molecular mechanics (MM) force fields—physical models that abstract molecular systems as atomic
+pointmassesthatinteractvianonbondedinteractionsandvalence(bond,angle,torsion)terms—havepow-
+eredinsilicomodelingtoprovidekeyinsightsandquantitativepredictionsinallaspectsofchemistry,from
+1of41
+2202
+rpA
+81
+]hp-pmoc.scisyhp[
+3v69110.0102:viXra
+drugdiscoverytomaterialsscience[1–9]. Whilerecentworkinquantummachinelearning(QML)poten-
+tialshasdemonstratedhowflexibilityinfunctionalformsandtrainingstrategiescanleadtoincreasedac-
+curacy[10–16],theseQMLpotentialsareordersofmagnitudeslowerthanpopularmolecularmechanics
+potentials even on expensive hardware accelerators, as they involve orders of magnitude more floating
+pointoperationsperenergyorforceevaluation.
+On the other hand, the simpler physical energy functions of MM models are compatible with highly
+optimizedimplementationsthatcanexploitawidevarietyofhardware[2,17–21],butrelyoncomplexand
+inextensiblelegacyatomtypingschemesforparameterassignment[22]:
+• First,asetofrulesisusedtoclassifyatomsintodiscreteatomtypesthatmustencodeallinformation
+aboutanatom’schemicalenvironmentneededinsubsequentparameterassignmentsteps.
+• Next, a discrete set of bond, angle, and torsion types is determined by composing the atom types
+involvedintheinteraction.
+• Finally, theparametersattachedtoatoms, bonds, angles, andtorsionsareassignedaccordingtoa
+look-uptableofcomposedparametertypes.
+Consequently, atoms, bonds, angles, or torsions with distinct chemical environments that happen to
+fallintothesameexpert-deriveddiscretetypeclassareforcedtosharethesamesetofMMparameters,
+potentially leading to low resolution and potentially poor accuracy. On the other hand, the explosion of
+numberofdiscreteparameterclassesdescribingequivalentchemicalenvironmentsrequiredbytraditional
+MMatomtypingschemesnotonlyposessignificantchallengestoextendingthespaceofatomtypes[22],
+optimizing these independently has the potential to compromise generalizabilty and lead to overfitting.
+Even with modern MM parameter optimization frameworks [23–25] and sufficient data, parameter opti-
+mizationisonlyfeasibleinthecontinuousparameterspacedefinedbythesefixedatomtypes,whilethe
+mixeddiscrete-continuousoptimizationproblem—jointlyoptimizingtypesandparameters—isintractable.
+Here,wepresentacontinuousalternativetotraditionaldiscreteatomtypingschemesthatpermitsfull
+end-to-enddifferentiableoptimizationofbothtypingandparameterassignmentstages, allowinganentire
+force field to be built, extended, and applied using standard automatic differentiation machine learning
+frameworkssuchasPyTorch[32],TensorFlow[33],orJAX[34](Figure1). Graphneuralnetworkshavere-
+centlyemergedasapowerfulwaytolearnchemicalpropertiesofatoms,bonds,andmoleculesforbiomolec-
+ularspecies(bothsmallorganicmoleculesandbiopolymers),whichcanbeconsideredisomorphicwiththeir
+graphrepresentations[35–44].Wehypothesizethatgraphneuralnetworksoperatingonmoleculeshaveex-
+pressivenessthatisatleastequivalentto—andlikelymuchgreaterthan—expert-derivedtypingrules,with
+theadvantageofbeingabletosmoothlyinterpolatebetweenrepresentationsofchemicalenvironments
+(suchasaccountingforfractionalbondorders[45]).WeprovideempiricalevidenceforthisinSection1.1.
+Next,wedemonstratetheutilityofsuchamodel(whichwecalltheextendablesurrogatepotentialoptimized
+bymessage-passing, orespaloma)toconstructend-to-endoptimizableforcefieldswithcontinuousatom
+types. Espalomaassignsmolecularmechanicsparametersfromamoleculargraphinthreedifferentiable
+stages(Figure1):
+• Stage 1: Continuous atom embeddings are constructed using graph neural networks to perceive
+chemicalenvironments(Section1.1).
+• Stage 2: Continuous bond, angle, and torsion embeddings are constructed using pooling that pre-
+servesappropriatesymmetries(Section1.2).
+• Stage 3: Molecular mechanics force field parameters are computed from atom, bond, angle, and
+torsionembeddingsusingfeed-forwardnetworks(Section1.3).
+Additionalmolecularmechanicsparameterclasses(suchaspointpolarizabilities,valencecouplingterms,
+orevenparametersforcharge-transfermodels[46])caneasilybeaddedinamodularmanner.
+Similartolegacymolecularmechanicsparameterassignmentinfrastructures,molecularmechanicspa-
+rametersareassignedonceforeachsystem,andcanbesubsequentlyusedtocomputeenergiesandforces
+orcarryoutmolecularsimulationswithstandardmolecularmechanicspackages. Unliketraditionallegacy
+force fields, espaloma model parameters Φ —which define the entire process by which molecular me-
+NN
+chanicsforcefieldparametersΦ aregeneratedadhocforagivenmolecule—caneasilybefittodatafrom
+FF
+2of41
+Figure1. Espalomaisanend-to-enddifferentiablemolecularmechanicsparameterassignmentschemeforarbi-
+traryorganicmolecules.espaloma(extendablesurrogatepotentialoptimizedbymessage-passing)isamodularapproach
+fordirectlycomputingmolecularmechanicsforcefieldparametersΦ fromachemicalgraphsuchasasmallmolecule
+FF
+orbiopolymerviaaprocessthatisfullydifferentiableinthemodelparametersΦ .InStage1,agraphneuralnetworkis
+NN
+usedtogeneratecontinuouslatentatomembeddingsdescribinglocalchemicalenvironmentsfromthechemicalgraph.
+InStage2,theseatomembeddingsaretransformedintofeaturevectorsthatpreserveappropriatesymmetriesforatom,
+bond,angle,andproper/impropertorsioninferenceviaJanossypooling. InStage3,molecularmechanicsparameters
+aredirectlypredictedfromthesefeaturevectorsusingfeed-forwardneuralnets. Thisparameterassignmentprocess
+isperformedoncepermolecularspecies,allowingthepotentialenergytoberapidlycomputedusingstandardmolecu-
+larmechanicsormoleculardynamicsframeworksthereafter.ThecollectionofparametersΦ describingtheespaloma
+NN
+modelcanbeconsideredastheequivalentcompletespecificationofatraditionalmolecularmechanicsforcefieldsuchas
+GAFF[26,27]/AM1-BCC[28,29]inthatitencodestheequivalentoftraditionaltypingrules,parameterassignmenttables,
+andevenpartialchargemodels.Thisfinalstageismodular,andcanbeeasilyextendedtoincorporateadditionalmolec-
+ularmechanicsparameterclasses,suchasparametersforacharge-equilibrationmodel(Section4),pointpolarizabilities,
+orvalence-couplingtermsforClassIImolecularmechanicsforcefields[30,31].
+scratchusingstandard,highlyportable,high-performancemachinelearningframeworksthatsupportau-
+tomaticdifferentiation.
+Here, we demonstrate that espaloma provides a sufficiently flexible representation to both learn to
+applyexistingMMforcefieldsandtogeneralizethemtonewmolecules(Section2). Espaloma’smodular
+lossfunctionenablesforcefieldstobelearneddirectlyfromquantumchemicalenergies(Section3),partial
+charges (Section 4), or both. The resultingforce fields can generate self-consistent parameters for small
+molecules,biopolymers(Section5),andcovalentadducts(SectionF).Finally,anespalomamodelfittothe
+samequantumchemicaldatasetusedtobuildtheOpenForceFieldOpenFF("Parsley")openff-1.2.0small
+moleculeforcefield,augmentedwithpeptidequantumchemicaldata,canoutperformitinanout-of-sample
+kinase:inhibitoralchemicalfreeenergybenchmark(Section9.4).
+1 Espaloma: End-to-enddifferentiableMMparameterassignment
+First,wedescribehowourproposedframework,espaloma(Figure1),operatesanalogouslytolegacyforce
+fieldtypingschemestogenerateMMparametersΦ fromamoleculargraphandneuralmodelparame-
+FF
+tersΦ ,
+NN
+Φ ←espaloma(,Φ ), (1)
+FF NN
+3of41
+whichcansubsequentlybeusedtocomputetheMMenergy(asinEquation14)foranyconformation. A
+briefgraph-theoreticoverviewofmolecularmechanicsforcefieldsisprovidedintheAppendix(SectionA).
+1.1 Stage1: Graphneuralnetworksgenerateacontinuousatomembedding,replacing
+legacydiscreteatomtyping
+Weproposetousegraphneuralnetworks[35–44]asareplacementforrule-basedchemicalenvironment
+perception[22].Theseneuralarchitectureslearnusefulrepresentationsofatomicchemicalenvironments
+fromsimpleinputfeaturesbyupdatingandpoolingembeddingvectorsviamessagepassingiterationsto
+neighboringatoms [44]. Assuch,symmetriesinchemicalgraphs(chemicalequivalencies)areinherently
+preserved,whilearich,continuous,anddifferentiablylearnablerepresentationoftheatomicenvironment
+isderived.Forabriefintroductiontographneuralnetworks,seeAppendixSectionB
+Traditional molecular mechanics force field parameter assignment schemes such as Antechamber/-
+GAFF[26,27]orCGenFF[47,48]useattributesofatomsandtheirneighbors(suchasatomicnumber,hy-
+bridization,andaromaticity)toassigndiscreteatomtypes. Subsequently,atom,bond,angle,andtorsion
+parametersareassignedforspecificcombinationsofthesediscretetypesaccordingtohumanchemicalin-
+tuition[22].Onacloserlook,thisschemeresemblesatwo-orthree-stepWeisfeiler-Lemantest[49],which
+hasbeenshowntobewellapproximatedbysomegraphneuralnetworkarchitectures[35].Wehypothesize
+thatgraphneuralnetworkarchitecturescanbeatleastasexpressiveaslegacyatomtypingrules.
+Tocomputecontinuousatomembeddings,westartwithamoleculargraphwhoseatoms(nodes)are
+labeledwithsimplechemicalproperties(here,weconsiderelement,hybridization,aromaticity,andformal
+charge, and membership in various ring sizes) easily computed in any cheminformatics toolkit. Sequen-
+tialapplicationofthegraphneuralnetworkmessage-passingupdaterules(SectionB)thencomputesan
+updatedsetofatom(node)featuresineachgraphneuralnetworklayer,andthefinalatomembeddings
+ℎ ∈ℝ∣∣×𝐷areextractedfromthefinallayer.Thelossontrainingdataisthenminimizedbyminimizingthe
+𝑣
+cross-entropylossbetweenpredictedandreferencetypes.1
+WeuseasubsetofZINC[50]providedwithparm@Frossttovalidateatomtypingimplementations[51]
+(7529smalldrug-likemolecules,partitioned80:10:10intotraining:validation:testsets)forthisexperiment.
+ReferenceGAFF1.81[27]atomtypesareassignedusingAntechamber[27]fromAmberToolsandareused
+fortrainingandtesting.
+Graphneuralnetworkscanreproducelegacyatomtypeswithhighaccuracy
+ThetestsetperformanceisreportedinFigure2,wheretheoverallaccuracybetweenreferencelegacytypes
+andlearnedtypesisveryhigh—98.31%98.63%.Inanalyzingtheinfrequentfailures,wefindthemodelassigns
+97.94%
+atomtypesthatcorrespondtothereferencetypemoreoftenwhentheatomtypeappearsmorefrequently
+inthetrainingdata,whereasthediscrepanciesoccurinassigningraretypesandtypeswhosedefinitionsfol-
+lowamoresophisticated(butchemicallyarbitrary)logic.Forinstance,oneofthemostfrequentconfusions
+isthemisassignmentofca(sp2carboninpurearomaticsystems)tocp(headsp2carbonthatconnectstwo
+ringsinbiphenylsystems,occurringinonly0.6%ofthedataset).Therelativeambiguityofthevarioustypes
+thataremostfrequentlyconfusedissuggestivethatthegraphnetmakeshuman-likeerrorsinperceiving
+subtledifferencesbetweendistinctchemicalenvironments.
+Thebenefitsofneuralembeddingcomparedtolegacydiscretetypingaremany-fold:
+• Legacytypingschemesaregenerallydescribedintextforminpublishedwork(forexample[26,27]),
+creating the potential for discrepancies between implementations when different cheminformatics
+toolkits are used. By contrast, with the knowledge to distinguish chemical environments stored in
+latentvectorsandnotdependentonanymanualcoding,ourapproachisdeterministiconcetrained,
+andisportableacrossplatformsthankstomodernmachinelearningframeworks.
+• BoththechemicalperceptionprocessandtheapplicationofforcefieldparametersΦ canbeopti-
+𝙵𝙵
+mizedsimultaneouslyviagradient-basedoptimizationofΦ usingstandardmachinelearningframe-
+NN
+worksthatsupportautomaticdifferentiation.
+1Notethatthisdiscretetypeassignmentlayerisonlyusedtoaddressthequestionofhowwellthecontinuousembeddingsapproximate
+discretetypes,andisnotusedinsubsequentexperimentsthatutilizethestandardespalomaarchitecture(Figure1).
+4of41
+Figure2. Graphneuralnetworkscanreproducelegacyatomtypeswithhighaccuracy. TheStage1graphneural
+networkofespaloma(Section1.1)chainedtoadiscreteatomtypereadoutwasfittoGAFF1.81atomtypes[26,27]ona
+subsetofZINC[50]distributedwithparm@Frosst[51]asavalidationset.The7529moleculesinthissetwerepartitioned
+80:10:10intotraining:validation:testsetsforthisexperiment. Withintestset,99.07%99.22% atomswerecorrectlytyped,
+98.93%
+with1000bootstrapreplicatesusedtoestimatetheconfidenceintervalsarisingfromfinitetestsetsizeeffects. (a)The
+distributionofthenumberofatomtypediscrepanciespermoleculeonthetestsetdemonstratesthatonlyaminorityof
+atomsareincorrectlytyped.(b)Theerrorrateperelementisprimarilyconcentratedwithincarbon,nitrogen,andsulfur
+types.(c)Examiningatomtypefailuresindetailonmoleculeswiththelargestnumbersofdiscrepanciesshowsthatthe
+atomtypesareeasilyconfusingeventoahumanexpert,sincetheyrepresentqualitiesthataredifficulttopreciselydefine.
+(d)Thedistributionofpredictedatomtypesforeachreferenceatomtypeforcarbontypesareshown;on-diagonalvalues
+indicateagreement.Thepercentagesannotatedunderx-axisdenotetherelativeabundancewithinthetestset.Onlythe
+commoncarbontypesareincludedintheconfusionmatrixhere;forfullconfusionmatrixacrossallatomtypes,seeSI
+Figure10.(e)AlistofcommonnitrogentypesinGAFF-1.81[52].(f)AlistofcommoncarbontypesinGAFF-1.81[52].
+• Whileextendingalegacyforcefieldbyaddingnewatomtypescanleadtoanexplosioninthenumber
+ofparametertypes,continuousneuralembeddingsdonotsufferfromthislimitation; expansionof
+thetypingprocessoccursautomaticallyasmorediversetrainingexamplesareintroduced.
+1.2 Stage2: Symmetry-preservingpoolinggeneratescontinuousbond,angle,andtorsion
+embeddings,replacingdiscretetypes
+Termsinamolecularmechanicspotentialaresymmetricwithrespecttocertainpermutationsoftheatoms
+involvedintheinteraction.Forexample,harmonicbondtermsaresymmetricwithrespecttotheexchange
+of atoms involved in the bond. More elaborate symmetries are frequently present, such as in the three-
+fold terms representing improper torsions for the Open Force Field "Parsley" generation of force fields
+(𝚔−𝚒−𝚓−𝚕, 𝚔−𝚓−𝚕−𝚒, and𝚔−𝚕−𝚒−𝚓, where𝑘isthecentralatom)[53]. Traditionalforcefields, for
+bond,angle,andpropertorsionterms,enforcethisbyensuringequivalentorderingsofatomtypesreceive
+thesameparametervalue.2
+Forneuralembeddings,theinvariancesofvalencetermsw.r.t. theseatomorderingsymmetriesmust
+beconsideredwhilesearchingforexpressivelatentrepresentationstofeedintoasubsequentparameter
+predictionnetworkstage.InspiredbyJanossypooling[55],weenumeratethetherelevantequivalentatom
+permutationstoderivebond,angle,andtorsionembeddingsℎ,ℎ ,ℎ thatrespectthesesymmetriesfrom
+𝑟 𝜃 𝜙
+2Traditionalforcefieldsgroupbonds,angles,andtorsionssimplybytheircomposingorderedgroupsofatoms.Forinstance,thefirst
+bondtypeinGAFF1.81[27]isdefinedbythetypeshw-ow[54],whichisequivalenttoow-hwduetomirrorsymmetryinidentifyingbonds.
+Anglesandtorsionshavesimilarsymmetriesthatmusttobeaccountedforwhenenumeratingtheatomsormatchingvalencetypes.Note
+thatAmberdoesnotuniquelyspecifyequivariantimpropertorsionorderings—seefootnoteaofTable3of[22]fordetails.
+5of41
+atomembeddingsℎ ,
+𝑣
+ℎ =NN([ℎ ∶ℎ ])+NN([ℎ ∶ℎ ]); (2)
+𝑟𝑖𝑗 𝑟 𝑣𝑖 𝑣𝑗 𝑟 𝑣𝑗 𝑣𝑖
+ℎ =NN ([ℎ ∶ℎ ∶ℎ ])+NN ([ℎ ∶ℎ ∶ℎ ]); (3)
+𝜃𝑖𝑗𝑘 𝜃 𝑣𝑖 𝑣𝑗 𝑣𝑘 𝜃 𝑣𝑘 𝑣𝑗 𝑣𝑖
+ℎ =NN ([ℎ ∶ℎ ∶ℎ ∶ℎ ])+NN ([ℎ ∶ℎ ∶ℎ ∶ℎ ]); (4)
+𝜙𝑖𝑗𝑘𝑙proper 𝜙proper 𝑣𝑖 𝑣𝑗 𝑣𝑘 𝑣𝑙 𝜙 𝑣𝑙 𝑣𝑘 𝑣𝑗 𝑣𝑖
+ℎ =NN ([ℎ ∶ℎ ∶ℎ ∶ℎ ])+NN ([ℎ ∶ℎ ∶ℎ ∶ℎ ])+NN ([ℎ ∶ℎ ∶ℎ ∶ℎ ]),
+𝜙𝑖𝑗𝑘𝑙improper 𝜙improper 𝑣𝑖 𝑣𝑗 𝑣𝑘 𝑣𝑙 𝜙 𝑣𝑘 𝑣𝑗 𝑣𝑙 𝑣𝑖 𝜙improper 𝑣𝑙 𝑣𝑗 𝑣𝑖 𝑣𝑘
+(5)
+wherecolumns(⋅∶⋅)denoteconcatenation3.Assuch,theorderinvarianceisevident,i.e.,ℎ =ℎ ,ℎ =
+𝑟𝑖𝑗 𝑟𝑗𝑖 𝜃𝑖𝑗𝑘
+ℎ ,andℎ =ℎ 4.
+𝜃𝑘𝑗𝑖 𝜙𝑖𝑗𝑘𝑙 𝜙𝑙𝑘𝑗𝑖
+1.3 Stage3: Neuralparametrizationofatoms,bonds,angles,andtorsionsreplaces
+tabulatedparameterassignment
+Inthefinalstage,eachfeed-forwardneuralnetworksmodularlylearnthemappingfromthesesymmetry-
+preservingatom,bond,angle,andtorsionencodingstoMMparametersΦ thatreflectthespecificchemical
+FF
+environmentsappropriatefortheseterms:
+{𝜖 ,𝜎 }=NN (ℎ ) atomparameters (6)
+𝑣 𝑣 𝑣readout 𝑣
+{𝑘,𝑏}=NN (ℎ) bondparameters (7)
+𝑟 𝑟 𝑟readout 𝑟
+{𝑘 ,𝑏 }=NN (ℎ ) angleparameters (8)
+𝜃 𝜃 𝜃readout 𝜃
+{𝑘 }=NN (ℎ ) torsionparameters (9)
+𝜙 𝜙readout 𝜙
+This stage is analogous to the final table lookup step in traditional force field construction, but with sig-
+nificantaddedflexibilityarisingfromthecontinuousembeddingthatcapturesthechemicalenvironment
+specifictothepotentialenergytermbeingassigned.
+Here, we use Lennard-Jones parameters from legacy force fields (here, Open Force Field 1.2.0 [56])
+toavoidhavingtoincludecondensed-phasephysicalpropertiesinthefittingprocedure. Whileincluding
+condensed-phasephysicalpropertiesinthelossfunctionispossible,itisveryexpensivetodoso,andas
+our experiments demonstrate, may not be necessary for achieving increased accuracy over legacy force
+fields.
+WealsofoundproducingbondandangleparametersdirectlyinStage3tofrustrateoptimization, so
+we employ a mixture of linear bases to represent harmonic energies that can be translated back to the
+original functional form (see Appendix Section B.1.1). Similarly, we do not fit phases and periodicities of
+torsionsastheyarediscrete.Weinsteadfixphasesat𝜙 =0andfitallperiodicities𝑛=1,…,6.Thisallows
+0
+thecorrespondingtorsionbarriers𝐾 toassumetheentirecontinuumofpositiveornegativevalues;asa
+𝑛
+result,𝐾 <0mimicstheeffectof𝜙 =𝜋.
+𝑛 0
+Asaresultofusingthecontinuousatomembeddingvectorstorepresentchemicalenvironmentsfor
+eachatom,itispossibletointelligentlyinterpolatebetweenrelevantchemicalenvironmentsseenduring
+training. Thisinterpolationproducesmorenuancedvarietiesofparametersthaneithertraditionalatom
+typingordirectchemicalperception,andiscapableofcapturingsubtleeffectsarisingfromfractionalbond
+order perturbation [45]. Due to the modularity of this stage, it is easy to add new modules or swap out
+existingonestoexploreotherforcefieldfunctionalforms,suchasalternativevdWinteractions[57];pair-
+specificLennard-Jonesinteractionparameters[58,59];pointpolarizabilitiesforinstantaneousdipole[60],
+Drudeoscillator[61],orGaussiancharge[62]polarizabilitymodels;classIIvalencecouplings[63–65];charge
+transfer[46];orotherpotentialenergytermsofinterest.
+3Here,weusethethreefoldimproperformulationusedbytheOpenForceField"Parsley"generationforcefields,whichavoidsthe
+ambiguityassociatedwithselectingasinglearbitraryimpropertorsionfromasetoffouratomsinvolvedinthetorsion[53].
+4InSISectionG,weprovethatthisformissufficientlyexpressivetoassignuniquevalencetypes.
+6of41
+Figure3. Espalomaaccuratelylearnsmolecularmechanicsparameterswhenfittosnapshotenergiesfroma
+molecularmechanicsforcefield.Inthisexperiment,espalomawasusedtofitmolecularmechanics(GAFF1.81)poten-
+tialenergiesofsnapshotsgeneratedfromshortmoleculardynamics(MD)simulationsinitiatedfrommultipleconformers
+ofmoleculesfromthePhAlkEthOHdataset,whichusesonlytheelementscarbon,oxygen,andhydrogen[66].Thedataset
+contains7408moleculeswith100snapshotseach,andwaspartitionedbymolecules80:10:10intotrain:validate:testsets.
+Weexcludedthree-andfour-memberedringsinthedataset;foradetailedstudyontherolesofthesetwofactors,seeSI
+SectionE.(a)Statisticsquotedabovetheplotsprovidetherootmeansquarederror(RMSE)betweenreferenceandpre-
+dictedMMenergies,andmeanabsolutepercentageerror(MAPE)(infractionalform)betweenreferenceandpredicted
+forcefieldparameters. Thesub-andsuperscriptsreportthethe95%confidenceintervalofeachstatisticsestimated
+from1000bootstrappedreplicatesovermoleculesinthetestset. Energytermshavekcal/molunitswhereastheunits
+offorcefieldparametersdoesnotaffectstatisticsreportedhere.Forcefieldparameters(ΦFF ):𝐾
+𝑟
+:bondforceconstant;
+𝑏: equilibriumbondlength;𝐾 : angleforceconstant;𝑏 : equilibriumanglevalue. Torsionparametersarenotshown
+𝑟 𝜃 𝜃
+becauseofthepotentialfordegeneracyoffitgiventhatallperiodicities𝑛=1,2,…,6arelearnedbyespaloma. (b)The
+dataefficiencyofespalomawasassessedinatypicaluse-caseregimebyexploringthetestsetenergyRMSEasafunction
+ofthenumberoftrainingmoleculesandsnapshotspermolecule.Thestandarddeviationoverthreefittingexperiments
+withdifferentrandomseedsisshowninparenthesis. Onceasufficientlylargenumberofmoleculesareavailable,dou-
+blingthenumberofsnapshotspermoleculedoesnotreducetheerrorasrapidlyasdoublingthenumberofmolecules.
+(c)Thedataefficiencyofespalomainadata-poorregimewasassessedinthesamemanneras(a),butforasmallnumber
+ofmoleculesandtrainingsnapshotspermolecule. Inthedata-poorregime,increasingboththenumberofmolecules
+andsnapshotspermoleculecandeliverlargedecreasesintestseterror.
+7of41
+2 Espalomacanlearntomimicexistingmolecularmechanicsforcefieldsfrom
+snapshotsandassociatedpotentialenergies
+Havingestablishedthatgraphneuralnetworkshavethecapacitytolearntoreproducelegacyatomtypes
+describingdistinctchemicalenvironments,weaskwhetherespalomaiscapableoflearningtoreproduce
+traditionalmolecularmechanics(MM)forcefieldsassignedviastandardatomtypingschemes.Inaddition
+toquantifyinghowwellaforcefieldcanbelearnedwhentheexactparametersofthemodelbeinglearned
+areknown,beingabletoaccuratelylearnexistingMMforcefieldswouldhavenumerousapplications,in-
+cludingreplacinglegacynon-portableparameterassignmentcodeswithmodernportablemachinelearning
+frameworks,learningtogeneralizetonewmoleculesthatcontainfamiliarchemicalenvironments,andper-
+mittingsimplifiedparameterassignmentforcomplex,heterogeneoussystemsinvolvingpost-translational
+modifications,covalentligands,orheterogeneouscombinationsofbiopolymersandsmallmolecules.
+Toassesshowwellespalomacanlearntoreproduceamolecularmechanicsforcefieldfromalimited
+amountofdata,weselectedadatasetwithlimitedchemicalcomplexity—PhAlkEthOH[66,67]—whichcon-
+sistsof7408linearandcyclicmoleculescontainingphenylrings,smallalkanes,ethers,andalcoholscom-
+posedofonlytheelementscarbon,oxygen,andhydrogen.Three-andfour-memberedringsareexcludedin
+thedatasetsincetheywouldcauseinstabilityinthepredictionofenergies(seeSISectionE).Wegenerated
+asetof100conformationalsnapshotsforeachmoleculeusingshortmoleculardynamicssimulationsat
+300Kinitiatedfrommultipleconformationstoensureadequatesamplingofconformers.ThePhAlkEthOH
+datasetwasrandomlypartitioned(bymolecules)into80%training,10%validation,and10%testmolecules,
+andanespalomamodelwastrainedwithearlystoppingviamonitoringforadecreaseinaccuracyinthe
+validationset.TheperformanceoftheresultingmodelisshowninFigure3.
+Espalomacanlearnexistingforcefieldsandgeneralizetonewmoleculeswithlowerror
+Espalomaisabletoachieveverylowtotalenergyandparametererroronthetrainingset,suggestingthat
+espalomacanlearntheparametersoftypedmoleculesfromenergiesalone. Inaddition,errorontheout-
+of-sample test set of molecules is comparable—less than 0.02 kcal/mol—suggesting that espaloma can
+effectivelygeneralizetonewmoleculeswithinthesamechemicalspace.Surprisingly,thetotalenergyRMSE
+islowerthantheangleenergyRMSE,suggestingthatthereissomedegeneracyinhowenergycontributions
+aredistributedamongvalenceenergyterms.
+Espalomarequiresfewconformationspermoleculetoachievehighaccuracy
+WeexaminedthedataefficiencyofespalomabyrepeatingtheMMfittingexperimentwithvaryingnumbers
+ofmoleculesandsnapshotspermoleculeinanattempttoaddresswhethermoleculardiversity orconfor-
+mationaldiversityismoreimportant. Inthetypicaldataregime(Figure3b),oncesufficientconformational
+diversityisreached(∼20snapshots/molecule),increasingmoleculardiversitymoreeffectivelyreduceser-
+ror,thoughthismeetswithdiminishingreturnspastacertainpoint.Inthelowdataregime(Figure3c),both
+molecularandconformationaldiversityareimportantforreducingerrortousefulregimes,withaminimal
+thresholdforeachrequiredtoachievereasonableerrors.
+3 Espalomacanfitquantumchemicalenergiesdirectlytobuildnewmolecular
+mechanicsforcefields
+Sinceespalomacanderiveaforcefieldsolelybyfittingtoenergies(andoptionallygradients),werepeatthe
+end-to-endfittingexperiment(Section2)directlyusingquantumchemical(QM)datasetsusedtobuildand
+evaluateMMforcefields. WeassessedtheabilityofEspalomatolearnseveraldistinctquantumchemical
+datasetsgeneratedbytheOpenForceFieldInitiative[70]anddepositedintheMolSSIQCArchive[71]with
+B3LYP-D3BJ/DZVPleveloftheory:
+• PhAlkEthOH[66]isacollectionofcompoundscontainingonlytheelementscarbon,hydrogen,and
+oxygenincompoundscontainingphenylrings,alkanes,ketones,andalcohols. Limitedinelemental
+andchemicaldiversity,thisdatasetischosenasaproof-of-concepttodemonstratethecapabilityof
+espalomatofitandgeneralizequantumchemicalenergieswhentrainingdataissufficienttoexhaus-
+tivelycoverthebreadthofchemicalenvironments.
+8of41
+EspalomaRMSE LegacyFFRMSE(kcal/mol)(Testmolecules)
+(a)dataset #mols #trajs #snapshots
+Train Test OpenFF1.2.0 GAFF-1.81 GAFF-2.11 Amberff14SB
+PhAlkEthOH(simpleCHO) 7408 12592 244036 0.86560.9131 1.13981.2332 1.60711.6915 1.72671.7935 1.74061.8148
+0.8225 1.0715 1.5197 1.6543 1.6679
+OpenFFGen2Optimization(druglike) 792 3977 23748 0.74130.7920 0.76000.8805 2.17682.3388 2.42742.5207 2.53862.6640
+0.6914 0.6644 2.0380 2.3300 2.4370
+VEHICLe(heterocyclic) 24867 24867 234326 0.44760.4690 0.42330.4414 8.02478.2456 8.00778.2313 9.40149.6434
+0.4273 0.4053 7.8271 7.7647 9.2135
+PepConf(peptides) 736 7560 22154 1.27141.3616 1.87271.9749 3.61433.7288 4.44464.5738 4.33564.4641 3.15023.1859,∗
+1.1899 1.7309 3.4870 4.3386 4.1965 3.1117
+OpenFFGen2Optimization 0.82640.9007 1.87641.9947 2.17682.3388 2.42742.5207 2.53862.6640
+joint PepConf 1528 11537 45902 1.2038 0 1 . . 7 3 6 0 8 5 2 6 1.7307 1 1 . . 7 8 8 4 2 3 7 9 3.6143 2 3 . . 0 7 3 2 8 8 0 8 4.4446 2 4 . . 3 5 3 7 0 3 0 8 4.3356 2 4 . . 4 4 3 6 7 4 0 1 3.15023.1859,∗
+1.1178 1.6053 3.4870 4.3386 4.1965 3.1117
+Figure4.Espalomacandirectlyfitquantumchemicalenergiestoproducenewmolecularmechanicsforcefields
+withbetteraccuracythantraditionalforcefieldsbasedonatomtypingordirectchemicalperception.Espaloma
+wasfittoquantumchemicalpotentialenergiesforconformationsgeneratedbyoptimizationtrajectoriesinitiatedfrom
+distinctconformersinvariousdatasetsfromQCArchive[27]. Alldatasetswerepartitionedbymolecules80:10:10into
+train:validate:testsets. Thenumberofmolecules,optimizationtrajectories,andtotalsnapshotsareannotatedinthe
+table. (a)WereporttheRMSEontrainingandtestsets,aswellastheperformanceoflegacyforcefieldsonthetest
+set. Allstatisticsarecomputedwithpredictedandreferenceenergiescenteredtohavezeromeanforeachmolecule,
+inordertofocusonerrorsinrelativeconformationalenergeticsratherthanonerrorsinpredictingtheheatsoffor-
+mationofchemicalspecies(whichtheMMfunctionalformusedhereisincapableof). The95%confidenceintervals
+annotatedarecalculatedbyviabootstrappingmoleculeswithreplacementusing1000replicates.(b)Optimizationtrajec-
+toryofarepresentative(wihhighestOpenFF1.2.0RMSE)heterocycliccompoundinVEHICLedatasetwithSMILESstring
+[H]C1=C(N2N(N=C(N(N2N=N1)[H])[H])[H])[H].Legacyforcefields,becauseoftheirlimitedchemicaltypingrules,werenot
+abletoperceivethechemicalenvironmentofthenitrogenatoms,whichwerenotaromatic.(c)Espalomaisabletopredict
+energiesforquantumchemicaltorsionscansforanout-of-sampletorsionscandataset(theOpenFFPhenylTorsionDrive
+Dataset[45,68],dihedralangleprofiledmarkedinrouge.) tohighaccuracyeventhoughitwasnottrainedontorsion
+scans(onlyoptimizationtrajectories)oranyofthemoleculesinthetorsionscanset.*:Sixcyclicpeptidesthatcannotbe
+parametrizedusingOpenForceFieldtoolkitengine[69]arenotincluded.
+9of41
+• OpenFFGen2Optimization[72]consistsofdruglikemoleculesusedintheparametrizationofthe
+Open Force Field 1.2.0 ("Parsley") small molecule force field [73]. This set was constructed by the
+Open Force Field Consortium from challenging molecule structures provided by Pfizer, Bayer, and
+Roche,alongwithdiversemoleculesselectedfromeMoleculestoachieveusefulcoverageofchemical
+space.
+• VEHICLe [74] or virtual exploratory heterocyclic library, is a set of heteroaromatic ring systems of in-
+terest to drug discovery enumerated by Pitt et al. [75]. The atoms in the molecules in this dataset
+haveinterestingchemicalenvironmentsinheteroarmaticringsthatpresentachallengetotraditional
+atomtypingschemes, whichcannoteasilyaccommodatethenuanceddistinctionsinchemicalenvi-
+ronments that lead to perturbations in heterocycle structure. We use this dataset to illustrate that
+espalomaperformswellinsituationschallengingtotraditionalforcefields.
+• PepConf[76]fromPrasadetal.[77]containsavarietyofshortpeptides,includingcapped,cyclic,and
+disulfide-bondedpeptides.Thisdataset—regeneratedasanOptimizationDataset(quantumchemical
+optimization trajectories initiated from multiple conformers) using the Open Force Field QCSubmit
+tool[78]—explorestheapplicabilityofespalomatobiopolymers,suchasproteins.
+Sincenonbondedtermsaregenerallyoptimizedtofitothercondensed-phaseproperties,wefocused
+hereonoptimizingonlythevalenceparameters(bond,angle,andproperandimpropertorsion)tofitthese
+gas-phasequantumchemicaldatasets, fixingthenon-bondedenergiesusingalegacyforcefield[70]. In
+thisexperiment,allthenon-bondedenergies(Lennard-Jonesandelectrostatics)werecomputedusingOpen
+ForceField1.2Parsley[79],withAM1-BCCchargesgeneratedbytheOpenEyeToolkitback-endfortheOpen
+ForceFieldtoolkit0.10.0[69]. BecausewearelearninganMMforcefieldthatisincapableofreproducing
+quantumchemicalheatsofformation,whicharereflectedasanadditiveoffsetinthequantumchemical
+energytargets,snapshotenergiesforeachmoleculeinboththetrainingandtestsetsareshiftedtohave
+zeromean.Alldatasetsarerandomlyshuffledandsplit(bymolecules)intotraining(80%),validation(10%),
+andtest(10%)sets.
+Espalomageneralizestonewmoleculesbetterthanwidely-usedtraditionalforcefields
+Toassesshowwellespalomaisabletogeneralizetonewmolecules,theperformanceforespalomaontest
+(and training) sets was compared to a legacy atom typing based force field (GAFF 1.81 and 2.11 [26, 27],
+which collectively have been cited over 13,066 times) and a modern force field based on direct chemical
+perception [22] (the Open Force Field 1.2.0 ("Parsley") small molecule force field [56], downloaded over
+150,000times).
+TheresultsofthisexperimentarereportedinFigure4. Ascanbereadilyseenbythereportedtestset
+rootmeansquarederror(RMSE),espalomacanproduceMMforcefieldswithgeneralizationperformance
+consistentlybetterthanlegacyforcefieldsbasedondiscreteatomtyping(GAFF[26,27]).Inchemicallywell-
+representeddatasetslikePhAlkEthOH—whichcontainsonlysimplemoleculesconstructedfromelements
+C,H,andO—espalomaisabletosignificantlyimproveontheaccuracyoftraditionalforcefieldssuchas
+OpenFF1.2.0,GAFF-1.81,andGAFF-2.11onthetestset.
+Surprisingly,eventhoughOpenFF1.2.0includedthe"OpenFFGen2"datasetintraining,espalomais
+abletoachievesuperiortestsetperformanceonthisdataset,suggestingthatboththeflexibilityandgener-
+alizabilityofcontinuousatomtypinghavesignificantadvantagesoverevendirectchemicalperception[22].
+Even compared to highly optimized late-generation protein force fields such as Amber ff14SB [80]—
+which was highly optimized to reproduce quantum chemical torsion drive data—espaloma achieves sig-
+nificantlyhigheraccuracy,improvingonAmberff14SBerrorof3.15023.1859,∗ kcal/moltoachieve1.87271.9749
+3.1117 1.7309
+kcal/molonthePepConfpeptidedataset[76,81]. Thissuggeststhatespalomaiscapableofeffectivelypa-
+rameterizingbothsmallmoleculeandbiopolymerforcefields. Indeed,whenwetrainanespalomamodel
+usingboththeOpenFFGen2OptimizationandPepConfdatasets(JointinFigure4(a)),weseethatasingle
+espalomamodeliscapableofachievingsuperioraccuracytotraditionalsmallmoleculeandproteinforce
+fieldssimultaneously.
+10of41
+Espalomacanautomaticallylearndistinctatomenvironmentsoverlookedbytraditionalforce
+fields
+Itisworthnotingthatthatthetraditionalbutwidelyusedforcefieldsconsideredhereuniformlyperform
+poorlyontheVEHICLedataset[75]("HeteroaromaticRingsoftheFuture",containingheterocyclicscaffolds
+of interest to future drug discovery programs). In Figure 4(b), we show the most common mode of fail-
+ureoflegacyforcefieldsbyexaminingtheirpredictedenergyovertheQMoptimizationtrajectoryofthe
+compoundwithlargestRMSE(withSMILESstring[H]C1=C(N2N(N=C(N(N2N=N1)[H])[H])[H])[H]).Theinitial
+conformationofthemolecule,generatedbyOpenEyeToolkit,wasplanar. Astheconformationwasopti-
+mizedbyquantumchemicalmethods,thetertiarynitrogensinthesystembecomepyramidal. Inacloser
+examination,GAFF-2.11,forinstance,assignedallcarbonstobeoftypeccandallnitrogensna,indicating
+thattheywereperceivedasaromatic,whereasthereisnoconjugatedsystempresentinthemolecule.This
+alsoreflectsthelimitationinresolutionoflegacyforcefields.Espaloma,ontheotherhand,providesahigh-
+resolutionatomembeddingthatcanflexiblycharacterizethechemicalenvironments,providedthatsimilar
+environmentsexistedinthetrainingdata.
+Espalomacanreliablylearntorsionprofilesfromoptimizationtrajectories
+Wewonderedwhetherespalomacouldfaithfullyrecover torsionenergyprofiles—whicharetraditionally
+expensivetogenerateusingmethodslikewavefrontpropagation[82]—fromtheinexpensiveoptimization
+trajectoriesusedtotrainespalomamodels. Wethereforeexaminedsomerepresentativedihedralenergy
+profilesformoleculesoutsideofthedatasetusedtotrainespaloma. InFigure4(c),weusetheespaloma
+modeltrainedonOpenFFGen2OptimizationandPepConftopredicttheenergyprofilesofseveraltorsion
+drive experiments in the OpenFF Phenyl Torsion Drive Dataset [68]—which does not contain any of the
+moleculesinthetrainingset—andobservedthatthelocationsandheightsoftorsionenergybarriersare
+recapitulatedwithreasonableaccuracy.Thissuggeststhatoptimizationtrajectoriesaresufficienttocapture
+thelocationsandrelativeheightsoftorsionbarriers—ahighlyusefulfindinggiventherelativeexpenseof
+generatingaccuratetorsionprofilescomparedtosimpleoptimizationtrajectories[82].
+4 Espalomacanlearnself-consistentchargemodelsinanend-to-end
+differentiablemanner
+Historically,biopolymerforcefieldsderivepartialatomicchargesviafitstohigh-levelmulticonformerquan-
+tumchemicalelectrostaticpotentialsoncappedmodelcompounds,adjustedtoensuretherepeatingbiopoly-
+merunitshaveintegralcharge(oftenincorporatingconstraintstoshareidenticalbackbonepartialcharges)[83–
+85]. Some approaches to the derivation of partial atomic charges are enormously expensive, requiring
+iterative QM/MM simulations in explicit solvent to derive partial charges for new molecules [86, 87]. For
+smallmolecules,state-of-the-artmethodsrangefromfastbondchargecorrectionsappliedtochargesde-
+rivedfromsemiempiricalquantumchemicalmethods(suchasAM1-BCC[28,29]orCGenFFchargeincre-
+ments[47])toexpensivemulticonformerrestrainedelectrostaticpotential(RESP)fitstohigh-levelquantum
+chemistry[88,89].Surprisinglylittleattentionhasbeenpaidtothedivergenceofmethodsusedforassign-
+ing partial charges to small molecules and biopolymers, and the potential impact this inconsistency has
+onaccuracyoreaseofuse—indeed,developingchargesforpost-translationalmodificationstobiopolymer
+residues[90,91]orcovalentligandscanprovetobeasignificanttechnicalchallengeinattemptingtobridge
+thesetwoworlds.
+Whilemachinelearningapproacheshavebeguntofindapplicationindeterminingsmallmoleculepartial
+charges[92–94],methodssuchasrandomforestsarenotfullycontinuouslydifferentiable,renderingthem
+unsuitable for a fully end-to-end differentiable parameter assignment framework. Recently, a fast (500x
+speedupforsmallmolecules)approachhasbeenproposedthatusesgraphneuralnetworksaspartofa
+charge-equilibration[95,96]scheme(inspiredbytheearlierVChargemodel[97])toself-consistentlyassign
+partialchargestosmallmolecules,biopolymers,andarbitrarilycomplexhybridmoleculesinaconformation-
+independentmannerthatonlymakesuseofmoleculartopology[36]. Perhapsunsurprisingly,duetothe
+requirementthatmoleculesretaintheirintegralnetcharge,directlypredictingpartialatomicchargesfrom
+latentatomembeddingsandsubsequentlyrenormalizingchargesleadstopoorperformance(0.28e[36]).
+11of41
+PhAlkEthOHexperiment(combinationofindependentmodels) energyRMSE(kcal/mol) chargeRMSE(e)
+valenceforcefield chargemodel Train Test Train Test
+openff-1.2.0 AM1-BCC 1.60711.6915 reference
+1.5197
+openff-1.2.0 espaloma 1.62861.6628 1.70721.7913 0.00720.0073 0.00720.0073
+1.5861 1.6361 0.0071 0.0070
+espaloma AM1-BCC 0.86560.9131 1.13981.2332 reference
+0.8225 1.0715
+espaloma espaloma 0.95961.0101 1.22161.2766 0.00720.0073 0.00720.0073
+0.9100 1.1529 0.0071 0.0070
+MSE(𝑈 (𝐱),𝑈̂ (𝐱;Φ )+𝑈̂ (𝐱;Φ )+𝑈 (𝐱)) 0.86460.9180 1.08391.1228 0.32180.3258 0.32300.3290
+𝚚𝚖 𝚟𝚊𝚕𝚎𝚗𝚌𝚎 𝙽𝙽 𝚌𝚑𝚊𝚛𝚐𝚎 𝙽𝙽 𝙻𝙹 0.8186 1.0462 0.3173 0.3184
+JointModel,Loss= MSE(𝑈 (𝐱),𝑈̂ (𝐱;Φ )+𝑈 (𝐱)+𝑈 (𝐱))+MSE(𝑞,𝑞̂(Φ )) 0.83360.8877 1.09871.1697 0.00750.0077 0.00760.0077
+𝚚𝚖 𝚟𝚊𝚕𝚎𝚗𝚌𝚎 𝙽𝙽 𝙰𝙼𝟷−𝙱𝙲𝙲 𝙻𝙹 𝐍𝐍 0.7882 1.0318 0.0073 0.0075
+MSE(𝑈 (𝐱),𝑈̂ (𝐱;Φ )+𝑈̂ (𝐱;Φ )+𝑈 (𝐱))+MSE(𝑞,𝑞̂(Φ )) 0.99121.0443 1.29211.3323 0.01380.0140 0.01370.0139
+𝚚𝚖 𝚟𝚊𝚕𝚎𝚗𝚌𝚎 𝙽𝙽 𝚌𝚑𝚊𝚛𝚐𝚎 𝙽𝙽 𝙻𝙹 𝐍𝐍 0.9531 1.2403 0.0136 0.0135
+Table1. Espalomacanjointlypredictpartialchargesthroughasimplecharge-equilibrationmodelthatlearns
+electronegativityandhardnessparameters. UsingtheOpenFFPhAlkEthOHdataset(244,036snapshotsover7,408
+moleculescontainingonlycarbon,oxygen,andhydrogenatoms),wecomparetheperformanceofindepdentlytrained
+andjointlytrainedespalomamodelsinreproducingsnapshotpotentialenergiesandAM1-BCCpartialcharges.Inthefirst
+tworows,wetraintwoindependentmodelstopredicttheenergyofconformationsandchargesofatoms;inthethirdrow,
+weuseajointmodelwherethelatentembeddingissharedbetweenthesetwotasks.Asareference,theRMSEbetween
+AM1-BCCchargesassignedbytwodifferentchemoinformaticstoolkits—Ambertools21[26]andOpenEyeToolkit—are
+0.01260.0129(e).
+0.0124
+Asimplecharge-equilibrationmodelcanuselearnedphysicalparameters
+Instead,predictingtheparametersofasimplephysicaltopologicalcharge-equilibrationmodel[95,97]can
+produce geometry-independent partial charges capable of reproducing charges derived from quantum
+chemicalelectrostaticpotentialfits[36]. Notethat, unlikeWangetal.[36], herewefitAM1-BCCcharges
+ratherthanhigherlevelofquantummechanicstheoryduetotheirhighcost.Specifically,weuseouratom
+latentrepresentationtoinsteadpredictthefirst-andsecond-orderderivativesofapseudopotentialenergy
+𝐸withrespecttothepartialatomiccharge𝑞 onatom𝑖:
+𝑖
+𝜕𝐸 𝜕𝐸2
+𝑒 ≡ ,𝑠 ≡ . (10)
+𝑖 𝜕𝑞 𝑖 𝜕2𝑞
+𝑖 𝑖
+Here,theelectronegativity 𝑒 quantifiesthedesireforanatomtotakeupnegativecharge,whilethehard-
+𝑖
+ness 𝑠 quantifies the resistance to gaining or losing too much charge. A module is added to Stage III of
+𝑖
+espalomatopredictthechemicalenvironmentadapted(𝑒,𝑠)parametersforeachatomfromthelatent
+𝑖 𝑖
+atomembeddings.
+Thepartialchargesforallatomscanthenbeobtainedbyminimizingthesecond-orderTaylorexpansion
+ofthepotentialpseudoenergycontributedbyatomiccharges:
+∑ 1
+{𝑞̂}=argmin 𝑒̂𝑞 + 𝑠̂𝑞2, (11)
+𝑖 𝑖 𝑖 2 𝑖 𝑖
+𝑞𝑖 𝑖
+subjectto
+∑ ∑
+𝑞̂ = 𝑞 =𝑄, (12)
+𝑖 𝑖
+𝑖 𝑖
+where𝑄isthetotal(net)chargeofthemolecule.
+UsingLagrangemultipliers,thesolutionto11canbegivenanalyticallyby:
+𝑄+ ∑ 𝑒𝑠−1
+𝑞̂ =−𝑒𝑠−1+𝑠−1 𝑖 𝑖 𝑖 , (13)
+𝑖 𝑖 𝑖 𝑖 ∑ 𝑠−1
+𝑗 𝑗
+whose Jacobian and Hessian are trivially easy to calculate. As a result, the prediction of {𝑒̂,𝑠̂} could be
+𝑖 𝑖
+optimizedend-to-endusingbackpropagation.
+AlearnedchargemodelpredictsAM1-BCCchargestobetteraccuracythanthedifference
+betweendifferentimplementationsofAM1-BCC
+Whenpredictingthepartialchargesindependently,weobservethattheRMSEerroronthetestset(0.00720.0073
+0.0071
+e),issmallerthanthedifferencebetweenthediscrepancybetweenAM1-BCCchargesassignedbytwopop-
+ularchemoinformaticstoolkits,Ambertools21[80]andOpenEyeToolkit(0.01260.0129).Totranslatethiserror
+0.0124
+intoenergyscale, wepairthischargemodule, whichwetermedespalomachargeinTable1, witheither
+openff-1.2.0 or espaloma valence force field and observe that there is only a slight decrease in the total
+energyperformance(withinconfidenceinterval).
+12of41
+Espalomacangeneratefastandaccuratepartialchargesandvalenceparameters
+simultaneously
+Next,weintegratedthisapproachintoanespalomamodelwhereparametersofthechargeequilibration
+model {𝑒,𝑠} and the bonded (bond, angle, and torsion) parameters are optimized jointly. The resulting
+𝑖 𝑖
+modelistrainedbyaugmentingthelossfunctiontoincludeatermthatpenalizesthedeviationfromAM1-
+BCCpartialchargesforthemoleculesinthetrainingset.Ontheonehand,onecancalculatetheCoulomb
+energytermusingthispredictedsetofchargesandincorporatethisdirectlyintotheenergyMSElossfunc-
+tion(showninthefirstrowinthesecondhalfofTable1).Thisapproach,althoughitmaintainsarelativelyac-
+curateenergyprediction,leadstoalargechargeRMSE,sincenoreferencechargeisprovided.Ontheother
+hand,wecanpenalizethederivationfromthereferencechargesbyaddinganMSElossonthechargeswith
+atunableweightasahyperparameter(secondrow),whichwetuneonthevalidationsettobe1𝑒−3. This
+settingresultsinsatisfactoryperformanceinbothenergyandchargeprediction.Finally,ifwecombineboth
+losses(thirdrow),weobserveworseperformanceontestsetenergypredictions,whichcouldbeattributed
+totherepeatedstrongregularizationonchargeparameters.
+5 Espalomacanparameterizebiopolymers
+Wehaveinsofarestablishedthatespaloma,asamethodtoconstructMMforcefields,showsgreatversa-
+tilityandflexibility. Inthefollowingsections,weshowcaseitsutilitywithamodelpredictingbothvalence
+parametersandpartialchargestrainedonOpenFFGen2OptimizationDatasetaswellasPepConfdataset,
+whichwereleasedas‘espaloma-0.2.2‘withthepackage.
+Thespeedandflexibilityofgraphconvolutionalnetworksallowsespalomatoparameterizeevenvery
+large biopolymers, treating them as (large) small molecules in a graph-theoretical manner. While graph
+neural networks perceive nonlocal aspects of the chemical environment around each atom, the limited
+numberofroundsofmessagepassingensuresstabilityoftheresultingparameterswhenparameterizing
+systemsthatconsistofrepeatingresidues,likeproteinsandnucleicacids.
+Todemonstratethis,weconsideredthesimplepolypeptidesystemACE-ALA -NME,consistingof𝑛ala-
+𝑛
+nine residues terminally capped by acetyl- and N-methyl amide capping groups. Using the joint charge
+andvalencetermespalomamodel,weassignedparameterstoACE-ALA -NMEsystemswith𝑛=1,2,...,500,
+𝑛
+showingillustrativeparametersinFigure5.Espalomastablyassignsparameterstotheinteriorresiduesof
+peptidesevenastheyincreaseinlength,withparametersofthecentralresidueunchangedafter𝑛>3.This
+pleasantlyresemblesthebehavioroftraditionalresiduetemplatebasedproteinforcefields,eventhough
+notemplatesareusedwithinespaloma’sparameterassignmentprocess.
+Espalomacangenerateself-consistentvalenceparametersandpartialchargesforlarge
+biopolymersinlessthanasecond
+Despiteitsuseofasophisticatedgraphnetmachinelearningmodel,thewalltimerequiredtoparameterize
+large proteins scales linearly with respect to the number of residues (and hence system size) on a CPU
+(Figure 5, lower right). On a GPU, the wall clock time needed to parameterize systems of this size stays
+roughlyconstant(duetooverheadinexecutingmodelsontheGPU)atlessthan100microseconds. Since
+espalomaappliesstandardmolecularmechanicsforcefields,theenergyevaluationtimesforanEspaloma-
+generatedforcefieldareidenticaltotraditionalforcefields.
+6 Espalomacanproduceself-consistentbiopolymerandsmallmoleculeforce
+fieldsthatresultinstablesimulations
+Traditionally,inaprotein-ligandsystem,separate(buthopefullycompatible)forcefieldsandchargemodels
+havebeenassignedtosmallmolecules(whicharetreatedasindependententitiesparameterizedholisti-
+cally)andproteins(whicharetreatedascollectionsoftemplatedresiduesparameterizedpiecemeal)[80].
+This practice both has the potential to allow significant inconsistencies while also introducing significant
+complexityinparameterizingheterogeneoussystems.
+13of41
+Figure5.Espalomacanbeusedtogenerateself-consistentforcefieldsforbiopolymersandsmallmolecules.(a)
+Espaloma-assignedequilibriumheavyatombondlengths(left,inangstrom)andheavyatompartialcharges(right,in
+elementalchargeunit)forACE-(ALA) -NME.(b)Espaloma-assignedequilibriumheavyatombondlengths(left)andheavy
+1
+atompartialcharges(right)forACE-(ALA) -NME,whichshowsminimaldeviationfromACE-(ALA) -NMEandconsistentpa-
+3 1
+rametersforaminoacidresidues.(c)PartialatomicchargesofselectedatomsshownforACE-(ALA) -NMEfor𝑛=1,...,10.
+𝑛
+(d)EquilibriumbondlengthsofselectedbondsforACE-(ALA) -NMEfor𝑛=1,...,10.(e)CPU(left)andGPU(right)parameter
+𝑛
+assignment(bluecurve)andenergyevaluationonOpenMM7.5.1[98](orangecurve)walltimes. (f)Espalomasimulta-
+neouslyparametrizesmarco-andsmallmoleculeinprotein-ligandsystem.Left:Tyrosinekinase2systemparametrized
+byespalomaandmiminizedandequilibratedwithTIP3Pwatermodel[99]andcounterions.Right:Rootmean-squared
+displacement(RMSD)ofligandw.r.t.theinitialposition,insystemsparametrizedbyespalomaandtraditionalforcefields.
+14of41
+Figure6. Espalomasmallmoleculeparameterscanbeusedforaccurateprotein-ligandalchemicalfreeenergy
+calculations. (a)TheTyk2congenericligandbenchmarkseriestakenfromtheSchrödingerJACSbenchmarkset[100]
+ischallengingforbothcommercialforcefields(OPLS2.1achievesaΔGRMSEof0.93±0.12kcalmol−1[100])andpublic
+forcefields(GAFF1.8achievesaΔGRMSEof1.13kcalmol−1,andΔΔGRMSEof1.27kcalmol−1[101]).WeshowtheX-ray
+structureusedforallfreeenergycalculationsaswellas2Dstructuresofallligandsinthebenchmarkset,alongwith
+theirexperimentalbindingfreeenergies.Thiscongenericseriesfrom[100]wasselectedfrom[102]whereexperimental
+errorsin𝐾 arereportedtohave𝛿𝐾∕𝐾 <0.3,yielding𝛿Δ𝐺≈0.18kcalmol−1and𝛿ΔΔ𝐺≈0.25kcalmol−1.Here,weused
+𝑖 𝑖 𝑖
+theperses[103]relativefreeenergycalculationtool,basedonOpenMM[17],toassesstheaccuracyofespalomaonthis
+dataset.(b)TheOpenForceField("Parsley")openff-1.2.0smallmoleculeforcefieldachievesanabsolutefreeenergy(Δ𝐺)
+RMSEof0.91[95%CI:0.66,1.17]kcal/molonthisset. (c)Theespaloma-0.2.2modelforpredictingvalenceparameters
+andpartialcharges—trainedjointlyonthesameOpenFFGen2Optimizationdatasetusedforopenff-1.2.0aswellasthe
+PepConfdatasettoreproducequantumchemicalenergiesandAM1-BCCcharges—achievesalowererrorof0.48[95%
+CI:0.30,0.73]onthisset,despitehavingneverbeentrainedonanymoleculesinthisset.
+15of41
+Usingthejointespalomamodeltrainedonboththe"OpenFFGen2Optimization"smallmoleculeand
+"PepConf"peptidequantumchemicaldatasets(Section3)[81,104]),wecanapplyaconsistentsetofparam-
+eterstobothproteinandsmallmoleculecomponentsofakinase:inhibitorsystem. Figure5(f)showsthe
+ligandheavy-atomRMSDafteraligningonproteinheavyatomsfor0.5nstrajectoriesoftheTyk2:inhibitor
+systemfromtheAlchemicalBestPracticesBenchmarkSet1.0[105].Itisreadilyapparentthattheespaloma-
+derived parameters lead to trajectories that are comparably stable to simulations that utilize the Amber
+ff14SB protein force field [106] with GAFF 1.81, GAFF 2.11 [26, 27], or OpenFF 1.2.0 [56] small molecule
+forcefields. Allsystemsareexplicitlysolvatedwitha9ÅbufferaroundtheproteinwithTIP3Pwater[107]
+andusetheJoungandCheathammonovalentcounterionparameters[108]tomodelaneutralsystemwith
+300mMNaClsalt.
+Additionally,theespalomamodelalsoprovidessufficientcoveragetomodelmorecomplexandhetero-
+geneousprotein-ligandconvalentconjugates,whichwashighlynontrivialintraditionalforcefieldswhere
+proteinandligandareparametrizedseparately.WeprovideadetailedstudyofthiscapabilityinAppendix
+SectionF.
+7 Espalomasmallmoleculeparametersandchargesprovideaccuracy
+improvementsinalchemicalfreeenergycalculations
+Toassesswhetherthesmallmoleculeparametersandchargesgeneratedbyespalomaachievecompetitive
+performancetotraditionalforcefields,weusedtheperses0.9.5relativealchemicalfreeenergycalculation
+infrastructure[103](basedonOpenMM7.7[17]andopenmmtools0.21.2[109])tocompareperformance
+ontheTyk2kinase:inhibitorbenchmarksetfromtheSchrodingerJACSbenchmarkset[100]ascuratedby
+theOpenFFprotein-ligandbenchmark0.2.0[110].Inordertoassesstheimpactofespalomasmallmolecule
+parametersandchargesinisolation,weusedtheAmberff14SBproteinforcefield[106],andperformed
+simulationswitheitherOpenFF1.2.0(openff-1.2.0)ortheespalomaJointmodeltrainedonOpenFFGen2
+OptimizationandPepConfdatasets(espaloma-0.2.2)availablethroughtheopenmmforcefields0.11.0pack-
+age[111].Notably,noneoftheligandsappearinginthissetappearinthetrainingsetforeitherforcefield.
+Allsystemswereexplicitlysolvatedwitha9ÅbufferaroundtheproteinwithTIP3Pwater[107]andusethe
+JoungandCheathammonovalentcounterionparameters[108]tomodelaneutralsystemwith300mMNaCl
+salt.ThesametransformationnetworkprovidedintheOpenFFprotein-ligandbenchmarksetwasusedto
+computealchemicaltransformations,andabsolutefreeenergiesuptoanadditiveconstantwereestimated
+fromaleast-squaresestimationstrategy[112]asimplementedintheOpenFFarsenicpackage[113].Both
+experimentalandcalculatedabsolutefreeenergieswereshiftedtotheirrespectivemeansbeforecomput-
+ingstatistics,asin[100].
+Figure6showsacomparisonofbothrelative(ΔΔ𝐺)andabsolute(Δ𝐺)freeenergyerrorstatistics.While
+theOpenFF1.2.0forcefieldachievesanimpressiveRMSEof0.911.17kcal/mol,usingespalomavalenceand
+0.66
+charge parameters improves the accuracy to 0.470.70 kcal/mol. Additionally, the Spearman 𝜌 correlation
+0.30
+coefficientimprovesfrom0.690.89 (OpenFF1.2.0)to0.930.98 (espaloma-0.2.2). Whilemoreextensivebench-
+0.28 0.80
+markingisnecessarytoesablishthegeneralityoftheseimprovements,thisrepresentsafirstdemonstration
+thatperformancecanbeonparwith,ifnotsuperiorto,traditionallyconstructedforcefields.
+8 Discussion
+Here, wehavedemonstratedthatgraphneuralnetworksnotonlyhavethecapacitytoreproducelegacy
+atomtypeclassification,buttheyaresufficientlyexpressivetofitatraditionalmolecularmechanicsforce
+fieldandgeneralizeittonewmolecules, aswellaslearnentirelynewforcefieldsdirectlyfromquantum
+chemicalenergiesandexperimentalmeasurements.Theneuralframeworkpresentedherealsoaffordsthe
+modularitytoeasilyexperimentwiththeinclusionofadditionalpotentialenergyterms,functionalforms,
+orparameterclasses,whilemakingiteasytorapidlyrefittheentireforcefieldafterwards.
+Espalomaenablesawidevarietyofapplications
+Espaloma enables a wide variety of applications in the realm of molecular simulation: While many force
+fieldpackagesusecomplex,difficulttomaintain,non-portablecustomtypingengines[27,114–116],simply
+16of41
+generatingexamplesissufficienttotrainespalomatoreproducethistyping,translatingitintoamodelthat
+iseasytoextendbyprovidingmorequantumchemicaltrainingdata. Someforcefieldshavetraditionally
+beentypedbyhand,makingthemdifficulttoautomate[116];espalomacaninprinciplelearntogeneralize
+fromtheseexamples,providedcareistakentoavoidoverfittingduringtraining. Aswehaveshownhere,
+espalomaalsoprovidesaconvenientwaytorapidlybuildnewforcefieldsdirectlyfromquantumchemical
+data.
+Modernmachinelearningframeworksofferflexibilityinfittingpotentials
+Theflexibilityaffordedbymodernmachinelearningframeworkssolvesalong-standingprobleminmolec-
+ular simulation in which it is extremely difficult to assess whether a new functional form might lead to
+significantbenefitsinmodelingmultiplepropertiesofinterest. WhileeffortssuchastheOpenForceField
+Initiativeaimtostreamlinetheprocessofrefittingforcefields[104],theeaseofrefittingmodelsinmachine
+learningframeworksmakesitextremelyeasytoexperimentwithnewfunctionalforms:Modernautomatic
+differentiationintheseframeworksmeansthatonlythepotentialneedbeimplemented,andgradientsare
+automaticallycomputed.
+Thisenablesawidevarietyofexploration: Simpleimprovementscouldbewidelyimplementedincur-
+rent molecular simulation packages including adjusting the 1-4 Lennard-Jones and electrostatics scaling
+parameters,producing1-4interactionparametersthatoverrideLennard-Jonescombiningrules,exploring
+differentLennard-Jonescombiningrules[117],changingthevanderWaalstreatmenttoalternativefunc-
+tionalforms(suchasBuckinghamexp-6[118]orHalgrenpotentials[57]),andrefittingforcefieldsforvarious
+non-bondedtreatments(suchasPME[119]andreactionfieldelectrostatics[120]). Manysimulationpack-
+agesprovidesupportforClassIImolecularmechanicsforcefields[30,31],whichincludeadditionalcoupling
+termsthatcandrasticallyreduceerrorsinmodelingquantumchemicalenergiesatessentiallynomeaning-
+fulimpactoncostduetothe(𝑁)numberoftheseterms; simpleextensionstoespaloma’sarchitecture
+caneasilypredicttheparametersforthesecouplingtermsfromadditionalsymmetry-preservingfeatures.
+Moreradicalpotentialexplorationscouldinvolveassessingdifferentalgebraicfunctionalforms—modern
+simulationpackagessuchasOpenMMhavetheabilitytoautomaticallydifferentiateandcompilesymbolic
+algebraicexpressionstoproduceoptimizedforcekernelsforsimulationonfastGPUs[17,98]. Excitingly,
+thesimplicityofincorporatinganewgenerationofquantummachinelearning(QML)potentials[121]—such
+asANI[10,13]andSchNet[14]—meansthatitwillbeeasytoexplorehybridpotentialsthatcombinethe
+flexibilityofQMLpotentialsatshortrangewiththeaccuracyofphysicalforcesatlongrange[122].
+Espalomacanenablemodularlossfunctionsandregularization
+Theeaseatwhichthelossfunctioncanbeaugmentedwithadditionaltermsenablestheadditionofother
+classesoflosstermstothelossfunction.Forexample,oneofthemoleculesconsideredintheTyk2:inhibitor
+systemincludedacyanogroupwhichprovedtobeslightlyunstablewithhydrogenmassrepartitioningat
+4fstimesteps. Thelossfunctioncouldeitherbeaugmentedtoregularizeparameterstoincreasestability
+(penalizingshortvibrationalperiods)ortoincludeotherdataclasses(suchasHessiansand/ortorsiondrive
+data)toimprovefitstoparticularaspects. Whilethiswillrequiretuningoftheweightingofdifferentloss
+classes,theseparameterscanbeselectedautomaticallyviacross-validationstrategies.
+EspalomacanenableBayesianforcefieldparameterizationandmodeluncertainty
+quantification
+Whilemuchofthehistoryofmolecularsimulationhasfocusedonquantifyingtheimpactofstatisticalun-
+certainty [123–125], critical studies over the last decade [126–135] have improved our ability to quantify
+andpropagatepredictiveuncertaintyinmolecularmechanicsforcefieldsbyquantifyingcontributionsfrom
+modeluncertainty—whichisfrequentlythemajorsourceofpredictiveuncertaintyinapplicationsofinter-
+est.Whilemostattentionhasbeenfocusedonthecontinuousparametersoftheforcefieldmodelwithfixed
+modelform,someprogresshasbeenmadeindiscretemodelselectionamongcandidatemodelforms[136–
+138].
+It remains an open problem to rigorously quantify uncertainty in other important parts of the model
+definition—especiallyinthedefinitionsofatom-types.These“chemicalperception”definitionscaninvolve
+17of41
+verylargespacesofdiscretechoices,andcruciallyinfluencethebehaviorofageneralizablemolecularme-
+chanicsmodel[22,139].
+Animportantbenefitofthepresentapproachisthatitreducesthemixedcontinuous-discretetaskof“be-
+ingBayesianaboutatom-types”tothemorefamiliartaskof“beingBayesianaboutneuralnetworkweights.”
+Bayesiantreatmentofneuralnetworks—whilealsointractable—hasbeenthefocusofproductivestudyand
+methodologicalinnovationfordecades[140].
+WeanticipatethatBayesianextensionsofthisworkwillenablemorecomprehensivetreatmentofpre-
+dictiveuncertaintyinmolecularmechanicsforcefields.
+Ensuringfullchemicalequivalenceisnontrivial
+In the current experiments, espaloma used a set of atom features (one-hot encoded element, hybridiza-
+tion,aromaticity,formalcharge,andmembershipinringsofvarioussizes)easilycomputedusingachem-
+informatics toolkit; no bond features were used (see Detailed Methods). While this provided excellent
+performance,thenon-uniquenessofformalchargeassignment(obviousinmoleculessuchasguanidinium
+whereresonanceformslocatetheformalchargeondifferentatoms)doesnotguaranteetheassignedpa-
+rameterswillrespectchemicalequivalence(aformofinvariance)incaseswheretheseatompropertiesare
+notunique. Ensuringfullchemicalequivalencewouldrequiremodificationstothisstrategy,suchasomis-
+sionofnon-uniquefeatures(whichmayrequireadditionaldataorpre-trainingtolearnequivalentchemical
+information),averagingoftheoutputofoneormorestagesoverequivalentresonanceforms,orarchitec-
+turessuchastransformersthatmorefullyencodechemicalequivalence.
+9 DetailedMethods
+9.1 CodeandParameterAvailability
+ThePythoncodeusedtoproducetheresultsdiscussedinthispaperisdistributedopensourceunderMIT
+license[https://github.com/choderalab/espaloma].CoredependenciesincludePyTorch1.9.1[141],
+DeepGraphLibrary0.6.0[41],theOpenForceFieldToolkit0.10.0[70,142],andOpenMM7.7.0[17].
+DescribehowespalomacanbeusedinOpenMMviaopenmmtools,anddescribewhichmodelis
+availableasespaloma-0.0.2
+9.2 Datasets
+ThetypedZINCvalidationsubsetdistributedwithparm@Frosst[51]wasusedinatomtypingclassification
+experiments(Section1.1).
+ForMMfittingexperiments(Section2),weemployedmoleculesthePhAlkEthOHdataset[66],parametrized
+withGAFF-1.81[52]usingAntechamber[26,27]fromAmberTools21, andgeneratedmoleculardynamics
+(MD)snapshotswithannotatedenergiesaccordingtotheproceduredetailedbelow(Section9.4).Wefiltered
+outmoleculeswithagapbetweenminimumandmaximumenergylargerthan0.1Hartree(62.5kcal/mol).
+ForQMfittingexperiments(Section3),datasetshostedonQCArchive[71]areused.Wefilteroutsnap-
+shotswithenergiesmorethan0.1Hartree(62.5kcal/mol)higherthantheminima. Withinalldatasets,we
+randomlyselecttraining,test,andvalidationsetswith80:10:10partitions.
+9.3 Machinelearningexperimentaldetails
+Theinputfeaturesoftheatomsincludedtheone-hotencodedelement,aswellasthehybridization,aro-
+maticity,(varioussized-)ringmembership,andformalchargethereof,assignedusingtheOpenEyeToolkit
+(OpenEyeScientificSoftware).
+Allmodelsaretrainedwith5000epochswiththeAdamoptimizer[143];earlystoppingwasusedtoselect
+theepochwithlowestvalidationsetloss.
+Hyperparameters,namelychoicesofgraphneuralnetworklayerarchitectures(GIN[35],GCN[37],Graph-
+SAGE[144],SGConv[145]),depthofgraphneuralnetworkandofJanossypoolingnetwork(3,4,5,6),acti-
+vationfunctions(ReLU,sigmoid,tanh),learningrates(1e-3,1e-4,1e-5),andper-layerunits(16,32,64,128,
+256,512)werebrieflyoptimizedwithagridsearchusingvalidationsetsontheMMfittingexperiment. As
+aresult,weusethree128-unitsGraphSAGE[144]layerswithReLUactivationfunctionforstageIandfour
+18of41
+128-unitsfeed-forwardlayerswithReLUactivationforstageIIandIII.Reportedmetrics:𝑅2:thecoefficient
+of determination, RMSE: root mean square error, MAPE: mean absolute percentage error; note that the
+MAPEresultswereportisnotmultipliedby100,andthereforedenotesthefractionalerror.Theannotated
+95%confidenceintervalsarecalculatedbybootstrappingthetestset1000timestoaccountforfinite-size
+effectsinthecompositionofthetestset.
+9.4 Moleculardynamicssimulationdetails
+High-temperatureMDsimulationsdescribedinSection2wereinitializedusingRDKit’sdefaultconformer
+generatorfollowedbyenergyminimizationinOpenMM7.5,withinitialvelocitiesassignedrandomlytothe
+targettemperature.VacuumtrajectoriesweresimulatedwithoutconstraintsusingLangevinIntegrator
+fromOpenMM[17]usingatemperatureof500K,collisionrateof1/picosecond,andatimestepof1fs.500
+samples(5ns)arecollectedwith10000steps(10ps)betweeneachsample.
+9.5 Alchemicalfreeenergycalculations
+Weusedtheperses0.9.5relativealchemicalfreeenergycalculationinfrastructure[103](basedonOpenMM
+7.7[17]andopenmmtools0.21.2[109])tocompareperformanceontheTyk2kinase:inhibitorbenchmark
+setfromtheSchrodingerJACSbenchmarkset[100]ascuratedbytheOpenFFprotein-ligandbenchmark
+0.2.0[110].Inordertoassesstheimpactofespalomasmallmoleculeparametersandchargesinisolation,
+weusedtheAmberff14SBproteinforcefield[106],andperformedsimulationswitheitherOpenFF1.2.0
+(openff-1.2.0) or the espaloma Joint model trained on OpenFF Gen2 Optimization and PepConf datasets
+(espaloma-0.2.2)availablethroughtheopenmmforcefields0.11.0package[111]. Notably,noneofthelig-
+andsappearinginthissetappearinthetrainingsetforeitherforcefield.Allsystemswereexplicitlysolvated
+witha9ÅbufferaroundtheproteinwithTIP3Pwater[107]andusetheJoungandCheathammonovalent
+counterionparameters[108]tomodelaneutralsystemwith300mMNaClsalt. Thesametransformation
+networkprovidedintheOpenFFprotein-ligandbenchmarksetwasusedtocomputealchemicaltransforma-
+tions,andabsolutefreeenergiesuptoanadditiveconstantwereestimatedfromaleast-squaresestimation
+strategy[112]asimplementedintheOpenFFarsenicpackage[113].Bothexperimentalandcalculatedab-
+solutefreeenergieswereshiftedtotheirrespectivemeansbeforecomputingstatistics,asin[100].
+Alchemical free energy calculations used replica exchange among Hamiltonians with Gibbs sampling
+complete mixing exchanges each iteration [146], simulating 5 ns/replica with 1 ps between exchange at-
+tempts. 12alchemicalstateswereused. Simulationswereconductedat300Kand1atmusingaMonte
+CarloBarostatandLangevinBAOABintegrator[147]withbondstohydrogenconstrained,acollisionrate
+of 1/ps, 4 fs timestep, and heavy hydrogen masses. Atom mappings were generated from the provided
+geometriesinthebenchmarkset,mappingatomsthatwerewithin0.2Åandsubsequentlycorrectingthe
+mapstobevalidwiththeuse_given_geometriesfunctionalityofperses.
+References
+[1] JayWPonderandDavidACase. Forcefieldsforproteinsimulations. InAdvancesinproteinchemistry,volume66,
+pages27–85.Elsevier,2003.
+[2] DavidVanDerSpoel,ErikLindahl,BerkHess,GerritGroenhof,AlanEMark,andHermanJCBerendsen. Gromacs:
+fast,flexible,andfree.Journalofcomputationalchemistry,26(16):1701–1718,2005.
+[3] DavidACase,ThomasECheathamIII,TomDarden,HolgerGohlke,RayLuo,KennethMMerzJr,AlexeyOnufriev,
+CarlosSimmerling,BingWang,andRobertJWoods. Theamberbiomolecularsimulationprograms. Journalof
+computationalchemistry,26(16):1668–1688,2005.
+[4] JamesCPhillips,RosemaryBraun,WeiWang,JamesGumbart,EmadTajkhorshid,ElizabethVilla,ChristopheChipot,
+RobertDSkeel,LaxmikantKale,andKlausSchulten. Scalablemoleculardynamicswithnamd. Journalofcomputa-
+tionalchemistry,26(16):1781–1802,2005.
+[5] FreeEnergyCalculations.Theoryandapplicationsinchemistryandbiology.SpringerSeriesinChemicalPhysics,86,
+2007.
+19of41
+[6] C.C.Wang,G.Pilania,S.A.Boggs,S.Kumar,C.Breneman,andR.Ramprasad.Computationalstrategiesforpolymer
+dielectricsdesign. Polymer,55(4):979–988,2014. ISSN0032-3861. doi:https://doi.org/10.1016/j.polymer.2013.12.069.
+URLhttp://www.sciencedirect.com/science/article/pii/S0032386113011889.
+[7] Chunyu Li and Alejandro Strachan. Molecular scale simulations on thermoset polymers: A review. Journal of
+PolymerSciencePartB:PolymerPhysics,53(2):103–122,2015.
+[8] HuaiSun,ZhaoJin,ChunweiYang,ReinierLCAkkermans,StruanHRobertson,NeilASpenley,SimonMiller,and
+StephenMTodd.Compassii:extendedcoverageforpolymeranddrug-likemoleculedatabases.Journalofmolec-
+ularmodeling,22(2):47,2016.
+[9] EdwardHarder,WolfgangDamm,JonMaple,ChuanjieWu,MarkReboul,JinYuXiang,LingleWang,DmitryLupyan,
+Markus K Dahlgren, Jennifer L Knight, et al. Opls3: a force field providing broad coverage of drug-like small
+moleculesandproteins.Journalofchemicaltheoryandcomputation,12(1):281–296,2016.
+[10] JustinSSmith, OlexandrIsayev, andAdrianERoitberg. Ani-1: anextensibleneuralnetworkpotentialwithdft
+accuracyatforcefieldcomputationalcost.Chemicalscience,8(4):3192–3203,2017.
+[11] JustinSSmith,BenNebgen,NicholasLubbers,OlexandrIsayev,andAdrianERoitberg. Lessismore: Sampling
+chemicalspacewithactivelearning.TheJournalofchemicalphysics,148(24):241733,2018.
+[12] JustinSSmith,BenjaminTNebgen,RomanZubatyuk,NicholasLubbers,ChristianDevereux,KiptonBarros,Sergei
+Tretiak,OlexandrIsayev,andAdrianERoitberg. Approachingcoupledclusteraccuracywithageneral-purpose
+neuralnetworkpotentialthroughtransferlearning.Naturecommunications,10(1):1–8,2019.
+[13] ChristianDevereux,JustinSSmith,KateKDavis,KiptonBarros,RomanZubatyuk,OlexandrIsayev,andAdrianE
+Roitberg. Extendingtheapplicabilityoftheanideeplearningmolecularpotentialtosulfurandhalogens. Journal
+ofChemicalTheoryandComputation,16(7):4192–4202,2020.
+[14] KristofTSchütt,HuzielESauceda,P-JKindermans,AlexandreTkatchenko,andK-RMüller.Schnet–adeeplearning
+architectureformoleculesandmaterials.TheJournalofChemicalPhysics,148(24):241722,2018.
+[15] SimonBatzner,TessESmidt,LixinSun,JonathanPMailoa,MordechaiKornbluth,NicolaMolinari,andBorisKozin-
+sky.Se(3)-equivariantgraphneuralnetworksfordata-efficientandaccurateinteratomicpotentials.arXivpreprint
+arXiv:2101.03164,2021.
+[16] YanqiangHan,ZhilongWang,ZhiyunWei,JinyunLiu,andJinjinLi.Machinelearningbuildsfull-QMprecisionprotein
+forcefieldsinseconds. BriefingsinBioinformatics,22(6),052021. ISSN1477-4054. doi: 10.1093/bib/bbab158. URL
+https://doi.org/10.1093/bib/bbab158.bbab158.
+[17] Peter Eastman, Jason Swails, John D Chodera, Robert T McGibbon, Yutong Zhao, Kyle A Beauchamp, Lee-Ping
+Wang,AndrewCSimmonett,MatthewPHarrigan,ChayaDStern,etal. Openmm7: Rapiddevelopmentofhigh
+performancealgorithmsformoleculardynamics.PLoScomputationalbiology,13(7):e1005659,2017.
+[18] MattJHarvey,GiovanniGiupponi,andGDeFabritiis.Acemd:acceleratingbiomoleculardynamicsinthemicrosec-
+ondtimescale.Journalofchemicaltheoryandcomputation,5(6):1632–1639,2009.
+[19] RomeliaSalomon-Ferrer,AndreasWGotz,DuncanPoole,ScottLeGrand,andRossCWalker.Routinemicrosecond
+moleculardynamicssimulationswithamberongpus.2.explicitsolventparticlemeshewald. Journalofchemical
+theoryandcomputation,9(9):3878–3888,2013.
+[20] SamuelS.SchoenholzandEkinD.Cubuk. Jax,m.d.: End-to-enddifferentiable,hardwareaccelerated,molecular
+dynamicsinpurepython,2019.
+[21] WujieWang,SimonAxelrod,andRafaelGómez-Bombarelli. Differentiablemolecularsimulationsforcontroland
+learning,2020.
+[22] DavidLMobley,CaitlinCBannan,AndreaRizzi,ChristopherIBayly,JohnDChodera,VictoriaTLim,NathanMLim,
+KyleABeauchamp,DavidRSlochower,MichaelRShirts,etal. Escapingatomtypesinforcefieldsusingdirect
+chemicalperception.Journalofchemicaltheoryandcomputation,14(11):6076–6092,2018.
+[23] Lee-PingWang,JiahaoChen,andTroyVanVoorhis. Systematicparametrizationofpolarizableforcefieldsfrom
+quantumchemistrydata.JournalofChemicalTheoryandComputation,9(1):452–460,November2012.doi:10.1021/
+ct300826t.URLhttps://doi.org/10.1021/ct300826t.
+20of41
+[24] Lee-PingWang,ToddJ.Martinez,andVijayS.Pande. Buildingforcefields: Anautomatic,systematic,andrepro-
+ducibleapproach.TheJournalofPhysicalChemistryLetters,5(11):1885–1891,May2014.doi:10.1021/jz500737m.URL
+https://doi.org/10.1021/jz500737m.
+[25] YudongQiu,PaulS.Nerenberg,TeresaHead-Gordon,andLee-PingWang.Systematicoptimizationofwatermodels
+usingliquid/vaporsurfacetensiondata. TheJournalofPhysicalChemistryB,123(32):7061–7073, July2019. doi:
+10.1021/acs.jpcb.9b05455.URLhttps://doi.org/10.1021/acs.jpcb.9b05455.
+[26] JunmeiWang,RomainMWolf,JamesWCaldwell,PeterAKollman,andDavidACase.Developmentandtestingof
+ageneralamberforcefield.Journalofcomputationalchemistry,25(9):1157–1174,2004.
+[27] JunmeiWang,WeiWang,PeterAKollman,andDavidACase. Automaticatomtypeandbondtypeperceptionin
+molecularmechanicalcalculations.Journalofmoleculargraphicsandmodelling,25(2):247–260,2006.
+[28] ArazJakalian,BruceLBush,DavidBJack,andChristopherIBayly.Fast,efficientgenerationofhigh-qualityatomic
+charges.am1-bccmodel:I.method.Journalofcomputationalchemistry,21(2):132–146,2000.
+[29] ArazJakalian,DavidBJack,andChristopherIBayly.Fast,efficientgenerationofhigh-qualityatomiccharges.am1-
+bccmodel:Ii.parameterizationandvalidation.Journalofcomputationalchemistry,23(16):1623–1641,2002.
+[30] Jon RMaple, M-J Hwang, Thomas P.Stockfisch, UriDinur, MarvinWaldman, CarlS Ewig, and ArnoldT. Hagler.
+Derivationofclassiiforcefields.i.methodologyandquantumforcefieldforthealkylfunctionalgroupandalkane
+molecules.JournalofComputationalChemistry,15(2):162–182,1994.
+[31] MjJHwang,TPStockfisch,andATHagler. Derivationofclassiiforcefields.2.derivationandcharacterizationof
+aclassiiforcefield,cff93,forthealkylfunctionalgroupandalkanemolecules. JournaloftheAmericanChemical
+Society,116(6):2515–2525,1994.
+[32] Adam Paszke, Sam Gross, Francisco Massa, Adam Lerer, James Bradbury, Gregory Chanan, Trevor Killeen,
+Zeming Lin, Natalia Gimelshein, Luca Antiga, Alban Desmaison, Andreas Kopf, Edward Yang, Zachary
+DeVito, Martin Raison, Alykhan Tejani, Sasank Chilamkurthy, Benoit Steiner, Lu Fang, Junjie Bai, and
+Soumith Chintala. Pytorch: An imperative style, high-performance deep learning library. In H. Wallach,
+H. Larochelle, A. Beygelzimer, F. d'Alché-Buc, E. Fox, and R. Garnett, editors, Advances in Neural Information
+Processing Systems 32, pages 8024–8035. Curran Associates, Inc., 2019. URL http://papers.neurips.cc/paper/
+9015-pytorch-an-imperative-style-high-performance-deep-learning-library.pdf.
+[33] MartínAbadi,AshishAgarwal,PaulBarham,EugeneBrevdo,ZhifengChen,CraigCitro,GregS.Corrado,AndyDavis,
+Jeffrey Dean, Matthieu Devin, Sanjay Ghemawat, Ian Goodfellow, Andrew Harp, Geoffrey Irving, Michael Isard,
+YangqingJia,RafalJozefowicz,LukaszKaiser,ManjunathKudlur,JoshLevenberg,DandelionMané,RajatMonga,
+SherryMoore, DerekMurray, ChrisOlah, MikeSchuster, JonathonShlens, BenoitSteiner, IlyaSutskever, Kunal
+Talwar, PaulTucker, VincentVanhoucke, VijayVasudevan, FernandaViégas, OriolVinyals, PeteWarden, Martin
+Wattenberg,MartinWicke,YuanYu,andXiaoqiangZheng.TensorFlow:Large-scalemachinelearningonheteroge-
+neoussystems,2015.URLhttps://www.tensorflow.org/.Softwareavailablefromtensorflow.org.
+[34] JamesBradbury,RoyFrostig,PeterHawkins,MatthewJamesJohnson,ChrisLeary,DougalMaclaurin,GeorgeNec-
+ula,AdamPaszke,JakeVanderPlas,SkyeWanderman-Milne,andQiaoZhang.JAX:composabletransformationsof
+Python+NumPyprograms,2018.URLhttp://github.com/google/jax.
+[35] KeyuluXu,WeihuaHu,JureLeskovec,andStefanieJegelka.Howpowerfularegraphneuralnetworks?arXivpreprint
+arXiv:1810.00826,2018.
+[36] YuanqingWang,JoshFass,ChayaDStern,KunLuo,andJohnChodera. Graphnetsforpartialchargeprediction.
+arXivpreprintarXiv:1909.07903,2019.
+[37] Thomas N. Kipf and Max Welling. Semi-supervised classification with graph convolutional networks. CoRR,
+abs/1609.02907,2016.URLhttp://arxiv.org/abs/1609.02907.
+[38] Peter W Battaglia, Jessica B Hamrick, Victor Bapst, Alvaro Sanchez-Gonzalez, Vinicius Zambaldi, Mateusz Mali-
+nowski,AndreaTacchetti,DavidRaposo,AdamSantoro,RyanFaulkner,etal. Relationalinductivebiases,deep
+learning,andgraphnetworks.arXivpreprintarXiv:1806.01261,2018.
+[39] JianDu,ShanghangZhang,GuanhangWu,JoseM.F.Moura,andSoummyaKar. TopologyAdaptiveGraphConvo-
+lutionalNetworks.arXiv:1710.10370[cs,stat],February2018.
+[40] FelixWu,TianyiZhang,AmauriHolandadeSouzaJr,ChristopherFifty,TaoYu,andKilianQWeinberger.Simplifying
+graphconvolutionalnetworks.arXivpreprintarXiv:1902.07153,2019.
+21of41
+[41] Minjie Wang, Da Zheng, Zihao Ye, Quan Gan, Mufei Li, Xiang Song, Jinjing Zhou, Chao Ma, Lingfan Yu, Yu Gai,
+etal. Deepgraphlibrary: Agraph-centric,highly-performantpackageforgraphneuralnetworks. arXivpreprint
+arXiv:1909.01315,2019.
+[42] YueWang,YongbinSun,ZiweiLiu,SanjayESarma,MichaelMBronstein,andJustinMSolomon. Dynamicgraph
+cnnforlearningonpointclouds.AcmTransactionsOnGraphics(tog),38(5):1–12,2019.
+[43] DavidKDuvenaud, DougalMaclaurin, JorgeIparraguirre, RafaelBombarell, TimothyHirzel, AlánAspuru-Guzik,
+andRyanPAdams. Convolutionalnetworksongraphsforlearningmolecularfingerprints. InAdvancesinneural
+informationprocessingsystems,pages2224–2232,2015.
+[44] JustinGilmer,SamuelSSchoenholz,PatrickFRiley,OriolVinyals,andGeorgeEDahl. Neuralmessagepassingfor
+quantumchemistry.InInternationalconferenceonmachinelearning,pages1263–1272.PMLR,2017.
+[45] Chaya D Stern, Christopher I Bayly, Daniel GA Smith, Josh Fass, Lee-Ping Wang, David L Mobley, and John D
+Chodera. Capturingnon-localthrough-bondeffectswhenfragmentingmoleculesforquantumchemicaltorsion
+scans.bioRxiv,2020.
+[46] TszWaiKo,JonasAFinkler,StefanGoedecker,andJörgBehler. Afourth-generationhigh-dimensionalneuralnet-
+workpotentialwithaccurateelectrostaticsincludingnon-localchargetransfer.Naturecommunications,12(1):1–11,
+2021.
+[47] KennoVanommeslaeghe,EPrabhuRaman,andAlexanderDMacKerellJr. Automationofthecharmmgeneral
+forcefield(cgenff)ii:assignmentofbondedparametersandpartialatomiccharges.Journalofchemicalinformation
+andmodeling,52(12):3155–3168,2012.
+[48] KennoVanommeslaeghe,EPrabhuRaman,andAlexanderDMacKerellJr. Automationofthecharmmgeneral
+forcefield(cgenff)ii:assignmentofbondedparametersandpartialatomiccharges.Journalofchemicalinformation
+andmodeling,52(12):3155–3168,2012.
+[49] BWeisfeilerandALeman. Thereductionofagraphtocanonicalformandthealgebgrawhichappearstherein.
+1968.
+[50] JohnJIrwinandBrianKShoichet.Zinc-afreedatabaseofcommerciallyavailablecompoundsforvirtualscreening.
+Journalofchemicalinformationandmodeling,45(1):177–182,2005.
+[51] Aninformalambersmallmoleculeforcefield: parm@frosst,2010. URLhttp://www.ccl.net/cca/data/parm_at_
+Frosst/.
+[52] JunmeiWang,RomainM.Wolf,JamesW.Caldwell,PeterA.Kollman,andDavidA.Case. Developmentandtesting
+ofageneralamberforcefield. JournalofComputationalChemistry,25(9):1157–1174,2004. doi: 10.1002/jcc.20035.
+URLhttps://onlinelibrary.wiley.com/doi/abs/10.1002/jcc.20035.
+[53] YudongQiu,DanielSmith,SimonBoothroyd,HyesuJang,JeffreyWagner,CaitlinC.Bannan,TrevorGokey,VictoriaT.
+Lim,ChayaStern,AndreaRizzi,andetal. Developmentandbenchmarkingofopenforcefieldv1.0.0,theparsley
+smallmoleculeforcefield.ChemRxiv,2021.doi:10.33774/chemrxiv-2021-l070l-v4.
+[54] gaff-1.81.URLhttps://github.com/openmm/openmmforcefields/blob/0.9.0/amber/gaff/dat/gaff-1.81.dat#L87.
+[55] RyanL.Murphy,BalasubramaniamSrinivasan,VinayakA.Rao,andBrunoRibeiro.Janossypooling:Learningdeep
+permutation-invariantfunctionsforvariable-sizeinputs. CoRR,abs/1811.01900,2018. URLhttp://arxiv.org/abs/
+1811.01900.
+[56] Hyesu Jang, Jessica Maat, Yudong Qiu, Daniel G.A. Smith, Simon Boothroyd, Jeffrey Wagner, Caitlin C. Bannan,
+TrevorGokey,VictoriaT.Lim,XavierLucas,andetal. openforcefield/openforcefields: Version1.2.0"parsley"up-
+date.Jun2020.doi:10.5281/zenodo.3872244.
+[57] ThomasAHalgren. Therepresentationofvanderwaals(vdw)interactionsinmolecularmechanicsforcefields:
+potentialform,combinationrules,andvdwparameters. JournaloftheAmericanChemicalSociety,114(20):7827–
+7843,1992.
+[58] ChristopherMBaker,PedroEMLopes,XiaoZhu,BenoîtRoux,andAlexanderDMacKerellJr. Accuratecalculation
+ofhydrationfreeenergiesusingpair-specificlennard-jonesparametersinthecharmmdrudepolarizableforce
+field.Journalofchemicaltheoryandcomputation,6(4):1181–1198,2010.
+22of41
+[59] PayalChatterjee,MertY.Sengul,AnmolKumar,andAlexanderD.MacKerell.Harnessingdeeplearningforoptimiza-
+tionoflennard-jonesparametersforthepolarizableclassicaldrudeoscillatorforcefield.JournalofChemicalTheory
+andComputation,18(4):2388–2407,2022.doi:10.1021/acs.jctc.2c00115.URLhttps://doi.org/10.1021/acs.jctc.2c00115.
+PMID:35362975.
+[60] PengyuRenandJayWPonder. Consistenttreatmentofinter-andintramolecularpolarizationinmolecularme-
+chanicscalculations.Journalofcomputationalchemistry,23(16):1497–1506,2002.
+[61] JustinALemkul,JingHuang,BenoîtRoux,andAlexanderDMacKerellJr.Anempiricalpolarizableforcefieldbased
+ontheclassicaldrudeoscillatormodel: developmenthistoryandrecentapplications. Chemicalreviews, 116(9):
+4983–5013,2016.
+[62] ItaiLevenandTeresaHead-Gordon.C-gem:Coarse-grainedelectronmodelforpredictingtheelectrostaticpoten-
+tialinmolecules.Thejournalofphysicalchemistryletters,10(21):6820–6826,2019.
+[63] Jon RMaple, M-J Hwang, Thomas P.Stockfisch, UriDinur, MarvinWaldman, CarlS Ewig, and ArnoldT. Hagler.
+Derivationofclassiiforcefields.i.methodologyandquantumforcefieldforthealkylfunctionalgroupandalkane
+molecules.JournalofComputationalChemistry,15(2):162–182,1994.
+[64] MjJHwang,TPStockfisch,andATHagler. Derivationofclassiiforcefields.2.derivationandcharacterizationof
+aclassiiforcefield,cff93,forthealkylfunctionalgroupandalkanemolecules. JournaloftheAmericanChemical
+Society,116(6):2515–2525,1994.
+[65] JR Maple, M-J Hwang, TP Stockfisch, and AT Hagler. Derivation of class ii force fields. iii. characterization of a
+quantumforcefieldforalkanes.IsraelJournalofChemistry,34(2):195–231,1994.
+[66] Trevor Gokey. Openff sandbox cho phalkethoh v1.0, 2020. URL https://github.com/openforcefield/
+qca-dataset-submission/tree/master/submissions/2020-09-18-OpenFF-Sandbox-CHO-PhAlkEthOH.
+[67] CaitlinC.BannanandDavidMobley.ChemPer:AnOpenSourceToolforAutomaticallyGeneratingSMIRKSPatterns.
+62019.doi:10.26434/chemrxiv.8304578.v1.URLhttps://chemrxiv.org/articles/preprint/ChemPer_An_Open_Source_
+Tool_for_Automatically_Generating_SMIRKS_Patterns/8304578.
+[68] Openff phenyl dataset, 2020. URL https://github.com/openforcefield/qca-dataset-submission/tree/master/
+submissions/2020-10-06-OpenFF-Phenyl-Set.
+[69] JeffWagner, DavidL.Mobley, MattThompson, JohnChodera, CaitlinBannan, AndreaRizzi, trevorgokey, David
+Dotson,JaimeRodríguez-Guerra,Camila,PavanBehara,ChristopherBayly,JoshA.Mitchell,JoshHorton,NathanM.
+Lim,VictoriaLim,SukanyaSasmal,LilyWang,AndrewDalke,SimonBoothroyd,IvánPulido,DanielSmith,Lee-Ping
+Wang,andYutongZhao. openforcefield/openff-toolkit: 0.10.0Improvementsforforcefieldfitting,August2021.
+URLhttps://doi.org/10.5281/zenodo.5153946.
+[70] DavidLMobley,CaitlinCBannan,AndreaRizzi,ChristopherIBayly,JohnDChodera,VictoriaTLim,NathanMLim,
+KyleABeauchamp,MichaelRShirts,MichaelKGilson,etal. Openforcefieldconsortium: Escapingatomtypes
+usingdirectchemicalperceptionwithsmirnoffv0.1.BioRxiv,page286542,2018.
+[71] DanielGASmith,DoaaAltarawy,LoriABurns,MatthewWelborn,LeviNNaden,LoganWard,SamEllis,BenjaminP
+Pritchard,andTDanielCrawford. Themolssiqcarchiveproject: Anopen-sourceplatformtocompute,organize,
+andsharequantumchemistrydata. WileyInterdisciplinaryReviews: ComputationalMolecularScience,pagee1491,
+2020.
+[72] Openffsandboxgen2optimizationdataset,2020.URLhttps://github.com/openforcefield/qca-dataset-submission/
+tree/master/submissions/2020-03-12-OpenFF-Gen-2-Torsion-Set-1-Roche,https://github.com/openforcefield/
+qca-dataset-submission/tree/master/submissions/2020-03-12-OpenFF-Gen-2-Torsion-Set-2-Coverage,https://github.
+com/openforcefield/qca-dataset-submission/tree/master/submissions/2020-03-12-OpenFF-Gen-2-Torsion-Set-3-Pfizer-Discrepancy,
+https://github.com/openforcefield/qca-dataset-submission/tree/master/submissions/2020-03-12-OpenFF-Gen-2-Torsion-Set-4-eMolecules-Discrepancy,
+https://github.com/openforcefield/qca-dataset-submission/tree/master/submissions/2020-03-12-OpenFF-Gen-2-Torsion-Set-5-Bayer.
+[73] YudongQiu,DanielSmith,SimonBoothroyd,HyesuJang,JeffreyWagner,CaitlinCBannan,TrevorGokey,VictoriaT
+Lim,ChayaStern,AndreaRizzi,etal.Developmentandbenchmarkingofopenforcefieldv1.0.0,theparsleysmall
+moleculeforcefield.2021.
+[74] Vehicle dataset, 2020. URL https://github.com/openforcefield/qca-dataset-submission/tree/master/submissions/
+2019-07-02%20VEHICLe%20optimization%20dataset.
+23of41
+[75] WilliamR.Pitt,DavidM.Parry,BenjaminG.Perry,andColinR.Groom.Heteroaromaticringsofthefuture.Journal
+ofMedicinalChemistry, 52(9):2952–2963, 2009. doi: 10.1021/jm801513z. URLhttps://doi.org/10.1021/jm801513z.
+PMID:19348472.
+[76] Pepconfdataset, 2020. URLhttps://github.com/openforcefield/qca-dataset-submission/tree/master/submissions/
+2020-10-26-PEPCONF-Optimization.
+[77] VikiKumarPrasad,AlbertoOtero-de-laRoza,andGinoA.DiLabio. Pepconf,adiversedatasetofpeptideconfor-
+mationalenergies,Jan2019.URLhttps://doi.org/10.1038/sdata.2018.310.
+[78] JoshHorton.openforcefield/openff-qcsubmit:0.3.1.Mar2022.doi:10.5281/zenodo.6338096.
+[79] JeffWagner,MattThompson,DavidDotson,hyejang,andJaimeRodríguez-Guerra.openforcefield/openforcefields:
+Version1.2.1"Parsley"Update,September2020.URLhttps://doi.org/10.5281/zenodo.4021623.
+[80] D.A.Case, K.Belfon, I.Y.Ben-Shalom, S.R.Brozell, D.S.Cerutti, T.E.Cheatham, III,V.W.D.Cruzeiro, T.A.Darden,
+R.E.Duke,G.Giambasu,M.K.Gilson,H.Gohlke,RHarrisA.W.Goetz,S.Izadi,S.A.Izmailov,K.Kasavajhala,A.Ko-
+valenko, R. Krasny, T.Kurtzman, T.S. Lee, S. LeGrand, P.Li, C. Lin, J. Liu, T. Luchko, R.Luo, V. Man, K.M. Merz,
+Y.Miao,O.Mikhailovskii,G.Monard,H.Nguyen,A.Onufriev,F.Pan,S.Pantano,R.Qi,D.R.Roe,A.Roitberg,C.Sagui,
+S.Schott-Verdugo,J.Shen,C.L.Simmerling,N.R.Skrynnikov,J.Smith,J.Swails,R.C.Walker,J.Wang,L.Wilson,R.M.
+Wolf,X.Wu,Y.Xiong,Y.Xue,D.M.York,andP.A.Kollman.Amber2020,2020.
+[81] VikiKumarPrasad,AlbertoOtero-deLa-Roza,andGinoADiLabio. Pepconf,adiversedatasetofpeptideconfor-
+mationalenergies.Scientificdata,6:180310,2019.
+[82] YudongQiu,DanielGASmith,ChayaDStern,MudongFeng,HyesuJang,andLee-PingWang.Drivingtorsionscans
+withwavefrontpropagation.TheJournalofChemicalPhysics,152(24):244116,2020.
+[83] WendyDCornell, PiotrCieplak, ChristopherIBayly, IanRGould, KennethMMerz, DavidMFerguson, DavidC
+Spellmeyer,ThomasFox,JamesWCaldwell,andPeterAKollman.Asecondgenerationforcefieldforthesimulation
+ofproteins,nucleicacids,andorganicmolecules.JournaloftheAmericanChemicalSociety,117(19):5179–5197,1995.
+[84] YongDuan,ChunWu,ShibasishChowdhury,MathewCLee,GuomingXiong,WeiZhang,RongYang,PiotrCieplak,
+RayLuo,TaisungLee,etal. Apoint-chargeforcefieldformolecularmechanicssimulationsofproteinsbasedon
+condensed-phasequantummechanicalcalculations.Journalofcomputationalchemistry,24(16):1999–2012,2003.
+[85] RobertBBest,XiaoZhu,JihyunShim,PedroEMLopes,JeetainMittal,MichaelFeig,andAlexanderDMacKerellJr.
+Optimizationoftheadditivecharmmall-atomproteinforcefieldtargetingimprovedsamplingofthebackbone𝜙,
+𝜓andside-chain𝜒1and𝜒2dihedralangles.Journalofchemicaltheoryandcomputation,8(9):3257–3273,2012.
+[86] DavidSCerutti, JuliaERice, WilliamCSwope, andDavidACase. Derivationoffixedpartialchargesforamino
+acidsaccommodatingaspecificwatermodelandimplicitpolarization. TheJournalofPhysicalChemistryB,117(8):
+2328–2338,2013.
+[87] KarlTDebiec,DavidSCerutti,LewisRBaker,AngelaMGronenborn,DavidACase,andLillianTChong. Further
+alongtheroadlesstraveled:Amberff15ipq,anoriginalproteinforcefieldbuiltonaself-consistentphysicalmodel.
+Journalofchemicaltheoryandcomputation,12(8):3926–3947,2016.
+[88] ChristopherIBayly,PiotrCieplak,WendyCornell,andPeterAKollman.Awell-behavedelectrostaticpotentialbased
+methodusingchargerestraintsforderivingatomiccharges:therespmodel. TheJournalofPhysicalChemistry,97
+(40):10269–10280,1993.
+[89] Michael Schauperl, Paul S Nerenberg, Hyesu Jang, Lee-Ping Wang, Christopher I Bayly, David L Mobley, and
+MichaelKGilson. Non-bondedforcefieldmodelwithadvancedrestrainedelectrostaticpotentialcharges(resp2).
+CommunicationsChemistry,3(1):1–11,2020.
+[90] GeorgeAKhoury,JeffPThompson,JamesSmadbeck,ChrisAKieslich,andChristodoulosAFloudas.Forcefield_ptm:
+Abinitiochargeandamberforcefieldparametersforfrequentlyoccurringpost-translationalmodifications.Journal
+ofchemicaltheoryandcomputation,9(12):5653–5674,2013.
+[91] KennethAtz,ClemensIsert,MarkusN.A.Böcker,JoséJiménez-Luna,andGisbertSchneider. Delta-quantumma-
+chinelearningformedicinalchemistry.ChemRxiv,2021.doi:10.26434/chemrxiv-2021-fz6v7-v2.
+[92] PatrickBleiziffer,KaySchaller,andSereinaRiniker. Machinelearningofpartialchargesderivedfromhigh-quality
+quantum-mechanicalcalculations.Journalofchemicalinformationandmodeling,58(3):579–590,2018.
+24of41
+[93] NicholasLubbers,JustinSSmith,andKiptonBarros. Hierarchicalmodelingofmolecularenergiesusingadeep
+neuralnetwork.TheJournalofchemicalphysics,148(24):241715,2018.
+[94] AndrewESifain,NicholasLubbers,BenjaminTNebgen,JustinSSmith,AndreyYLokhov,OlexandrIsayev,AdrianE
+Roitberg,KiptonBarros,andSergeiTretiak. Discoveringatransferablechargeassignmentmodelusingmachine
+learning.Thejournalofphysicalchemistryletters,9(16):4495–4501,2018.
+[95] AnthonyKRappeandWilliamAGoddardIII.Chargeequilibrationformoleculardynamicssimulations.TheJournal
+ofPhysicalChemistry,95(8):3358–3363,1991.
+[96] WilfriedJ.Mortier,SwapanK.Ghosh,andS.Shankar. Electronegativity-equalizationmethodforthecalculation
+ofatomicchargesinmolecules. JournaloftheAmericanChemicalSociety,108(15):4315–4320,1986. doi: 10.1021/
+ja00275a013.URLhttps://doi.org/10.1021/ja00275a013.
+[97] MichaelKGilson,HillarySRGilson,andMichaelJPotter. Fastassignmentofaccuratepartialatomiccharges: an
+electronegativityequalizationmethodthataccountsforalternateresonanceforms.Journalofchemicalinformation
+andcomputersciences,43(6):1982–1997,2003.
+[98] PeterEastmanandVijayPande.Acceleratingdevelopmentandexecutionspeedwithjust-in-timegpucodegener-
+ation.InGPUComputingGemsJadeEdition,pages399–407.Elsevier,2012.
+[99] Lee-PingWang,ToddJMartinez,andVijaySPande. Buildingforcefields: Anautomatic,systematic,andrepro-
+ducibleapproach.Thejournalofphysicalchemistryletters,5(11):1885–1891,2014.
+[100] LingleWang,YujieWu,YuqingDeng,ByungchanKim,LeviPierce,GoranKrilov,DmitryLupyan,ShaughnessyRobin-
+son,MarkusKDahlgren,JeremyGreenwood,etal. Accurateandreliablepredictionofrelativeligandbindingpo-
+tencyinprospectivedrugdiscoverybywayofamodernfree-energycalculationprotocolandforcefield.Journalof
+theAmericanChemicalSociety,137(7):2695–2703,2015.
+[101] LinFrankSong,Tai-SungLee,ChunZhu,DarrinMYork,andKennethMMerzJr. Usingamber18forrelativefree
+energycalculations.Journalofchemicalinformationandmodeling,59(7):3128–3135,2019.
+[102] JunLiang,AnnevanAbbema,MercedeszBalazs,KathyBarrett,LeoBerezhkovsky,WadeBlair,ChristineChang,
+DonnieDelarosa,JasonDeVoss,JimDriscoll,etal. Leadoptimizationofa4-aminopyridinebenzamidescaffoldto
+identifypotent,selective,andorallybioavailabletyk2inhibitors. Journalofmedicinalchemistry,56(11):4521–4536,
+2013.
+[103] DominicA.Rufa,IvyZhang,HannahE.BruceMacdonald,PatrickB.Grinaway,IvánPulido,MikeM.Henry,Jaime
+Rodríguez-Guerra,MattWittmann,StevenK.Albanese,WilliamG.Glass,AnaSilveira,DavidSchaller,LeviN.Naden,
+andJohnD.Chodera.Perses,March2022.URLhttps://doi.org/10.5281/zenodo.6328265.Pleasecitethissoftware
+usingthesemetadata.
+[104] YudongQiu,DanielSmith,SimonBoothroyd,HyesuJang,JeffreyWagner,CaitlinCBannan,TrevorGokey,VictoriaT
+Lim,ChayaStern,AndreaRizzi,etal.Developmentandbenchmarkingofopenforcefieldv1.0.0,theparsleysmall
+moleculeforcefield.2020.
+[105] AntoniaSJSMey,BryceAllen,HannahEBruceMacdonald,JohnDChodera,MaximilianKuhn,JulienMichel,DavidL
+Mobley,LeviNNaden,SamarjeetPrasad,AndreaRizzi,etal.Bestpracticesforalchemicalfreeenergycalculations.
+arXivpreprintarXiv:2008.03067,2020.
+[106] JamesAMaier,CarmenzaMartinez,KoushikKasavajhala,LaurenWickstrom,KevinEHauser,andCarlosSimmer-
+ling.ff14sb:improvingtheaccuracyofproteinsidechainandbackboneparametersfromff99sb.Journalofchemical
+theoryandcomputation,11(8):3696–3713,2015.
+[107] WilliamLJorgensen,JayaramanChandrasekhar,JeffryDMadura,RogerWImpey,andMichaelLKlein.Comparison
+ofsimplepotentialfunctionsforsimulatingliquidwater.TheJournalofchemicalphysics,79(2):926–935,1983.
+[108] InSukJoungandThomasECheathamIII. Determinationofalkaliandhalidemonovalentionparametersforuse
+inexplicitlysolvatedbiomolecularsimulations.ThejournalofphysicalchemistryB,112(30):9020–9041,2008.
+[109] JohnChodera,AndreaRizzi,LeviNaden,KyleBeauchamp,PatrickGrinaway,JoshFass,AlexWade,BasRustenburg,
+GregoryA.Ross,AndreasKrämer,HannahBruceMacdonald,JaimeRodríguez-Guerra,dominicrufa,AndySimmon-
+ett,DavidW.H.Swenson,hb0402,MikeHenry,SanderRoet,andAnaSilveira. Choderalab/openmmtools:0.20.3
+BugfixRelease.Zenodo,March2021.
+[110] DavidF.HahnandJeffWagner.openforcefield/protein-ligand-benchmark:0.1.2.ReleasetocreateZenodorecord,
+May2021.URLhttps://doi.org/10.5281/zenodo.4813735.
+25of41
+[111] JohnChodera, RafalWiewiora, ChayaStern, andpeastman. openmm/openmm-forcefields: FixGAFFAM1-BCC
+chargingbugforsomemolecules,January2020.URLhttps://doi.org/10.5281/zenodo.3627391.
+[112] HuafengXu.Optimalmeasurementnetworkofpairwisedifferences.JournalofChemicalInformationandModeling,
+59(11):4720–4728,2019.
+[113] Hannah Bruce Macdonald, dfhahn, Mike Henry, John Chodera, David Dotson, William Glass, and Iván Pulido.
+openforcefield/openff-arsenic:v0.2.1,February2022.URLhttps://doi.org/10.5281/zenodo.6210305.
+[114] KennoVanommeslaegheandAlexanderDMacKerellJr. Automationofthecharmmgeneralforcefield(cgenff)i:
+bondperceptionandatomtyping.Journalofchemicalinformationandmodeling,52(12):3144–3154,2012.
+[115] KennoVanommeslaeghe,EPrabhuRaman,andAlexanderDMacKerellJr. Automationofthecharmmgeneral
+forcefield(cgenff)ii:assignmentofbondedparametersandpartialatomiccharges.Journalofchemicalinformation
+andmodeling,52(12):3155–3168,2012.
+[116] JosephDYesselman,DanielJPrice,JenniferLKnight,andCharlesLBrooksIII. Match:Anatom-typingtoolsetfor
+molecularmechanicsforcefields.Journalofcomputationalchemistry,33(2):189–202,2012.
+[117] MarvinWaldmanandArnoldTHagler. Newcombiningrulesforraregasvanderwaalsparameters. Journalof
+computationalchemistry,14(9):1077–1084,1993.
+[118] J Peter Toennies. On the validity of a modified buckingham potential for the rare gas dimers at intermediate
+distances.ChemicalPhysicsLetters,20(3):238–241,1973.
+[119] TomDarden,DarrinYork,andLeePedersen. Particlemeshewald: Annlog(n)methodforewaldsumsinlarge
+systems.TheJournalofchemicalphysics,98(12):10089–10092,1993.
+[120] AlžbetaKubincová, SereinaRiniker, andPhilippeHHünenberger. Reaction-fieldelectrostaticsinmoleculardy-
+namicssimulations:Developmentofaconservativeschemecompatiblewithanatomiccutoff. PhysicalChemistry
+ChemicalPhysics,22(45):26419–26437,2020.
+[121] OAnatoleVonLilienfeld. Quantummachinelearninginchemicalcompoundspace. AngewandteChemieInterna-
+tionalEdition,57(16):4164–4169,2018.
+[122] OliverTUnkeandMarkusMeuwly. Physnet: Aneuralnetworkforpredictingenergies,forces,dipolemoments,
+andpartialcharges.Journalofchemicaltheoryandcomputation,15(6):3678–3693,2019.
+[123] AlanGrossfieldandDanielMZuckerman. Quantifyinguncertaintyandsamplingqualityinbiomolecularsimula-
+tions.Annualreportsincomputationalchemistry,5:23–48,2009.
+[124] JohnDChodera. Asimplemethodforautomatedequilibrationdetectioninmolecularsimulations. Journalof
+chemicaltheoryandcomputation,12(4):1799–1805,2016.
+[125] AlanGrossfield,PaulNPatrone,DanielRRoe,AndrewJSchultz,DanielWSiderius,andDanielMZuckerman.Best
+practicesforquantificationofuncertaintyandsamplingqualityinmolecularsimulations[articlev1.0].Livingjournal
+ofcomputationalmolecularscience,1(1),2018.
+[126] FabienCailliezandPascalPernot. Statisticalapproachestoforcefieldcalibrationandpredictionuncertaintyin
+molecularsimulation.TheJournalofChemicalPhysics,134(5):054124,February2011.ISSN0021-9606.doi:10.1063/
+1.3545069.
+[127] FabienCailliez, ArnaudBourasseau, andPascalPernot. Calibrationofforcefieldsformolecularsimulation: Se-
+quentialdesignofcomputerexperimentsforbuildingcost-efficientkrigingmetamodels.JournalofComputational
+Chemistry,35(2):130–149,January2014.ISSN1096-987X.doi:10.1002/jcc.23475.
+[128] PanagiotisAngelikopoulos,CostasPapadimitriou,andPetrosKoumoutsakos.Bayesianuncertaintyquantification
+andpropagationinmoleculardynamicssimulations: Ahighperformancecomputingframework. TheJournalof
+ChemicalPhysics,137(14):144103,October2012.ISSN0021-9606.doi:10.1063/1.4757266.
+[129] P.E.Hadjidoukas,P.Angelikopoulos,C.Papadimitriou,andP.Koumoutsakos.Π4U:Ahighperformancecomputing
+frameworkforBayesianuncertaintyquantificationofcomplexmodels.JournalofComputationalPhysics,284:1–21,
+March2015.ISSN0021-9991.doi:10.1016/j.jcp.2014.12.006.
+[130] BenCookeandScottC.Schmidler. StatisticalPredictionandMolecularDynamicsSimulation. BiophysicalJournal,
+95(10):4497–4511,November2008.ISSN0006-3495.doi:10.1529/biophysj.108.131623.
+26of41
+[131] XiaowangZhouandStephenM.Foiles. UncertaintyQuantificationandReductionofMolecularDynamicsModels.
+2017.doi:10.5772/intechopen.68507.
+[132] F.Rizzi,H.Najm,B.Debusschere,K.Sargsyan,M.Salloum,H.Adalsteinsson,andO.Knio.UncertaintyQuantification
+inMDSimulations.PartII:BayesianInferenceofForce-FieldParameters. MultiscaleModeling&Simulation,10(4):
+1460–1492,January2012.ISSN1540-3459.doi:10.1137/110853170.
+[133] S.Wu,P.Angelikopoulos,C.Papadimitriou,R.Moser,andP.Koumoutsakos.AhierarchicalBayesianframeworkfor
+forcefieldselectioninmoleculardynamicssimulations. Phil.Trans.R.Soc.A,374(2060):20150032,February2016.
+ISSN1364-503X,1471-2962.doi:10.1098/rsta.2015.0032.
+[134] LinaKulakova,GeorgiosArampatzis,PanagiotisAngelikopoulos,PanagiotisChatzidoukas,CostasPapadimitriou,
+andPetrosKoumoutsakos. Experimentaldataoverquantummechanicssimulationsforinferringtherepulsive
+exponentoftheLennard-JonespotentialinMolecularDynamics.arXiv:1705.08533[physics,stat],May2017.
+[135] PaulN.PatroneandAndrewDienstfrey. UncertaintyQuantificationforMolecularDynamics. arXiv:1801.02483
+[physics],January2018.
+[136] StephenWu,PanagiotisAngelikopoulos,GerardoTauriello,CostasPapadimitriou,andPetrosKoumoutsakos.Fus-
+ingheterogeneousdataforthecalibrationofmoleculardynamicsforcefieldsusinghierarchicalBayesianmodels.
+TheJournalofChemicalPhysics,145(24):244112,December2016.ISSN0021-9606.doi:10.1063/1.4967956.
+[137] RichardA.Messerly,ThomasA.Knotts,andW.VincentWilding. Uncertaintyquantificationandpropagationof
+errorsoftheLennard-Jones12-6parametersforn-alkanes. TheJournalofChemicalPhysics,146(19):194110,May
+2017.ISSN0021-9606.doi:10.1063/1.4983406.
+[138] OwenC.Madin,SimonBoothroyd,RichardA.Messerly,JohnD.Chodera,JoshFass,andMichaelR.Shirts.Bayesian
+inference-drivenmodelparameterizationandmodelselectionfor2CLJQfluidmodels. arXiv:2105.07863[physics,
+stat],September2021.
+[139] Camila Zanette, Caitlin C. Bannan, Christopher I. Bayly, Josh Fass, Michael K. Gilson, Michael R. Shirts, John D.
+Chodera,andDavidL.Mobley.TowardLearnedChemicalPerceptionofForceFieldTypingRules.JournalofChem-
+icalTheoryandComputation,15(1):402–423,January2019.ISSN1549-9618.doi:10.1021/acs.jctc.8b00821.
+[140] RadfordM.Neal. BayesianLearningforNeuralNetworks. LectureNotesinStatistics.Springer-Verlag,NewYork,
+1996.ISBN978-0-387-94724-2.doi:10.1007/978-1-4612-0745-0.
+[141] AdamPaszke,SamGross,SoumithChintala,GregoryChanan,EdwardYang,ZacharyDeVito,ZemingLin,Alban
+Desmaison,LucaAntiga,andAdamLerer.Automaticdifferentiationinpytorch.2017.
+[142] JeffWagner, DavidL.Mobley, CaitlinBannan, JohnChodera, AndreaRizzi, MattThompson, JoshHorton, David
+Dotson,JaimeRodríguez-Guerra,Camila,ChristopherBayly,JoshHorton,trevorgokey,NathanM.Lim,VictoriaLim,
+PavanBehara,SimonBoothroyd,SukanyaSasmal,DanielSmith,Lee-Ping,andYutongZhao.openforcefield/open-
+forcefield:0.7.2Bugfixandminorfeaturerelease,September2020.URLhttps://doi.org/10.5281/zenodo.4057038.
+[143] DiederikPKingmaandJimmyBa.Adam:Amethodforstochasticoptimization.arXivpreprintarXiv:1412.6980,2014.
+[144] WillHamilton,ZhitaoYing,andJureLeskovec. Inductiverepresentationlearningonlargegraphs. InAdvancesin
+neuralinformationprocessingsystems,pages1024–1034,2017.
+[145] FelixWu,TianyiZhang,AmauriH.SouzaJr.,ChristopherFifty,TaoYu,andKilianQ.Weinberger.Simplifyinggraph
+convolutionalnetworks.CoRR,abs/1902.07153,2019.URLhttp://arxiv.org/abs/1902.07153.
+[146] JohnDChoderaandMichaelRShirts. Replicaexchangeandexpandedensemblesimulationsasgibbssampling:
+Simpleimprovementsforenhancedmixing.TheJournalofchemicalphysics,135(19):194110,2011.
+[147] BenedictLeimkuhlerandCharlesMatthews.Efficientmoleculardynamicsusinggeodesicintegrationandsolvent–
+solute splitting. Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences, 472(2189):
+20160138,2016.
+[148] JR Maple, M-J Hwang, TP Stockfisch, and AT Hagler. Derivation of class ii force fields. iii. characterization of a
+quantumforcefieldforalkanes.IsraelJournalofChemistry,34(2):195–231,1994.
+[149] ZhengweiPeng,CarlSEwig,Ming-JingHwang,MarvinWaldman,andArnoldTHagler. Derivationofclassiiforce
+fields.4.vanderwaalsparametersofalkalimetalcationsandhalideanions. TheJournalofPhysicalChemistryA,
+101(39):7243–7252,1997.
+27of41
+[150] JRMaple,M-JHwang,KarlJamesJalkanen,ThomasPStockfisch,andArnoldTHagler. Derivationofclassiiforce
+fields:V.quantumforcefieldforamides,peptides,andrelatedcompounds.Journalofcomputationalchemistry,19
+(4):430–458,1998.
+[151] PninaDauber-OsguthorpeandArnoldTHagler. Biomolecularforcefields: wherehavewebeen,wherearewe
+now,wheredoweneedtogoandhowdowegetthere? Journalofcomputer-aidedmoleculardesign,33(2):133–203,
+2019.
+[152] ArnoldTHagler. Forcefielddevelopmentphaseii: Relaxationofphysics-basedcriteria... orinclusionofmore
+rigorousphysicsintotherepresentationofmolecularenergetics.Journalofcomputer-aidedmoleculardesign,33(2):
+205–264,2019.
+[153] JérômeDelhommelleandPhilippeMillié.Inadequacyofthelorentz-berthelotcombiningrulesforaccuratepredic-
+tionsofequilibriumpropertiesbymolecularsimulation.MolecularPhysics,99(8):619–625,2001.
+[154] KennoVanommeslaeghe, MingjunYang, andAlexanderD.MacKerellJr. Robustnessinthefittingofmolecular
+mechanicsparameters. JournalofComputationalChemistry,36(14):1083–1101,2015. doi:https://doi.org/10.1002/jcc.
+23897.URLhttps://onlinelibrary.wiley.com/doi/abs/10.1002/jcc.23897.
+[155] Lee-PingWang,JiahaoChen,andTroyVanVoorhis. Systematicparametrizationofpolarizableforcefieldsfrom
+quantumchemistrydata.Journalofchemicaltheoryandcomputation,9(1):452–460,2013.
+[156] AndersS.ChristensenandO.AnatolevonLilienfeld. Ontheroleofgradientsformachinelearningofmolecular
+energiesandforces,2020.
+[157] StefanChmiela,HuzielE.Sauceda,IgorPoltavsky,Klaus-RobertMüller,andAlexandreTkatchenko. sgdml: Con-
+structingaccurateanddataefficientmolecularforcefieldsusingmachinelearning. ComputerPhysicsCommunica-
+tions,240:38–45,2019.doi:10.1016/j.cpc.2019.02.007.
+[158] HuzielE.Sauceda,StefanChmiela,IgorPoltavsky,Klaus-RobertMüller,andAlexandreTkatchenko.Molecularforce
+fieldswithgradient-domainmachinelearning:Constructionandapplicationtodynamicsofsmallmoleculeswith
+coupledclusterforces.TheJournalofChemicalPhysics,150(11):114102,2019.doi:10.1063/1.5078687.
+[159] HuzielE.Sauceda,MichaelGastegger,StefanChmiela,Klaus-RobertMüller,andAlexandreTkatchenko.Molecular
+forcefieldswithgradient-domainmachinelearning(gdml): Comparisonandsynergieswithclassicalforcefields,
+2020.
+[160] HansWHorn,WilliamCSwope,JedWPitera,JeffryDMadura,ThomasJDick,GregLHura,andTeresaHead-Gordon.
+Developmentofanimprovedfour-sitewatermodelforbiomolecularsimulations:Tip4p-ew.TheJournalofchemical
+physics,120(20):9665–9678,2004.
+[161] Lee-PingWang,KeriAMcKiernan,JosephGomes,KyleABeauchamp,TeresaHead-Gordon,JuliaERice,WilliamC
+Swope,ToddJMartínez,andVijaySPande.Buildingamorepredictiveproteinforcefield:asystematicandrepro-
+ducibleroutetoamber-fb15.TheJournalofPhysicalChemistryB,121(16):4023–4039,2017.
+[162] EliotBoulanger,LeiHuang,ChetanRupakheti,AlexanderDMacKerellJr,andBenoîtRoux.Optimizedlennard-jones
+parametersfordruglikesmallmolecules.Journalofchemicaltheoryandcomputation,14(6):3121–3131,2018.
+[163] SimonBoothroyd,OwenMadin,JeffWagner,JeffrySetiadi,JaimeRodríguez-Guerra,MattThompson,andDavid
+Dotson.openforcefield/openff-evaluator:0.3.0,October2020.URLhttps://doi.org/10.5281/zenodo.4153484.
+[164] KristofSchütt,Pieter-JanKindermans,HuzielEnocSaucedaFelix,StefanChmiela,AlexandreTkatchenko,andKlaus-
+RobertMüller. Schnet: Acontinuous-filterconvolutionalneuralnetworkformodelingquantuminteractions. In
+Advancesinneuralinformationprocessingsystems,pages991–1001,2017.
+[165] KunYao,JohnE.Herr,DavidW.Toth,RykerMckintyre,andJohnParkhill. Thetensormol-0.1modelchemistry: a
+neuralnetworkaugmentedwithlong-rangephysics. Chem.Sci.,9:2261–2269,2018. doi:10.1039/C7SC04934J. URL
+http://dx.doi.org/10.1039/C7SC04934J.
+[166] Rodrigo Galindo-Murillo, James C Robertson, Marie Zgarbova, Jiri Sponer, Michal Otyepka, Petr Jurecka, and
+ThomasECheathamIII.Assessingthecurrentstateofamberforcefieldmodificationsfordna.Journalofchemical
+theoryandcomputation,12(8):4114–4127,2016.
+[167] AlbertoPérez,IvánMarchán,DanielSvozil,JiriSponer,ThomasECheathamIII,CharlesALaughton,andModesto
+Orozco. Refinementoftheamberforcefieldfornucleicacids:improvingthedescriptionof𝛼/𝛾conformers. Bio-
+physicaljournal,92(11):3817–3829,2007.
+28of41
+[168] InSukJoungandThomasECheathamIII.Moleculardynamicssimulationsofthedynamicandenergeticproperties
+ofalkaliandhalideionsusingwater-model-specificionparameters. TheJournalofPhysicalChemistryB,113(40):
+13279–13290,2009.
+[169] PengfeiLi,BenjaminPRoberts,DhruvaKChakravorty,andKennethMMerzJr. Rationaldesignofparticlemesh
+ewaldcompatiblelennard-jonesparametersfor+2metalcationsinexplicitsolvent.Journalofchemicaltheoryand
+computation,9(6):2733–2748,2013.
+[170] PengfeiLiandKennethMMerzJr.Takingintoaccounttheion-induceddipoleinteractioninthenonbondedmodel
+ofions.Journalofchemicaltheoryandcomputation,10(1):289–297,2014.
+[171] PengfeiLi,LinFrankSong,andKennethMMerzJr.Parameterizationofhighlychargedmetalionsusingthe12-6-4
+lj-typenonbondedmodelinexplicitwater.TheJournalofPhysicalChemistryB,119(3):883–895,2015.
+[172] CallumJDickson,BenjaminDMadej,ÅgeASkjevik,RobinMBetz,KnutTeigen,IanRGould,andRossCWalker.
+Lipid14:theamberlipidforcefield.Journalofchemicaltheoryandcomputation,10(2):865–879,2014.
+[173] KarlNKirschner,AustinBYongye,SarahMTschampel,JorgeGonzález-Outeiriño,CharlisaRDaniels,BLachele
+Foley,andRobertJWoods. Glycam06:ageneralizablebiomolecularforcefield.carbohydrates. Journalofcompu-
+tationalchemistry,29(4):622–655,2008.
+[174] MariLDeMarcoandRobertJWoods. Atomic-resolutionconformationalanalysisofthegm3gangliosideinalipid
+bilayeranditsimplicationsforganglioside–proteinrecognitionatmembranesurfaces.Glycobiology,19(4):344–355,
+2009.
+[175] MariLDeMarco,RobertJWoods,JamesHPrestegard,andFangTian. Presentationofmembrane-anchoredgly-
+cosphingolipidsdeterminedfrommoleculardynamicssimulationsandnmrparamagneticrelaxationrateenhance-
+ment.JournaloftheAmericanChemicalSociety,132(4):1334–1338,2010.
+[176] DazhiTan,StefanoPiana,RobertMDirks,andDavidEShaw.Rnaforcefieldwithaccuracycomparabletostate-of-
+the-artproteinforcefields.ProceedingsoftheNationalAcademyofSciences,115(7):E1346–E1355,2018.
+[177] ShamaKhan, ImaneBjij, FisayoAOlotu, ClementAgoni, EmmanuelAdeniji, andMahmoudESSoliman. Cova-
+lentsimulationsofcovalent/irreversibleenzymeinhibitionindrugdiscovery:areliabletechnicalprotocol. Future
+medicinalchemistry,10(19):2265–2275,2018.
+[178] KurtHornik.Approximationcapabilitiesofmultilayerfeedforwardnetworks.Neuralnetworks,4(2):251–257,1991.
+[179] KurtHornik,MaxwellStinchcombe,HalbertWhite,etal. Multilayerfeedforwardnetworksareuniversalapproxi-
+mators.1991.
+10 Acknowledgments
+The authors wish to thank Yutong Zhao (0000-0003-0090-7801) for helpful feedback while troubleshoot-
+ingimplementationsofmolecularmechanicsmodelsautomaticdifferentiationpackages,DavidL.Mobley
+(0000-0002-1083-5533)forfeedbackaboutissueswithimpropertorsionmodelsandotherimportantcon-
+siderations, Joshua T. Horton (0000-0001-8694-7200) for insightful comments especially regarding fitting
+andassessingtorsions. TheauthorswishtothankChristianL.Mueller(0000-0002-3821-7083). Wethank
+OpenEyeScientificSoftwaretoprovideuswiththefreeacademiclicense.
+11 Funding
+YWacknowledgessupportfromNSFCHI-1904822andtheSloanKetteringInstitute. JFacknowledgessup-
+portfromNSFCHE-1738979andtheSloanKetteringInstitute. JDCacknowledgessupportfromNIHgrant
+P30CA008748,NIHgrantR01GM121505,NIHgrantR01GM132386,NSFCHI-1904822,andtheSloanKet-
+teringInstitute.
+29of41
+12 Disclosures
+YWisamongtheco-foundersandequityholdersofUli,Inc.andUli(Shenzhen)TechnologyCo.Ltd.
+JDCisacurrentmemberoftheScientificAdvisoryBoardofOpenEyeScientificSoftware,RedesignSci-
+ence, Ventus Therapeutics, and Interline Therapeutics, and has equity interests in Redesign Science and
+InterlineTherapeutics.TheChoderalaboratoryreceivesorhasreceivedfundingfrommultiplesources,in-
+cludingtheNationalInstitutesofHealth,theNationalScienceFoundation,theParkerInstituteforCancer
+Immunotherapy,RelayTherapeutics,EntasisTherapeutics,SiliconTherapeutics,EMDSerono(MerckKGaA),
+AstraZeneca,VirBiotechnology,Bayer,XtalPi,InterlineTherapeutics,theMolecularSciencesSoftwareInsti-
+tute,theStarrCancerConsortium,theOpenForceFieldConsortium,CycleforSurvival,aLouisV.Gerstner
+YoungInvestigatorAward, andtheSloanKetteringInstitute. AcompletefundinghistoryfortheChodera
+labcanbefoundathttp://choderalab.org/funding.
+13 Disclaimers
+Thecontentissolelytheresponsibilityoftheauthorsanddoesnotnecessarilyrepresenttheofficialviews
+oftheNationalInstitutesofHealth.
+14 AuthorContributions
+Conceptualization: JF,YW,JDC;DataCuration: YW,JF,JEH;FormalAnalysis: YW;FundingAcquisition: JDC;
+Investigation:YW,JF;Methodology:YW,JF;ProjectAdministration:JDC;Resources:JDC;Software:YW,JF,BK,
+DR,IZ,IP,MH;Supervision: JDC;Visualization: YW;Writing–OriginalDraft: YW;Writing–Review&Editing:
+YW,JDC,JF,BK,JEH.
+30of41
+Appendix: End-to-End differentiable
+construction of molecular mechanics
+force fields
+YuanqingWang(ORCID:0000-0003-4403-2015)1,3,4,JoshFass(ORCID:0000-0003-3719-266X)1,2‡,
+BenjaminKaminow(ORCID:0000-0002-2266-3353)1,2,JohnE.Herr(ORCID:0000-0001-5639-1520)1,Dominic
+Rufa(ORCID:0000-0003-0930-9445)1,IvyZhang(ORCID:0000-0003-0628-6276)1,2,Iván
+Pulido(ORCID:0000-0002-7178-8136)1,MikeHenry(ORCID:0000-0002-3870-9993)1,
+JohnD.Chodera(ORCID:0000-0003-0542-119X)1
+1ComputationalandSystemsBiologyProgram,SloanKetteringInstitute,MemorialSloanKetteringCancerCenter,New
+York,NY10065;2Tri-InstitutionalPhDPrograminComputationalBiologyandMedicine,WeillCornellMedicalCollege,
+CornellUniversity,NewYork,NY10065;3Physiology,Biophysics,andSystemBiologyPh.D.Program,WeillCornell
+MedicalCollege,CornellUniversity,NewYork,NY10065;4MFA.PrograminCreativeWriting,DivisionofHumanitiesand
+Arts,theCityCollegeofNewYork,theCityUniversityofNewYork,NewYork,NY10031
+*Forcorrespondence:
+yuanqing.wang@choderalab.org(YW);john.chodera@choderalab.org(JDC)
+Presentaddress:§RelayTherapeutics,Cambridge,MA02139
+A AgraphtheoreticviewofClassImolecularmechanicsforcefields
+Consider a molecular graph  where atoms map to vertices  and covalent bonds map to edges . In a
+classImolecularmechanicsforcefield[30,31,148–152],theparametersΦ assignedtoamoleculegraph
+𝙵𝙵
+definehowthetotalpotentialenergyofaconformation𝐱 ∈ ℝ|  |∗3 iscomputedfromindependentbond,
+angle,torsion,andnonbondedenergytermsgiventhecompletesetofmolecularmechanicsparameters
+Φ .
+FF
+𝑈 (𝐱;,Φ ) = ∑ 𝑈 ( 𝑟(𝐱;𝑣,𝑣 );𝐾(Φ ;𝑣,𝑣 ),𝑟 (Φ ;𝑣,𝑣 ) )
+MM 𝙵𝙵 bond 𝑖 𝑗 𝑟 𝙵𝙵 𝑖 𝑗 0 𝙵𝙵 𝑖 𝑗
+(𝑣𝑖,𝑣𝑗)∈bond
+∑ ( )
++ 𝑈 𝜃(𝐱;𝑣,𝑣 ,𝑣 );𝐾 (Φ ;𝑣,𝑣 ,𝑣 ),𝜃 (Φ ;𝑣,𝑣 ,𝑣 )
+angle 𝑖 𝑗 𝑘 𝜃 𝙵𝙵 𝑖 𝑗 𝑘 0 𝙵𝙵 𝑖 𝑗 𝑘
+(𝑣𝑖,𝑣𝑗,𝑣𝑘)∈angle
++ ∑ 𝑈 ( 𝜙(𝐱;𝑣,𝑣 ,𝑣 ,𝑣);{𝐾 (Φ ;𝑣,𝑣 ,𝑣 ,𝑣)}𝑛max,𝜙 (Φ ;𝑣,𝑣 ,𝑣 ,𝑣) )
+torsion 𝑖 𝑗 𝑘 𝑙 𝜙,𝑛 𝙵𝙵 𝑖 𝑗 𝑘 𝑙 𝑛=1 0 𝙵𝙵 𝑖 𝑗 𝑘 𝑙
+(𝑣𝑖,𝑣𝑗,𝑣𝑘,𝑣𝑙)∈torsion
+∑ ( )
++ 𝑈 𝑟(𝐱;𝑣,𝑣 );𝑞(Φ ;𝑣),𝑞(Φ ;𝑣 )
+Coulomb 𝑖 𝑗 𝙵𝙵 𝑖 𝙵𝙵 𝑗
+(𝑣𝑖,𝑣𝑗)∈Coulomb
++ ∑ 𝑈 ( 𝑟(𝐱;𝑣,𝑣 );𝜎(Φ ;𝑣,𝑣 ),𝜖(Φ ;𝑣,𝑣 ) ) (14)
+vanderWaals 𝑖 𝑗 𝙵𝙵 𝑖 𝑗 𝙵𝙵 𝑖 𝑗
+(𝑣𝑖,𝑣𝑗)∈vanderWaals
+Here,thesets , , denotetheduples,triples,andquadruplesofbondedatoms(vertices)in
+bond angle torsion
+, while  and  denotes the set of atom (vertex) pairs separated by at least three edges,
+Coulomb vanderWaals
+sinceinteractionsseparatedbyfeweredgesaregenerallyexcluded.𝜖 denotesthevacuumelectricpermit-
+0
+tivity.Thepotentialtermsdependondistances𝑟(𝐱;𝑣,𝑣 ),angles𝜃(𝐱;𝑣,𝑣 ,𝑣 ),andtorsions(dihedralangles)
+𝑖 𝑗 𝑖 𝑗 𝑘
+𝜙(𝐱;𝑣,𝑣 ,𝑣 ,𝑣)measuredforthecorrespondingatomsfromthepositionsvector𝐱.Thevariousparameter
+𝑖 𝑗 𝑘 𝑙
+functions—bond force constant 𝐾 and equilibrium distance 𝑟 , angle force constant 𝐾 and equilibrium
+𝑟 0 𝜃
+angle𝜃 ,periodictorsiontermbarrierheight𝐾 andphase𝜙 forperiodicity𝑛,partialcharge𝑞,Lennard-
+0 𝜙,𝑛 0
+Jonesradius𝜎andwelldepth𝜖—extracttheparameterscorrespondingtospecificsetsofatoms(vertices)
+fromthevectorofmolecularmechanicsparametersΦ tocomputethatcontributiontothetotalpotential
+FF
+energy.
+31of41
+Theindividualpotentialenergytermsarecomputedbyfunctionsthatgenerallytakesimpleharmonic
+or periodic forms with respect to bond lengths and angles in terms of the parameters for those specific
+interactions:
+𝐾
+𝑈 (𝑟;𝐾,𝑟 ) = 𝑟(𝑟−𝑟 )2 (15)
+bond 𝑟 0 2 0
+𝐾
+𝑈 (𝜃;𝐾 ,𝜃 ) = 𝜃(𝜃−𝜃 )2 (16)
+angle 𝜃 0 2 0
+𝑛 ∑max
+𝑈 (𝜙;{𝐾 },𝜙 ) = 𝐾 [1+cos(𝑛𝜙)] (17)
+torsion 𝜙,𝑛 0 𝜙,𝑛
+𝑛=1
+𝑈 (𝑟;𝑞,𝑞 ) = 1 𝑞 𝑖 𝑞 𝑗 (18)
+Coulomb 𝑖 𝑗 4𝜋𝜖 𝑟
+0
+[(𝜎)12 (𝜎)6 ]
+𝑈 (𝑟;𝜎,𝜖) =4𝜖 − (19)
+vanderWaals 𝑟 𝑟
+where𝐾 and𝐾 denoteforceconstantsforbondsandangles,𝑟 and𝜃 denoteequilibriumbondlengths
+𝑟 𝜃 0 0
+andangles,𝐾 denotesatorsionenergyfactor(whichcanbepositiveornegative)forperiodicity𝑛,𝜖 isthe
+𝜙,𝑛 0
+permittivityoffreespace,and𝑞 denotepartialcharges.ForforcefieldslikeAMBER[106]andCHARMM[85],
+𝑖
+theeffectiveLennard-Joneswelldepth𝜖 andradius𝜎 parametersforaninteractingpairofatomsare
+𝑣𝑖,𝑣𝑗 𝑣𝑖,𝑣𝑗
+computedfromatomicparametersforatoms𝑣 and𝑣 usingLorentz-Berthelotcombiningrules[153],
+𝑖 𝑗
+1
+𝜎(Φ ;𝑣,𝑣 ) = (𝜎 +𝜎 ) (20)
+𝙵𝙵 𝑖 𝑗 2 𝑣𝑖 𝑣𝑗
+𝜖(Φ ;𝑣,𝑣 ) = √𝜖 𝜖 (21)
+𝙵𝙵 𝑖 𝑗 𝑣𝑖 𝑣𝑗
+thoughalternativecombiningrules[117]orevenpair-specificparameters[58]arealsopossible.
+Typically,atomtypebasedforcefieldparameterizationengines[22]suchasthoseusedinAMBER[106]
+orCHARMM[85]assignparametersbasedontemplates(forbiopolymerresiduesorsolvents)orthrough
+chemicalperceptionalgorithms(asinthecaseofGAFF[26,27]orCGenFF[114,115]). Morerecently, an
+approachtoassigningatom,bond,angle,andtorsionparametersdirectlybasedonthecommonSMART-
+S/SMIRKS chemical perception language was introduced, which bypasses the need to define parameter
+classesintermsofatomtypes,butstillretainsdiscreteinteractiontypes[22]. Automaticallyfittingthese
+typedefinitionsstillrepresentsanintractablemixeddiscrete-continuousoptimizationproblem.Inthenext
+section,wewillshowhowacontinuous,differentiablemodelcanassignparametersdirectly,withoutthe
+useofdiscreteatomorinteractiontypes.
+B Abriefintroductiontographneuralnetworks
+In the context of molecular machine learning, molecules are modelled as undirected graphs of bonded
+atoms,whereeachatomandbondcancarryattributesreflectingtheirchemicalnaturefromwhichcomplex
+chemicalfeaturescanbelearned.Ifwewritethisasatupleofthreesets,
+={,,} (22)
+Here, isthesetofthevertices(ornodes)(atoms), thesetofedges(bonds),and ={𝐮}theuniversal
+(global)attribute.
+In a graph neural network (GN) a set of functions (with learnable parameters Φ ) govern the three
+NN
+stagesusedinbothtrainingandinferenceofagraphneuralnetwork:initialization,propagation,andreadout.
+Followingoneofthemostgeneraldescriptionofthemessage-passingprocedureinthepropagationstage
+in [38], we briefly review the message-passing steps in graph neural networks, where node attribuves 𝐯,
+32of41
+edgeattributes𝐞,andglobalattributes𝐮areupdatedaccordingto:
+∑
+𝐞(𝑡+1)=𝜙𝑒(𝐞(𝑡), 𝐯,𝐮(𝑡)), edgeupdate (23)
+𝑘 𝑘 𝑖
+𝑖∈𝑒
+𝑘
+𝐞̄(𝑡+1)=𝜌𝑒→𝑣(𝐸(𝑡+1)), edge-to-nodeaggregate (24)
+𝑖 𝑖
+𝐯(𝑡+1)=𝜙𝑣(𝐞̄(𝑡+1),𝐯(𝑡),𝐮(𝑡)), nodeupdate (25)
+𝑖 𝑖 𝑖
+𝐞̄(𝑡+1)=𝜌𝑒→𝑢(𝐸(𝑡+1)), edge-to-globalaggregate (26)
+𝐮̄(𝑡+1)=𝜌𝑣→𝑢(𝑉(𝑡)), node-to-globalaggregate (27)
+𝐮(𝑡+1)=𝜙𝑢(𝐞̄(𝑡+1),𝐯̄(𝑡+1),𝐮(𝑡)), globalupdate (28)
+where𝐸 ={𝐞 ,𝑘∈𝑣}isthesetofattributesofedgesconnectedtoaspecificnode,𝐸 ={𝑒 ,𝑘∈1,2,...,𝑁𝑒}
+𝑖 𝑘 𝑖 𝑖 𝑘
+isthesetofattributesofalledges,𝑉 isthesetofattributesofallnodes,and𝑣 and𝑒 denotetheset
+ofindicesofentitiesconnectedtoacertainnodeoracertainedge,respectively. 𝜙𝑒,𝜙𝑣,and𝜙𝑢 areupdate
+functionsthattaketheenvironmentoftheanentityasinputandupdatetheattributeoftheentity,which
+couldbestatefulornot;𝜌𝑒→𝑣,𝜌𝑒→𝑢,and𝜌𝑣→𝑢areaggregationfunctionsthataggregatetheattributesofmul-
+tipleentitiesintoanaggregatedattributewhichsharesthesamedimensionwitheachentity. Notethatit
+iscommonthattheedgesdonotholdattributebutonlypassmessagesontoneighboringnodes. Forall
+modelswesurveyhere,edge-to-globalupdatedoesnotapplyandglobalattributedoesnotpresentuntil
+thereadoutstage,whenasumfunctionisappliedtoformtheglobalrepresentation(𝐮= ∑ 𝐯).Wereview
+𝑖 𝑖
+thespecificsofthegraphneuralnetworkarchitecturesthatweconsideredhereintheAppendix(Table2).
+B.1 Trainingandinference
+Whiletraditionalforcefieldsbasedondiscreteatomtypesareonlydifferentiablewithrespecttothemolec-
+ularmechanicsparameterstheyassign,ourmodelisfullydifferentiableinallmodelparametersΦ that
+NN
+governboththeassignmentofcontinuousatomembeddingsℎ (whichreplacediscreteatomtypes)and
+𝑣
+subsequentassignmentofMMparametersΦ .Wecanthereforeusegradient-basedoptimizationtotune
+FF
+alloftheseparameterstofitarbitrarydifferentiabletargetfunctions,suchasenergiesandforcesofsnap-
+shotsofmolecules,equilibriumphysicalpropertymeasurements,fluctuationproperties,orexperimentally
+measuredfreeenergydifferences.Inthisway,straightforwardgradient-basedoptimizationsimultaneously
+learnsthecontinuousequivalentofatomtypingsimultaneouswithparameterassignmentstrategies,effec-
+tivelysolvingtheintractabletraditionalforcefieldparmaeterizationproblemofmixedcontinuous-discrete
+optimizationbyreplacingitwithafullycontinuousoptimizationproblem.
+B.1.1 Alinearbasisfacilitatesbondandangleparameteroptimization
+Theharmonicfunctionalform(Equation19),
+𝐾
+𝑢(𝑥;𝐾,𝑏)= (𝑥−𝑏)2, (29)
+2
+isfrequentlyusedinMMpotentialsformodelingbondandangleenergies.Althoughonecandirectlyopti-
+mizeforceconstants𝐾 andequilibriumbondoranglevalues𝑏,thisempiricallyresultinsignificantdifficul-
+tiesintraining(Figure7).Thiscanbeseenthroughthelossfunctionanditsgradientforasimpletoymodel
+consistingofasinglebondandreferenceparameters(𝐾 ,𝑏 ):
+0 0
+𝑁
+∑
+𝐿(𝐾,𝑏) = [𝑢(𝑥 ;𝐾,𝑏)−𝑢(𝑥 ;𝐾 ,𝑏 )]2 (30)
+𝑛 𝑛 0 0
+𝑛=1
+∑ 𝑁 𝐾 𝐾
+= [ (𝑥 −𝑏)2− 0(𝑥 −𝑏 )2]2 (31)
+2 𝑛 2 𝑛 0
+𝑛=1
+Qualitatively,thelossfunctionlandscapefor𝐾 around𝐾 isrelativelyflat,whileitissteeplyvaryingfor𝑏
+0
+around𝑏 ,frustratingefficientoptimization;Figure7ademonstratesthisforasimpletoysystem.Tocircum-
+0
+ventthisissue,weusetheapproachdescribedbyVanommeslaegheetal.[154]andtranslatetheharmonic
+33of41
+Appendix0Figure7. Linearbasisparameterizationofbondsandanglesfacilitatesrobustoptimization. Aone-
+dimensionalharmonicoscillatorsystem(𝑢 = 𝐾0(𝑥−𝑏 )2)wassimulatedwith𝐾 =5, 𝑏 =5asreferenceparameters.
+2 0 0 0
+Trainingsetconformations𝑥weresampledfromauniformdistributionwith𝑥∼Uniform(4,6).Thelossfunction(squared
+energyerror)asafunctionoforiginalMMparameters(𝐾, 𝑏)shownin(a)isclearlymoredifficulttooptimizedueto
+thelargedifferenceingradientmagnitudesbetween𝐾 and𝑏parameters,whilethelinearbasisparametrization(Sec-
+tionB.1.1)showingthelossasafunctionoftransformed(𝐾 ,𝐾 )in(b)ismuchsimplertooptimize.
+1 2
+functionalformEquation29inwhich(𝐾,𝑏 )areoptimizedinsteadintoalinearcombination(𝐾 ,𝐾 )ofbasis
+0 1 2
+functionsisoptimizedinstead:
+𝐾 𝐾
+(
+(𝐾 𝑏 +𝐾 𝑏
+)2)
+𝑢(𝑥;𝐾 ,𝐾 )= 1(𝑥−𝑏 )2+ 2(𝑥−𝑏 )2+ −𝐾 𝑏2−𝐾 𝑏2+ 1 1 2 2 (32)
+1 2 2 1 2 2 1 1 2 2 𝐾 +𝐾
+⏟⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏟⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏟ ⏟⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞⏟⏞⏞⏞⏞⏞⏞⏞⏞ 1 ⏞⏞⏞⏞⏞⏞⏞⏞⏞⏞ 2 ⏞⏞⏞⏞⏞⏞⏞⏞⏟
+linearcombinationofbasis 𝑥-independentconstant
+where𝑏 and𝑏 aretwopositiveconstantschosentobesmallerandlargerthananypossiblevalidbond
+1 2
+orangle—theymustsatisfying𝑏 < 𝑥 < 𝑏 for∀𝑥thatmightbeobserved. Here,StageIIIoftheespaloma
+1 2
+pipelinewouldpredict𝐾 ,𝐾 ,whichwouldbeusedtocomputetheMMparameters(𝐾,𝑏)via
+1 2
+𝐾 =𝐾 +𝐾 (33)
+1 2
+𝐾 𝑏 +𝐾 𝑏
+𝑏= 1 1 2 2 (34)
+𝐾 +𝐾
+1 2
+Whentrainingtofitenergies,ourlossfunctionsubtractsthemeanfromthetrainingsetenergiesandpre-
+dictedenergiesforeachmoleculetoremovethearbitraryoffsetconstantintroducedbythistransformation
+ofvariables.
+B.1.2 Trainingbypotentialenergies
+Givenatrainingsetofmolecules{ },𝑚=1,…,𝑀,withcorresponding𝑛=1,…,𝑁 conformationalsnap-
+𝑚 𝑚
+shots 𝐱
+𝑚,𝑛
+∈ 𝐑(∣ 𝑚∣×3) for each molecule 𝑚, and reference potential energies {𝑈
+ref
+(𝑥
+𝑚,𝑛
+;;
+𝑚
+)}, the model pa-
+rametersΦ canbeoptimizedtominimizeameasureofdeviationbetweenthereferenceenergiesand
+NN
+modelenergiesgivenbythecomposedforcefieldΦ .Forexample,asquaredlossfunctioncanbeused
+FF,Θ
+toquadraticallypenalizedeviations:
+∑ 𝑀 ∑ 𝑁𝑚 [ ]2
+(Φ )= 𝑤 𝑈 (𝑥 ; )−𝑈 (𝐱 ; ) (35)
+NN 𝑚,𝑛 ref 𝑚,𝑛 𝑚 ΦFF,Θ 𝑚,𝑛 𝑚
+𝑚=1𝑛=1
+Inthiswork,wetooktheweights𝑤 =1,butmoresophisticatedweightingschemescanbeusedtoempha-
+𝑚,𝑛
+sizelow-energysnapshotswhereMMpotentialsareintendedtobemoreaccuratewhenfittingtoquantum
+chemical datasets, as in ForceBalance [99, 155]. In a Bayesian context, the loss function in Eq. 35 would
+correspondtothenegativeloglikelihoodforanormalerrormodel.Otherlossorlikelihoodfunctionforms
+mayalsobeusefulinensuringaminorityofmoleculesorgeometriesforwhichtheMMfunctionalform
+poorlyreproducesquantumchemicalenergeticsdonotdominatethefit.
+Additionaltermscanbeaddedtothelossfunctiontoregularizethechoiceofparameters,suchaspenal-
+izingunphysicalchoices(suchasunphysicalmagnitudesorparameterregions)ortoprovidemoreuseful
+34of41
+models(suchaspenalizingbondvibrationswitheffectiveperiodsthataresoshorttheywouldrequireex-
+tremelysmalltimesteps).
+When fitting to quantum chemical energies, an additive offset for each molecule 𝑚 corresponding to
+theheatofformationgenerallycannotbeaccountedforusingstandardMMfunctionalforms. Toaddress
+this,wesubtracttheper-moleculemeanpotentialenergyforbothpredictedMMandreferencequantum
+chemicalenergiesinformulatingthelossfunction,withthegoalofensuringthatrelativeconformational
+energeticsareaccuratelyapproximatedeveniftheheatofformationcannotbecomputed.
+B.1.3 Otherdifferentiableobjectives
+Inquantumchemicalcalculations, nuclearpotentialenergygradientsareoftenavailableatverylowcost
+oncethewavefunctionhasbeensolvedtocomputetheenergy. Toexploittherichinformationavailable
+in these gradients [156–159] ∇ 𝑈, it is possible to incorporate both energies and gradients into the loss
+𝐱
+function,withautomaticdifferentiationusedtocomputepartialderivativesoftheespalomaenergyfunc-
+tion in terms of both coordinates and parameters. Additional terms penalizing deviations in more com-
+plexquantumchemicalproperties,suchaspolarizabilitiesorvibrationalfrequencies,couldalsobeincor-
+porated [99, 155]. In this work, however, we found that incorporation of gradient information does not
+significantlyenhancetheperformanceofthemodel.Weleavethistopictofuturestudy.
+Inadditiontoincorporatingconfiguration-dependentproperties,ifthegoalistobuildacompletemolec-
+ularmechanicsforcefieldtomodelentirephysicalsystemsinthecondensedphase,additionaltermscould
+be added to the objective function to quantify the deviation in physical properties, such as densities, di-
+electric constants, and enthalpies of vaporization [99, 155, 160–163], or even experimental transfer free
+energies.
+B.1.4 Assigningespalomaparameterstomolecules
+Incontrastwithmanyquantummachinelearning(QML)forcefieldsthatuseaneuralmodeltocomputethe
+energyandgradientforeveryconfiguration[10,164,165],espalomausesaneuralmodeltoassignmolecu-
+larmechanicsparametersonceatthebeginningofasimulation,usingonlythechemicalinformationabout
+all components in a system. Once generated, the MM parameters Φ for the system can be seamlessly
+FF
+portedtomolecularmechanicspackagesthatcanexploitacceleratedhardware[2,17–19]toachievehigh
+accuracyforindividualsystemsatthesamespeedastraditionalforcefields.
+C Graphneuralnetwork(GNN)architecturesconsideredinthispaper
+WeconsideredthefollowinggraphneuralnetworkarchitecturesavailableinDGL[41]inthispaper:
+Model Edgeupdate𝜙𝑒 Edgeaggregate𝜌𝑒→𝑣 Nodeupdate𝜙𝑣
+GCN Identity Mean NN
+EdgeConv ReLU(𝑊 (𝐯 −𝐯 )+𝑊 𝐯) Max Identity
+0 𝑖 𝑗 1 𝑖
+GraphSAGE Identity Mean∗ Normalize(NN([𝐯∶𝐞]))
+GIN Identity Sum∗ NN((1+𝜖)𝐯+𝐞)
+Appendix0Table2.Summaryofrepresentativegraphneuralnetworkarchitecturesbyedgeupdate,edgeaggre-
+gate,andnodeupdatetypes.Modelsanalyzedhereinclude:GCN[37],EdgeConv[42],GraphSAGE[144],andGIN[35].
+Otherarchitecturesevaluated—TAGCN[39]andSGC[40]—involvemulti-steppropagation,whichcouldbeexpressedas
+acombinationoftheseupdatesandaggregates.
+*:Multipleaggregationfunctionsstudiedinthereferencedpublication.
+D Codesnippetsforusingespaloma
+D.1 Designingandtrainingespalomamodel
+import torch, dgl, espaloma as esp
+# retrieve OpenFF Gen2 Optimization Dataset
+35of41
+dataset = esp.data.dataset.GraphDataset.load("gen2").view(batch_size=128)
+# define espaloma stage I: graph -> atom latent representation
+representation = esp.nn.Sequential(
+layer=esp.nn.layers.dgl_legacy.gn("SAGEConv"), # use SAGEConv implementation in DGL
+config=[128, "relu", 128, "relu", 128, "relu"], # 3 layers, 128 units, ReLU activation
+)
+# define espaloma stage II and III:
+# atom latent representation -> bond, angle, and torsion representation and parameters
+readout = esp.nn.readout.janossy.JanossyPooling(
+in_features=128, config=[128, "relu", 128, "relu", 128, "relu"],
+out_features={ # define modular MM parameters espaloma will assign
+1: {"e": 1, "s": 1}, # atom hardness and electronegativity
+2: {"log_coefficients": 2}, # bond linear combination, enforce positive
+3: {"log_coefficients": 3}, # angle linear combination, enforce positive
+4: {"k": 6}, # torsion barrier heights (can be positive or negative)
+},
+)
+# compose all three espaloma stages into an end-to-end model
+espaloma_model = torch.nn.Sequential(
+representation, readout, esp.nn.readout.janossy.ExpCoefficients(),
+esp.mm.geometry.GeometryInGraph(), esp.mm.energy.EnergyInGraph(),
+esp.nn.readout.charge_equilibrium.ChargeEquilibrium(),
+)
+# define training metric
+metrics = [
+esp.metrics.GraphMetric(
+base_metric=torch.nn.MSELoss(), # use mean-squared error loss
+between=[’u’, "u_ref"], # between predicted and QM energies
+level="g", # compare on graph level
+)
+esp.metrics.GraphMetric(
+base_metric=torch.nn.MSELoss(), # use mean-squared error loss
+between=[’q’, "q_hat"], # between predicted and reference charges
+level="n1", # compare on node level
+)
+]
+# fit espaloma model to training data
+results = esp.Train(
+ds_tr=dataset, net=espaloma_model, metrics=metrics,
+device=torch.device(’cuda:0’), n_epochs=5000,
+optimizer=lambda net: torch.optim.Adam(net.parameters(), 1e-3), # use Adam optimizer
+).run()
+torch.save(espaloma_model, "espaloma_model.pt") # save model
+Listing1.Definingandtrainingamodularespalomamodel.
+D.2 Deployingespalomamodel
+# define or load a molecule of interest via the Open Force Field toolkit
+from openff.toolkit.topology import Molecule
+molecule = Molecule.from_smiles("CN1C=NC2=C1C(=O)N(C(=O)N2C)C")
+# create an espaloma Graph object to represent the molecule of interest
+import espaloma as esp
+molecule_graph = esp.Graph(molecule)
+36of41
+# apply a trained espaloma model to assign parameters
+espaloma_model = torch.load("espaloma_model.pt")
+espaloma_model(molecule_graph.heterograph)
+# create an OpenMM System for the specified molecule
+openmm_system = esp.graphs.deploy.openmm_system_from_graph(molecule_graph)
+Listing2.Usingatrainedespalomamodeltoassignparameterstoasmallmolecule.
+E Closeexaminationofmolecularmechanics(MM)fittingexperiments
+Ablationstudy: theroleofenergycentering,theinclusionoftorsionenergies,andtheinclusion
+ofsmallringsindatasetsintheperformanceofMMfitting.
+RCTPart 𝑈 𝑈 𝑈 𝑈 𝑈 𝑈 𝑈 𝑈 𝑘 𝑏 𝑘 𝑏
+𝚝𝚘𝚝𝚊𝚕 𝚋𝚘𝚗𝚍 𝚊𝚗𝚐𝚕𝚎 𝚝𝚘𝚛𝚜𝚒𝚘𝚗 𝚝𝚘𝚝𝚊𝚕 𝚋𝚘𝚗𝚍 𝚊𝚗𝚐𝚕𝚎 𝚝𝚘𝚛𝚜𝚒𝚘𝚗 𝑟 𝑟 𝜃 𝜃
+RMSE(kcal/mol) CenteredRMSE(kcal/mol) MAPE
+test 0.87230.9334 1.27251.4465 1.22911.4102 0.78290.84280.65010.73080.45530.4860 0.12380.12650.00260.00270.07330.07440.00670.0068
+000 0.8139 1.0575 0.9563 0.7025 0.5919 0.4245 0.1206 0.0025 0.0722 0.0066
+train0.91830.9889 1.31591.5514 1.28441.5360 0.86810.93300.72090.77710.48150.5097 0.12930.13200.00270.00280.07260.07360.00710.0073
+0.8343 1.0655 1.0052 0.7993 0.6639 0.4431 0.1253 0.0027 0.0712 0.0069
+test 4.40334.6173 13.716214.55157.92108.4048 0.03630.03843.52383.65903.09563.21871.70861.76190.00150.00171.00001.00000.07200.07400.47340.47630.01360.0138
+001 4.1317 12.9510 7.3953 0.0345 3.3984 2.9908 1.6367 0.0014 1.0000 0.0701 0.4712 0.0134
+train4.23724.5129 13.269514.22198.04678.6800 0.03530.03793.50413.62773.02413.16451.74251.81820.00160.00171.00001.00000.07050.07200.48030.48310.01370.0139
+3.9854 12.1669 7.4667 0.0330 3.3614 2.9115 1.6659 0.0014 1.0000 0.0686 0.4778 0.0135
+test 0.04900.0585 0.02060.0262 0.04290.0497 0.01750.01870.01300.01400.01170.0127 0.00160.00170.00010.00010.00200.00200.00060.0007
+010∗ 0.0369 0.0158 0.0362 0.0163 0.0121 0.0105 0.0016 0.0001 0.0019 0.0006
+train0.03940.0478 0.01740.0206 0.03320.0394 0.01690.01780.01280.01350.01130.0121 0.00160.00160.00010.00010.00200.00210.00060.0006
+0.0315 0.0142 0.0271 0.0160 0.0118 0.0103 0.0016 0.0001 0.0020 0.0005
+test 11.068812.8267 0.02400.0284 0.18010.2122 0.01740.02030.03460.03690.01680.01800.02700.03070.00010.00010.00200.00210.00010.00010.00200.00210.00090.0009
+011 8.8832 0.0204 0.1535 0.0145 0.0324 0.0157 0.0226 0.0001 0.0020 0.0001 0.0020 0.0008
+train11.781914.0593 0.01900.0203 0.18990.2335 0.01850.02160.03350.03570.01610.01730.02840.03210.00010.00010.00200.00210.00010.00010.00200.00210.00090.0009
+9.4086 0.0179 0.1545 0.0152 0.0302 0.0150 0.0238 0.0001 0.0020 0.0001 0.0020 0.0008
+test 0.62370.7049 0.52240.5707 0.66600.7498 0.49700.55260.33800.36140.46540.5205 0.04690.04790.00120.00130.06450.06620.01110.0117
+100 0.5459 0.4774 0.5843 0.4483 0.3176 0.4084 0.0459 0.0012 0.0624 0.0107
+train0.66150.7584 0.61990.6905 0.69390.7702 0.56930.64940.39160.43040.52930.6160 0.04820.04930.00130.00130.06590.06770.01120.0117
+0.5706 0.5480 0.6107 0.4963 0.3473 0.4489 0.0473 0.0013 0.0637 0.0108
+test 4.77194.9088 9.59639.9684 23.197224.2192 0.05010.05194.36434.44982.69942.77563.62633.69480.00200.00220.84100.84400.02630.02671.00001.00000.92870.9294
+101 4.6354 9.1500 22.2922 0.0480 4.2759 2.6075 3.5347 0.0019 0.8386 0.0259 1.0000 0.9282
+train4.80434.9617 9.38079.8568 23.249124.1563 0.04950.05144.40504.51692.69712.77863.57343.68500.00190.00210.84040.84280.02670.02721.00001.00000.92810.9288
+4.6731 8.8160 22.4420 0.0481 4.2726 2.6393 3.4918 0.0018 0.8371 0.0263 1.0000 0.9275
+test 89.0006102.21050.03840.0440 88.9808107.0304 0.02230.02570.02460.02690.02780.0310 0.00180.00190.00010.00010.00330.00350.00740.0089
+110 70.4894 0.0339 64.5673 0.0200 0.0221 0.0247 0.0018 0.0001 0.0032 0.0064
+train79.692799.1904 0.11550.1924 79.658998.9583 0.02090.02360.08150.15660.08140.1351 0.00180.00200.00010.00010.00310.00330.00620.0076
+62.4512 0.0351 59.2236 0.0185 0.0243 0.0264 0.0017 0.0001 0.0029 0.0051
+test 99.6155118.20890.05860.0661 91.7758115.40960.02450.02700.02970.03520.03270.03710.04380.04920.00000.00010.00170.00180.00010.00010.00340.00360.00770.0087
+111 75.0240 0.0520 71.2381 0.0222 0.0262 0.0282 0.0398 0.0000 0.0016 0.0001 0.0032 0.0066
+train90.1890113.64300.16820.2789 81.666498.1073 0.02640.02900.02790.02990.10150.16930.10430.16790.00010.00010.00170.00180.00010.00010.00330.00350.00650.0075
+70.8691 0.0543 64.1198 0.0236 0.0258 0.0311 0.0440 0.0000 0.0017 0.0001 0.0031 0.0055
+Appendix0Table3. BestperformanceofMMfittingonPhAlkEthOHdatasetonlywhencenteringisdeployed
+andtorsionenergyandsmallringsareexcluded.AcomparisonofespalomaMMfittingexperimentsonPhAlkEthOH
+datasetwith/withoutfittingtorsions,centeringenergies,andincludingthree-andfour-memberedrings. TheRCTcol-
+umnsummarizestheexperimentalconditions: Rindicateswhethersmall(3-and4-membered)ringswereincludedin
+thedataset(1smallringsincluded,0excluded);(C)indicateswhetherthepotentialenergiesforsampledsnapshotsof
+eachmoleculewerecenteredbysubtractingoffthemeanenergyforthatmoleculeinthelossfunction(1centered,0
+uncentered);(T)indicateswhethertorsionenergieswereincludedinthefitting(1included,0excluded).Therestofthe
+experimentalsettingisidenticalwithFigure2. Forcefieldparameters(ΦFF ): 𝐾
+𝑟
+: bondforceconstant; 𝑏
+𝑟
+: equilibrium
+bondlength;𝐾 : angleforceconstant;𝑏 : equilibriumanglevalue. Therootmeansquarederror(RMSE)andcorrela-
+𝜃 𝜃
+tioncoefficient(𝑅2)betweenreferenceandpredictedMMenergies,aswellasmeanabsolutepercentageerror(MAPE)
+(asafractionratherasapercentage,i.e. notmultipliedby100),andcorrelationcoefficient(𝑅2)betweenreferenceand
+predictedforcefieldparameters. Thesub-andsuperscriptsreportthethe95%confidenceintervalofeachstatistics
+estimatedfrom1000bootstrappedreplicatesonthemoleculeset.*:SameexperimentasFigure2.
+Wecloselyexaminedseveralchoiceswhichappeartohavesignificantimpactontheabilitytoproduce
+high-qualitygeneralizablemodelsforthetaskoflearninganMMpotential: Concretely,weconductanab-
+lationstudy(Table3)wherewerepeattheexperimentshowninFigure2consideringseveralvariationsof
+thesechoices:
+Smallrings(R):Weconsiderwhethermoleculeswithsmall(3-or4-membered)ringsareincludedinthe
+dataset,sincethesemoleculesassumegeometrieshavenear-degeneraciesinequilibriumangles(Figure9).
+Energycentering(C):Weconsidertheroleofenergycenteringinthelossfunction,wheretheaveragepo-
+tential energy over all conformations for each molecule is subtracted for both reference and predicted
+energiesinthelossfunction,suchthatonlyrelativeconformationalenergyerrorsarepenalized. Weeval-
+uatetheerrorbothwithandwithoutcentering. Torsionenergies(T):Wealsoconsiderwhethertorsion
+energiesareincludedaswell, sincerecoveryoftorsionprofilescanbechallengingduetoboththenear-
+degeneracyofparametersandphases. Notably,whileMMforcefieldsgenerallyspecifyaminimalsetofa
+37of41
+w/centering w/ocentering
+RMSEatES(kcal/mol) RMSEatES(kcal/mol)
+Rep. ESEpoch Rep. ESEpoch
+Train Validation Test Train Validation Test
+0 9602 0.0456 0.0523 0.0834 0 2447 0.7331 0.6937 0.7705
+1 8938 0.0381 0.0500 0.0815 1 1902 1.2449 1.1950 1.1910
+2 9967 0.0438 0.0503 0.0545 2 1424 1.1646 1.1351 1.1537
+3 9696 0.0411 0.0342 0.0714 3 2422 0.9849 0.9121 0.9805
+4 9879 0.0377 0.0470 0.0714 4 2446 0.8727 0.8006 0.8460
+Appendix0Figure8.espalomamodelsaredifficulttotrain,especiallywhenattemptingtofittoabsolute(rather
+thanrelative)conformationenergies. Wecomparethetrainingtrajectoryofespalomawithouttorsionenergyon
+PhAlkEthOHdatasetexcludingthree-andfour-memberedringswithandwithoutcentering(experiments010and000
+inTable3). ExampletrainingtrajectorieswiththesamesettingasFigure2. Variousrepetitionsareplottedindifferent
+colors.
+fewtorsionperiodicitieswithphasesof0or𝜋explicitlyspecified,weuseaformulationwhereallperiodic-
+ities𝑛 = 1,2,…,6arealwaysfitandthesignofthetorsion𝐾 parameterindicateswhetherthephaseis0
+(𝐾 >0)or𝜋(𝐾 <0).
+ExperimentsforallcombinationsofthesechoicesareshowninTable3.
+We summarize our findings as follow: First of all, best performance is only achieved when we center
+the predicted and reference energies in the loss function used in training, effectively training to fit only
+relativeenergies,suggestingthismakesrobustoptimizationeasier. Therationalizationcouldbefoundin
+SectionB.1.1.WealsoexaminedthetrainingtrajectoryofespalomaonthisMMfittingtaskwithandwithout
+thecenteringofpredictedandreferenceenergies(Figure8)andnoticedthatcenteringalleviates,butnot
+completelyremediesthetrainingdifficultiesofespalomamodels.
+Secondly,theinclusionoftorsionenergiesdeterioratesperformance,especiallyifmeasuredbyuncen-
+teredRMSE.Thiscouldbeattributedtothefactthatweuseaslightlydifferentfunctionalformtoexpress
+torsionenergiesthanreferencelegacyforcefields.
+Lastly,withenergycentering,includingthree-andfour-memberedringsinourtrainingsetresultsinvery
+large uncentered RMSE without drastically changing the centered RMSE (relative conformational energy
+errors).Westudythiseffectindetailinthenextsection.
+CaseStudy: ParametrizationofCyclopropane
+We use the model trained on PhAlkEthOH dataset with the inclusion of small rings but without torsion
+energies(experiment110inTable3)andapplythismodeltocyclopropane(SMILES:C1CC1)Asshownin(b)
+inFigure9,whentrainedwithcenteredenergylossfunction,espalomaassignedequilibriumanglevalue
+𝜃 ≈ 122.1◦ totheCCCangleincyclopropanewhiletheequilibriumangleis60◦ inthereferenceGAFF-1.81
+0
+forcefield.Withashiftinangleforceconstant,whilethiswoulddrasticallychangetheenergiesofindividual
+CCCangles,thesumofenergiesofthethreeCCCangles(whoseanglevalueswouldsumupto180◦)would
+remainveryclosetothereferencevalueuptoaconstant. Wefurthermorecompared(inFigure9-(e))the
+sumofCCCangleenergiesinthesetwoparametrizationsonawiderangeofgeometriesofcyclopropane
+withthreeCCCangles𝜃 ,𝜃 ,𝜃 satisfying50◦ <Θ <70◦,−10◦ <𝜃 −𝜃 <10◦andnoticedthatthedifference
+0 1 2 0 1 2
+38of41
+Appendix0Figure9.Acomparisonofreferenceandespaloma-learnedparametrizationofcyclopropane.(a):KDE
+plotofCCCangleincyclopropane. (b): Individualreferenceandpredictedangleenergy(𝑈 and𝑈̂ ,energyof
+𝚊𝚗𝚐𝚕𝚎 𝚊𝚗𝚐𝚕𝚎
+eachCCCangle)plottedagainstCCCanglevaluesinthesnapshotsgenerated. (c): Predictedplottedagainstreference
+individualCCCenergy.(d):PredictedplottedagainstreferencesumCCCenergy.(e):Distributionofdifferencebetween
+referenceΣ𝑈 andpredictedΣ𝑈̂ sumCCCenergy.
+𝚊𝚗𝚐𝚕𝚎 𝚊𝚗𝚐𝚕𝚎
+isalwaysaconstantwithfluctuationswithin1kcal/mol.
+F Espalomacaneasilyparameterizecomplexheterogeneousbiomolecular
+systems
+Becausebiomolecularsystemsofinterestareoftenhighlyheterogeneousenvironments,itisoftenpracti-
+callyincrediblydifficulttomodelsystemsthatconsistofmorethanthesimplestprotein-ligand-solventcom-
+binations.Forexample,thelatestAmber20release[80]recommendsasetofindependentlydeveloped(but
+looselycoupled)setofforcefieldsandcomplexparameterizationmachineryforproteins[106],DNA[166],
+RNA [167], water [107], monovalent [108, 168] and divalent [169–171] counterions, lipids [172], carbohy-
+drates [173], glycoconjugates [174, 175], small molecules [26, 27], post-translational modifications [90],
+andnucleicacidmodifications[176],collectivelyrepresentinghundredsofhuman-yearsofeffort. Despite
+this,evenseeminglysimplecommontasks—suchasmodelingirreversiblecovalentinhibitors—represent
+amind-bendingtechnicalchallengeforparameterization[177].
+Espalomaoperatesononlythechemicalgraphofcomponentsofthesystem,whichenablesittosolve
+manyissueswiththeselegacyapproaches: Ingeneratingparameters, thereisnopracticaldifferencebe-
+tweenanyofthebiopolymer,biomolecule,organicmolecule,solvent,ion,orcovalentlymodifiedspecies
+thatpreviouslyrequiredenormousefforttoseparatelybuildparametersetstocover; espalomawillsim-
+ply interpolate the parameters from observed examples in a continuous manner. Instead of separately
+curatingdistinctdatasetsandphilosophiesforparameterizingeachofthesedifferentclassesofchemical
+species,extendinganespalomamodeltoanewclassofchemicalspeciesissimplyamatterofextending
+the training datasets of quantum chemical and/or physical property data. As we have seen, building an
+elementarymodelcapableofsimulatingsolvatedprotein-ligandcomplexessimplyrequiredincorporating
+quantumchemicaldatasetsusedtoparameterizeasmallmoleculeforcefieldalongsidequantumchemical
+dataforshortpeptides.
+Thisespalomamodelshouldalsoprovidesufficientcoveragetomodelmorecomplexprotein-ligandco-
+valentconjugates,sincetherelevantchemistrytomodelthiscomplexalreadyexistsinthetrainingdataset.
+Todemonstratethatthisleadstostable,sensibleparameters,weconsideredthepre-reactiveformofthe
+covalentkinaseinhibitoribrutinibandtheterminally-blockedformoftheVal-Cys-Glysequencethatitre-
+acts with in its target kinase BTK (Figure 11, left). Espaloma is able to rapidly parameterize the covalent
+conjugate of ibrutinib to this BTK target sequence, resulting in minor changes to parameters and partial
+chargesaroundthecovalentwarhead, butminimallyperturbingtheremainderofthesystem(Figure11,
+right). Unlikelegacyapproachestoparameterizingcovalently-modifiedresidues,noexpensiveparameter
+orchargerefinementprocedurewasneededforthistask.
+G ProofthatJanossypoolingissufficientlyexpressive
+Nowweprovethatsuchformulationisexpressiveenoughtodistinguishbondsconsistingofdistinctatoms.
+Anequivalentproofforanglesandtorsionsfollowssimilarly.
+39of41
+Appendix0Figure10. ConfusionMatrix: ReferencevsLearnedAtomTypes. Continuationoftheconfusionmatrix
+showninFigure2,toincludenotjustcarbontypes. Theblankentriesarebecausethedatasetdoesnotcoversomeof
+therareatomtypes.
+40of41
+Appendix0Figure11. espalomaparametrizescovalentinhibitoradductsystem. Heavyatombondequilibrium
+length(inangstrom)andpartialcharge(inelementalcharge)predictionfor(a)ibrutinib;(b)cappedGCLpeptide;and(c)
+theircovalentadduct.
+Lemma1. ThereexistsaneuralfunctionNN,suchthat,
+𝑟
+NN([ℎ ∶ℎ ])+NN([ℎ ∶ℎ ])=NN([ℎ ∶ℎ ])+NN([ℎ ∶ℎ ])
+𝑟 𝑣𝑖 𝑣𝑗 𝑟 𝑣𝑗 𝑣𝑖 𝑟 𝑣𝑘 𝑣𝑙 𝑟 𝑣𝑘 𝑣𝑙
+ifandonlyifℎ =ℎ andℎ =ℎ orℎ =ℎ andℎ =ℎ .
+𝑣𝑖 𝑣𝑙 𝑣𝑗 𝑣𝑘 𝑣𝑖 𝑣𝑙 𝑣𝑗 𝑣𝑘
+Proof. We first prove that there is a function 𝑓 satisfying the condition in Lemma 1. With finite possible
+𝑟
+initialconditionsandfiniteroundsofmessagepassing,thepossiblevaluesofℎ isfinite(correspondingto
+𝑣
+thefinitenumberofuniquelabelsinWeisfeiler-Leman[49]test). Weuse𝑐 todenotethemaximumvalue
+ofthehashofℎ :
+𝑣
+𝑐=max{hash(ℎ )} (36)
+𝑣
+Thus,oneexampleofsuch𝑓 ∶ℝ𝐷 →ℕsatisfyingtheconditioninLemma1is:
+𝑟
+⎧
+0,hash(ℎ )≥hash(ℎ );
+𝑓(ℎ ,ℎ )= ⎪ 𝑣𝑖 𝑣𝑗 (37)
+𝑟 𝑣𝑖 𝑣𝑗 ⎨
+(𝑐+1)hash(ℎ )+hash(ℎ ),hash(ℎ )<hash(ℎ ).
+⎪ 𝑣𝑖 𝑣𝑖 𝑣𝑖 𝑣𝑗
+⎩
+Followingtheuniversalapproximationtheorem[178,179],thereexistsaneuralfunctionNN thatapproxi-
+𝑟
+mates𝑓 arbitrarilywellandthussatisfiestheconditioninLemma1.
+𝑟
+41of41

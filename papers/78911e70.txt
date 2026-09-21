@@ -1,0 +1,1156 @@
+Taming Transformers for High-Resolution Image Synthesis
+PatrickEsser* RobinRombach* Bjo¨rnOmmer
+HeidelbergCollaboratoryforImageProcessing,IWR,HeidelbergUniversity,Germany
+*Bothauthorscontributedequallytothiswork
+Figure1. Ourapproachenablestransformerstosynthesizehigh-resolutionimageslikethisone,whichcontains1280x460pixels.
+Abstract and are increasingly adapted in other areas such as audio
+[12] and vision [8, 16]. In contrast to the predominant vi-
+Designed to learn long-range interactions on sequential sion architecture, convolutional neural networks (CNNs),
+data,transformerscontinuetoshowstate-of-the-artresults the transformer architecture contains no built-in inductive
+onawidevarietyoftasks.IncontrasttoCNNs,theycontain prior on the locality of interactions and is therefore free
+no inductive bias that prioritizes local interactions. This tolearncomplexrelationshipsamongitsinputs. However,
+makes them expressive, but also computationally infeasi- this generality also implies that it has to learn all relation-
+bleforlongsequences,suchashigh-resolutionimages. We ships, whereas CNNs have been designed to exploit prior
+demonstratehowcombiningtheeffectivenessoftheinduc- knowledge about strong local correlations within images.
+tivebiasofCNNswiththeexpressivityoftransformersen- Thus,theincreasedexpressivityoftransformerscomeswith
+ablesthemtomodelandtherebysynthesizehigh-resolution quadratically increasing computational costs, because all
+images. We show how to (i) use CNNs to learn a context- pairwise interactions are taken into account. The result-
+richvocabularyofimageconstituents,andinturn(ii)utilize ing energy and time requirements of state-of-the-art trans-
+transformers to efficiently model their composition within formermodelsthusposefundamentalproblemsforscaling
+high-resolution images. Our approach is readily applied themtohigh-resolutionimageswithmillionsofpixels.
+to conditional synthesis tasks, where both non-spatial in-
+formation, suchasobjectclasses, andspatialinformation, Observations that transformers tend to learn convolu-
+such as segmentations, can control the generated image. tional structures [16] thus beg the question: Do we have
+In particular, we present the first results on semantically- to re-learn everything we know about the local structure
+guidedsynthesisofmegapixelimageswithtransformersand and regularity of images from scratch each time we train
+obtainthestateoftheartamongautoregressivemodelson a vision model, or can we efficiently encode inductive im-
+class-conditional ImageNet. Code and pretrained models age biases while still retaining the flexibility of transform-
+canbefoundathttps://git.io/JnyvK. ers? Wehypothesizethatlow-levelimagestructureiswell
+described by a local connectivity, i.e. a convolutional ar-
+chitecture, whereas this structural assumption ceases to be
+1.Introduction
+effective on higher semantic levels. Moreover, CNNs not
+Transformers are on the rise—they are now the de-facto only exhibit a strong locality bias, but also a bias towards
+standard architecture for language tasks [74, 57, 58, 5] spatialinvariancethroughtheuseofsharedweightsacross
+1
+1202
+nuJ
+32
+]VC.sc[
+3v14890.2102:viXra
+allpositions. Thismakesthemineffectiveifamoreholistic products between all pairs of elements in the sequence, its
+understandingoftheinputisrequired. computational complexity increases quadratically with the
+Our key insight to obtain an effective and expressive sequencelength. Whiletheabilitytoconsiderinteractions
+modelisthat,takentogether,convolutionalandtransformer between all elements is the reason transformers efficiently
+architecturescanmodelthecompositionalnatureofourvi- learnlong-rangeinteractions,itisalsothereasontransform-
+sual world [51]: We use a convolutional approach to effi- ersquicklybecomeinfeasible,especiallyonimages,where
+ciently learn a codebook of context-rich visual parts and, thesequencelengthitselfscalesquadraticallywiththeres-
+subsequently, learn a model of their global compositions. olution.Differentapproacheshavebeenproposedtoreduce
+The long-range interactions within these compositions re- the computational requirements to make transformers fea-
+quireanexpressivetransformerarchitecturetomodeldistri- sibleforlongersequences. [55]and[76]restricttherecep-
+butionsovertheirconsituentvisualparts. Furthermore,we tive fields of the attention modules, which reduces the ex-
+utilizeanadversarialapproachtoensurethatthedictionary pressivityand,especiallyforhigh-resolutionimages,intro-
+of local parts captures perceptually important local struc- ducesassumptionsontheindependenceofpixels. [12]and
+ture to alleviate the need for modeling low-level statistics [26] retain the full receptive field but can reduce costs for
+√
+withthetransformerarchitecture. Allowingtransformersto asequenceoflengthnonlyfromn2 ton n,whichmakes
+concentrateontheiruniquestrength—modelinglong-range resolutionsbeyond64pixelsstillprohibitivelyexpensive.
+relations—enablesthemtogeneratehigh-resolutionimages
+asinFig.1,afeatwhichpreviouslyhasbeenoutofreach. Convolutional Approaches The two-dimensional struc-
+Ourformulationgivescontroloverthegeneratedimagesby
+ture of images suggests that local interactions are particu-
+meansofconditioninginformationregardingdesiredobject
+larly important. CNNs exploit this structure by restricting
+classesorspatiallayouts. Finally,experimentsdemonstrate
+interactionsbetweeninputvariablestoalocalneighborhood
+thatourapproachretainstheadvantagesoftransformersby
+definedbythekernelsizeoftheconvolutionalkernel. Ap-
+outperformingpreviouscodebook-basedstate-of-the-artap-
+plyingakernelthusresultsincoststhatscalelinearlywith
+proachesbasedonconvolutionalarchitectures.
+theoverallsequencelength(thenumberofpixelsinthecase
+of images) and quadratically in the kernel size, which, in
+2.RelatedWork
+modernCNNarchitectures,isoftenfixedtoasmallconstant
+suchas3×3. Thisinductivebiastowardslocalinteractions
+The Transformer Family The defining characteristic of
+thus leads to efficient computations, but the wide range of
+the transformer architecture [74] is that it models interac-
+specializedlayerswhichareintroducedintoCNNstohan-
+tionsbetweenitsinputssolelythroughattention[2,36,52]
+dledifferentsynthesistasks[53,80,68,85,84]suggestthat
+which enables them to faithfully handle interactions be-
+thisbiasisoftentoorestrictive.
+tweeninputsregardlessoftheirrelativepositiontoonean-
+Convolutional architectures have been used for autore-
+other. Originally applied to language tasks, inputs to the
+gressive modeling of images [70, 71, 10] but, for low-
+transformerweregivenbytokens,butothersignals,suchas
+resolution images, previous works [55, 12, 26] demon-
+thoseobtainedfromaudio[41]orimages[8],canbeused.
+stratedthattransformersconsistentlyoutperformtheircon-
+Each layer of the transformer then consists of an attention
+volutional counterparts. Our approach allows us to ef-
+mechanism,whichallowsforinteractionbetweeninputsat
+ficiently model high-resolution images with transformers
+different positions, followed by a position-wise fully con-
+while retaining their advantages over state-of-the-art con-
+nected network, which is applied to all positions indepen-
+volutionalapproaches.
+dently. More specifically, the (self-)attention mechanism
+can be described by mapping an intermediate representa-
+tionwiththreeposition-wiselinearlayersintothreerepre- Two-StageApproaches Closesttooursaretwo-stageap-
+sentations,queryQ ∈ RN×dk,keyK ∈ RN×dk andvalue proaches which first learn an encoding of data and after-
+V ∈RN×dv,tocomputetheoutputas wardslearn,inasecondstage,aprobabilisticmodelofthis
+encoding. [13]demonstratedboththeoreticalandempirical
+(cid:16)QKt(cid:17) evidence on the advantages of first learning a data repre-
+Attn(Q,K,V)=softmax √ V ∈RN×dv. (1)
+d sentation with a Variational Autoencoder (VAE) [38, 62],
+k
+andthenagainlearningitsdistributionwithaVAE.[18,78]
+When performing autoregressive maximum-likelihood demonstratesimilargainswhenusinganunconditionalnor-
+learning, non-causal entries of QKt, i.e. all entries be- malizingflowforthesecondstage,and[63,64]whenusing
+low its diagonal, are set to −∞ and the final output of the a conditional normalizing flow. To improve training effi-
+transformer is given after a linear, point-wise transforma- ciency of Generative Adversarial Networks (GANs), [43]
+tion to predict logits of the next sequence element. Since learnsaGAN[20]onrepresentationsofanautoencoderand
+theattentionmechanismreliesonthecomputationofinner [21] on low-resolution wavelet coefficients which are then
+2
+Figure2.OurapproachusesaconvolutionalVQGANtolearnacodebookofcontext-richvisualparts,whosecompositionissubsequently
+modeledwithanautoregressivetransformerarchitecture. Adiscretecodebookprovidestheinterfacebetweenthesearchitecturesanda
+patch-baseddiscriminatorenablesstrongcompressionwhileretaininghighperceptualquality. Thismethodintroducestheefficiencyof
+convolutionalapproachestotransformerbasedhighresolutionimagesynthesis.
+decodedtoimageswithalearnedgenerator. understandstheglobalcompositionofimages,enablingitto
+[72] presents the Vector Quantised Variational Autoen- generatelocallyrealisticaswellasgloballyconsistentpat-
+coder (VQVAE), an approach to learn discrete represen- terns. Therefore,insteadofrepresentinganimagewithpix-
+tations of images, and models their distribution autore- els,werepresentitasacompositionofperceptuallyrichim-
+gressively with a convolutional architecture. [61] extends ageconstituentsfromacodebook. Bylearninganeffective
+thisapproachtouseahierarchyoflearnedrepresentations. code, as described in Sec. 3.1, we can significantly reduce
+However, thesemethodsstillrelyonconvolutionaldensity the description length of compositions, which allows us to
+estimation, which makes it difficult to capture long-range efficiently model their global interrelations within images
+interactions in high-resolution images. [8] models images with a transformer architecture as described in Sec. 3.2.
+autoregressively with transformers in order to evaluate the This approach, summarized in Fig. 2, is able to generate
+suitability of generative pretraining to learn image repre- realistic and consistent high resolution images both in an
+sentationsfordownstreamtasks. Sinceinputresolutionsof unconditionalandaconditionalsetting.
+32×32pixelsarestillquitecomputationallyexpensive[8],
+a VQVAE is used to encode images up to a resolution of 3.1.LearninganEffectiveCodebookofImageCon-
+192×192. Inan efforttokeep thelearneddiscreterepre- stituentsforUseinTransformers
+sentation as spatially invariant as possible with respect to
+Toutilizethehighlyexpressivetransformerarchitecturefor
+the pixels, a shallow VQVAE with small receptive field is
+image synthesis, we need to express the constituents of an
+employed. Incontrast,wedemonstratethatapowerfulfirst
+imageintheformofasequence.Insteadofbuildingonindi-
+stage, which captures as much context as possible in the
+vidualpixels,complexitynecessitatesanapproachthatuses
+learned representation, is critical to enable efficient high-
+a discrete codebook of learned representations, such that
+resolutionimagesynthesiswithtransformers.
+any image x ∈ RH×W×3 can be represented by a spatial
+3.Approach
+collectionofcodebookentriesz
+q
+∈Rh×w×nz,wheren
+z
+is
+the dimensionality of codes. An equivalent representation
+Ourgoalistoexploitthehighlypromisinglearningca- isasequenceofh·w indiceswhichspecifytherespective
+pabilitiesoftransformermodels[74]andintroducethemto entries in the learned codebook. To effectively learn such
+high-resolutionimagesynthesisuptothemegapixelrange. a discrete spatial codebook, we propose to directly incor-
+Previouswork[55,8]whichappliedtransformerstoimage porate the inductive biases of CNNs and incorporate ideas
+generationdemonstratedpromisingresultsforimagesupto fromneuraldiscreterepresentationlearning[72]. First,we
+a size of 64 × 64 pixels but, due to the quadratically in- learnaconvolutionalmodelconsistingofanencoderEand
+creasing cost in sequence length, cannot simply be scaled a decoder G, such that taken together, they learn to repre-
+tohigherresolutions. sent images with codes from a learned, discrete codebook
+High-resolution image synthesis requires a model that Z = {z
+k
+}K
+k=1
+⊂ Rnz (see Fig. 2 for an overview). More
+3
+precisely,weapproximateagivenimagexbyxˆ = G(z ). the decoder, and δ = 10−6 is used for numerical stability.
+q
+We obtain z
+q
+using the encoding zˆ = E(x) ∈ Rh×w×nz To aggregate context from everywhere, we apply a single
+and a subsequent element-wise quantization q(·) of each attention layer on the lowest resolution. This training pro-
+spatialcodezˆ
+ij
+∈Rnz ontoitsclosestcodebookentryz
+k
+: cedure significantly reduces the sequence length when un-
+rolling the latent code and thereby enables the application
+(cid:18) (cid:19)
+z =q(zˆ):= argmin(cid:107)zˆ −z (cid:107) ∈Rh×w×nz. (2) ofpowerfultransformermodels.
+q ij k
+zk∈Z
+3.2. Learning the Composition of Images with
+Thereconstructionxˆ≈xisthengivenby Transformers
+xˆ=G(z )=G(q(E(x))). (3) Latent Transformers With E and G available, we can
+q
+now represent images in terms of the codebook-indices of
+Backpropagation through the non-differentiable quantiza-
+theirencodings. Moreprecisely,thequantizedencodingof
+tion operation in Eq. (3) is achieved by a straight-through an image x is given by z
+q
+= q(E(x)) ∈ Rh×w×nz and
+gradientestimator,whichsimplycopiesthegradientsfrom is equivalent to a sequence s ∈ {0,...,|Z|−1}h×w of in-
+the decoder to the encoder [3], such that the model and
+dices from the codebook, which is obtained by replacing
+codebookcanbetrainedend-to-endviathelossfunction
+eachcodebyitsindexinthecodebookZ:
+L (E,G,Z)=(cid:107)x−xˆ(cid:107)2+(cid:107)sg[E(x)]−z (cid:107)2
+VQ q 2 s =ksuchthat (z ) =z . (8)
+ij q ij k
++(cid:107)sg[z ]−E(x)(cid:107)2. (4)
+q 2
+By mapping indices of a sequence s back to their corre-
+H th e e r s e t , o L p r - e g c ra = di (cid:107) e x nt − o x p ˆ e (cid:107) r 2 at i i s o a n, re a c n o d n (cid:107) st s r g u [ c z t q io ]− nl E os ( s x , ) s (cid:107) g 2 2 [· i ] s d t e h n e o s te o s - e sp re o d nd a i n n d g d c e o c d o e d b e o d o t k o e a n n t i r m ie a s, ge z q xˆ = =G (cid:0) z ( s z i q j (cid:1) ). is readily recov-
+called“commitmentloss”[72]. Thus, after choosing some ordering of the indices in
+s, image-generation can be formulated as autoregressive
+Learning a Perceptually Rich Codebook Using trans- next-index prediction: Given indices s , the transformer
+<i
+formerstorepresentimagesasadistributionoverlatentim- learns to predict the distribution of possible next indices,
+age constituentsrequires us to pushthe limits of compres- i.e. p(s |s ) to compute the likelihood of the full repre-
+i <i
+(cid:81)
+sionandlearnarichcodebook. Todoso,weproposeVQ- sentationasp(s)= p(s |s ).Thisallowsustodirectly
+i i <i
+GAN,avariantoftheoriginalVQVAE,anduseadiscrimi- maximizethelog-likelihoodofthedatarepresentations:
+natorandperceptualloss[40,30,39,17,47]tokeepgood
+perceptualqualityatincreasedcompressionrate. Notethat L Transformer =E x∼p(x) [−logp(s)]. (9)
+this is in contrast to previous works which applied pixel-
+based [71, 61] and transformer-based autoregressive mod- Conditioned Synthesis In many image synthesis tasks a
+els[8]ontopofonlyashallowquantizationmodel. More userdemandscontroloverthegenerationprocessbyprovid-
+specifically,wereplacetheL lossusedin[72]forL by ingadditionalinformationfromwhichanexampleshallbe
+2 rec
+aperceptuallossandintroduceanadversarialtrainingpro- synthesized. Thisinformation, whichwewillcallc, could
+cedurewithapatch-baseddiscriminatorD[28]thataimsto beasinglelabeldescribingtheoverallimageclassoreven
+differentiatebetweenrealandreconstructedimages: anotherimageitself. Thetaskisthentolearnthelikelihood
+ofthesequencegiventhisinformationc:
+L ({E,G,Z},D)=[logD(x)+log(1−D(xˆ))] (5)
+GAN
+(cid:89)
+p(s|c)= p(s |s ,c). (10)
+Thecompleteobjectiveforfindingtheoptimalcompression i <i
+modelQ∗ ={E∗,G∗,Z∗}thenreads i
+(cid:104) Iftheconditioninginformationchasspatialextent,wefirst
+Q∗ =argminmaxE x∼p(x) L VQ (E,G,Z) learn another VQGAN to obtain again an index-based rep-
+E,G,Z D
+(cid:105)
+resentation r ∈ {0,...,|Z
+c
+|−1}hc×wc with the newly ob-
++λL ({E,G,Z},D) , (6) tained codebook Z Due to the autoregressive structure of
+GAN c
+the transformer, we can then simply prepend r to s and
+wherewecomputetheadaptiveweightλaccordingto restrict the computation of the negative log-likelihood to
+entries p(s |s ,r). This “decoder-only” strategy has also
+∇ [L ] i <i
+λ= GL rec (7) beensuccessfullyusedfortext-summarizationtasks[44].
+∇ [L ]+δ
+GL GAN
+whereL istheperceptualreconstructionloss[81],∇ [·] Generating High-Resolution Images The attention
+rec GL
+denotes the gradient of its input w.r.t. the last layer L of mechanism of the transformer puts limits on the sequence
+4
+NegativeLog-Likelihood(NLL)
+Data/ Transformer Transformer PixelSNAIL
+#params P-SNAILsteps P-SNAILtime fixedtime
+RIN/85M 4.78 4.84 4.96
+Figure3.Slidingattentionwindow.
+LSUN-CT/310M 4.63 4.69 4.89
+IN/310M 4.78 4.83 4.96
+lengthh·wofitsinputss. Whilewecanadaptthenumber D-RIN/180M 4.70 4.78 4.88
+of downsampling blocks m of our VQGAN to reduce S-FLCKR/310M 4.49 4.57 4.64
+images of size H ×W to h = H/2m ×w = W/2m, we
+Table 1. Comparing Transformer and PixelSNAIL architectures
+observe degradation of the reconstruction quality beyond
+acrossdifferentdatasetsandmodelsizes. Forallsettings, trans-
+a critical value of m, which depends on the considered formersoutperformthestate-of-the-artmodelfromthePixelCNN
+dataset. To generate images in the megapixel regime, we family,PixelSNAILintermsofNLL.Thisholdsbothwhencom-
+therefore have to work patch-wise and crop images to paring NLL at fixed times (PixelSNAIL trains roughly 2 times
+restrict the length of s to a maximally feasible size during faster)andwhentrainedforafixednumberofsteps. SeeSec.4.1
+training. To sample images, we then use the transformer fortheabbreviations.
+in a sliding-window manner as illustrated in Fig. 3. Our
+VQGAN ensuresthattheavailablecontextisstillsufficient
+conditioninginformation,andthentrainbothatransformer
+tofaithfullymodelimages,aslongaseitherthestatisticsof
+andaPixelSNAIL[10]modelonthesamerepresentations,
+the dataset are approximately spatially invariant or spatial
+asthelatterhasbeenusedinpreviousstate-of-the-arttwo-
+conditioning information is available. In practice, this is
+stageapproaches[61]. Forathoroughcomparison,wevary
+not a restrictive requirement, because when it is violated,
+the model capacities between 85M and 310M parameters
+i.e. unconditional image synthesis on aligned data, we can
+andadjustthenumberoflayersineachmodeltomatchone
+simplyconditiononimagecoordinates,similarto[42].
+another. WeobservethatPixelSNAILtrainsroughlytwice
+4.Experiments as fast as the transformer and thus, for a fair comparison,
+reportthenegativelog-likelihoodbothforthesameamount
+This section evaluates the ability of our approach to re-
+oftrainingtime(P-SNAILtime)andforthesameamountof
+taintheadvantagesoftransformersovertheirconvolutional
+trainingsteps(P-SNAILsteps).
+counterparts (Sec. 4.1) while integrating the effectiveness
+ofconvolutionalarchitecturestoenablehigh-resolutionim- Results Tab. 1 reports results for unconditional image
+age synthesis (Sec. 4.2). Furthermore, in Sec. 4.3, we in- modeling on ImageNet (IN) [14], Restricted ImageNet
+vestigate how codebook quality affects our approach. We (RIN) [65], consisting of a subset of animal classes from
+close the analysis by providing a quantitative comparison ImageNet, LSUN Churches and Towers (LSUN-CT) [79],
+to a wide range of existing approches for generative im- andforconditionalimagemodelingofRINconditionedon
+agesynthesisinSec.4.4. Basedoninitialexperiments,we depthmapsobtainedwiththeapproachof[60](D-RIN)and
+usuallyset|Z|= 1024andtrainallsubsequenttransformer of landscape images collected from Flickr conditioned on
+modelstopredictsequencesoflength16·16,asthisisthe semantic layouts (S-FLCKR) obtained with the approach
+maximumfeasiblelengthtotrainaGPT2-mediumarchitec- of [7]. Note that for the semantic layouts, we train the
+ture(307Mparameters)[58]onaGPUwith12GBVRAM. first-stage using a cross-entropy reconstruction loss due to
+More details on architectures and hyperparameters can be theirdiscretenature. Theresultsshowsthatthetransformer
+foundintheappendix(Tab.7andTab.8). consistentlyoutperformsPixelSNAILacrossalltaskswhen
+trained for the same amount of time and the gap increases
+4.1.AttentionIsAllYouNeedintheLatentSpace
+even further when trained for the same number of steps.
+These results demonstrate that gains of transformers carry
+Transformers show state-of-the-art results on a wide va-
+overtoourproposedtwo-stagesetting.
+riety of tasks, including autoregressive image modeling.
+However, evaluations of previous works were limited to
+4.2.AUnifiedModelforImageSynthesisTasks
+transformers working directly on (low-resolution) pixels
+[55,12,26],ortodeliberatelyshallowpixelencodings[8]. The versatility and generality of the transformer architec-
+This raises the question if our approach retains the advan- turemakesitapromisingcandidateforimagesynthesis. In
+tagesoftransformersoverconvolutionalapproaches. theconditionalcase,additionalinformationcsuchasclass
+Toanswerthisquestion,weuseavarietyofconditional labelsorsegmentationmapsareusedandthegoalistolearn
+and unconditional tasks and compare the performance be- the distribution of images as described in Eq. (10). Using
+tweenourtransformer-basedapproachandaconvolutional the same setting as in Sec. 4.1 (i.e. image size 256×256,
+approach. For each task, we train a VQGAN with m = 4 latentsize16×16),weperformvariousconditionalimage
+downsampling blocks, and, if needed, another one for the synthesisexperiments:
+5
+conditioning samples upsampled. Wetrainourmodelforanupsamplingfactorof
+8onImageNetandshowresultsinFig.6.
+(v): Class-conditional image synthesis: Here, the condi-
+tioninginformationcisasingleindexdescribingtheclass
+label of interest. Results for the RIN and IN dataset are
+demonstratedinFig.4andFig.8,respectively.
+All of these examples make use of the same methodology.
+Insteadofrequiringtaskspecificarchitecturesormodules,
+theflexibilityofthetransformerallowsustolearnappropri-
+ate interactions for each task, while the VQGAN — which
+can be reused across different tasks — leads to short se-
+quencelengths.Incombination,thepresentedapproachcan
+be understood as an efficient, general purpose mechanism
+forconditionalimagesynthesis.Notethatadditionalresults
+foreachexperimentcanbefoundintheappendix,Sec.D.
+High-Resolution Synthesis The sliding window ap-
+proach introduced in Sec. 3.2 enables image synthesis be-
+yond a resolution of 256 × 256 pixels. We evaluate this
+approachonunconditionalimagegenerationonLSUN-CT
+andFacesHQ(seeSec.4.3)andconditionalsynthesisonD-
+RIN, COCO-Stuff and S-FLCKR, where we show results
+in Fig. 1, 6 and the supplementary (Fig. 29-39). Note that
+this approach can in principle be used to generate images
+of arbitrary ratio and size, given that the image statistics
+ofthedatasetofinterestareapproximatelyspatiallyinvari-
+ant or spatial information is available. Impressive results
+canbeachievedbyapplyingthismethodtoimagegenera-
+Figure 4. Transformers within our setting unify a wide range of
+tion from semantic layouts on S-FLCKR, where a strong
+image synthesis tasks. We show 256 × 256 synthesis results
+VQGAN can be learned with m = 5, so that its code-
+acrossdifferentconditioninginputsanddatasets,allobtainedwith
+the same approach to exploit inductive biases of effective CNN book together with the conditioning information provides
+based VQGAN architectures in combination with the expressiv- the transformer with enough context for image generation
+ityoftransformerarchitectures. Toprow: Completionsfromun- inthemegapixelregime.
+conditional training on ImageNet. 2nd row: Depth-to-Image on
+4.3.BuildingContext-RichVocabularies
+RIN. 3rd row: Semantically guided synthesis on ADE20K. 4th
+row: Pose-guided person generation on DeepFashion. Bottom
+How important are context-rich vocabularies? To inves-
+row:Class-conditionalsamplesonRIN.
+tigate this question, we ran experiments where the trans-
+former architecture is kept fixed while the amount of con-
+textencodedintotherepresentationofthefirststageisvar-
+(i): Semantic image synthesis, where we condition on
+iedthroughthenumberofdownsamplingblocksofourVQ-
+semantic segmentation masks of ADE20K [83], a web-
+GAN. We specify the amount of context encoded in terms
+scraped landscapes dataset (S-FLCKR) and COCO-Stuff
+of reduction factor in the side-length between image in-
+[6]. ResultsaredepictedinFigure4,5andFig.6.
+puts and the resulting representations, i.e. a first stage en-
+(ii):Structure-to-image,whereweuseeitherdepthoredge
+coding images of size H ×W into discrete codes of size
+information to synthesize images from both RIN and IN
+H/f ×W/f is denoted by a factor f. For f = 1, we re-
+(see Sec. 4.1). The resulting depth-to-image and edge-to-
+produce the approach of [8] and replace our VQGAN by a
+imagetranslationsarevisualizedinFig.4andFig.6.
+k-meansclusteringofRGBvalueswithk =512.
+(iii): Pose-guidedsynthesis: Insteadofusingthesemanti- Duringtraining,wealwayscropimagestoobtaininputsof
+callyrichinformationofeithersegmentationordepthmaps, size 16 × 16 for the transformer, i.e. when modeling im-
+Fig.4showsthatthesameapproachasforthepreviousex- ageswithafactorf inthefirststage, weusecropsofsize
+perimentscanbeusedtobuildashape-conditionalgenera- 16f ×16f. To sample from the models, we always apply
+tivemodelontheDeepFashion[45]dataset. theminaslidingwindowmannerasdescribedinSec.3.
+(iv):Stochasticsuperresolution,wherelow-resolutionim- ResultsFig.7showsresultsforunconditionalsynthesisof
+agesserveastheconditioninginformationandarethereby facesonFacesHQ,thecombinationofCelebA-HQ[31]and
+6
+Figure5.SamplesgeneratedfromsemanticlayoutsonS-FLCKR. Figure6.Applyingtheslidingattentionwindowapproach(Fig.3)
+Sizesfromtop-to-bottom: 1280×832,1024×416and1280× tovariousconditionalimagesynthesistasks.Top:Depth-to-image
+240pixels. Bestviewedzoomedin. Alargervisualizationcanbe onRIN,2ndrow: StochasticsuperresolutiononIN,3rdand4th
+foundintheappendix,seeFig29. row:SemanticsynthesisonS-FLCKR,bottom:Edge-guidedsyn-
+thesisonIN.Theresultingimagesvarybetween368×496and
+1024×576,hencetheyarebestviewedzoomedin.
+Dataset ours SPADE[53] Pix2PixHD(+aug)[75] CRN[9]
+FFHQ[33]. Itclearlydemonstratesthebenefitsofpower-
+COCO-Stuff 22.4 22.6/23.9(*) 111.5(54.2) 70.4
+ful VQGANs by increasing the effective receptive field of
+ADE20K 35.5 33.9/35.7(*) 81.8(41.5) 73.3
+the transformer. For small receptive fields, or equivalently
+Table 2. FID score comparison for semantic image synthesis
+smallf,themodelcannotcapturecoherentstructures. For
+(256×256pixels).(*):Recalculatedwithourevaluationprotocol
+an intermediate value of f = 8, the overall structure of
+basedon[50]onthevalidationsplitsofeachdataset.
+images can be approximated, but inconsistencies of facial
+features such as a half-bearded face and of viewpoints in 4.4.BenchmarkingImageSynthesisResults
+different parts of the image arise. Only our full setting of
+f =16cansynthesizehigh-fidelitysamples.Foranalogous In this section we investigate how our approach quantita-
+tively compares to existing models for generative image
+results in the conditional setting on S-FLCKR, we refer to
+synthesis. In particular, we assess the performance of our
+theappendix(Fig.13andSec.C).
+model in terms of FID and compare to a variety of estab-
+To assess the effectiveness of our approach quantitatively, lished models (GANs, VAEs, Flows, AR, Hybrid). The
+wecompareresultsbetweentrainingatransformerdirectly results on semantic synthesis are shown in Tab. 2, where
+onpixels, andtrainingitontopofaVQGAN’slatentcode we compare to [53, 75, 35, 9], and the results on uncon-
+withf =2,givenafixedcomputationalbudget. Again,we ditional face synthesis are shown in Tab. 3. While some
+follow[8]andlearnadictionaryof512RGBvaluesonCI- task-specializedGANmodelsreportbetterFIDscores,our
+FAR10tooperatedirectlyonpixelspaceandtrainthesame approach provides a unified model that works well across
+transformerarchitectureontopofourVQGANwithalatent a wide range of tasks while retaining the ability to encode
+codeofsize16×16 = 256. Weobserveimprovementsof andreconstructimages. Ittherebybridgesthegapbetween
+18.63%forFIDsand14.08×fastersamplingofimages. purelyadversarialandlikelihood-basedapproaches.
+7
+f1 f2 f8 f16 downsamplingfactor
+1.0 3.86 65.81 280.68 speed-up
+Figure7.EvaluatingtheimportanceofeffectivecodebookforHQ-Faces(CelebA-HQandFFHQ)forafixedsequencelength|s|=16·16=
+256.Globallyconsistentstructurescanonlybemodeledwithacontext-richvocabulary(right).Allsamplesaregeneratedwithtemperature
+t=1.0andtop-ksamplingwithk =100. Lastrowreportsthespeedupoverthef1baselinewhichoperatesdirectlyonpixelsandtakes
+7258secondstoproduceasampleonaNVIDIAGeForceGTXTitanX.
+Model acceptancerate FID IS
+CelebA-HQ256×256 FFHQ256×256
+mixedk,p=1.0 1.0 17.04 70.6±1.8
+Method FID↓ Method FID↓
+k=973,p=1.0 1.0 29.20 47.3±1.3
+GLOW[37] 69.0 VDVAE(t=0.7)[11] 38.8 k=250,p=1.0 1.0 15.98 78.6±1.1
+NVAE[69] 40.3 VDVAE(t=1.0) 33.5
+k=973,p=0.88 1.0 15.78 74.3±1.8
+PIONEER(B.)[23] 39.2(25.3) VDVAE(t=0.8) 29.8
+k=600,p=1.0 0.05 5.20 280.3±5.5
+NCPVAE[1] 24.8 VDVAE(t=0.9) 28.5
+VAEBM[77] 20.4 VQGAN+P.SNAIL 21.9 mixedk,p=1.0 0.5 10.26 125.5±2.4
+StyleALAE[56] 19.2 BigGAN 12.4 mixedk,p=1.0 0.25 7.35 188.6±3.3
+DC-VAE[54] 15.8 ours(k=300) 9.6 mixedk,p=1.0 0.05 5.88 304.8±3.6
+ours(k=400) 10.2 U-NetGAN(+aug)[66] 10.9(7.6)
+mixedk,p=1.0 0.005 6.59 402.7±2.9
+PGGAN[31] 8.0 StyleGAN2(+aug)[34] 3.8(3.6)
+DCTransformer[48] 1.0 36.5 n/a
+Table3.FIDscorecomparisonforfaceimagesynthesis. CelebA-
+VQVAE-2[61] 1.0 ∼31 ∼45
+HQresultsreproducedfrom[1,54,77,24],FFHQfrom[66,32]. VQVAE-2 n/a ∼10 ∼330
+BigGAN[4] 1.0 7.53 168.6±2.5
+BigGAN-deep 1.0 6.84 203.6±2.6
+Autoregressivemodelsaretypicallysampledwithadecod- IDDPM[49] 1.0 12.3 n/a
+ADM-G,noguid.[15] 1.0 10.94 100.98
+ing strategy [27] such as beam-search, top-k or nucleus
+ADM-G,1.0guid. 1.0 4.59 186.7
+sampling. Formostofourresults,includingthoseinTab.2, ADM-G,10.0guid. 1.0 9.11 283.92
+we use top-k sampling with k = 100 unless stated other-
+val.data 1.0 1.62 234.0±3.9
+wise. For the results on face synthesis in Tab. 3, we com-
+Table 4. FID score comparison for class-conditional synthesis
+puted scores for k ∈ {100,200,300,400,500} and report
+on256×256ImageNet,evaluatedbetween50ksamplesandthe
+thebestresults,obtainedwithk =400forCelebA-HQand trainingsplit. Classifier-basedrejectionsamplingasinVQVAE-2
+k = 300 for FFHQ. Fig. 10 in the supplementary shows usesaResNet-101[22]classifier. BigGAN(-deep)evaluatedvia
+FIDandInceptionscoresasafunctionofk. https://tfhub.dev/deepmindtruncatedat1.0. “Mixed”
+kreferstosamplesgeneratedwithdifferenttop-kvalues,herek∈
+Class-ConditionalSynthesisonImageNet Toaddressa {100,200,250,300,350,400,500,600,800,973}.
+directcomparisonwiththepreviousstate-of-the-artforau-
+Quantitative results are summarized in Tab. 4. We report
+toregressivemodelingofclass-conditionalimagesynthesis
+FID and Inception Scores for the best k/p in top-k/top-p
+on ImageNet, VQVAE-2 [61], we train a class-conditional
+sampling. Following [61], we can further increase quality
+ImageNet transformer on 256×256 images, using a VQ-
+via classifier-rejection, which keeps only the best m-out-
+GAN with dimZ = 16384 and f = 16, and addition-
+of-n samples in terms of the classifier’s score, i.e. with an
+allycomparetoBigGAN[4],IDDPM[49],DCTransformer
+acceptancerateofm/n.WeuseaResNet-101classifier[22].
+[48] and ADM [15] in Tab. 4. Note that our model uses
+Weobservethatourmodeloutperformsotherautoregres-
+(cid:39) 10×lessparametersthanVQVAE-2,whichhasanesti-
+sive approaches (VQVAE-2, DCTransformer) in terms of
+matedparametercountof13.5B(estimatebasedon[67]).
+FID and IS, surpasses BigGAN and IDDPM even for low
+SamplesofthismodelfordifferentImageNetclassesare
+rejectionratesandyieldsscoresclosetothestateoftheart
+shown in Fig. 8. We observe that the adversarial training
+forhigherrejectionrates,seealsoFig.9.
+of the corresponding VQGAN enables sampling of high-
+quality images with realistic textures, of comparable or HowgoodistheVQGAN? ReconstructionFIDsobtained
+higher quality than existing approaches such as BigGAN viathecodebookprovideanestimateontheachievableFID
+andVQVAE-2,seealsoFig.14-17inthesupplementary. of the generative model trained on it. To quantify the per-
+8
+Figure8. Samplesfromourclass-conditionalImageNetmodeltrainedon256×256images.
+Figure9. FIDandInceptionScoreasafunctionoftop-k,nucleusandrejectionfiltering.
+Model CodebookSize dimZ FID/val FID/train 5.Conclusion
+VQVAE-2 64×64&32×32 512 n/a ∼10
+DALL-E[59] 32×32 8192 32.01 33.88 Thispaperadressedthefundamentalchallengesthatprevi-
+VQGAN 16×16 1024 7.94 10.54 ously confined transformers to low-resolution images. We
+VQGAN 16×16 16384 4.98 7.41 proposedanapproachwhichrepresentsimagesasacompo-
+VQGAN∗ 32×32 8192 1.49 3.24
+sition of perceptually rich image constituents and thereby
+VQGAN 64×64&32×32 512 1.45 2.78
+overcomes the infeasible quadratic complexity when mod-
+Table5. FIDonImageNetbetweenreconstructedvalidationsplit elingimagesdirectlyinpixelspace. Modelingconstituents
+and original validation (FID/val) and training (FID/train) splits.
+with a CNN architecture and their compositions with a
+∗trainedwithGumbel-Softmaxreparameterizationasin[59,29].
+transformerarchitecturetapsintothefullpotentialoftheir
+complementary strengths and thereby allowed us to rep-
+formancegainsofourVQGAN overdiscreteVAEstrained
+resent the first results on high-resolution image synthesis
+without perceptual and adversarial losses (e.g. VQVAE-2,
+withatransformer-basedarchitecture. Inexperiments, our
+DALL-E [59]), we evaluate this metric on ImageNet and
+approach demonstrates the efficiency of convolutional in-
+report results in Tab. 5. Our VQGAN outperforms non-
+ductivebiasesandtheexpressivityoftransformersbysyn-
+adversarialmodelswhileprovidingsignificantlymorecom-
+thesizingimagesinthemegapixelrangeandoutperforming
+pression (seq. length of 256 vs. 5120 = 322 + 642 for
+state-of-the-artconvolutionalapproaches. Equippedwitha
+VQVAE-2,256vs1024forDALL-E).Asexpected,larger
+generalmechanismforconditionalsynthesis,itoffersmany
+versions of VQGAN (either in terms of larger codebook
+opportunitiesfornovelneuralrenderingapproaches.
+sizes or increased code lengths) further improve perfor-
+mance. Usingthesamehierarchicalcodebooksettingasin
+VQVAE-2withourmodelprovidesthebestreconstruction
+FID, albeit at the cost of a very long and thus impractical
+ThisworkhasbeensupportedbytheGermanResearchFoundation
+sequence. Thequalitativecomparisoncorrespondingtothe
+(DFG) projects 371923335, 421703927 and a hardware donation from
+resultsinTab.5canbefoundinFig.12. NVIDIAcorporation.
+9
+Taming Transformers for High-Resolution
+Image Synthesis
+–
+SupplementaryMaterial
+ThesupplementarymaterialforourworkTamingTransformersforHigh-ResolutionImageSynthesisisstructuredasfollows:
+First,Sec.Asummarizeschangestoapreviousversionofthispaper.InSec.B,wepresenthyperparametersandarchitectures
+whichwereusedtotrainourmodels. Next,extendingthediscussionofSec.4.3,Sec.Cpresentsadditionalevidenceforthe
+importanceofperceptuallyrichcodebooksanditsinterpretationasatrade-offbetweenreconstructionfidelityandsampling
+capability. Additionalresultsonhigh-resolutionimagesynthesisforawiderangeoftasksarethenpresentedinSec.D,and
+Sec.Eshowsnearestneighborsofsamples. Finally,Sec.Fcontainsresultsregardingtheorderingofimagerepresentations.
+A.Changelog
+Wesummarizechangesbetweenthisversion1ofthepaperanditspreviousversion2.
+Inthepreviousversion,Eq.(4)hadaweightingtermβ onthecommitmentloss,andTab.8reportedavalueofβ =0.25
+forallmodels.However,duetoabugintheimplementation,βwasneverusedandallmodelshavebeentrainedwithβ =1.0.
+Thus,weremovedβ inEq.(4).
+We updated class-conditional synthesis results on ImageNet in Sec. 4.4. The previous results, included here in Tab. 6
+for completeness, were based on a slightly different implementation where the transformer did not predict the distribution
+of the first token but used a histogram for it. The new model has been trained for 2.4 million steps with a batch size of
+16 accumulated over 8 batches, which took 45.8 days on a single A100 GPU. The previous model had been trained for
+1.0 million steps. Furthermore, the FID values were based on 50k (18k) samples against 50k (18k) training examples (to
+comparewithMSP).Forbettercomparisonwithotherworks,thecurrentversionreportsFIDsbasedon50ksamplesagainst
+alltrainingexamplesofImageNetusingtorch-fidelity[50]. Weupdatedallqualitativefiguresshowingsamplesfrom
+thismodelandaddedvisualizationsoftheeffectoftuningtop-k/porrejectionrateinFig.14-26.
+Toprovideabetteroverview,wealsoincluderesultsfromworksthatbecameavailableafterthepreviousversionofour
+work.Specifically,weincluderesultsonreconstructionqualityoftheVQVAEfrom[59]inTab.5andFig.12(whichreplaces
+thepreviousqualitativecomparison),andresultsonclass-conditionalImageNetsamplingfrom[49,48,15]inTab.4. Note
+thatwiththeexceptionofBigGANandBigGAN-deep[4],nomodelsorsamplingresultsareavailableforthemethodswe
+comparetoinTab.4. Thus,wecanonlyreportthenumbersfromtherespectivepapersbutcannotre-evaluatethemwiththe
+samecode. Wefollowthecommonevaluationprotocolforclass-conditionalImageNetsynthesisfrom[4]andevaluate50k
+samplesfromthemodelagainstthewholetrainingsplitofImageNet. However,itisnotclearhowdifferentimplementations
+resizethetrainingimages. Inourcode,weusethelargestcenter-cropandresizeitbilinearlywithanti-aliasingto256×256
+usingPillow[73]. FIDandInceptionScoresarethencomputedwithtorch-fidelity[50].
+Weupdatedface-synthesisresultsinTab.3basedonaslightlydifferentimplementationasinthecaseofclass-conditional
+ImageNetresultsandimprovethepreviousresultsslightly. Inaddition,weevaluatetheabilityofourNLL-basedtrainingto
+detectoverfitting.Wetrainlargermodels(FFHQ(big)andCelebA-HQ(big)inTab.8)onthefacedatasets,andshownearest
+neighborsofsamplesobtainedfromcheckpointswiththebestNLLonthevalidationsplitandthetrainingsplitinSec.E.We
+alsoaddedFig.10,whichvisualizestheeffectoftuningkintop-ksamplingonFIDandIS.
+B.ImplementationDetails
+The hyperparameters for all experiments presented in the main paper and supplementary material can be found in Tab. 8.
+Exceptforthec-IN(big),COCO-Stuff andADE20Kmodels,thesehyperparametersaresetsuchthateachtransformermodel
+can be trained with a batch-size of at least 2 on a GPU with 12GB VRAM, but we generally train on 2-4 GPUs with an
+accumulatedVRAMof48GB.Ifhardwarepermits,16-bitprecisiontrainingisenabled.
+1https://arxiv.org/abs/2012.09841v3
+2https://arxiv.org/abs/2012.09841v2
+10
+Dataset ours-previous(+R) BigGAN(-deep) MSP Dataset ours-previous ours-new
+IN256,50K 19.8(11.2) 7.1(7.3) n.a. CelebA-HQ256 10.7 10.2
+IN256,18K 23.5 9.6(9.7) 50.4 FFHQ256 11.4 9.6
+Table6. Resultsfromapreviousversionofthispaper,seealsoSec.A.Left: Previousresultsonclass-conditionalImageNetsynthesis
+withaslightlydifferentimplementationandevaluatedagainst50kand18ktrainingexamplesinsteadofthewholetrainingsplit.SeeTab.4
+for new, improved results evaluated against the whole training split. Right: Previous results on face-synthesis with a slightly different
+implementationcomparedtothenewimplementation.SeealsoTab.3forcomparisonwithothermethods.
+Figure10. FIDandInceptionScoreasafunctionoftop-kforCelebA-HQ(left)andFFHQ(right).
+Encoder Decoder
+x∈RH×W×C z
+q
+∈Rh×w×nz
+Conv2D→RH×W×C(cid:48) Conv2D→Rh×w×C(cid:48)(cid:48)
+m×{ResidualBlock,DownsampleBlock}→Rh×w×C(cid:48)(cid:48) ResidualBlock→Rh×w×C(cid:48)(cid:48)
+ResidualBlock→Rh×w×C(cid:48)(cid:48) Non-LocalBlock→Rh×w×C(cid:48)(cid:48)
+Non-LocalBlock→Rh×w×C(cid:48)(cid:48) ResidualBlock→Rh×w×C(cid:48)(cid:48)
+ResidualBlock→Rh×w×C(cid:48)(cid:48) m×{ResidualBlock,UpsampleBlock}→RH×W×C(cid:48)
+GroupNorm,Swish,Conv2D→Rh×w×nz GroupNorm,Swish,Conv2D→RH×W×C
+Table7.High-levelarchitectureoftheencoderanddecoderofourVQGAN.Thedesignofthenetworksfollowsthearchitecturepresented
+in[25]withnoskip-connections.Forthediscriminator,weuseapatch-basedmodelasin[28].Notethath= H ,w= W andf =2m.
+2m 2m
+VQGANArchitecture ThearchitectureofourconvolutionalencoderanddecodermodelsusedintheVQGANexperiments
+isdescribedinTab.7. Notethatweadoptthecompressionratebytuningthenumberofdownsamplingstepsm. Furthernote
+thatλinEq.5issettozeroinaninitialwarm-upphase. Empirically,wefoundthatlongerwarm-upsgenerallyleadtobetter
+reconstructions. Asaruleofthumb,werecommendsettingλ=0foratleastoneepoch.
+Transformer Architecture Our transformer model is identical to the GPT2 architecture [58] and we vary its capacity
+mainly through varying the amount of layers (see Tab. 8). Furthermore, we generally produce samples with a temperature
+t=1.0andatop-kcutoffatk =100(withhighertop-kvaluesforlargercodebooks).
+C.OnContext-RichVocabularies
+Sec. 4.3 investigated the effect of the downsampling factor f used for encoding images. As demonstrated in Fig. 7, large
+factorsarecrucialforourapproach,sincetheyenablethetransformertomodellong-rangeinteractionsefficiently. However,
+since larger f correspond to larger compression rates, the reconstruction quality of the VQGAN starts to decrease after a
+certainpoint,whichisanalyzedinFig.11. Theleftpartshowsthereconstructionerror(measuredbyLPIPS[81])versusthe
+negativelog-likelihoodobtainedbythetransformerforvaluesoff rangingfrom1to64. Thelatterprovidesameasureofthe
+abilitytomodelthedistributionoftheimagerepresentation, whichincreaseswithf. Thereconstructionerrorontheother
+handdecreaseswithf andthequalitativeresultsontherightpartshowthatbeyondacriticalvalueoff,inthiscasef =16,
+reconstructionerrorsbecomesevere. Atthispoint,evenwhentheimagerepresentationsaremodeledfaithfully,assuggested
+byalownegativelog-likelihood,sampledimagesareoflow-fidelity,becausethereconstructioncapabilitiesprovideanupper
+boundonthequalitythatcanbeachieved.
+Hence,Fig.11showsthatwemustlearnperceptuallyrichencodings,i.e.encodingswithalargef andperceptuallyfaithful
+reconstructions. ThisisthegoalofourVQGANandFig.12comparesitsreconstructioncapabilitiesagainsttheVQVAE[72]
+11
+Experiment n #params[M] n |Z| dropout length(s) n m
+layer z e
+RIN 12 85 64 768 0.0 512 1024 4
+c-RIN 18 128 64 768 0.0 257 768 4
+D-RINv1 14 180 256 1024 0.0 512 768 4
+D-RINv2 24 307 256 1024 0.0 512 1024 4
+IN 24 307 256 1024 0.0 256 1024 4
+c-IN 24 307 256 1024 0.0 257 1024 4
+c-IN(big) 48 1400 256 16384 0.0 257 1536 4
+IN-Edges 24 307 256 1024 0.0 512 1024 3
+IN-SR 12 153 256 1024 0.0 512 1024 3
+S-FLCKR,f =4 24 307 256 1024 0.0 512 1024 2
+S-FLCKR,f =16 24 307 256 1024 0.0 512 1024 4
+S-FLCKR,f =32 24 307 256 1024 0.0 512 1024 5
+(FacesHQ, f =1)∗ 24 307 – 512 0.0 512 1024 –
+FacesHQ,f =2 24 307 256 1024 0.0 512 1024 1
+FacesHQ,f =4 24 307 256 1024 0.0 512 1024 2
+FacesHQ,f =8 24 307 256 1024 0.0 512 1024 3
+FacesHQ∗∗,f =16 24 307 256 1024 0.0 512 1024 4
+FFHQ∗∗,f =16 28 355 256 1024 0.0 256 1024 4
+CelebA-HQ∗∗,f =16 28 355 256 1024 0.0 256 1024 4
+FFHQ(big) 24 801 256 1024 0.0 256 1664 4
+CelebA-HQ(big) 24 801 256 1024 0.0 256 1664 4
+COCO-Stuff 32 651 256 8192 0.0 512 1280 4
+ADE20K 28 405 256 4096 0.1 512 1024 4
+DeepFashion 18 129 256 1024 0.0 340 768 4
+LSUN-CT 24 307 256 1024 0.0 256 1024 4
+CIFAR-10 24 307 256 1024 0.0 256 1024 1
+Table8.Hyperparameters. Foreveryexperiment,wesetthenumberofattentionheadsinthetransformerton =16. n denotesthe
+h layer
+numberoftransformerblocks,#paramsthenumberoftransformerparameters,n thedimensionalityofcodebookentries,|Z|thenumber
+z
+ofcodebookentries,dropoutthedropoutratefortrainingthetransformer,length(s)thetotallengthofthesequence,n theembedding
+e
+dimensionalityandmthenumberofdownsamplingstepsintheVQGAN.D-RINv1istheexperimentwhichcomparestoPixel-SNAILin
+Sec.4.1. Notethattheexperiment(FacesHQ, f =1)∗doesnotusealearnedVQGANbutafixedk-meansclusteringalgorithmasin[8]
+withK =512centroids.Aprefix“c”referstoaclass-conditionalmodel.Themodelsmarkedwitha‘∗∗‘aretrainedonthesameVQGAN.
+used in DALL-E [59]. We observe that for f = 8 and 8192 codebook entries, both the VQVAE and VQGAN capture the
+globalstructurefaithfully. However,thetexturesproducedbytheVQVAEareblurry,whereasthoseoftheVQGAN arecrisp
+andrealisticlooking(e.g.thestonetextureandthefurandtailofthesquirrel). Whenweincreasethecompressionrateofthe
+VQGAN furthertof = 16, weseethatsomereconstructedpartsarenotperfectlyalignedwiththeinputanymore(e.g.the
+pawofthesquirrel),but,especiallywithslightlylargercodebooks,thereconstructionsstilllookrealistic. Thisdemonstrates
+howtheVQGAN provideshigh-fidelityreconstructionsatlargefactors,andtherebyenablesefficienthigh-resolutionimage
+synthesiswithtransformers.
+Toillustratehowthechoiceoff dependsonthedataset,Fig.13presentsresultsonS-FLCKR.Intheleftpart,itshows,
+analogous to Fig. 7, how the quality of samples increases with increasing f. However, in the right part, it shows that
+reconstructionsremainfaithfulperceptuallyfaithfulevenforf32,whichisincontrasttothecorrespondingresultsonfaces
+inFig.11. Theseresultsmightbeexplainedbyahigherperceptualsensitivitytofacialfeaturesascomparedtotextures,and
+allowustogeneratehigh-resolutionlandscapesevenmoreefficientlywithf =32.
+D.AdditionalResults
+QualitativeComparisons ThequalitativecomparisoncorrespondingtoTab.4andTab.6canbefoundinFig.14,15,16
+and 17. Since no models are available for VQVAE-2 and MSP, we extracted results directly from the supplementary3 and
+3https://drive.google.com/file/d/1H2nr_Cu7OK18tRemsWn_6o5DGMNYentM/view?usp=sharing
+12
+from the provided samples4, respectively. For BigGAN, we produced the samples via the provided model5. Similarly, the
+qualitativecomparisonwiththebestcompetitormodel(SPADE)forsemanticsynthesisonstandardbenchmarks(seeTab.2)
+canbefoundinFig.40(ADE20K)andFig.41(COCO-Stuff)6.
+Comparison to Image-GPT To further evaluate the effectiveness of our approach, we compare to the state-of-the-art
+generativetransformermodelonimages,ImageGPT[8]. Byusingimmenseamountsofcomputetheauthorsdemonstrated
+thattransformermodelscanbeappliedtothepixel-representationofimagesandtherebyachievedimpressiveresultsbothin
+representationlearningandimagesynthesis. However,astheirapproachisconfinedtopixel-space,itdoesnotscalebeyond
+a resolution of 192×192. As our approach leverages a strong compression method to obtain context-rich representations
+of images and then learns a transformer model, we can synthesize images of much higher resolution. We compare both
+approaches in Fig. 27 and Fig. 28, where completions of images are depicted. Both plots show that our approach is able
+to synthesize consistent completions of dramatically increased fidelity. The results of [8] are obtained from https://
+openai.com/blog/image-gpt/.
+Additional High-Resolution Results Fig. 29, 30, 31 and Fig. 32 contain additional HR results on the S-FLCKR dataset
+forbothf =16(m=4)andf =32(m=5)(semanticallyguided). Inparticular,weprovideanenlargedversionofFig.5
+fromthemaintext,whichhadtobescaleddownduetospaceconstraints. Additionally,weuseourslidingwindowapproach
+(seeSec.3)toproducehigh-resolutionsamplesforthedepth-to-imagesettingonRINinFig.33andFig.34,edge-to-image
+on IN in Fig. 35, stochastic superresolution on IN in Fig. 36, more examples on semantically guided landscape synthesis
+on S-FLCKR in Fig. 37 with f = 16 and in Fig. 38 with f = 32, and unconditional image generation on LSUN-CT (see
+Sec. 4.1) in Fig. 39. Moreover, for images of size 256×256, we provide results for generation from semantic layout on
+(i)ADE20KinFig.40and(ii)COCO-StuffinFig.41, depth-to-imageonINinFig.42, pose-guidedpersongenerationin
+Fig.43andclass-conditionalsynthesisonRINinFig.44.
+E.NearestNeighborsofSamples
+One advantage of likelihood-based generative models over, e.g., GANs is the ability to evaluate NLL on training data and
+validationdatatodetectoverfitting. Totestthis, wetrainedlargemodelsforfacesynthesis, whichcaneasilyoverfitthem,
+and retained two checkpoints on eachdataset: One for the best validation NLL (at the 10th and 13th epoch for FFHQ and
+CelebA-HQ, respectively), and another for the best training NLL (at epoch 1000). We then produced samples from both
+checkpoints and retrieved nearest neighbors from the training data based on the LPIPS similarity metric [81]. The results
+areshowninFig.45,whereitcanbeobservedthatthecheckpointswithbesttrainingNLL(besttrainNLL)reproducethe
+trainingexamples,whereassamplesfromthecheckpointswithbestvalidationNLL(bestval. NLL)depictnewfaceswhich
+arenotfoundinthetrainingdata.
+Basedontheseresults,wecanconcludethatearly-stoppingbasedonvalidationNLLcanpreventoverfitting.Furthermore,
+thebottleneckforourapproachonfacesynthesisisgivenbythedatasetsizesinceithasthecapacitytoalmostperfectlyfit
+thetrainingdata.Unfortunately,FIDscorescannotdetectsuchanoverfitting.Indeed,thebesttrainNLLcheckpointsachieve
+FIDscoresof3.86onCelebA-HQand2.68onFFHQ,comparedto10.2and9.6forthebestval. NLLcheckpoints. While
+validationNLLprovidesawaytodetectoverfittingforlikelihood-basedmodels,itisnotclearifearly-stoppingbasedonit
+isoptimalifoneismainlyinterestedinthequalityofsamples. ToaddressthisandtheevaluationofGANs,newmetricswill
+berequiredwhichcandifferentiatebetweenmodelsthatproducenew,high-qualitysamplesandthosethatsimplyreproduce
+thetrainingdata.
+Ourclass-conditionalImageNetmodeldoesnotdisplayoverfittingaccordingtovalidationNLL,andthenearestneighbors
+showninFig.46alsoprovideevidencethatthemodelproducesnew,high-qualitysamples.
+F.OntheOrderingofImageRepresentations
+Forthe“classical”domainoftransformermodels,NLP,theorderoftokensisdefinedbythelanguageathand. Forimages
+andtheirdiscreterepresentations, incontrast, itisnotclearwhichlinearorderingtouse. Inparticular, oursliding-window
+approach depends on a row-major ordering and we thus investigate the performance of the following five different permu-
+tations of the input sequence of codebook indices: (i) row major, or raster scan order, where the image representation is
+4https://bit.ly/2FJkvhJ
+5https://tfhub.dev/deepmind/biggan-deep-256/1
+6sampleswerereproducedwiththeauthors’officialimplementationavailableathttps://github.com/nvlabs/spade/
+13
+unrolled from top left to bottom right. (ii) spiral out, which incorporates the prior assumption that most images show a
+centeredobject. (iii)z-curve,alsoknownasz-orderormortoncurve,whichintroducesthepriorofpreservedlocalitywhen
+mappinga2Dimagerepresentationontoa1Dsequence. (iv)subsample, whereprefixescorrespondtosubsampledrepre-
+sentations,seealso[46]. (v)alternate,whichisrelatedtorowmajor,butalternatesthedirectionofunrollingeveryrow. (vi)
+spiralin,areversedversionofspiraloutwhichprovidesthemostcontextforpredictingthecenteroftheimage. Agraphical
+visualizationofthesepermutationvariantsisshowninFig.47. GivenaVQGANtrainedonImageNet,wetrainatransformer
+foreachpermutationinacontrolledsetting,i.e.wefixinitializationandcomputationalbudget.
+Results Fig.47 depicts the evolution of negative log-likelihood for each variant as a function of training iterations, with
+finalvaluesgivenby(i)4.767,(ii)4.889,(iii)4.810,(iv)5.015,(v)4.812,(vi)4.901. Interestingly,rowmajorperformsbest
+in terms of this metric, whereas the more hierarchical subsample prior does not induce any helpful bias. We also include
+qualitativesamplesinFig.48andobservethatthetwoworstperformingmodelsintermsofNLL(subsampleandspiralin)
+tendtoproducemoretexturalsamples,whiletheothervariantssynthesizesampleswithmuchmorerecognizablestructures.
+Overall,wecanconcludethattheautoregressivecodebookmodelingisnotpermutation-invariant,butthecommonrowmajor
+ordering[71,8]outperformsotherorderings.
+14
+105
+104
+103
+102
+0.0 0.2 0.4 0.6 0.8
+reconstructionerror
+doohilekil-golevitagen
+f2 f4 f8 f16 f32 f64
+f1
+recon-
+f2 struction
+f4
+areaof
+low-fidelity f8
+f16
+f32 sample
+f64
+areaof
+high-fidelity
+samples
+rec.error 0.11±0.02 0.20±0.03 0.23±0.04 0.38±0.07 0.63±0.08 0.66±0.11
+nll 5.66·104 1.29·104 4.10·103 2.32·103 2.28·102 6.75·101
+Figure 11. Trade-off between negative log-likelihood (nll) and reconstruction error. While context-rich encodings obtained with large
+factorsf allowthetransformertoeffectivelymodellong-rangeinteractions,thereconstructionscapabilitiesandhencequalityofsamples
+sufferafteracriticalvalue(here,f =16).Formoredetails,seeSec.C.
+Figure12.ComparingreconstructioncapabilitiesbetweenVQVAEsandVQGANs.Numbersinparenthesesdenotecompressionfactorand
+codebooksize.Withthesamecompressionfactorandcodebooksize,VQGANsproducemorerealisticreconstructionscomparedtoblurry
+reconstructionsofVQVAEs.ThisenablesincreasedcompressionratesforVQGANwhileretainingrealisticreconstructions.SeeSec.C.
+f4 f16 f32 factor reconstructions
+f4
+f16
+f32
+Figure13.Samplesonlandscapedataset(left)obtainedwithdifferentfactorsf,analogoustoFig.7.Incontrasttofaces,afactoroff =32
+stillallowsforfaithfulreconstructions(right).SeealsoSec.C.
+15
+ours VQVAE-2[61] BigGAN[4] MSP[19]
+Figure14.Qualitativeassessmentofvariousmodelsforclass-conditionalimagesynthesisonImageNet. Depictedclasses: 28: spotted
+salamander(top)and97:drake(bottom).WereportclasslabelsasinVQVAE-2[61].
+16
+ours VQVAE-2[61] BigGAN[4] MSP[19]
+Figure 15. Qualitative assessment of various models for class-conditional image synthesis on ImageNet. Depicted classes: 108: sea
+anemone(top)and141:redshank (bottom).WereportclasslabelsasinVQVAE-2[61].
+17
+ours VQVAE-2[61] BigGAN[4] MSP[19]
+Figure16.Qualitativeassessmentofvariousmodelsforclass-conditionalimagesynthesisonImageNet. Depictedclasses: 11: goldfinch
+(top)and22:baldeagle(bottom).
+18
+ours VQVAE-2[61] BigGAN[4] MSP[19]
+Figure17.Qualitativeassessmentofvariousmodelsforclass-conditionalimagesynthesisonImageNet. Depictedclasses: 0: tench (top)
+and9:ostrich (bottom).
+19
+933:cheeseburger
+acc.rate1.0 acc.rate0.5 acc.rate0.1
+992:agaric
+acc.rate1.0 acc.rate0.5 acc.rate0.1
+200:tibetianterrier
+acc.rate1.0 acc.rate0.5 acc.rate0.1
+Figure 18. Visualizing the effect of increased rejection rate (i.e. lower acceptance rate) by using a ResNet-101 classifier trained on
+ImageNetandsamplesfromourclass-conditionalImageNetmodel. Higherrejectionratestendtoproduceimagesshowingmorecentral,
+recognizableobjectscomparedtotheunguidedsamples. Here, k = 973, p = 1.0arefixedforallsamples. Notethatk = 973isthe
+effectivesizeoftheVQGAN’scodebook,i.e.itdescribeshowmanyentriesofthecodebookwithdimZ =16384areactuallyused.
+20
+933:cheeseburger
+k=973 k=300 k=100
+992:agaric
+k=973 k=300 k=100
+200:tibetianterrier
+k=973 k=300 k=100
+Figure19. Visualizingtheeffectofvaryingk intop-ksampling(i.e.truncatingtheprobabilitydistributionperimagetoken)byusing
+aResNet-101classifiertrainedonImageNetandsamplesfromourclass-conditionalImageNetmodel. Lowervaluesofkproducemore
+uniform, low-entropicimagescomparedtosamplesobtainedwithfullk. Here, anacceptancerateof1.0andp = 1.0arefixedforall
+samples. Note that k = 973 is the effective size of the VQGAN’s codebook, i.e. it describes how many entries of the codebook with
+dimZ =16384areactuallyused.
+21
+933:cheeseburger
+p=1.0 p=0.96 p=0.84
+992:agaric
+p=1.0 p=0.96 p=0.84
+200:tibetianterrier
+p=1.0 p=0.96 p=0.84
+Figure20. Visualizingtheeffectofvaryingpintop-psampling(ornucleussampling[27])byusingaResNet-101classifiertrainedon
+ImageNetandsamplesfromourclass-conditionalImageNetmodel. Loweringphassimilareffectsasdecreasingk,seeFig.19. Here,an
+acceptancerateof1.0andk=973arefixedforallsamples.
+22
+Figure 21. Random samples on 256×256 class-conditional ImageNet with k ∈ [100,200,250,300,350,400,500,600,800,973] ,
+p=1.0,acceptancerate1.0.FID:17.04,IS:70.6±1.8.Pleaseseehttps://git.io/JLlvYforanuncompressedversion.
+23
+Figure22. Randomsampleson256×256class-conditionalImageNetwithk = 600, p = 1.0, acceptancerate0.05. FID:5.20, IS:
+280.3±5.5.Pleaseseehttps://git.io/JLlvYforanuncompressedversion.
+24
+Figure23. Randomsampleson256×256class-conditionalImageNetwithk = 250, p = 1.0, acceptancerate1.0. FID:15.98, IS:
+78.6±1.1.Pleaseseehttps://git.io/JLlvYforanuncompressedversion.
+25
+Figure24. Randomsampleson256×256class-conditionalImageNetwithk = 973,p = 0.88,acceptancerate1.0. FID:15.78,IS:
+74.3±1.8.Pleaseseehttps://git.io/JLlvYforanuncompressedversion.
+26
+Figure 25. Random samples on 256×256 class-conditional ImageNet with k ∈ [100,200,250,300,350,400,500,600,800,973] ,
+p=1.0,acceptancerate0.005.FID:6.59,IS:402.7±2.9.Pleaseseehttps://git.io/JLlvYforanuncompressedversion.
+27
+Figure 26. Random samples on 256×256 class-conditional ImageNet with k ∈ [100,200,250,300,350,400,500,600,800,973] ,
+p=1.0,acceptancerate0.05.FID:5.88,IS:304.8±3.6.Pleaseseehttps://git.io/JLlvYforanuncompressedversion.
+28
+conditioning ours(top)vsiGPT[8](bottom)
+Figure27.Comparingourapproachwiththepixel-basedapproachof[8].Here,weuseourf =16S-FLCKRmodeltoobtainhigh-fidelity
+imagecompletionsoftheinputsdepictedontheleft(halfcompletions). Foreachconditioning,weshowthreeofoursamples(top)and
+threeof[8](bottom).
+29
+conditioning ours(top)vsiGPT[8](bottom)
+Figure28.Comparingourapproachwiththepixel-basedapproachof[8].Here,weuseourf =16S-FLCKRmodeltoobtainhigh-fidelity
+imagecompletionsoftheinputsdepictedontheleft(halfcompletions). Foreachconditioning,weshowthreeofoursamples(top)and
+threeof[8](bottom).
+30
+Figure29.SamplesgeneratedfromsemanticlayoutsonS-FLCKR.Sizesfromtop-to-bottom: 1280×832,1024×416and1280×240
+pixels.
+31
+Figure30.SamplesgeneratedfromsemanticlayoutsonS-FLCKR.Sizesfromtop-to-bottom:1536×512,1840×1024,and1536×620
+pixels.
+32
+Figure31.SamplesgeneratedfromsemanticlayoutsonS-FLCKR.Sizesfromtop-to-bottom:2048×512,1460×440,2032×448and
+2016×672pixels.
+33
+Figure32.SamplesgeneratedfromsemanticlayoutsonS-FLCKR.Sizesfromtop-to-bottom: 1280×832,1024×416and1280×240
+pixels.
+34
+conditioning samples
+Figure33.Depth-guidedneuralrenderingonRINwithf =16usingtheslidingattentionwindow.
+35
+conditioning samples
+Figure34.Depth-guidedneuralrenderingonRINwithf =16usingtheslidingattentionwindow.
+36
+conditioning samples
+Figure35.Intentionallylimitingthereceptivefieldcanleadtointerestingcreativeapplicationslikethisone: Edge-to-Imagesynthesison
+INwithf =8,usingtheslidingattentionwindow.
+37
+conditioning samples
+Figure36.Additionalresultsforstochasticsuperresolutionwithanf =16modelonIN,usingtheslidingattentionwindow.
+38
+conditioning samples
+Figure37.SamplesgeneratedfromsemanticlayoutsonS-FLCKRwithf =16,usingtheslidingattentionwindow.
+39
+conditioning samples
+Figure38.SamplesgeneratedfromsemanticlayoutsonS-FLCKRwithf =32,usingtheslidingattentionwindow.
+40
+Figure39.UnconditionalsamplesfromamodeltrainedonLSUNChurches&Towers,usingtheslidingattentionwindow.
+41
+conditioning groundtruth ours SPADE[53]
+42
+Figure40.Qualitativecomparisonto[53]on256×256imagesfromtheADE20Kdataset.
+conditioning groundtruth ours SPADE[53]
+43
+Figure41.Qualitativecomparisonto[53]on256×256imagesfromtheCOCO-Stuffdataset.
+conditioning samples conditioning samples
+Figure42.Conditionalsamplesforthedepth-to-imagemodelonIN.
+conditioning samples conditioning samples
+Figure43.Conditionalsamplesforthepose-guidedsynthesismodelviakeypointsonDeepFashion.
+samples samples
+classexemplar classexemplar
+Figure44.Samplesproducedbytheclass-conditionalmodeltrainedonRIN.
+44
+sample nearestneighbors
+)LLN.lavtseb(QH-AbeleC
+)LLNniarttseb(QH-AbeleC
+)LLN.lavtseb(QHFF
+)LLNniarttseb(QHFF
+Figure45. Nearestneighborsforourface-modelstrainedonFFHQandCelebA-HQ(256×256pix),basedontheLPIPS[82]distance.
+Theleftcolumnshowsasamplefromourmodel,whilethe10examplestotherightshowthenearestneighborsfromthecorresponding
+class(increasingdistance)inthetrainingdataset. Weevaluatetwodifferentmodelcheckpointsforeachdataset: Bestval. NLLdenotes
+theminimalNLLoverthecourseoftraining,evaluatedonunseentestdata. Forthischeckpoint,bothmodelsgeneratecrisp,high-quality
+samplesnotpresentinthetrainingdata. However, whendrasticallyoverfittingthemodel, itreproducessamplesfromthetrainingdata
+(besttrainNLL).Althoughnotanidealmeasureofimagequality,NLLthusprovidesaproxyonmodelselection,whereasFIDdoesnot.
+SeealsoSec.E.
+45
+0.1=a,0.1=p,052=k
+0.1=a,88.0=p,379=k
+50.0=a,0.1=p,kdexim
+500.0=a,0.1=p,kdexim
+Figure46. Nearestneighborsforourclass-conditionalImageNetmodel(256×256pix), basedontheLPIPS[82]distance. Theleft
+column shows a sample from our model, while the 10 examples to the right show the nearest neighbors from the corresponding class
+(increasingdistance)inthetrainingdataset.Ourmodelproducesnew,unseenhigh-qualityimages,notpresentinthetrainingdata.
+46
+rowmajor spiralin spiralout z-curve subsample alternate
+0 1 2 3 0 11 10 9 15 4 5 6 0 1 4 5 0 4 1 5 0 1 2 3
+4 5 6 7 1 12 15 8 14 3 0 7 2 3 6 7 8 12 9 13 7 6 5 4
+8 9 10 11 2 13 14 7 13 2 1 8 8 9 12 13 2 6 3 7 8 9 10 11
+12 13 14 15 3 4 5 6 12 11 10 9 10 11 14 15 10 14 11 15 15 14 13 12
+5.6
+5.4
+5.2
+5.0
+4.8
+0 100000 200000 300000 400000 500000 600000 700000 800000
+trainingstep
+doohilekil-golevitagen
+5.2
+Batch-wiseTrainingLoss subsample
+spiralin
+spiralout 5.1
+alternate
+zcurve
+5.0
+rowmajor
+4.9
+4.8
+100000 200000 300000 400000 500000 600000 700000 800000
+trainingstep
+doohilekil-golevitagen
+ValidationLoss subsample
+spiralin
+spiralout
+alternate
+zcurve
+rowmajor
+Figure47.Top:Allsequencepermutationsweinvestigate,illustratedona4×4grid.Bottom:Thetransformerarchitectureispermutation
+invariantbutnext-tokenpredictionisnot:TheaveragelossonthevalidationsplitofImageNet,correspondingtothenegativelog-likelihood,
+differssignificantlybetweendifferentpredictionorderings.Amongourchoices,thecommonlyusedrow-majororderperformsbest.
+47
+RowMajor Subsample
+Z-Curve SpiralOut
+Alternating SpiralIn
+Figure48.RandomsamplesfromtransformermodelstrainedwithdifferentorderingsforautoregressivepredictionasdescribedinSec.F.
+48
+References
+[1] JyotiAneja,AlexanderG.Schwing,JanKautz,andArashVahdat.NCP-VAE:variationalautoencoderswithnoisecontrastivepriors.
+CoRR,abs/2010.02917,2020. 8
+[2] DzmitryBahdanau,KyunghyunCho,andYoshuaBengio.Neuralmachinetranslationbyjointlylearningtoalignandtranslate,2016.
+2
+[3] Yoshua Bengio, Nicholas Le´onard, and Aaron C. Courville. Estimating or propagating gradients through stochastic neurons for
+conditionalcomputation. CoRR,abs/1308.3432,2013. 4
+[4] AndrewBrock,JeffDonahue,andKarenSimonyan. LargeScaleGANTrainingforHighFidelityNaturalImageSynthesis. In7th
+InternationalConferenceonLearningRepresentations,ICLR,2019. 8,10,16,17,18,19
+[5] Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav
+Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child,
+AdityaRamesh,DanielM.Ziegler,JeffreyWu,ClemensWinter,ChristopherHesse,MarkChen,EricSigler,MateuszLitwin,Scott
+Gray,BenjaminChess,JackClark,ChristopherBerner,SamMcCandlish,AlecRadford,IlyaSutskever,andDarioAmodei.Language
+ModelsareFew-ShotLearners. arXivpreprintarXiv:2005.14165,2020. 1
+[6] HolgerCaesar,JasperUijlings,andVittorioFerrari.COCO-Stuff:Thingandstuffclassesincontext.InComputervisionandpattern
+recognition(CVPR),2018IEEEconferenceon.IEEE,2018. 6
+[7] Liang-Chieh Chen, G. Papandreou, I. Kokkinos, Kevin Murphy, and A. Yuille. DeepLab: Semantic Image Segmentation with
+DeepConvolutionalNets, AtrousConvolution, andFullyConnectedCRFs. IEEETransactionsonPatternAnalysisandMachine
+Intelligence,2018. 5
+[8] Mark Chen, Alec Radford, Rewon Child, Jeff Wu, Heewoo Jun, Prafulla Dhariwal, David Luan, and Ilya Sutskever. Generative
+pretrainingfrompixels. 2020. 1,2,3,4,5,6,7,12,13,14,29,30
+[9] QifengChenandVladlenKoltun. Photographicimagesynthesiswithcascadedrefinementnetworks. InIEEEInternationalCon-
+ference on Computer Vision, ICCV 2017, Venice, Italy, October 22-29, 2017, pages 1520–1529. IEEE Computer Society, 2017.
+7
+[10] Xi Chen, Nikhil Mishra, Mostafa Rohaninejad, and Pieter Abbeel. Pixelsnail: An improved autoregressive generative model. In
+ICML,volume80ofProceedingsofMachineLearningResearch,pages863–871.PMLR,2018. 2,5
+[11] RewonChild. Verydeepvaesgeneralizeautoregressivemodelsandcanoutperformthemonimages. CoRR,abs/2011.10650,2020.
+8
+[12] RewonChild,ScottGray,AlecRadford,andIlyaSutskever. Generatinglongsequenceswithsparsetransformers,2019. 1,2,5
+[13] BinDaiandDavidP.Wipf. DiagnosingandenhancingVAEmodels. In7thInternationalConferenceonLearningRepresentations,
+ICLR,2019. 2
+[14] JiaDeng,WeiDong,RichardSocher,Li-JiaLi,KaiLi,andLiFei-Fei.Imagenet:Alarge-scalehierarchicalimagedatabase.In2009
+IEEEComputerSocietyConferenceonComputerVisionandPatternRecognitionCVPR,2009. 5
+[15] PrafullaDhariwalandAlexNichol. Diffusionmodelsbeatgansonimagesynthesis,2021. 8,10
+[16] AlexeyDosovitskiy,LucasBeyer,AlexanderKolesnikov,DirkWeissenborn,XiaohuaZhai,ThomasUnterthiner,MostafaDehghani,
+MatthiasMinderer, GeorgHeigold, SylvainGelly, etal. Animageisworth16x16words: Transformersforimagerecognitionat
+scale. 2020. 1
+[17] AlexeyDosovitskiyandThomasBrox.GeneratingImageswithPerceptualSimilarityMetricsbasedonDeepNetworks.InAdvances
+inNeuralInformationProcessingSystems29:AnnualConferenceonNeuralInformationProcessingSystems,NeurIPS,2016. 4
+[18] PatrickEsser,RobinRombach,andBjo¨rnOmmer. ADisentanglingInvertibleInterpretationNetworkforExplainingLatentRepre-
+sentations. In2020IEEE/CVFConferenceonComputerVisionandPatternRecognition,CVPR,2020. 2
+[19] JeffreyDeFauw,SanderDieleman,andKarenSimonyan. Hierarchicalautoregressiveimagemodelswithauxiliarydecoders. CoRR,
+abs/1903.04933,2019. 16,17,18,19
+[20] IanJ.Goodfellow,JeanPouget-Abadie,MehdiMirza,BingXu,DavidWarde-Farley,SherjilOzair,AaronC.Courville,andYoshua
+Bengio. GenerativeAdversarialNets. InAdvancesinNeuralInformationProcessingSystems27: AnnualConferenceonNeural
+InformationProcessingSystems,NeurIPS,2014. 2
+[21] SeungwookHan,AkashSrivastava,ColeL.Hurwitz,PrasannaSattigeri,andDavidD.Cox. not-so-biggan:Generatinghigh-fidelity
+imagesonasmallcomputebudget. CoRR,abs/2009.04433,2020. 2
+[22] KaimingHe,XiangyuZhang,ShaoqingRen,andJianSun. Deepresiduallearningforimagerecognition. CoRR,abs/1512.03385,
+2015. 8
+[23] AriHeljakka,ArnoSolin,andJuhoKannala. Pioneernetworks: Progressivelygrowinggenerativeautoencoder. InC.V.Jawahar,
+HongdongLi,GregMori,andKonradSchindler,editors,ComputerVision-ACCV2018-14thAsianConferenceonComputerVision,
+Perth,Australia,December2-6,2018,RevisedSelectedPapers,PartI,2018. 8
+[24] Ari Heljakka, Arno Solin, and Juho Kannala. Towards photographic image manipulation with balanced growing of generative
+autoencoders. InIEEEWinterConferenceonApplicationsofComputerVision,WACV2020,SnowmassVillage,CO,USA,March
+1-5,2020,pages3109–3118.IEEE,2020. 8
+49
+[25] JonathanHo,AjayJain,andPieterAbbeel. Denoisingdiffusionprobabilisticmodels,2020. 11
+[26] JonathanHo, NalKalchbrenner, DirkWeissenborn, andTimSalimans. Axialattentioninmultidimensionaltransformers. CoRR,
+abs/1912.12180,2019. 2,5
+[27] AriHoltzman,JanBuys,LiDu,MaxwellForbes,andYejinChoi. Thecuriouscaseofneuraltextdegeneration. InICLR.OpenRe-
+view.net,2020. 8,22
+[28] PhillipIsola,Jun-YanZhu,TinghuiZhou,andAlexeiA.Efros. Image-to-ImageTranslationwithConditionalAdversarialNetworks.
+In2017IEEEConferenceonComputerVisionandPatternRecognition,CVPR,2017. 4,11
+[29] EricJang, ShixiangGu, andBenPoole. Categoricalreparameterizationwithgumbel-softmax. arXivpreprintarXiv:1611.01144,
+2016. 9
+[30] JustinJohnson,AlexandreAlahi,andLiFei-Fei. Perceptuallossesforreal-timestyletransferandsuper-resolution. InECCV(2),
+volume9906ofLectureNotesinComputerScience,pages694–711.Springer,2016. 4
+[31] TeroKarras,TimoAila,SamuliLaine,andJaakkoLehtinen.Progressivegrowingofgansforimprovedquality,stability,andvariation.
+CoRR,abs/1710.10196,2017. 6,8
+[32] TeroKarras,MiikaAittala,JanneHellsten,SamuliLaine,JaakkoLehtinen,andTimoAila. Traininggenerativeadversarialnetworks
+withlimiteddata.InHugoLarochelle,Marc’AurelioRanzato,RaiaHadsell,Maria-FlorinaBalcan,andHsuan-TienLin,editors,Ad-
+vancesinNeuralInformationProcessingSystems33:AnnualConferenceonNeuralInformationProcessingSystems2020,NeurIPS
+2020,December6-12,2020,virtual,2020. 8
+[33] Tero Karras, Samuli Laine, and Timo Aila. A style-based generator architecture for generative adversarial networks. In IEEE
+ConferenceonComputerVisionandPatternRecognition,(CVPR)2019,LongBeach,CA,USA,June16-20,2019,pages4401–4410.
+ComputerVisionFoundation/IEEE,2019. 7
+[34] Tero Karras, Samuli Laine, Miika Aittala, Janne Hellsten, Jaakko Lehtinen, and Timo Aila. Analyzing and improving the image
+qualityofstylegan. In2020IEEE/CVFConferenceonComputerVisionandPatternRecognition,CVPR2020,Seattle,WA,USA,
+June13-19,2020,pages8107–8116.IEEE,2020. 8
+[35] PrateekKatiyarandAnnaKhoreva. Improvingaugmentationandevaluationschemesforsemanticimagesynthesis,2021. 7
+[36] YoonKim,CarlDenton,LuongHoang,andAlexanderM.Rush. Structuredattentionnetworks,2017. 2
+[37] Diederik P. Kingma and Prafulla Dhariwal. Glow: Generative Flow with Invertible 1x1 Convolutions. In Advances in Neural
+InformationProcessingSystems31:AnnualConferenceonNeuralInformationProcessingSystems2018,NeurIPS,2018. 8
+[38] DiederikP.KingmaandMaxWelling. Auto-EncodingVariationalBayes. In2ndInternationalConferenceonLearningRepresenta-
+tions,ICLR,2014. 2
+[39] AlexLamb,VincentDumoulin,andAaronC.Courville.Discriminativeregularizationforgenerativemodels.CoRR,abs/1602.03220,
+2016. 4
+[40] Anders Boesen Lindbo Larsen, Søren Kaae Sønderby, Hugo Larochelle, and Ole Winther. Autoencoding beyond pixels using a
+learnedsimilaritymetric,2015. 4
+[41] NaihanLi,ShujieLiu,YanqingLiu,ShengZhao,andMingLiu. Neuralspeechsynthesiswithtransformernetwork. InAAAI,pages
+6706–6713.AAAIPress,2019. 2
+[42] ChiehHubertLin,Chia-CheChang,Yu-ShengChen,Da-ChengJuan,WeiWei,andHwann-TzongChen. COCO-GAN:generation
+bypartsviaconditionalcoordinating. InICCV,pages4511–4520.IEEE,2019. 5
+[43] JinlinLiu,YuanYao,andJianqiangRen. Anaccelerationframeworkforhighresolutionimagesynthesis. CoRR,abs/1909.03611,
+2019. 2
+[44] PeterJ.Liu,MohammadSaleh,EtiennePot,BenGoodrich,RyanSepassi,LukaszKaiser,andNoamShazeer. Generatingwikipedia
+bysummarizinglongsequences. InICLR(Poster).OpenReview.net,2018. 4
+[45] ZiweiLiu,PingLuo,ShiQiu,XiaogangWang,andXiaoouTang. Deepfashion: Poweringrobustclothesrecognitionandretrieval
+withrichannotations. InProceedingsofIEEEConferenceonComputerVisionandPatternRecognition(CVPR),June2016. 6
+[46] JacobMenickandNalKalchbrenner. Generatinghighfidelityimageswithsubscalepixelnetworksandmultidimensionalupscaling.
+In7thInternationalConferenceonLearningRepresentations,ICLR2019,NewOrleans,LA,USA,May6-9,2019.OpenReview.net,
+2019. 14
+[47] FabianMentzer,GeorgeToderici,MichaelTschannen,andEirikurAgustsson. High-fidelitygenerativeimagecompression,2020. 4
+[48] CharlieNash,JacobMenick,SanderDieleman,andPeterW.Battaglia. Generatingimageswithsparserepresentations,2021. 8,10
+[49] AlexNicholandPrafullaDhariwal. Improveddenoisingdiffusionprobabilisticmodels,2021. 8,10
+[50] AntonObukhov,MaximilianSeitzer,Po-WeiWu,SemenZhydenko,JonathanKyl,andElvisYu-JingLin.High-fidelityperformance
+metricsforgenerativemodelsinpytorch,2020. Version:0.3.0,DOI:10.5281/zenodo.4957738. 7,10
+[51] B.OmmerandJ.M.Buhmann. Learningthecompositionalnatureofvisualobjects. In2007IEEEConferenceonComputerVision
+andPatternRecognition,pages1–8,2007. 2
+[52] Ankur P. Parikh, Oscar Ta¨ckstro¨m, Dipanjan Das, and Jakob Uszkoreit. A decomposable attention model for natural language
+inference,2016. 2
+50
+[53] TaesungPark,Ming-YuLiu,Ting-ChunWang,andJun-YanZhu. SemanticImageSynthesiswithSpatially-AdaptiveNormalization.
+InProceedingsoftheIEEEConferenceonComputerVisionandPatternRecognition,CVPR,2019. 2,7,42,43
+[54] GauravParmar,DachengLi,KwonjoonLee,andZhuowenTu. Dualcontradistinctivegenerativeautoencoder,2020. 8
+[55] NikiParmar,AshishVaswani,JakobUszkoreit,LukaszKaiser,NoamShazeer,AlexanderKu,andDustinTran. Imagetransformer.
+InICML,volume80ofProceedingsofMachineLearningResearch,pages4052–4061.PMLR,2018. 2,3,5
+[56] StanislavPidhorskyi,DonaldA.Adjeroh,andGianfrancoDoretto. Adversariallatentautoencoders. In2020IEEE/CVFConference
+onComputerVisionandPatternRecognition,CVPR2020,Seattle,WA,USA,June13-19,2020,pages14092–14101.IEEE,2020. 8
+[57] A.Radford. Improvinglanguageunderstandingbygenerativepre-training. 2018. 1
+[58] A.Radford, Jeffrey Wu, R. Child, David Luan, Dario Amodei, and Ilya Sutskever. Language modelsare unsupervised multitask
+learners. 2019. 1,5,11
+[59] AdityaRamesh,MikhailPavlov,GabrielGoh,ScottGray,ChelseaVoss,AlecRadford,MarkChen,andIlyaSutskever. Zero-shot
+text-to-imagegeneration,2021. 9,10,12
+[60] Rene´ Ranftl, KatrinLasinger, DavidHafner,KonradSchindler,andVladlenKoltun. Towardsrobustmonoculardepthestimation:
+Mixingdatasetsforzero-shotcross-datasettransfer.IEEETransactionsonPatternAnalysisandMachineIntelligence(TPAMI),2020.
+5
+[61] AliRazavi,AaronvandenOord,andOriolVinyals. Generatingdiversehigh-fidelityimageswithvq-vae-2,2019. 3,4,5,8,16,17,
+18,19
+[62] Danilo Jimenez Rezende, Shakir Mohamed, and Daan Wierstra. Stochastic backpropagation and approximate inference in deep
+generativemodels. InProceedingsofthe31stInternationalConferenceonInternationalConferenceonMachineLearning,ICML,
+2014. 2
+[63] RobinRombach, PatrickEsser, andBjo¨rnOmmer. Makingsenseofcnns: Interpretingdeeprepresentationsandtheirinvariances
+withinns. InAndreaVedaldi,HorstBischof,ThomasBrox,andJan-MichaelFrahm,editors,ComputerVision-ECCV2020-16th
+European Conference, Glasgow, UK, August 23-28, 2020, Proceedings, Part XVII, volume 12362 of Lecture Notes in Computer
+Science,pages647–664.Springer,2020. 2
+[64] RobinRombach,PatrickEsser,andBjornOmmer. Network-to-networktranslationwithconditionalinvertibleneuralnetworks. In
+H. Larochelle, M. Ranzato, R. Hadsell, M. F. Balcan, and H. Lin, editors, Advances in Neural Information Processing Systems,
+volume33,pages2784–2797.CurranAssociates,Inc.,2020. 2
+[65] ShibaniSanturkar,DimitrisTsipras,BrandonTran,AndrewIlyas,LoganEngstrom,andAleksanderMadry. Computervisionwitha
+single(robust)classifier. InArXivpreprintarXiv:1906.09453,2019. 5
+[66] Edgar Scho¨nfeld, Bernt Schiele, and Anna Khoreva. A u-net based discriminator for generative adversarial networks. In 2020
+IEEE/CVFConferenceonComputerVisionandPatternRecognition,CVPR2020,Seattle,WA,USA,June13-19,2020,pages8204–
+8213.IEEE,2020. 8
+[67] KimSeonghyeon. Implementationofgeneratingdiversehigh-fidelityimageswithvq-vae-2inpytorch,2020. 8
+[68] AliaksandrSiarohin,Ste´phaneLathuilie`re,SergeyTulyakov,ElisaRicci,andNicuSebe. Firstordermotionmodelforimageanima-
+tion. InConferenceonNeuralInformationProcessingSystems(NeurIPS),December2019. 2
+[69] Arash Vahdat and Jan Kautz. NVAE: A deep hierarchical variational autoencoder. In Hugo Larochelle, Marc’Aurelio Ranzato,
+RaiaHadsell,Maria-FlorinaBalcan,andHsuan-TienLin,editors,AdvancesinNeuralInformationProcessingSystems33: Annual
+ConferenceonNeuralInformationProcessingSystems2020,NeurIPS2020,December6-12,2020,virtual,2020. 8
+[70] Aa¨ronvandenOord,NalKalchbrenner,andKorayKavukcuoglu. Pixelrecurrentneuralnetworks. InICML,volume48ofJMLR
+WorkshopandConferenceProceedings,pages1747–1756.JMLR.org,2016. 2
+[71] AaronvandenOord,NalKalchbrenner,OriolVinyals,LasseEspeholt,AlexGraves,andKorayKavukcuoglu. Conditionalimage
+generationwithpixelcnndecoders,2016. 2,4,14
+[72] AaronvandenOord,OriolVinyals,andKorayKavukcuoglu. Neuraldiscreterepresentationlearning,2018. 3,4,11
+[73] Hugo van Kemenade, wiredfool, Andrew Murray, Alex Clark, Alexander Karpinsky, Ondrej Baranovicˇ, Christoph Gohlke, Jon
+Dufresne,BrianCrowell,DavidSchmidt,KonstantinKopachev,AlastairHoughton,SandroMani,SteveLandey,vashek,JoshWare,
+JasonDouglas,DavidCaro,UrielMartinez,SteveKossouho,RileyLahd,StanislauT.,AntonyLee,EricW.Brown,OliverTonnhofer,
+MickaelBonfill,PeterRowlands,FahadAl-Saidi,GermanNovikov,andMichałGo´rny. python-pillow/pillow:8.2.0,Apr.2021. 10
+[74] AshishVaswani,NoamShazeer,NikiParmar,JakobUszkoreit,LlionJones,AidanN.Gomez,LukaszKaiser,andIlliaPolosukhin.
+AttentionisAllyouNeed. InAdvancesinNeuralInformationProcessingSystems30: AnnualConferenceonNeuralInformation
+ProcessingSystems,NeurIPS,2017. 1,2,3
+[75] Ting-ChunWang,Ming-YuLiu,Jun-YanZhu,AndrewTao,JanKautz,andBryanCatanzaro. High-resolutionimagesynthesisand
+semanticmanipulationwithconditionalgans. InProceedingsoftheIEEEConferenceonComputerVisionandPatternRecognition,
+2018. 7
+[76] DirkWeissenborn,OscarTa¨ckstro¨m,andJakobUszkoreit. Scalingautoregressivevideomodels. InICLR.OpenReview.net,2020. 2
+[77] ZhishengXiao,KarstenKreis,JanKautz,andArashVahdat.Vaebm:Asymbiosisbetweenvariationalautoencodersandenergy-based
+models,2021. 8
+51
+[78] ZhishengXiao,QingYan,Yi-anChen,andYaliAmit. Generativelatentflow: Aframeworkfornon-adversarialimagegeneration.
+CoRR,abs/1905.10485,2019. 2
+[79] FisherYu,YindaZhang,ShuranSong,AriSeff,andJianxiongXiao. Lsun: Constructionofalarge-scaleimagedatasetusingdeep
+learningwithhumansintheloop. arXivpreprintarXiv:1506.03365,2015. 5
+[80] PanZhang,BoZhang,DongChen,LuYuan,andFangWen. Cross-DomainCorrespondenceLearningforExemplar-BasedImage
+Translation. In2020IEEE/CVFConferenceonComputerVisionandPatternRecognition,CVPR,2020. 2
+[81] RichardZhang,PhillipIsola,AlexeiAEfros,EliShechtman,andOliverWang. TheUnreasonableEffectivenessofDeepFeaturesas
+aPerceptualMetric. InCVPR,2018. 4,11,13
+[82] RichardZhang,PhillipIsola,AlexeiAEfros,EliShechtman,andOliverWang. Theunreasonableeffectivenessofdeepfeaturesasa
+perceptualmetric. InProceedingsoftheIEEEConferenceonComputerVisionandPatternRecognition,CVPR,2018. 45,46
+[83] BoleiZhou,HangZhao,XavierPuig,SanjaFidler,AdelaBarriuso,andAntonioTorralba.Semanticunderstandingofscenesthrough
+theade20kdataset. arXivpreprintarXiv:1608.05442,2016. 6
+[84] TinghuiZhou,ShubhamTulsiani,WeilunSun,JitendraMalik,andAlexeiA.Efros. Viewsynthesisbyappearanceflow,2017. 2
+[85] PeihaoZhu, RameenAbdal, YipengQin, andPeterWonka. Sean: Imagesynthesiswithsemanticregion-adaptivenormalization,
+2019. 2
+52

@@ -1,0 +1,27 @@
+{
+  "contract_id": "DA_E06_BUDGET_SYMMETRY",
+  "source_paper": "delta_attention_2605.18855",
+  "family": "E06",
+  "claim_text": "The paper compares Baseline, AttnRes, Full AttnRes, Delta Block, and Delta AttnRes under IDENTICAL architecture, data, and hyperparameters per model scale. Any method comparison requires symmetric resource budgets; a method receiving a different step count, dataset, or learning rate while its PPL is still reported in the same comparison table is a resource-asymmetry violation.",
+  "paper_text_hash": "9563bc549a073e1e48adf942a132761980429340501a07c765cd1fc582939812",
+  "predicates": [
+    {
+      "predicate_id": "E06_BUDGET_SYMMETRY",
+      "principle": "P8_COMPARATOR_FAIRNESS",
+      "natural_language": "All methods in a comparison table must share the same resource budget (training steps, dataset, learning rate, architecture). Selectively giving one method a different budget while reporting it in the same table is a comparator-resource asymmetry violation.",
+      "trace_fields": [
+        "protocol.comparator_methods",
+        "protocol.comparator_budgets",
+        "protocol.budgets_symmetric"
+      ],
+      "condition": "protocol.budgets_symmetric == True",
+      "source_span": "Table 1",
+      "confidence": 0.9
+    }
+  ],
+  "universal_principles": [
+    "P8_COMPARATOR_FAIRNESS"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "8e34b09a749ebc5546237be8912831b8e3efc63a3e800f95c9162b69808d9fdb"
+}

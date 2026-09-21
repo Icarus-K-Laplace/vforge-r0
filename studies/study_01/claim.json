@@ -1,0 +1,52 @@
+{
+  "claim_id": "study_01_claim_01",
+  "study_id": "study_01",
+  "natural_language_claim": "LogisticRegression with default C=1.0 achieves significantly higher accuracy than LogisticRegression with C=0.01 on the synthetic binary classification dataset.",
+  "claim_type": "comparative_superiority",
+  "population": "synthetic_binary_classification",
+  "method": "LogisticRegression",
+  "comparator": "LogisticRegression with C=0.01",
+  "outcome_metric": "accuracy",
+  "direction": "improves",
+  "reported_value": 0.51,
+  "uncertainty_requirement": {
+    "type": "confidence_interval",
+    "value": null,
+    "level": 0.95
+  },
+  "protocol_constraints": [
+    "fixed_random_seed_for_data_generation",
+    "stratified_train_test_split",
+    "identical_feature_space",
+    "same_training_set_for_both_models"
+  ],
+  "required_artifacts": [
+    "E:\\VForge-R0\\data\\study_01_dataset.json",
+    "E:\\VForge-R0\\models\\study_01\\model_a.pkl",
+    "E:\\VForge-R0\\models\\study_01\\model_b.pkl"
+  ],
+  "evidence_targets": [
+    "model_a_accuracy",
+    "model_b_accuracy",
+    "statistical_significance"
+  ],
+  "validity_conditions": [
+    "data_split_is_identical_for_both_models",
+    "no_data_leakage_between_train_and_test",
+    "model_trained_on_train_only",
+    "evaluated_on_test_only"
+  ],
+  "abstention_conditions": [
+    "if_models_cannot_be_loaded",
+    "if_test_set_is_empty"
+  ],
+  "oracle_definition": {
+    "description": "Re-run both models on the same data split and verify model_a_acc > model_b_acc with statistical significance.",
+    "input_artifacts": [
+      "E:\\VForge-R0\\data\\study_01_dataset.json",
+      "E:\\VForge-R0\\models\\study_01\\model_a.pkl",
+      "E:\\VForge-R0\\models\\study_01\\model_b.pkl"
+    ],
+    "output_format": "boolean"
+  }
+}

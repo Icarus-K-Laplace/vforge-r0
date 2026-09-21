@@ -1,0 +1,38 @@
+{
+  "experiment_id": "VForge-R0-C-001",
+  "protocol_version": "R0-C",
+  "date": "2026-09-20",
+  "status": "STRONG_GO",
+  
+  "data": {
+    "n_studies": 5,
+    "n_mutants_total": 136,
+    "n_valid_mutants": 96,
+    "n_benign_controls": 40
+  },
+  
+  "results": {
+    "B0": {"mk r": 0.417, "pass": 56, "fail": 40, "abstain": 0},
+    "B1": {"mk r": 0.500, "pass": 0, "fail": 48, "abstain": 48},
+    "V0": {"mk r": 0.500, "pass": 0, "fail": 48, "abstain": 48},
+    "SI": {"mk r": 1.000, "pass": 0, "fail": 96, "abstain": 0}
+  },
+  
+  "primary_comparison": {
+    "SI_vs_V0_delta": 0.500,
+    "SI_vs_V0_significant": true
+  },
+  
+  "m03_analysis": {
+    "V0_MKR": 0.0,
+    "SI_MKR": 1.0,
+    "improvement": 1.0
+  },
+  
+  "novelty": {
+    "status": "CLEAR_CANDIDATE",
+    "collision": false
+  },
+  
+  "generalization_headroom": "YES"
+}

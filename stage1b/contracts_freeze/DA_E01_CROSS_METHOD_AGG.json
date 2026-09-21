@@ -1,0 +1,27 @@
+{
+  "contract_id": "DA_E01_CROSS_METHOD_AGG",
+  "source_paper": "delta_attention_2605.18855",
+  "family": "E01",
+  "claim_text": "Per-scale results report a Val PPL for each method independently. Any cross-method 'mean PPL' aggregation at a scale must use ALL declared methods; selecting a subset is a selective-aggregation violation.",
+  "paper_text_hash": "9563bc549a073e1e48adf942a132761980429340501a07c765cd1fc582939812",
+  "predicates": [
+    {
+      "predicate_id": "E01_ALL_METHODS",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "A cross-method mean PPL at a model scale must be computed over ALL declared methods; no method may be selectively omitted.",
+      "trace_fields": [
+        "protocol.declared_methods",
+        "protocol.reported_methods",
+        "outputs.reported_value"
+      ],
+      "condition": "set(protocol.reported_methods) == set(protocol.declared_methods)",
+      "source_span": "Table 1",
+      "confidence": 0.85
+    }
+  ],
+  "universal_principles": [
+    "P6_AGGREGATION_FIDELITY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "51a11528cc50165ee8fc6dd8bea65e3577779b8eccbff7ab01f5bb6e5409c0b0"
+}

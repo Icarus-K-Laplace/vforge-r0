@@ -1,0 +1,10 @@
+{
+  "candidate_id": "CAND-06",
+  "paper_title": "A Fair Comparison of Graph Neural Networks for Graph Classification",
+  "venue_year": "ICLR 2020",
+  "deviation_category": "C4_comparator_asymmetry",
+  "blind_metadata": {
+    "declared_protocol_source": "Paper Methods section of A Fair Comparison of Graph Neural Networks for Graph Classification",
+    "execution_target_repo": "https://github.com/diningphil/gnn-comparison"
+  }
+}

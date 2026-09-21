@@ -1,0 +1,48 @@
+{
+  "trace_id": "RDML_E01_SOP_GenLifted_Tplus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "SOP_GenLifted_s0",
+    "SOP_GenLifted_s1",
+    "SOP_GenLifted_s2",
+    "SOP_GenLifted_s3",
+    "SOP_GenLifted_s4"
+  ],
+  "protocol": {
+    "dataset": "SOP",
+    "method": "GenLifted",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_SOP_GenLifted_s0",
+      "RDML_E01_SOP_GenLifted_s1",
+      "RDML_E01_SOP_GenLifted_s2",
+      "RDML_E01_SOP_GenLifted_s3",
+      "RDML_E01_SOP_GenLifted_s4"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.7477,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_SOP_GenLifted_s0",
+        "RDML_E01_SOP_GenLifted_s1",
+        "RDML_E01_SOP_GenLifted_s2",
+        "RDML_E01_SOP_GenLifted_s3",
+        "RDML_E01_SOP_GenLifted_s4"
+      ]
+    }
+  },
+  "is_counterfactual": false,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "41d5e93a80325b76458a515f4ea1bd0ed56ce7b02456d7aafe67041cddb6ad2a"
+}

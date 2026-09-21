@@ -1,0 +1,45 @@
+{
+  "stage": "R1-C-BLIND-CONTRACTS",
+  "contracts": [
+    {
+      "candidate_id": "CAND-01",
+      "contract_id": "CAND-01_CONTRACT",
+      "hash": "c349011587ac1ccf64be7b641d2aef151d8cfe223991e14335e779260272a52f"
+    },
+    {
+      "candidate_id": "CAND-02",
+      "contract_id": "CAND-02_CONTRACT",
+      "hash": "cbd2bc1e33e8cb6b41a8ca949c39c886708673d22da2a1ad2cda497211230f95"
+    },
+    {
+      "candidate_id": "CAND-03",
+      "contract_id": "CAND-03_CONTRACT",
+      "hash": "955adda8e473690f903eaf970a6ea710ed3a668dc6cf8b83509fcf7730694e04"
+    },
+    {
+      "candidate_id": "CAND-04",
+      "contract_id": "CAND-04_CONTRACT",
+      "hash": "a9b373e0a5ab4ee99d3e7847dcdca16e44e2c466629782a16a86938861ba1ac5"
+    },
+    {
+      "candidate_id": "CAND-05",
+      "contract_id": "CAND-05_CONTRACT",
+      "hash": "4b763f219745f8e1dafddee4d40aacd76bb93b6154b625960c91454bb5d6d818"
+    },
+    {
+      "candidate_id": "CAND-06",
+      "contract_id": "CAND-06_CONTRACT",
+      "hash": "7d9f5c4f2075ec8571910f9ab58a0015f2e32cdc5add965ff334eeac7f550475"
+    },
+    {
+      "candidate_id": "CAND-07",
+      "contract_id": "CAND-07_CONTRACT",
+      "hash": "59ddfb29292fad5a5c5039c82cbc132a361175a748c2c4d34698ac3351c3497f"
+    },
+    {
+      "candidate_id": "CAND-08",
+      "contract_id": "CAND-08_CONTRACT",
+      "hash": "1d9e1aa03a7753b52b7026b4e97e1b487514c8ea74141ad2866a6111b535a7f1"
+    }
+  ]
+}

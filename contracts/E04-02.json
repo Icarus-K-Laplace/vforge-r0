@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E04-02",
+  "source_paper": "E04-02",
+  "family": "E04",
+  "paper_text_hash": "21069945e2554c805f375738457beb01e4e89f8b6a6cc80e9f34c1010a576f30",
+  "source_span": "Per-cohort F1 is reported for every cohort in the dataset.",
+  "predicates": [
+    {
+      "predicate_id": "P7_SUBGROUPS",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "All declared subgroups must appear in the reported outputs.",
+      "trace_fields": [
+        "protocol",
+        "declared_subgroups",
+        "protocol",
+        "reported_subgroups"
+      ],
+      "condition": "set(protocol.reported_subgroups) == set(protocol.declared_subgroups)",
+      "source_span": "Per-cohort F1 is reported for every cohort in the dataset.",
+      "confidence": 0.85
+    }
+  ],
+  "universal_principles": [
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "ef360cf0bae3a989a8deb12d1993ec33176ac5f2b2b2765104880643a58fc4ad"
+}

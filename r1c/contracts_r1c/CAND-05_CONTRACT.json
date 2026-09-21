@@ -1,0 +1,22 @@
+{
+  "contract_id": "CAND-05_CONTRACT",
+  "candidate_id": "CAND-05",
+  "source_paper": "ALBERT: A Lite BERT for Self-supervised Learning of Language Representations",
+  "deviation_category": "C5_runtime_protocol_mismatch",
+  "claim_text": "In paper 'ALBERT: A Lite BERT for Self-supervised Learning of Language Representations', actual runtime execution configuration (data augmentation, strides, evaluation options) must identically match the declared protocol in the paper text.",
+  "predicates": [
+    {
+      "predicate_id": "RUNTIME_PROTOCOL_FIDELITY",
+      "principle": "P3_EXECUTION_PROTOCOL_MATCH",
+      "natural_language": "Runtime evaluation flags and options must be identical to those declared in the paper methods.",
+      "trace_fields": [
+        "protocol.declared_options",
+        "protocol.runtime_options"
+      ],
+      "condition": "protocol.runtime_options == protocol.declared_options",
+      "confidence": 0.9
+    }
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "4b763f219745f8e1dafddee4d40aacd76bb93b6154b625960c91454bb5d6d818"
+}

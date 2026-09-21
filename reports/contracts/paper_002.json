@@ -1,0 +1,81 @@
+{
+  "contract_id": "CONTRACT_paper_002",
+  "source_paper": "paper_002",
+  "claim": {
+    "claim_id": "CLAIM_paper_002",
+    "source_paper": "paper_002",
+    "natural_language_claim": "Our proposed method achieves Dice score of 0",
+    "population": "",
+    "method": "",
+    "comparator": "",
+    "metric": "",
+    "direction": "",
+    "scope": "",
+    "evaluation_split": "",
+    "aggregation_rule": "mean",
+    "selection_rule": "none",
+    "uncertainty_requirement": {
+      "type": "none",
+      "value": null,
+      "level": 0.95
+    },
+    "required_evidence": [
+      "aggregation_code",
+      "selection_procedure",
+      "validation_set",
+      "raw_metrics"
+    ],
+    "validity_conditions": [
+      "Model selection must use held-out data, not test data",
+      "Reported metrics must faithfully represent computations"
+    ],
+    "abstention_conditions": [
+      "No selection information available",
+      "No metric information available"
+    ],
+    "source_spans": {}
+  },
+  "invariants": [
+    {
+      "invariant_id": "INV_001",
+      "source_principle": "P4_SELECTION_SEPARATION",
+      "natural_language": "Model selection must use held-out data, not test data",
+      "machine_readable": {
+        "type": "selection_separation",
+        "check": "selection_data \u2260 test_data"
+      },
+      "source_paper_span": "to\nU-Net (0.85) and DeepLabV3 (0.87).\nModels were selected using validation performance.\nStatistical significance was confirmed (p < 0.001).",
+      "required_evidence": [
+        "selection_procedure",
+        "validation_set"
+      ],
+      "failure_condition": "Test data used for selection",
+      "abstention_condition": "No selection information available",
+      "confidence": 0.8
+    },
+    {
+      "invariant_id": "INV_002",
+      "source_principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Reported metrics must faithfully represent computations",
+      "machine_readable": {
+        "type": "fidelity",
+        "check": "reported == computed"
+      },
+      "source_paper_span": "global",
+      "required_evidence": [
+        "raw_metrics",
+        "aggregation_code"
+      ],
+      "failure_condition": "Metric mismatch between reported and computed",
+      "abstention_condition": "No metric information available",
+      "confidence": 0.65
+    }
+  ],
+  "metadata": {
+    "n_invariants": 2,
+    "source_principles": [
+      "P6_AGGREGATION_FIDELITY",
+      "P4_SELECTION_SEPARATION"
+    ]
+  }
+}

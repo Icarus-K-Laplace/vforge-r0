@@ -1,0 +1,22 @@
+{
+  "contract_id": "CAND-06_CONTRACT",
+  "candidate_id": "CAND-06",
+  "source_paper": "A Fair Comparison of Graph Neural Networks for Graph Classification",
+  "deviation_category": "C4_comparator_asymmetry",
+  "claim_text": "In paper 'A Fair Comparison of Graph Neural Networks for Graph Classification', all competing models and baselines must be evaluated under symmetric resource budgets, tuning trials, and hyperparameter search spaces.",
+  "predicates": [
+    {
+      "predicate_id": "SYMMETRIC_RESOURCE_BUDGET",
+      "principle": "P8_COMPARATOR_FAIRNESS",
+      "natural_language": "Comparators must receive identical tuning budgets and computational resources.",
+      "trace_fields": [
+        "protocol.comparator_budgets",
+        "protocol.budgets_symmetric"
+      ],
+      "condition": "protocol.budgets_symmetric == True",
+      "confidence": 0.92
+    }
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "7d9f5c4f2075ec8571910f9ab58a0015f2e32cdc5add965ff334eeac7f550475"
+}

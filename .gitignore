@@ -1,0 +1,3 @@
+repositories/
+__pycache__/
+*.pyc

@@ -1,0 +1,26 @@
+{
+  "trace_id": "CAND-03_pre",
+  "protocol": {
+    "declared_seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "reported_seeds": [
+      1,
+      3,
+      5
+    ],
+    "aggregation_rule": "mean_top_seeds"
+  },
+  "outputs": {
+    "average_return": 1845.2,
+    "metric": "cumulative_reward"
+  },
+  "candidate_id": "CAND-03",
+  "paper": "Deep Reinforcement Learning that Matters",
+  "family": "C2_selective_aggregation_reporting",
+  "self_hash": "3819a8153fce7a023d6bcef4d284e5c20b4d9d0b263c5a6133b0498913b8fb51"
+}

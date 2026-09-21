@@ -1,0 +1,48 @@
+{
+  "trace_id": "RDML_E01_CARreg_Margin_b12_Distance_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CARreg_Margin_b12_Distance_s3",
+    "CARreg_Margin_b12_Distance_s0",
+    "CARreg_Margin_b12_Distance_s4",
+    "CARreg_Margin_b12_Distance_s1"
+  ],
+  "protocol": {
+    "dataset": "CARreg",
+    "method": "Margin_b12_Distance",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CARreg_Margin_b12_Distance_s3",
+      "RDML_E01_CARreg_Margin_b12_Distance_s0",
+      "RDML_E01_CARreg_Margin_b12_Distance_s4",
+      "RDML_E01_CARreg_Margin_b12_Distance_s1"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.8089,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CARreg_Margin_b12_Distance_s3",
+        "RDML_E01_CARreg_Margin_b12_Distance_s0",
+        "RDML_E01_CARreg_Margin_b12_Distance_s4",
+        "RDML_E01_CARreg_Margin_b12_Distance_s1"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "3b717d15b308d79dd647938c6030f4082dab8503c3d0a9c32f978f48e48c1661",
+  "vps": 0.1771,
+  "value_preserving": true,
+  "abs_diff": 0.0018
+}

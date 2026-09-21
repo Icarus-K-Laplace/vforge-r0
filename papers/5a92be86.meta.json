@@ -1,0 +1,10 @@
+{
+  "paper_id": "5a92be86",
+  "paper_url": "https://proceedings.neurips.cc/paper_files/paper/2022/file/90d17e882adbdda42349db6f50123817-Paper-Conference.pdf",
+  "acquisition_status": "SUCCESS",
+  "parser_used": "pdfplumber",
+  "character_count": 45583,
+  "section_count": 51,
+  "extraction_confidence": 0.9,
+  "hash": "8d82f88e1a53c58ba719d61df9fac337bcf7744d417943f110e3ca29eeed083e"
+}

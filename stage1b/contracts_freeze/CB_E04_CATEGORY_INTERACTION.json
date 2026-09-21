@@ -1,0 +1,26 @@
+{
+  "contract_id": "CB_E04_CATEGORY_INTERACTION",
+  "source_paper": "clinicalbench_2605.11143",
+  "family": "E04",
+  "claim_text": "ClinicalBench evaluates by category x condition interaction, not aggregate score. All 9 assertion-sensitive categories must be reported; selecting only categories where retrieval wins is a selective-subgroup violation.",
+  "paper_text_hash": "36166b27eab6e4fb8a53689fadb033fc20329b06be3b7405d9df5d7656cb41f7",
+  "predicates": [
+    {
+      "predicate_id": "E04_CATEGORY_INTERACTION",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "The reported category set must equal the full declared set of 9 assertion-sensitive categories; no category may be selectively omitted.",
+      "trace_fields": [
+        "protocol.declared_categories",
+        "protocol.reported_categories"
+      ],
+      "condition": "len(protocol.reported_categories) == len(protocol.declared_categories)",
+      "source_span": "Section 4.2",
+      "confidence": 0.9
+    }
+  ],
+  "universal_principles": [
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "1819eb76bea95bc89d6f369656616521e1a0706770d6ff0ac7548976fd22baf9"
+}

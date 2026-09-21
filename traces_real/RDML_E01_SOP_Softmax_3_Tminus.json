@@ -1,0 +1,44 @@
+{
+  "trace_id": "RDML_E01_SOP_Softmax_3_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "SOP_Softmax_3_s3",
+    "SOP_Softmax_3_s0",
+    "SOP_Softmax_3_s4"
+  ],
+  "protocol": {
+    "dataset": "SOP",
+    "method": "Softmax_3",
+    "declared_seeds": [
+      0,
+      1,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_SOP_Softmax_3_s3",
+      "RDML_E01_SOP_Softmax_3_s0",
+      "RDML_E01_SOP_Softmax_3_s4"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.7716,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_SOP_Softmax_3_s3",
+        "RDML_E01_SOP_Softmax_3_s0",
+        "RDML_E01_SOP_Softmax_3_s4"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "573d9084d3fcd07f3adef7c34ff6fcf9bf9d938c9fb8fafdd0e5840cc51d4c10",
+  "vps": 0.2902,
+  "value_preserving": false,
+  "abs_diff": 0.0029
+}

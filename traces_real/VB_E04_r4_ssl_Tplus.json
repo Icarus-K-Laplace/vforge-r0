@@ -1,0 +1,46 @@
+{
+  "trace_id": "VB_E04_r4_ssl_Tplus",
+  "paper": "viewbatchmodel_2503.18371",
+  "repository": "hankyul2/ViewBatchModel",
+  "source_runs": [
+    "VB_icarl_r4_ssl_s1993",
+    "VB_icarl_r4_ssl_s1996",
+    "VB_icarl_r4_ssl_s1997"
+  ],
+  "protocol": {
+    "declared_subgroups": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "reported_subgroups": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean_over_tasks",
+    "aug_repeat": 4,
+    "flag": "ssl"
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 69.25,
+      "aggregation_rule": "mean_over_tasks",
+      "upstream_tasks": [
+        "task_0",
+        "task_1",
+        "task_2",
+        "task_3",
+        "task_4"
+      ]
+    }
+  },
+  "is_counterfactual": false,
+  "family": "E04",
+  "contract_id": "VB_C2_TASK_SUBGROUP_SCOPE",
+  "self_hash": "631db9ee059ddc8ce844e0571a984a0dad99ffa045bf6b46b4e703cec20d465c"
+}

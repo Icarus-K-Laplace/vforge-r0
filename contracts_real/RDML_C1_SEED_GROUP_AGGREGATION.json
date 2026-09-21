@@ -1,0 +1,39 @@
+{
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "source_paper": "revisitdml_2002.08473",
+  "claim_id": "C1",
+  "claim_text": "Table values are computed as the mean over all available random-seed runs for each (dataset, method) configuration. Groups with 5 seeds (0-4) report mean over 5; groups with 2 seeds report mean over 2.",
+  "paper_text_hash": "3f4ffae4b79a82bfaeb8ef75c118cabcb06bcdb2f466f9c5a6552b790e561945",
+  "source_span": "Table values are computed as the mean over all available random-seed runs for each (dataset, method) configuration. Groups with 5 seeds (0-4) report mean over 5; groups with 2 seeds report mean over 2.",
+  "declared_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "n_seeds": 5,
+  "aggregation_rule": "mean",
+  "seed_policy": "mean over all available seeds in the group",
+  "predicates": [
+    {
+      "predicate_id": "E01_REPORTED_RUN_SET",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "The reported table value for a (dataset, method) group must be computed from all available seed runs for that group, not a subset.",
+      "trace_fields": [
+        "protocol.declared_seeds",
+        "protocol.aggregation_inputs",
+        "outputs.reported_value"
+      ],
+      "condition": "len(protocol.aggregation_inputs) == len(protocol.declared_seeds)",
+      "source_span": "Table values are computed as the mean over all available random-seed runs for each (dataset, method) configuration. Groups with 5 seeds (0-4) report mean over 5; groups with 2 seeds report mean over 2.",
+      "confidence": 0.85
+    }
+  ],
+  "universal_principles": [
+    "P5_DETERMINISM_OR_SEEDS",
+    "P6_AGGREGATION_FIDELITY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "21519282780204c137a90aeae0f534db25540ccadd71d9ea51bede10143b10b8"
+}

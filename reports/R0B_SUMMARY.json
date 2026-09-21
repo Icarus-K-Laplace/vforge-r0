@@ -1,0 +1,12 @@
+{
+  "total_mutants": 204,
+  "valid_mutants": 144,
+  "benign_controls": 16,
+  "severity_distribution": {
+    "LOW": 12,
+    "MEDIUM": 96,
+    "HIGH": 96
+  },
+  "b2_qualified": false,
+  "b2_exec_rate": 1.0
+}

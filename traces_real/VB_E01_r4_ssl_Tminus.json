@@ -1,0 +1,40 @@
+{
+  "trace_id": "VB_E01_r4_ssl_Tminus",
+  "paper": "viewbatchmodel_2503.18371",
+  "repository": "hankyul2/ViewBatchModel",
+  "source_runs": [
+    "icarl_r4_ssl_s1993",
+    "icarl_r4_ssl_s1997"
+  ],
+  "protocol": {
+    "declared_seeds": [
+      1993,
+      1996,
+      1997
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "VB_s1993",
+      "VB_s1997"
+    ],
+    "aug_repeat": 4,
+    "flag": "ssl"
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 69.19,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "VB_s1993",
+        "VB_s1997"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "VB_C1_TABLE6_SEED_AGGREGATION",
+  "self_hash": "3b00c5591dc0e047520bf11012189e02cb5bc1f1ea3d18485ceab714fad5bd90",
+  "vps": 0.1778,
+  "value_preserving": true,
+  "abs_diff": 0.06
+}

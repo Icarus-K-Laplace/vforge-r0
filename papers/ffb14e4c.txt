@@ -1,0 +1,839 @@
+Generative Modeling by Estimating Gradients of the
+Data Distribution
+YangSong StefanoErmon
+StanfordUniversity StanfordUniversity
+yangsong@cs.stanford.edu ermon@cs.stanford.edu
+Abstract
+WeintroduceanewgenerativemodelwheresamplesareproducedviaLangevin
+dynamicsusinggradientsofthedatadistributionestimatedwithscorematching.
+Becausegradientscanbeill-definedandhardtoestimatewhenthedataresideson
+low-dimensionalmanifolds,weperturbthedatawithdifferentlevelsofGaussian
+noise, and jointly estimate the corresponding scores, i.e., the vector fields of
+gradientsoftheperturbeddatadistributionforallnoiselevels. Forsampling,we
+proposeanannealedLangevindynamicswhereweusegradientscorrespondingto
+graduallydecreasingnoiselevelsasthesamplingprocessgetsclosertothedata
+manifold.Ourframeworkallowsflexiblemodelarchitectures,requiresnosampling
+duringtrainingortheuseofadversarialmethods,andprovidesalearningobjective
+thatcanbeusedforprincipledmodelcomparisons. Ourmodelsproducesamples
+comparabletoGANsonMNIST,CelebAandCIFAR-10datasets,achievinganew
+state-of-the-artinceptionscoreof8.87onCIFAR-10.Additionally,wedemonstrate
+thatourmodelslearneffectiverepresentationsviaimageinpaintingexperiments.
+1 Introduction
+Generative models have many applications in machine learning. To list a few, they have been
+usedtogeneratehigh-fidelityimages[26,6],synthesizerealisticspeechandmusicfragments[58],
+improve the performance of semi-supervised learning [28, 10], detect adversarial examples and
+otheranomalousdata[54],imitationlearning[22],andexplorepromisingstatesinreinforcement
+learning[41]. Recentprogressismainlydrivenbytwoapproaches: likelihood-basedmethods[17,
+29,11,60]andgenerativeadversarialnetworks(GAN[15]). Theformeruseslog-likelihood(ora
+suitablesurrogate)asthetrainingobjective,whilethelatterusesadversarialtrainingtominimize
+f-divergences[40]orintegralprobabilitymetrics[2,55]betweenmodelanddatadistributions.
+Althoughlikelihood-basedmodelsandGANshaveachievedgreatsuccess,theyhavesomeintrinsic
+limitations. Forexample, likelihood-basedmodelseitherhavetousespecializedarchitecturesto
+buildanormalizedprobabilitymodel(e.g.,autoregressivemodels,flowmodels),orusesurrogate
+losses(e.g.,theevidencelowerboundusedinvariationalauto-encoders[29],contrastivedivergence
+inenergy-basedmodels[21])fortraining. GANsavoidsomeofthelimitationsoflikelihood-based
+models,buttheirtrainingcanbeunstableduetotheadversarialtrainingprocedure. Inaddition,the
+GANobjectiveisnotsuitableforevaluatingandcomparingdifferentGANmodels. Whileother
+objectivesexistforgenerativemodeling, suchasnoisecontrastiveestimation[19]andminimum
+probabilityflow[50],thesemethodstypicallyonlyworkwellforlow-dimensionaldata.
+Inthispaper,weexploreanewprincipleforgenerativemodelingbasedonestimatingandsampling
+fromthe(Stein)score[33]ofthelogarithmicdatadensity,whichisthegradientofthelog-density
+functionattheinputdatapoint. Thisisavectorfieldpointinginthedirectionwherethelogdata
+density grows the most. We use a neural network trained with score matching [24] to learn this
+vectorfieldfromdata. WethenproducesamplesusingLangevindynamics,whichapproximately
+33rdConferenceonNeuralInformationProcessingSystems(NeurIPS2019),Vancouver,Canada.
+worksbygraduallymovingarandominitialsampletohighdensityregionsalongthe(estimated)
+vectorfieldofscores. However,therearetwomainchallengeswiththisapproach. First,ifthedata
+distributionissupportedonalowdimensionalmanifold—asitisoftenassumedformanyrealworld
+datasets—thescorewillbeundefinedintheambientspace,andscorematchingwillfailtoprovidea
+consistentscoreestimator. Second,thescarcityoftrainingdatainlowdatadensityregions,e.g.,far
+fromthemanifold,hinderstheaccuracyofscoreestimationandslowsdownthemixingofLangevin
+dynamicssampling. SinceLangevindynamicswilloftenbeinitializedinlow-densityregionsofthe
+datadistribution, inaccuratescoreestimationintheseregionswillnegativelyaffectthesampling
+process. Moreover,mixingcanbedifficultbecauseoftheneedoftraversinglowdensityregionsto
+transitionbetweenmodesofthedistribution.
+To tackle these two challenges, we propose to perturb the data with random Gaussian noise of
+variousmagnitudes. Addingrandomnoiseensurestheresultingdistributiondoesnotcollapsetoa
+lowdimensionalmanifold. Largenoiselevelswillproducesamplesinlowdensityregionsofthe
+original(unperturbed)datadistribution,thusimprovingscoreestimation. Crucially,wetrainasingle
+scorenetworkconditionedonthenoiselevelandestimatethescoresatallnoisemagnitudes. We
+thenproposeanannealedversionofLangevindynamics,whereweinitiallyusescorescorresponding
+tothehighestnoiselevel,andgraduallyannealdownthenoiseleveluntilitissmallenoughtobe
+indistinguishablefromtheoriginaldatadistribution. Oursamplingstrategyisinspiredbysimulated
+annealing[30,37]whichheuristicallyimprovesoptimizationformultimodallandscapes.
+Our approach has several desirable properties. First, our objective is tractable for almost all pa-
+rameterizationsofthescorenetworkswithouttheneedofspecialconstraintsorarchitectures,and
+canbeoptimizedwithoutadversarialtraining,MCMCsampling,orotherapproximationsduring
+training. The objective can also be used to quantitatively compare different models on the same
+dataset. Experimentally, we demonstrate the efficacy of our approach on MNIST, CelebA [34],
+andCIFAR-10[31]. Weshowthatthesampleslookcomparabletothosegeneratedfrommodern
+likelihood-basedmodelsandGANs. OnCIFAR-10,ourmodelsetsthenewstate-of-the-artinception
+scoreof8.87forunconditionalgenerativemodels,andachievesacompetitiveFIDscoreof25.32. We
+showthatthemodellearnsmeaningfulrepresentationsofthedatabyimageinpaintingexperiments.
+2 Score-basedgenerativemodeling
+Suppose our dataset consists of i.i.d. samples {x ∈ RD}N from an unknown data distribution
+i i=1
+p (x). Wedefinethescoreofaprobabilitydensityp(x)tobe∇ logp(x). Thescorenetwork
+data x
+s : RD → RD isaneuralnetworkparameterizedbyθ,whichwillbetrainedtoapproximatethe
+θ
+scoreofp (x). Thegoalofgenerativemodelingistousethedatasettolearnamodelforgenerating
+data
+newsamplesfromp (x). Theframeworkofscore-basedgenerativemodelinghastwoingredients:
+data
+scorematchingandLangevindynamics.
+2.1 Scorematchingforscoreestimation
+Scorematching[24]isoriginallydesignedforlearningnon-normalizedstatisticalmodelsbasedon
+i.i.d.samplesfromanunknowndatadistribution.Following[53],werepurposeitforscoreestimation.
+Usingscorematching,wecandirectlytrainascorenetworks (x)toestimate∇ logp (x)without
+θ x data
+trainingamodeltoestimatep (x)first. Differentfromthetypicalusageofscorematching,weopt
+data
+nottousethegradientofanenergy-basedmodelasthescorenetworktoavoidextracomputationdue
+tohigher-ordergradients. Theobjectiveminimizes 1E [(cid:107)s (x)−∇ logp (x)(cid:107)2],whichcan
+2 pdata θ x data 2
+beshownequivalenttothefollowinguptoaconstant
+(cid:20) (cid:21)
+1
+E tr(∇ s (x))+ (cid:107)s (x)(cid:107)2 , (1)
+pdata(x) x θ 2 θ 2
+where∇ s (x)denotestheJacobianofs (x). Asshownin[53],undersomeregularityconditions
+x θ θ
+the minimizer of Eq. (3) (denoted as s θ∗ (x)) satisfies s θ∗ (x) = ∇ x logp data (x) almost surely.
+In practice, the expectation over p (x) in Eq. (1) can be quickly estimated using data samples.
+data
+However,scorematchingisnotscalabletodeepnetworksandhighdimensionaldata[53]duetothe
+computationoftr(∇ s (x)). Belowwediscusstwopopularmethodsforlargescalescorematching.
+x θ
+Denoising score matching Denoising score matching [61] is a variant of score matching that
+completelycircumventstr(∇ s (x)). Itfirstperturbsthedatapointxwithapre-specifiednoise
+x θ
+2
+distributionq (x˜ |x)andthenemploysscorematchingtoestimatethescoreoftheperturbeddata
+σ
+distributionq
+(x˜)(cid:44)(cid:82)
+q (x˜ |x)p (x)dx. Theobjectivewasprovedequivalenttothefollowing:
+σ σ data
+1
+E [(cid:107)s (x˜)−∇ logq (x˜ |x)(cid:107)2]. (2)
+2 qσ(x˜|x)pdata(x) θ x˜ σ 2
+Asshownin[61],theoptimalscorenetwork(denotedass
+θ∗
+(x))thatminimizesEq.(2)satisfies
+s
+θ∗
+(x) = ∇
+x
+logq
+σ
+(x)almostsurely. However,s
+θ∗
+(x) = ∇
+x
+logq
+σ
+(x) ≈ ∇
+x
+logp
+data
+(x)istrue
+onlywhenthenoiseissmallenoughsuchthatq (x)≈p (x).
+σ data
+Sliced score matching Sliced score matching [53] uses random projections to approximate
+tr(∇ s (x))inscorematching. Theobjectiveis
+x θ
+(cid:20) (cid:21)
+1
+E E v (cid:124) ∇ s (x)v+ (cid:107)s (x)(cid:107)2 , (3)
+pv pdata x θ 2 θ 2
+wherep isasimpledistributionofrandomvectors,e.g.,themultivariatestandardnormal. Asshown
+v
+in[53],thetermv(cid:124)∇ s (x)v canbeefficientlycomputedbyforwardmodeauto-differentiation.
+x θ
+Unlikedenoisingscorematchingwhichestimatesthescoresofperturbeddata,slicedscorematching
+providesscoreestimationfortheoriginalunperturbed datadistribution,butrequiresaroundfour
+timesmorecomputationsduetotheforwardmodeauto-differentiation.
+2.2 SamplingwithLangevindynamics
+Langevindynamicscanproducesamplesfromaprobabilitydensityp(x)usingonlythescorefunction
+∇ logp(x). Given a fixed step size (cid:15) > 0, and an initial value x˜ ∼ π(x) with π being a prior
+x 0
+distribution,theLangevinmethodrecursivelycomputesthefollowing
+(cid:15) √
+x˜ =x˜ + ∇ logp(x˜ )+ (cid:15)z , (4)
+t t−1 2 x t−1 t
+wherez ∼N(0,I). Thedistributionofx˜ equalsp(x)when(cid:15)→0andT →∞,inwhichcasex˜
+t T T
+becomesanexactsamplefromp(x)undersomeregularityconditions[62]. When(cid:15)>0andT <∞,
+aMetropolis-HastingsupdateisneededtocorrecttheerrorofEq.(4),butitcanoftenbeignoredin
+practice[9,12,39]. Inthiswork,weassumethiserrorisnegligiblewhen(cid:15)issmallandT islarge.
+NotethatsamplingfromEq.(4)onlyrequiresthescorefunction∇ logp(x). Therefore,inorderto
+x
+obtainsamplesfromp (x),wecanfirsttrainourscorenetworksuchthats (x)≈∇ logp (x)
+data θ x data
+andthenapproximatelyobtainsampleswithLangevindynamicsusings (x). Thisisthekeyideaof
+θ
+ourframeworkofscore-basedgenerativemodeling.
+3 Challengesofscore-basedgenerativemodeling
+Inthissection,weanalyzemorecloselytheideaofscore-basedgenerativemodeling. Wearguethat
+therearetwomajorobstaclesthatpreventanaïveapplicationofthisidea.
+3.1 Themanifoldhypothesis
+Themanifoldhypothesisstatesthatdatainthe
+real world tend to concentrate on low dimen-
+sional manifolds embedded in a high dimen-
+sional space (a.k.a., the ambient space). This
+hypothesisempiricallyholdsformanydatasets,
+and has become the foundation of manifold
+learning[3,47]. Underthemanifoldhypothesis,
+score-basedgenerativemodelswillfacetwokey Figure1: Left: Slicedscorematching(SSM)loss
+difficulties.First,sincethescore∇
+x
+logp
+data
+(x)
+w.r.t.iterations. Nonoiseisaddedtodata. Right:
+isagradienttakenintheambientspace,itisun-
+SamebutdataareperturbedwithN(0,0.0001).
+definedwhenxisconfinedtoalowdimensional
+manifold. Second,thescorematchingobjectiveEq.(1)providesaconsistentscoreestimatoronly
+whenthesupportofthedatadistributionisthewholespace(cf.,Theorem2in[24]),andwillbe
+inconsistentwhenthedataresideonalow-dimensionalmanifold.
+3
+ThenegativeeffectofthemanifoldhypothesisonscoreestimationcanbeseenclearlyfromFig.1,
+wherewetrainaResNet(detailsinAppendixB.1)toestimatethedatascoreonCIFAR-10. For
+fasttrainingandfaithfulestimationofthedatascores,weusetheslicedscorematchingobjective
+(Eq.(3)). AsFig.1(left)shows,whentrainedontheoriginalCIFAR-10images,theslicedscore
+matchinglossfirstdecreasesandthenfluctuatesirregularly. Incontrast,ifweperturbthedatawitha
+smallGaussiannoise(suchthattheperturbeddatadistributionhasfullsupportoverRD),theloss
+curvewillconverge(rightpanel). NotethattheGaussiannoiseN(0,0.0001)weimposeisverysmall
+forimageswithpixelvaluesintherange[0,1],andisalmostindistinguishabletohumaneyes.
+3.2 Lowdatadensityregions
+Thescarcityofdatainlowdensityregionscancausedifficultiesforbothscoreestimationwithscore
+matchingandMCMCsamplingwithLangevindynamics.
+3.2.1 Inaccuratescoreestimationwithscorematching
+In regions of low data density, score match-
+ingmaynothaveenoughevidencetoestimate
+score functions accurately, due to the lack of
+data samples. To see this, recall from Sec-
+tion2.1thatscorematchingminimizestheex-
+pectedsquarederrorofthescoreestimates,i.e.,
+1E [(cid:107)s (x)−∇ logp (x)(cid:107)2]. In prac-
+2 pdata θ x data 2
+tice, the expectation w.r.t. the data distribu-
+tion is always estimated using i.i.d. samples
+{x }N i. ∼ i.d. p (x). Consider any region
+i i=1 data
+R ⊂ RD such that p (R) ≈ 0. In most Figure 2: Left: ∇ logp (x); Right: s (x).
+data x data θ
+cases {x }N ∩R = ∅, and score matching The data density p (x) is encoded using an
+i i=1 data
+willnothavesufficientdatasamplestoestimate orange colormap: darker color implies higher
+∇ logp (x)accuratelyforx∈R. density. Red rectangles highlight regions where
+x data
+∇ logp (x)≈s (x).
+To demonstrate the negative effect of this, we x data θ
+providetheresultofatoyexperiment(detailsinAppendixB.1)inFig.2whereweuseslicedscore
+matchingtoestimatescoresofamixtureofGaussiansp = 1N((−5,−5),I)+ 4N((5,5),I).
+data 5 5
+Asthefiguredemonstrates,scoreestimationisonlyreliableintheimmediatevicinityofthemodes
+ofp ,wherethedatadensityishigh.
+data
+3.2.2 SlowmixingofLangevindynamics
+Whentwomodesofthedatadistributionareseparatedbylowdensityregions,Langevindynamics
+willnotbeabletocorrectlyrecovertherelativeweightsofthesetwomodesinreasonabletime,and
+thereforemightnotconvergetothetruedistribution. Ouranalysesofthisarelargelyinspiredby[63],
+whichanalyzedthesamephenomenoninthecontextofdensityestimationwithscorematching.
+Consideramixturedistributionp (x)=πp (x)+(1−π)p (x),wherep (x)andp (x)arenormal-
+data 1 2 1 2
+izeddistributionswithdisjointsupports,andπ ∈(0,1). Inthesupportofp (x),∇ logp (x)=
+1 x data
+∇ (logπ+logp (x))=∇ logp (x),andinthesupportofp (x),∇ logp (x)=∇ (log(1−
+x 1 x 1 2 x data x
+π)+logp (x)) = ∇ logp (x). In either case, the score ∇ logp (x) does not depend on π.
+2 x 2 x data
+SinceLangevindynamicsuse∇ logp (x)tosamplefromp (x),thesamplesobtainedwillnot
+x data data
+dependonπ. Inpractice,thisanalysisalsoholdswhendifferentmodeshaveapproximatelydisjoint
+supports—theymaysharethesamesupportbutbeconnectedbyregionsofsmalldatadensity. Inthis
+case,Langevindynamicscanproducecorrectsamplesintheory,butmayrequireaverysmallstep
+sizeandaverylargenumberofstepstomix.
+Toverifythisanalysis,wetestLangevindynamicssamplingforthesamemixtureofGaussianused
+inSection3.2.1andprovidetheresultsinFig.3. Weusethegroundtruthscoreswhensampling
+withLangevindynamics. ComparingFig.3(b)with(a),itisobviousthatthesamplesfromLangevin
+dynamicshaveincorrectrelativedensitybetweenthetwomodes,aspredictedbyouranalysis.
+4
+Figure 3: Samples from a mixture of Gaussian with different methods. (a) Exact sampling. (b)
+SamplingusingLangevindynamicswiththeexactscores. (c)SamplingusingannealedLangevin
+dynamicswiththeexactscores. ClearlyLangevindynamicsestimatetherelativeweightsbetween
+thetwomodesincorrectly,whileannealedLangevindynamicsrecovertherelativeweightsfaithfully.
+4 NoiseConditionalScoreNetworks: learningandinference
+We observe that perturbing data with random Gaussian noise makes the data distribution more
+amenabletoscore-basedgenerativemodeling. First,sincethesupportofourGaussiannoisedistri-
+butionisthewholespace,theperturbeddatawillnotbeconfinedtoalowdimensionalmanifold,
+whichobviatesdifficultiesfromthemanifoldhypothesisandmakesscoreestimationwell-defined.
+Second,largeGaussiannoisehastheeffectoffillinglowdensityregionsintheoriginalunperturbed
+datadistribution;thereforescorematchingmaygetmoretrainingsignaltoimprovescoreestimation.
+Furthermore,byusingmultiplenoiselevelswecanobtainasequenceofnoise-perturbeddistributions
+thatconvergetothetruedatadistribution. WecanimprovethemixingrateofLangevindynamics
+onmultimodaldistributionsbyleveragingtheseintermediatedistributionsinthespiritofsimulated
+annealing[30]andannealedimportancesampling[37].
+Builtuponthisintuition,weproposetoimprovescore-basedgenerativemodelingby1)perturbing
+thedatausingvariouslevelsofnoise;and2)simultaneouslyestimatingscorescorrespondingtoall
+noiselevelsbytrainingasingleconditionalscorenetwork. Aftertraining,whenusingLangevin
+dynamicstogeneratesamples,weinitiallyusescorescorrespondingtolargenoise,andgradually
+annealdownthenoiselevel. Thishelpssmoothlytransferthebenefitsoflargenoiselevelstolow
+noiselevelswheretheperturbeddataarealmostindistinguishablefromtheoriginalones. Inwhat
+follows,wewillelaboratemoreonthedetailsofourmethod,includingthearchitectureofourscore
+networks,thetrainingobjective,andtheannealingscheduleforLangevindynamics.
+4.1 NoiseConditionalScoreNetworks
+L (cid:82) e p t{σ ( i t } ) L i N =1 (x be | a t, p σ o 2 s I it ) i d ve td g e e n o o m te et t r h i e c p s e e r q t u ur e b n e c d e d th at a a t d s i a s t t i r s i fi bu e t s io σ σ n 1 2 . W = e · c · h · o = ose σ t σ L h L − e 1 no > ise 1. le L ve e l t s q { σ σ (x } ) L (cid:44)
+data i i=1
+suchthatσ islargeenoughtomitigatethedifficultiesdiscussedinSection3,andσ issmallenough
+1 L
+tominimizetheeffectondata. Weaimtotrainaconditionalscorenetworktojointlyestimatethe
+scoresofallperturbeddatadistributions,i.e.,∀σ ∈{σ }L :s (x,σ)≈∇ logq (x). Notethat
+i i=1 θ x σ
+s (x,σ)∈RD whenx∈RD. Wecalls (x,σ)aNoiseConditionalScoreNetwork(NCSN).
+θ θ
+Similartolikelihood-basedgenerativemodelsandGANs,thedesignofmodelarchitecturesplaysan
+importantroleingeneratinghighqualitysamples. Inthiswork,wemostlyfocusonarchitectures
+useful for image generation, and leave the architecture design for other domains as future work.
+Sincetheoutputofournoiseconditionalscorenetworks (x,σ)hasthesameshapeastheinput
+θ
+imagex,wedrawinspirationfromsuccessfulmodelarchitecturesfordensepredictionofimages
+(e.g., semanticsegmentation). Intheexperiments, ourmodels (x,σ)combinesthearchitecture
+θ
+designofU-Net[46]withdilated/atrousconvolution[64,65,8]—bothofwhichhavebeenproved
+verysuccessfulinsemanticsegmentation. Inaddition,weadoptinstancenormalizationinourscore
+network,inspiredbyitssuperiorperformanceinsomeimagegenerationtasks[57,13,23],andwe
+5
+use a modified version of conditional instance normalization [13] to provide conditioning on σ .
+i
+MoredetailsonourarchitecturecanbefoundinAppendixA.
+4.2 LearningNCSNsviascorematching
+BothslicedanddenoisingscorematchingcantrainNCSNs. Weadoptdenoisingscorematchingasit
+isslightlyfasterandnaturallyfitsthetaskofestimatingscoresofnoise-perturbeddatadistributions.
+However,weemphasizethatempiricallyslicedscorematchingcantrainNCSNsaswellasdenoising
+score matching. We choose the noise distribution to be q (x˜ | x) = N(x˜ | x,σ2I); therefore
+σ
+∇
+x˜
+logq
+σ
+(x˜ |x)=−(x˜−x)/σ2. Foragivenσ,thedenoisingscorematchingobjective(Eq.(2))is
+(cid:96)(θ;σ)(cid:44) 1 2 E pdata(x) E x˜∼N(x,σ2I)
+(cid:20)(cid:13)
+(cid:13) (cid:13) (cid:13) s θ (x˜,σ)+ x˜ σ − 2 x
+(cid:13)
+(cid:13) (cid:13) (cid:13)
+2(cid:21)
+. (5)
+2
+Then,wecombineEq.(5)forallσ ∈{σ }L togetoneunifiedobjective
+i i=1
+L
+1 (cid:88)
+L(θ;{σ }L )(cid:44) λ(σ )(cid:96)(θ;σ ), (6)
+i i=1 L i i
+i=1
+whereλ(σ )>0isacoefficientfunctiondependingonσ . Assumings (x,σ)hasenoughcapacity,
+i i θ
+s
+θ∗
+(x,σ)minimizesEq.(6)ifandonlyifs
+θ∗
+(x,σ
+i
+)=∇
+x
+logq
+σi
+(x)a.s.foralli∈{1,2,··· ,L},
+becauseEq.(6)isaconicalcombinationofLdenoisingscorematchingobjectives.
+There can be many possible choices of λ(·). Ideally, we hope that the values of λ(σ )(cid:96)(θ;σ )
+i i
+for all {σ }L are roughly of the same order of magnitude. Empirically, we observe that when
+i i=1
+the score networks are trained to optimality, we approximately have (cid:107)s
+θ
+(x,σ)(cid:107)
+2
+∝ 1/σ. This
+inspiresustochooseλ(σ) = σ2. Becauseunderthischoice,wehaveλ(σ)(cid:96)(θ;σ) = σ2(cid:96)(θ;σ) =
+1E[(cid:107)σs (x˜,σ)+ x˜−x(cid:107)2]. Since x˜−x ∼ N(0,I)and(cid:107)σs (x,σ)(cid:107) ∝ 1,wecaneasilyconclude
+2 θ σ 2 σ θ 2
+thattheorderofmagnitudeofλ(σ)(cid:96)(θ;σ)doesnotdependonσ.
+WeemphasizethatourobjectiveEq.(6)requiresnoadversarialtraining,nosurrogatelosses,andno
+samplingfromthescorenetworkduringtraining(e.g.,unlikecontrastivedivergence). Also,itdoes
+notrequires (x,σ)tohavespecialarchitecturesinordertobetractable. Inaddition,whenλ(·)and
+θ
+{σ }L arefixed,itcanbeusedtoquantitativelycomparedifferentNCSNs.
+i i=1
+4.3 NCSNinferenceviaannealedLangevindynamics
+AftertheNCSNs (x,σ)istrained,wepropose
+θ Algorithm1AnnealedLangevindynamics.
+a sampling approach—annealed Langevin dy-
+namics(Alg.1)—toproducedsamples,inspired Require: {σ }L ,(cid:15),T.
+i i=1
+by simulated annealing [30] and annealed im- 1: Initializex˜ 0
+portancesampling[37]. AsshowninAlg.1,we 2: fori←1toLdo
+startannealedLangevindynamicsbyinitializing 3: α i ←(cid:15)·σ i 2/σ L 2 (cid:46)α i isthestepsize.
+thesamplesfromsomefixedpriordistribution, 4: fort←1toT do
+e.g.,uniformnoise. Then,werunLangevindy- 5: Drawz t ∼N(0,I)
+n
+α
+am
+. N
+ic
+e
+s
+x
+t
+t
+o
+,w
+s
+e
+am
+ru
+p
+n
+le
+La
+fr
+n
+o
+g
+m
+evi
+q
+n
+σ1
+d
+(
+y
+x
+n
+)
+am
+w
+i
+i
+c
+th
+st
+s
+o
+te
+s
+p
+am
+s
+p
+iz
+l
+e
+e
+6: x˜
+t
+←x˜
+t−1
++ α
+2
+is
+θ
+(x˜
+t−1
+,σ
+i
+)+ √ α
+i
+z
+t
+1 7: endfor
+fromq (x),startingfromthefinalsamplesof
+theprev σ2 ioussimulationandusingareducedstep 8: x˜ 0 ←x˜ T
+9: endfor
+sizeα .Wecontinueinthisfashion,usingthefi-
+2 returnx˜
+nalsamplesofLangevindynamicsforq (x) T
+σi−1
+astheinitialsamplesofLangevindynamicfor
+q (x),andtuningdownthestepsizeα graduallywithα =(cid:15)·σ2/σ2. Finally,werunLangevin
+σi i i i L
+dynamicstosamplefromq (x),whichisclosetop (x)whenσ ≈0.
+σL data L
+Sincethedistributions{q }L areallperturbedbyGaussiannoise,theirsupportsspanthewhole
+σi i=1
+spaceandtheirscoresarewell-defined,avoidingdifficultiesfromthemanifoldhypothesis. When
+σ issufficientlylarge,thelowdensityregionsofq (x)becomesmallandthemodesbecomeless
+1 σ1
+isolated. Asdiscussedpreviously,thiscanmakescoreestimationmoreaccurate,andthemixingof
+Langevindynamicsfaster. WecanthereforeassumethatLangevindynamicsproducegoodsamples
+forq (x). Thesesamplesarelikelytocomefromhighdensityregionsofq (x), whichmeans
+σ1 σ1
+6
+Model Inception FID
+CIFAR-10Unconditional
+PixelCNN[59] 4.60 65.93
+PixelIQN[42] 5.29 49.46
+EBM[12] 6.02 40.58
+WGAN-GP[18] 7.86±.07 36.4
+MoLM[45] 7.90±.10 18.9
+SNGAN[36] 8.22±.05 21.7
+ProgressiveGAN[25] 8.80±.05 -
+NCSN(Ours) 8.87±.12 25.32
+CIFAR-10Conditional
+EBM[12] 8.30 37.9
+SNGAN[36] 8.60±.08 25.5
+BigGAN[6] 9.22 14.73
+Figure4: Intermediatesamplesofannealed
+Table1: InceptionandFIDscoresforCIFAR-10 Langevindynamics.
+theyarealsolikelytoresideinthehighdensityregionsofq (x),giventhatq (x)andq (x)only
+σ2 σ1 σ2
+slightlydifferfromeachother. AsscoreestimationandLangevindynamicsperformbetterinhigh
+densityregions,samplesfromq (x)willserveasgoodinitialsamplesforLangevindynamicsof
+σ1
+q (x). Similarly,q (x)providesgoodinitialsamplesforq (x),andfinallyweobtainsamples
+σ2 σi−1 σi
+ofgoodqualityfromq (x).
+σL
+Therecouldbemanypossiblewaysoftuningα accordingtoσ inAlg.1. Ourchoiceisα ∝σ2.
+i i i i
+Themotivationistofixthemagnitudeofthe“signal-to-noise”ratio αis √θ(x,σi) inLangevindynam-
+2 αiz
+ics. NotethatE[(cid:107)αi
+2
+s √θ(
+α
+x
+i
+,σ
+z
+i)(cid:107)2
+2
+] ≈ E[αi(cid:107)sθ(
+4
+x,σi)(cid:107)2 2] ∝ 1
+4
+E[(cid:107)σ
+i
+s
+θ
+(x,σ
+i
+)(cid:107)2
+2
+]. Recallthatempirically
+we found (cid:107)s
+θ
+(x,σ)(cid:107)
+2
+∝ 1/σ when the score network is trained close to optimal, in which case
+E[(cid:107)σ
+i
+s
+θ
+(x;σ
+i
+)(cid:107)2
+2
+]∝1. Therefore(cid:107)αi
+2
+s √θ(
+α
+x
+i
+,σ
+z
+i)(cid:107)
+2
+∝
+4
+1E[(cid:107)σ
+i
+s
+θ
+(x,σ
+i
+)(cid:107)2
+2
+]∝ 1
+4
+doesnotdependonσ
+i
+.
+TodemonstratetheefficacyofourannealedLangevindynamics,weprovideatoyexamplewherethe
+goalistosamplefromamixtureofGaussianwithtwowell-separatedmodesusingonlyscores. We
+applyAlg.1tosamplefromthemixtureofGausssianusedinSection3.2. Intheexperiment,we
+choose{σ }L tobeageometricprogression,withL=10,σ =10andσ =0.1. Theresultsare
+i i=1 1 10
+providedinFig.3. ComparingFig.3(b)against(c),annealedLangevindynamicscorrectlyrecover
+therelativeweightsbetweenthetwomodeswhereasstandardLangevindynamicsfail.
+5 Experiments
+Inthissection,wedemonstratethatourNCSNsareabletoproducehighqualityimagesampleson
+severalcommonlyusedimagedatasets. Inaddition,weshowthatourmodelslearnreasonableimage
+representationsbyimageinpaintingexperiments.
+Setup WeuseMNIST,CelebA[34],andCIFAR-10[31]datasetsinourexperiments. ForCelebA,
+theimagesarefirstcenter-croppedto140×140andthenresizedto32×32. Allimagesarerescaled
+sothatpixelvaluesarein[0,1]. WechooseL=10differentstandarddeviationssuchthat{σ }L is
+i i=1
+ageometricsequencewithσ =1andσ =0.01. NotethatGaussiannoiseofσ =0.01isalmost
+1 10
+indistinguishabletohumaneyesforimagedata. WhenusingannealedLangevindynamicsforimage
+generation,wechooseT =100and(cid:15)=2×10−5,anduseuniformnoiseasourinitialsamples. We
+foundtheresultsarerobustw.r.t.thechoiceofT,and(cid:15)between5×10−6and5×10−5generally
+worksfine. WeprovideadditionaldetailsonmodelarchitectureandsettingsinAppendixAandB.
+Imagegeneration InFig.5,weshowuncuratedsamplesfromannealedLangevindynamicsfor
+MNIST,CelebAandCIFAR-10. Asshownbythesamples,ourgeneratedimageshavehigheror
+comparablequalitytothosefrommodernlikelihood-basedmodelsandGANs. Tointuittheprocedure
+ofannealedLangevindynamics,weprovideintermediatesamplesinFig.4,whereeachrowshows
+7
+(a)MNIST (b)CelebA (c)CIFAR-10
+Figure5: UncuratedsamplesonMNIST,CelebA,andCIFAR-10datasets.
+Figure6: ImageinpaintingonCelebA(left)andCIFAR-10(right). Theleftmostcolumnofeach
+figureshowstheoccludedimages,whiletherightmostcolumnshowstheoriginalimages.
+howsamplesevolvefrompurerandomnoisetohighqualityimages.Moresamplesfromourapproach
+canbefoundinAppendixC.Wealsoshowthenearestneighborsofgeneratedimagesinthetraining
+datasetinAppendixC.2,inordertodemonstratethatourmodelisnotsimplymemorizingtraining
+images. Toshowitisimportanttolearnaconditionalscorenetworkjointlyformanynoiselevelsand
+useannealedLangevindynamics,wecompareagainstabaselineapproachwhereweonlyconsider
+onenoiselevel{σ =0.01}andusethevanillaLangevindynamicssamplingmethod. Althoughthis
+1
+smalladdednoisehelpscircumventthedifficultyofthemanifoldhypothesis(asshownbyFig.1,
+thingswillcompletelyfailifnonoiseisadded), itisnotlargeenoughtoprovideinformationon
+scoresinregionsoflowdatadensity. Asaresult,thisbaselinefailstogeneratereasonableimages,as
+shownbysamplesinAppendixC.1.
+Forquantitativeevaluation,wereportinception[48]andFID[20]scoresonCIFAR-10inTab.1. As
+anunconditionalmodel,weachievethestate-of-the-artinceptionscoreof8.87,whichisevenbetter
+thanmostreportedvaluesforclass-conditionalgenerativemodels.OurFIDscore25.32onCIFAR-10
+isalsocomparabletotopexistingmodels,suchasSNGAN[36]. WeomitscoresonMNISTand
+CelebAasthescoresonthesetwodatasetsarenotwidelyreported,anddifferentpreprocessing(such
+asthecentercropsizeofCelebA)canleadtonumbersnotdirectlycomparable.
+Image inpainting In Fig. 6, we demonstrate that our score networks learn generalizable and
+semanticallymeaningfulimagerepresentationsthatallowittoproducediverseimageinpaintings.
+NotethatsomepreviousmodelssuchasPixelCNNcanonlyimputeimagesintherasterscanorder.
+Incontrast,ourmethodcannaturallyhandleimageswithocclusionsofarbitraryshapesbyasimple
+modificationoftheannealedLangevindynamicsprocedure(detailsinAppendixB.3). Weprovide
+moreimageinpaintingresultsinAppendixC.5.
+8
+6 Relatedwork
+OurapproachhassomesimilaritieswithmethodsthatlearnthetransitionoperatorofaMarkovchain
+forsamplegeneration[4,51,5,16,52]. Forexample,generativestochasticnetworks(GSN[4,1])
+use denoising autoencoders to train a Markov chain whose equilibrium distribution matches the
+data distribution. Similarly, our method trains the score function used in Langevin dynamics to
+sample from the data distribution. However, GSN often starts the chain very close to a training
+data point, and therefore requires the chain to transition quickly between different modes. In
+contrast,ourannealedLangevindynamicsareinitializedfromunstructurednoise. Nonequilibrium
+Thermodynamics (NET [51]) used a prescribed diffusion process to slowly transform data into
+randomnoise,andthenlearnedtoreversethisprocedurebytraininganinversediffusion. However,
+NETisnotveryscalablebecauseitrequiresthediffusionprocesstohaveverysmallsteps,andneeds
+tosimulatechainswiththousandsofstepsattrainingtime.
+PreviousapproachessuchasInfusionTraining(IT[5])andVariationalWalkback(VW[16])also
+employed different noise levels/temperatures for training transition operators of a Markov chain.
+BothITandVW(aswellasNET)traintheirmodelsbymaximizingtheevidencelowerboundof
+asuitablemarginallikelihood. Inpractice,theytendtoproduceblurryimagesamples,similarto
+variationalautoencoders. Incontrast,ourobjectiveisbasedonscorematchinginsteadoflikelihood,
+andwecanproduceimagescomparabletoGANs.
+Thereareseveralstructuraldifferencesthatfurtherdistinguishourapproachfrompreviousmethods
+discussedabove. First,wedonotneedtosamplefromaMarkovchainduringtraining. Incontrast,
+thewalkbackprocedureofGSNsneedsmultiplerunsofthechaintogenerate“negativesamples”.
+OthermethodsincludingNET,IT,andVWalsoneedtosimulateaMarkovchainforeveryinputto
+computethetrainingloss. Thisdifferencemakesourapproachmoreefficientandscalablefortraining
+deepmodels. Secondly, ourtrainingandsamplingmethodsaredecoupledfromeachother. For
+scoreestimation,bothslicedanddenoisingscorematchingcanbeused. Forsampling,anymethod
+basedonscoresisapplicable,includingLangevindynamicsand(potentially)HamiltonianMonte
+Carlo[38]. Ourframeworkallowsarbitrarycombinationsofscoreestimatorsand(gradient-based)
+sampling approaches, whereas most previous methods tie the model to a specific Markov chain.
+Finally,ourapproachcanbeusedtotrainenergy-basedmodels(EBM)byusingthegradientofan
+energy-basedmodelasthescoremodel. Incontrast,itisunclearhowpreviousmethodsthatlearn
+transitionoperatorsofMarkovchainscanbedirectlyusedfortrainingEBMs.
+Score matching was originally proposed for learning EBMs. However, many existing methods
+based on score matching are either not scalable [24] or fail to produce samples of comparable
+quality to VAEs or GANs [27, 49]. To obtain better performance on training deep energy-based
+models,somerecentworkshaveresortedtocontrastivedivergence[21],andproposetosamplewith
+Langevindynamicsforbothtrainingandtesting[12,39]. However,unlikeourapproach,contrastive
+divergenceusesthecomputationallyexpensiveprocedureofLangevindynamicsasaninnerloop
+during training. The idea of combining annealing with denoising score matching has also been
+investigatedinpreviousworkunderdifferentcontexts. In[14,7,66],differentannealingschedules
+onthenoisefortrainingdenoisingautoencodersareproposed. However,theirworkisonlearning
+representations for improving the performance of classification, instead of generative modeling.
+ThemethodofdenoisingscorematchingcanalsobederivedfromtheperspectiveofBayesleast
+squares[43,44],usingtechniquesofStein’sUnbiasedRiskEstimator[35,56].
+7 Conclusion
+Weproposetheframeworkofscore-basedgenerativemodelingwherewefirstestimategradientsof
+datadensitiesviascorematching,andthengeneratesamplesviaLangevindynamics. Weanalyze
+several challenges faced by a naïve application of this approach, and propose to tackle them by
+trainingNoiseConditionalScoreNetworks(NCSN)andsamplingwithannealedLangevindynamics.
+Ourapproachrequiresnoadversarialtraining,noMCMCsamplingduringtraining,andnospecial
+modelarchitectures. Experimentally,weshowthatourapproachcangeneratehighqualityimages
+thatwerepreviouslyonlyproducedbythebestlikelihood-basedmodelsandGANs. Weachievethe
+newstate-of-the-artinceptionscoreonCIFAR-10,andanFIDscorecomparabletoSNGANs.
+9
+Acknowledgements
+ToyotaResearchInstitute("TRI")providedfundstoassisttheauthorswiththeirresearchbutthis
+articlesolelyreflectstheopinionsandconclusionsofitsauthorsandnotTRIoranyotherToyota
+entity. ThisresearchwasalsosupportedbyNSF(#1651565,#1522054,#1733686),ONR(N00014-
+19-1-2145),AFOSR(FA9550-19-1-0024).
+References
+[1] G.Alain,Y.Bengio,L.Yao,J.Yosinski,E.Thibodeau-Laufer,S.Zhang,andP.Vincent. GSNs:
+generativestochasticnetworks. InformationandInference,2016.
+[2] M. Arjovsky, S. Chintala, and L. Bottou. Wasserstein generative adversarial networks. In
+D.PrecupandY.W.Teh,editors,Proceedingsofthe34thInternationalConferenceonMa-
+chineLearning, volume70ofProceedingsofMachineLearningResearch, pages214–223,
+InternationalConventionCentre,Sydney,Australia,06–11Aug2017.PMLR.
+[3] M.BelkinandP.Niyogi. Laplacianeigenmapsfordimensionalityreductionanddatarepresen-
+tation. Neuralcomputation,15(6):1373–1396,2003.
+[4] Y.Bengio,L.Yao,G.Alain,andP.Vincent. Generalizeddenoisingauto-encodersasgenerative
+models. InAdvancesinneuralinformationprocessingsystems,pages899–907,2013.
+[5] F.Bordes,S.Honari,andP.Vincent. Learningtogeneratesamplesfromnoisethroughinfusion
+training. arXivpreprintarXiv:1703.06975,2017.
+[6] A.Brock,J.Donahue,andK.Simonyan. LargescaleGANtrainingforhighfidelitynatural
+imagesynthesis. InInternationalConferenceonLearningRepresentations,2019.
+[7] B.ChandraandR.K.Sharma. Adaptivenoiseschedulefordenoisingautoencoder. InInterna-
+tionalconferenceonneuralinformationprocessing,pages535–542.Springer,2014.
+[8] L.-C.Chen, G.Papandreou, I.Kokkinos, K.Murphy, andA.L.Yuille. Deeplab: Semantic
+imagesegmentationwithdeepconvolutionalnets,atrousconvolution,andfullyconnectedcrfs.
+IEEEtransactionsonpatternanalysisandmachineintelligence,40(4):834–848,2017.
+[9] T.Chen,E.Fox,andC.Guestrin. Stochasticgradienthamiltonianmontecarlo. InInternational
+conferenceonmachinelearning,pages1683–1691,2014.
+[10] Z. Dai, Z. Yang, F. Yang, W. W. Cohen, and R. R. Salakhutdinov. Good semi-supervised
+learningthatrequiresabadgan. InAdvancesinneuralinformationprocessingsystems,pages
+6510–6520,2017.
+[11] L.Dinh,D.Krueger,andY.Bengio. Nice: Non-linearindependentcomponentsestimation.
+arXivpreprintarXiv:1410.8516,2014.
+[12] Y.DuandI.Mordatch. Implicitgenerationandgeneralizationinenergy-basedmodels. arXiv
+preprintarXiv:1903.08689,2019.
+[13] V.Dumoulin,J.Shlens,andM.Kudlur. Alearnedrepresentationforartisticstyle. InInterna-
+tionalConferenceonLearningRepresentations2017,2017.
+[14] K.J.GerasandC.Sutton. Scheduleddenoisingautoencoders. arXivpreprintarXiv:1406.3269,
+2014.
+[15] I.Goodfellow,J.Pouget-Abadie,M.Mirza,B.Xu,D.Warde-Farley,S.Ozair,A.Courville,and
+Y.Bengio. Generativeadversarialnets. InAdvancesinneuralinformationprocessingsystems,
+pages2672–2680,2014.
+[16] A.G.A.P.Goyal, N.R.Ke, S.Ganguli, andY.Bengio. Variationalwalkback: Learninga
+transitionoperatorasastochasticrecurrentnet. InAdvancesinNeuralInformationProcessing
+Systems,pages4392–4402,2017.
+[17] A. Graves. Generating sequences with recurrent neural networks. arXiv preprint
+arXiv:1308.0850,2013.
+[18] I.Gulrajani,F.Ahmed,M.Arjovsky,V.Dumoulin,andA.C.Courville. Improvedtrainingof
+wassersteingans. InAdvancesinNeuralInformationProcessingSystems,pages5767–5777,
+2017.
+10
+[19] M.GutmannandA.Hyvärinen. Noise-contrastiveestimation: Anewestimationprinciplefor
+unnormalizedstatisticalmodels. InProceedingsoftheThirteenthInternationalConferenceon
+ArtificialIntelligenceandStatistics,pages297–304,2010.
+[20] M.Heusel,H.Ramsauer,T.Unterthiner,B.Nessler,andS.Hochreiter. Ganstrainedbyatwo
+time-scaleupdateruleconvergetoalocalnashequilibrium. InAdvancesinNeuralInformation
+ProcessingSystems,pages6626–6637,2017.
+[21] G. E. Hinton. Training products of experts by minimizing contrastive divergence. Neural
+computation,14(8):1771–1800,2002.
+[22] J.HoandS.Ermon. Generativeadversarialimitationlearning. InAdvancesinNeuralInforma-
+tionProcessingSystems,pages4565–4573,2016.
+[23] X. Huang and S. Belongie. Arbitrary style transfer in real-time with adaptive instance nor-
+malization. InProceedingsoftheIEEEInternationalConferenceonComputerVision,pages
+1501–1510,2017.
+[24] A.Hyvärinen. Estimationofnon-normalizedstatisticalmodelsbyscorematching. Journalof
+MachineLearningResearch,6(Apr):695–709,2005.
+[25] T.Karras,T.Aila,S.Laine,andJ.Lehtinen. ProgressivegrowingofGANsforimprovedquality,
+stability,andvariation. InInternationalConferenceonLearningRepresentations,2018.
+[26] T.Karras,S.Laine,andT.Aila. Astyle-basedgeneratorarchitectureforgenerativeadversarial
+networks. arXivpreprintarXiv:1812.04948,2018.
+[27] D.KingmaandY.LeCun. Regularizedestimationofimagestatisticsbyscorematching. In
+AdvancesinNeuralInformationProcessingSystems23: 24thAnnualConferenceonNeural
+InformationProcessingSystems2010,NIPS2010,2010.
+[28] D.P.Kingma,S.Mohamed,D.J.Rezende,andM.Welling.Semi-supervisedlearningwithdeep
+generativemodels. InAdvancesinneuralinformationprocessingsystems,pages3581–3589,
+2014.
+[29] D.P.KingmaandM.Welling. Auto-encodingvariationalbayes. InICLR,2014.
+[30] S.Kirkpatrick,C.D.Gelatt,andM.P.Vecchi. Optimizationbysimulatedannealing. SCIENCE,
+220(4598):671–680,1983.
+[31] A.Krizhevsky. Learningmultiplelayersoffeaturesfromtinyimages. Technicalreport,2009.
+[32] G.Lin,A.Milan,C.Shen,andI.Reid. Refinenet: Multi-pathrefinementnetworksforhigh-
+resolutionsemanticsegmentation. InProceedingsoftheIEEEconferenceoncomputervision
+andpatternrecognition,pages1925–1934,2017.
+[33] Q. Liu, J. Lee, and M. Jordan. A kernelized stein discrepancy for goodness-of-fit tests. In
+InternationalConferenceonMachineLearning,pages276–284,2016.
+[34] Z.Liu,P.Luo,X.Wang,andX.Tang. Deeplearningfaceattributesinthewild. InProceedings
+ofInternationalConferenceonComputerVision(ICCV),2015.
+[35] K.Miyasawa. Anempiricalbayesestimatorofthemeanofanormalpopulation. Bull.Inst.
+Internat.Statist,38(181-188):1–2,1961.
+[36] T. Miyato, T. Kataoka, M. Koyama, and Y. Yoshida. Spectral normalization for generative
+adversarialnetworks. InInternationalConferenceonLearningRepresentations,2018.
+[37] R.M.Neal. Annealedimportancesampling. Statisticsandcomputing,11(2):125–139,2001.
+[38] R.M.Neal. Mcmcusinghamiltoniandynamics. arXivpreprintarXiv:1206.1901,2012.
+[39] E. Nijkamp, M. Hill, T. Han, S.-C. Zhu, and Y. N. Wu. On the anatomy of mcmc-based
+maximumlikelihoodlearningofenergy-basedmodels. arXivpreprintarXiv:1903.12370,2019.
+[40] S. Nowozin, B. Cseke, and R. Tomioka. f-gan: Training generative neural samplers using
+variationaldivergenceminimization. InAdvancesinneuralinformationprocessingsystems,
+pages271–279,2016.
+[41] G. Ostrovski, M. G. Bellemare, A. van den Oord, and R. Munos. Count-based exploration
+withneuraldensitymodels. InProceedingsofthe34thInternationalConferenceonMachine
+Learning-Volume70,pages2721–2730.JMLR.org,2017.
+11
+[42] G. Ostrovski, W. Dabney, and R. Munos. Autoregressive quantile networks for generative
+modeling. InICML,volume80ofProceedingsofMachineLearningResearch,pages3933–
+3942.PMLR,2018.
+[43] M.RaphanandE.P.Simoncelli. Learningtobebayesianwithoutsupervision. InAdvancesin
+neuralinformationprocessingsystems,pages1145–1152,2007.
+[44] M.RaphanandE.P.Simoncelli. Leastsquaresestimationwithoutpriorsorsupervision. Neural
+computation,23(2):374–420,2011.
+[45] S.Ravuri,S.Mohamed,M.Rosca,andO.Vinyals. Learningimplicitgenerativemodelswith
+the method of learned moments. In J. Dy and A. Krause, editors, Proceedings of the 35th
+InternationalConferenceonMachineLearning,volume80ofProceedingsofMachineLearning
+Research,pages4314–4323,Stockholmsmässan,StockholmSweden,10–15Jul2018.PMLR.
+[46] O.Ronneberger,P.Fischer,andT.Brox. U-net: Convolutionalnetworksforbiomedicalimage
+segmentation. InMedicalImageComputingandComputer-AssistedIntervention(MICCAI),
+volume 9351 of LNCS, pages 234–241. Springer, 2015. (available on arXiv:1505.04597
+[cs.CV]).
+[47] S.T.RoweisandL.K.Saul. Nonlineardimensionalityreductionbylocallylinearembedding.
+science,290(5500):2323–2326,2000.
+[48] T. Salimans, I. Goodfellow, W. Zaremba, V. Cheung, A. Radford, and X. Chen. Improved
+techniques for training gans. In Advances in neural information processing systems, pages
+2234–2242,2016.
+[49] S. Saremi, A. Mehrjou, B. Schölkopf, and A. Hyvärinen. Deep energy estimator networks.
+arXivpreprintarXiv:1805.08306,2018.
+[50] J.Sohl-Dickstein,P.Battaglino,andM.R.DeWeese. Minimumprobabilityflowlearning. arXiv
+preprintarXiv:0906.4779,2009.
+[51] J.Sohl-Dickstein,E.Weiss,N.Maheswaranathan,andS.Ganguli. Deepunsupervisedlearning
+using nonequilibrium thermodynamics. In International Conference on Machine Learning,
+pages2256–2265,2015.
+[52] J.Song,S.Zhao,andS.Ermon. A-nice-mc: Adversarialtrainingformcmc. InAdvancesin
+NeuralInformationProcessingSystems,pages5140–5150,2017.
+[53] Y.Song,S.Garg,J.Shi,andS.Ermon. Slicedscorematching: Ascalableapproachtodensity
+andscoreestimation. InProceedingsoftheThirty-FifthConferenceonUncertaintyinArtificial
+Intelligence,UAI2019,TelAviv,Israel,July22-25,2019,page204,2019.
+[54] Y.Song,T.Kim,S.Nowozin,S.Ermon,andN.Kushman. Pixeldefend: Leveraginggenerative
+modelstounderstandanddefendagainstadversarialexamples. InInternationalConferenceon
+LearningRepresentations,2018.
+[55] B.K.Sriperumbudur,K.Fukumizu,A.Gretton,B.Schölkopf,andG.R.Lanckriet. Onintegral
+probabilitymetrics,\phi-divergencesandbinaryclassification. arXivpreprintarXiv:0901.2698,
+2009.
+[56] C. M. Stein. Estimation of the mean of a multivariate normal distribution. The annals of
+Statistics,pages1135–1151,1981.
+[57] D.Ulyanov,A.Vedaldi,andV.Lempitsky. Instancenormalization: Themissingingredientfor
+faststylization. arXivpreprintarXiv:1607.08022,2016.
+[58] A.vandenOord,S.Dieleman,H.Zen,K.Simonyan,O.Vinyals,A.Graves,N.Kalchbrenner,
+A.Senior,andK.Kavukcuoglu. Wavenet: Agenerativemodelforrawaudio. InArxiv,2016.
+[59] A.VandenOord,N.Kalchbrenner,L.Espeholt,O.Vinyals,A.Graves,etal. Conditionalimage
+generation with pixelcnn decoders. In Advances in neural information processing systems,
+pages4790–4798,2016.
+[60] A.VanDenOord,N.Kalchbrenner,andK.Kavukcuoglu. Pixelrecurrentneuralnetworks. In
+Proceedingsofthe33rdInternationalConferenceonInternationalConferenceonMachine
+Learning-Volume48,ICML’16,pages1747–1756.JMLR.org,2016.
+[61] P.Vincent. Aconnectionbetweenscorematchinganddenoisingautoencoders. Neuralcompu-
+tation,23(7):1661–1674,2011.
+12
+[62] M. Welling and Y. W. Teh. Bayesian learning via stochastic gradient langevin dynamics.
+InProceedingsofthe28thinternationalconferenceonmachinelearning(ICML-11),pages
+681–688,2011.
+[63] L.Wenliang,D.Sutherland,H.Strathmann,andA.Gretton. Learningdeepkernelsforexpo-
+nentialfamilydensities. InInternationalConferenceonMachineLearning,pages6737–6746,
+2019.
+[64] F.YuandV.Koltun. Multi-scalecontextaggregationbydilatedconvolutions. InInternational
+ConferenceonLearningRepresentations(ICLR),2016.
+[65] F.Yu,V.Koltun,andT.Funkhouser. Dilatedresidualnetworks. InComputerVisionandPattern
+Recognition(CVPR),2017.
+[66] Q.ZhangandL.Zhang. Convolutionaladaptivedenoisingautoencodersforhierarchicalfeature
+extraction. FrontiersofComputerScience,12(6):1140–1148,2018.
+13

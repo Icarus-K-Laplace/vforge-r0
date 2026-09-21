@@ -1,0 +1,31 @@
+{
+  "contract_id": "CONTRACT_E01-02",
+  "source_paper": "E01-02",
+  "family": "E01",
+  "paper_text_hash": "73ddd4f91708821b86cf194d59a0dcb142de2dbd71d9a0c508c471ada48a5279",
+  "source_span": "For each method we report the mean over three seeds on CIFAR-10. Results are averaged across runs.",
+  "predicates": [
+    {
+      "predicate_id": "P6_AGGREGATION",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Reported value must equal the declared mean aggregation over all N declared seeds.",
+      "trace_fields": [
+        "protocol",
+        "aggregation_rule",
+        "protocol",
+        "aggregation_inputs",
+        "protocol",
+        "declared_seeds"
+      ],
+      "condition": "protocol.aggregation_rule == 'mean' AND len(protocol.aggregation_inputs) == len(protocol.declared_seeds)",
+      "source_span": "For each method we report the mean over three seeds on CIFAR-10. Results are averaged across runs.",
+      "confidence": 0.9
+    }
+  ],
+  "universal_principles": [
+    "P5_DETERMINISM_OR_SEEDS",
+    "P6_AGGREGATION_FIDELITY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "d7cb271d2604875cdd62223ea9ccb69b07bed6f33ae07d89968a9561baeec01c"
+}

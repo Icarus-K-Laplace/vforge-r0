@@ -1,0 +1,16 @@
+{
+  "trace_id": "CAND-04_pre",
+  "protocol": {
+    "metric_formula": "multi_bleu_perl_tokenized",
+    "implementation_correct": false,
+    "standardized_hash": false
+  },
+  "outputs": {
+    "bleu_score": 28.4,
+    "metric": "BLEU"
+  },
+  "candidate_id": "CAND-04",
+  "paper": "A Call for Clarity in Reporting BLEU Scores",
+  "family": "C6_aggregation_statistical_procedure_error",
+  "self_hash": "73d14b13224903a121211f924ec73af8be7b644c151c93087bb79aec1331f781"
+}

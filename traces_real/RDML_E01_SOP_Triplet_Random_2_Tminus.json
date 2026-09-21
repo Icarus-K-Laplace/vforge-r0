@@ -1,0 +1,45 @@
+{
+  "trace_id": "RDML_E01_SOP_Triplet_Random_2_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "SOP_Triplet_Random_2_s2",
+    "SOP_Triplet_Random_2_s3",
+    "SOP_Triplet_Random_2_s0"
+  ],
+  "protocol": {
+    "dataset": "SOP",
+    "method": "Triplet_Random_2",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_SOP_Triplet_Random_2_s2",
+      "RDML_E01_SOP_Triplet_Random_2_s3",
+      "RDML_E01_SOP_Triplet_Random_2_s0"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.6673,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_SOP_Triplet_Random_2_s2",
+        "RDML_E01_SOP_Triplet_Random_2_s3",
+        "RDML_E01_SOP_Triplet_Random_2_s0"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "fea7ad215ce37d1dbcb0e8673d57cbc4b6bc9b196bbf8e098a51c5fd72364434",
+  "vps": 0.242,
+  "value_preserving": true,
+  "abs_diff": 0.0024
+}

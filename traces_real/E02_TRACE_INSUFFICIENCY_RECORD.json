@@ -1,0 +1,42 @@
+{
+  "family": "E02",
+  "status": "TRACE_INSUFFICIENT",
+  "viewbatchmodel_exposes_checkpoint_provenance": false,
+  "revisitdml_exposes_checkpoint_provenance": false,
+  "vb_summary_metric_keys_sample": [
+    "CPU_memory_usage",
+    "GPU_memory_usage",
+    "RESULT_class_acc_0",
+    "RESULT_class_acc_1",
+    "RESULT_class_acc_2",
+    "RESULT_class_acc_3",
+    "RESULT_class_acc_4",
+    "RESULT_class_mean_accs",
+    "RESULT_task_acc_0",
+    "RESULT_task_acc_1",
+    "RESULT_task_acc_2",
+    "RESULT_task_acc_3",
+    "RESULT_task_acc_4",
+    "RESULT_task_mean_accs",
+    "Task"
+  ],
+  "rdml_summary_metric_keys_sample": [
+    "Model Grad: L2: Grad L2",
+    "Model Grad: Max: Grad Max",
+    "Test: discriminative_LOG-rho_spectrum@0",
+    "Test: discriminative_dists: dists@inter",
+    "Test: discriminative_dists: dists@intra",
+    "Test: discriminative_dists: dists@intra_over_inter",
+    "Test: discriminative_e_recall: e_recall@1",
+    "Test: discriminative_e_recall: e_recall@2",
+    "Test: discriminative_e_recall: e_recall@4",
+    "Test: discriminative_f1: f1",
+    "Test: discriminative_mAP: mAP",
+    "Test: discriminative_nmi: nmi",
+    "Test: discriminative_rho_spectrum: rho_spectrum@-1",
+    "Test: discriminative_rho_spectrum: rho_spectrum@1",
+    "Test: discriminative_rho_spectrum: rho_spectrum@10"
+  ],
+  "reasoning": "W&B summaryMetrics for both public projects expose per-run task/class accuracy and test discriminative metrics, but do NOT expose checkpoint-selection provenance (selection criterion split, candidate checkpoints, selected checkpoint id). E02 therefore cannot be constructed from these sources without fabricating selection data. Recorded as TRACE_INSUFFICIENT per protocol (document, don't invent).",
+  "constructed_pairs": 0
+}

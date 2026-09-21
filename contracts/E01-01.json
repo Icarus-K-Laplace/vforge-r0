@@ -1,0 +1,31 @@
+{
+  "contract_id": "CONTRACT_E01-01",
+  "source_paper": "E01-01",
+  "family": "E01",
+  "paper_text_hash": "7a86d262c411c7ebbf69b34324e4989ca3137fb1d9f7fc0a6c9af17dfac62d0b",
+  "source_span": "We report the mean accuracy across five random seeds (0-4) on the ImageNet subset. Aggregation is arithmetic mean.",
+  "predicates": [
+    {
+      "predicate_id": "P6_AGGREGATION",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Reported value must equal the declared mean aggregation over all N declared seeds.",
+      "trace_fields": [
+        "protocol",
+        "aggregation_rule",
+        "protocol",
+        "aggregation_inputs",
+        "protocol",
+        "declared_seeds"
+      ],
+      "condition": "protocol.aggregation_rule == 'mean' AND len(protocol.aggregation_inputs) == len(protocol.declared_seeds)",
+      "source_span": "We report the mean accuracy across five random seeds (0-4) on the ImageNet subset. Aggregation is arithmetic mean.",
+      "confidence": 0.9
+    }
+  ],
+  "universal_principles": [
+    "P5_DETERMINISM_OR_SEEDS",
+    "P6_AGGREGATION_FIDELITY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "3968b7ddf4eec478d93d6d341a6104e78bdc9f29f7108d4f40567efa1f7c6e9d"
+}

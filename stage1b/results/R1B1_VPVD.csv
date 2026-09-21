@@ -1,0 +1,12 @@
+pair_id,family,paper,vps,value_preserving,sec_invalid_verdict,detected
+DS_E01_dual_inpainting,E01,diffusing_synth_2411.10164,0.1474,True,FAIL,1
+DS_E01_img2img,E01,diffusing_synth_2411.10164,0.1513,True,FAIL,1
+DS_E01_one_stage_no_table,E01,diffusing_synth_2411.10164,0.1875,True,FAIL,1
+DS_E01_prompts_blip,E01,diffusing_synth_2411.10164,0.1598,True,FAIL,1
+DS_E01_real,E01,diffusing_synth_2411.10164,0.1376,True,FAIL,1
+DS_E06_DATASET_ASYM,E06,diffusing_synth_2411.10164,0.0,True,FAIL,1
+DA_E06_220M,E06,delta_attention_2605.18855,0.0,True,FAIL,1
+DA_E06_533M,E06,delta_attention_2605.18855,0.0,True,FAIL,1
+DA_E06_1044M,E06,delta_attention_2605.18855,0.0,True,FAIL,1
+DA_E06_220M,E06,delta_attention_2605.18855,0.0,True,FAIL,1
+DA_E06_533M,E06,delta_attention_2605.18855,0.0,True,FAIL,1

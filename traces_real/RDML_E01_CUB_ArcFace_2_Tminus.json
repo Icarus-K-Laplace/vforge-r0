@@ -1,0 +1,44 @@
+{
+  "trace_id": "RDML_E01_CUB_ArcFace_2_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CUB_ArcFace_2_s4",
+    "CUB_ArcFace_2_s2",
+    "CUB_ArcFace_2_s3"
+  ],
+  "protocol": {
+    "dataset": "CUB",
+    "method": "ArcFace_2",
+    "declared_seeds": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CUB_ArcFace_2_s4",
+      "RDML_E01_CUB_ArcFace_2_s2",
+      "RDML_E01_CUB_ArcFace_2_s3"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.609,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CUB_ArcFace_2_s4",
+        "RDML_E01_CUB_ArcFace_2_s2",
+        "RDML_E01_CUB_ArcFace_2_s3"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "1ae359c534653a02faf4dab0288c7c5f4654d413e290f793a0df8aa4ef4b1580",
+  "vps": 0.4431,
+  "value_preserving": false,
+  "abs_diff": 0.0044
+}

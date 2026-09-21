@@ -1,0 +1,10 @@
+{
+  "candidate_id": "CAND-04",
+  "paper_title": "A Call for Clarity in Reporting BLEU Scores",
+  "venue_year": "WMT 2018",
+  "deviation_category": "C6_aggregation_statistical_procedure_error",
+  "blind_metadata": {
+    "declared_protocol_source": "Paper Methods section of A Call for Clarity in Reporting BLEU Scores",
+    "execution_target_repo": "https://github.com/mjpost/sacrebleu"
+  }
+}

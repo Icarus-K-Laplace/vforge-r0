@@ -1,0 +1,11 @@
+{
+  "candidate_id": "CAND-08",
+  "paper_title": "Objects as Points (CenterNet)",
+  "deviation_category": "C5_runtime_protocol_mismatch",
+  "gold_source_type": "A_author_github_issue",
+  "gold_url": "https://github.com/xingyizhou/CenterNet/issues/7",
+  "gold_authority": "Xingyi Zhou (first author) on GitHub Issue #7 & #53",
+  "gold_text": "Authors confirmed that Table 1 single-scale test AP numbers reported in the paper required test-time flip augmentation (flip_test=True) which was not documented in the evaluation protocol of Table 1.",
+  "pre_fix_ref": "commit 1e920d3 (src/lib/detectors/ctdet.py)",
+  "post_fix_ref": "commit 4a3f120 (clarify flip_test in test options and README)"
+}

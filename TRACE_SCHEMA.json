@@ -1,0 +1,204 @@
+{
+  "schema_name": "Scientific Execution Trace",
+  "version": "1.0",
+  "description": "Content-addressed execution trace for scientific reproducibility verification. Records the runtime provenance of a study execution so that paper-derived scientific contracts can be checked against what actually ran, not what the repository merely contains.",
+  "design_principles": [
+    "Content-addressed: every entity carries a stable hash; outputs record upstream entities that contributed to them.",
+    "Existing standards where practical: aligns with W3C PROV concepts (Entity/Activity/Agent) and RO-Crate structure rather than inventing a new provenance model.",
+    "Execution-independent inputs must be identical across a paired execution: paper, repository, code_commit. Only runtime/execution fields may differ.",
+    "No gold label leakage: the trace must not encode which execution is clean vs. invalid; that is derived by the verifier against the contract."
+  ],
+  "root_object": {
+    "type": "object",
+    "required": ["run_id", "code_commit", "environment_hash", "config_hash", "seed", "protocol", "lineage", "checkpoint", "evaluation", "outputs", "timestamps", "self_hash"],
+    "properties": {
+      "run_id": {
+        "type": "string",
+        "description": "Unique identifier for this execution (not necessarily stable across the pair)."
+      },
+      "code_commit": {
+        "type": "string",
+        "description": "Full git SHA of the code that was executed. MUST be identical across paired clean/invalid executions (same code, different runtime behaviour)."
+      },
+      "environment_hash": {
+        "type": "string",
+        "description": "Hash of the runtime environment (python version, key library versions, device). Identical across a pair."
+      },
+      "config_hash": {
+        "type": "string",
+        "description": "SHA256 of the raw config file(s) loaded at runtime. May differ between paired runs if the fault is a runtime config mismatch."
+      },
+      "seed": {
+        "type": "integer",
+        "description": "Random seed for this single execution. In a seed-aggregation study, multiple runs each have their own seed; the trace records this run's seed."
+      },
+      "protocol": {
+        "type": "object",
+        "description": "The scientific protocol as declared/executed. This is where paper-derived contracts are checked.",
+        "required": ["declared_seeds", "aggregation_rule", "selection_split", "final_test_split", "declared_preprocess", "executed_preprocess"],
+        "properties": {
+          "declared_seeds": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "Seed population the paper declares (e.g. [0,1,2,3,4] for 5 seeds)."
+          },
+          "aggregation_rule": {
+            "type": "string",
+            "enum": ["mean", "median", "best", "max", "min", "single"],
+            "description": "How multiple-seed results are aggregated into the reported value. Paper typically declares 'mean'; a violation uses 'best'."
+          },
+          "aggregation_inputs": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "run_ids whose metrics feed into the aggregated reported value."
+          },
+          "selection_split": {
+            "type": "string",
+            "enum": ["train", "validation", "test", "none"],
+            "description": "Which data split was used to select the checkpoint. Paper must say 'validation' or 'none' (no selection)."
+          },
+          "selection_criterion": {
+            "type": "string",
+            "description": "Metric used for selection, e.g. 'val_accuracy', 'val_loss', 'test_accuracy'."
+          },
+          "selection_dataset_hash": {
+            "type": "string",
+            "description": "Content hash of the dataset actually used for checkpoint selection."
+          },
+          "final_test_split": {
+            "type": "string",
+            "description": "Identifier/href of the split used for the final reported evaluation. MUST be disjoint from selection_split in a clean execution."
+          },
+          "final_test_dataset_hash": {
+            "type": "string",
+            "description": "Content hash of the dataset actually used for final evaluation."
+          },
+          "declared_preprocess": {
+            "type": "object",
+            "description": "Preprocessing pipeline the paper declares (normalisation, augmentation, etc.)."
+          },
+          "executed_preprocess": {
+            "type": "object",
+            "description": "Preprocessing pipeline actually applied at runtime. May diverge from declared_preprocess in E05."
+          },
+          "reported_subgroups": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Subgroup labels actually reported. May be a subset of declared_subgroups in E04."
+          },
+          "declared_subgroups": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Subgroup labels the paper says are reported."
+          }
+        }
+      },
+      "hyperparameters": {
+        "type": "object",
+        "description": "All hyperparameters actually used at runtime (lr, batch_size, epochs, etc.). Keyed by name."
+      },
+      "loss_identity": {
+        "type": "string",
+        "description": "Concrete loss function actually used, e.g. 'CrossEntropyLoss', 'nn.MSELoss'."
+      },
+      "optimizer": {
+        "type": "string",
+        "description": "Optimizer actually used, e.g. 'AdamW', 'SGD'."
+      },
+      "training_budget": {
+        "type": "object",
+        "description": "Compute/training budget actually consumed. Relevant for E06 asymmetry.",
+        "properties": {
+          "epochs": {"type": "integer"},
+          "steps": {"type": "integer"},
+          "gpu_seconds": {"type": "number"},
+          "dataset_fraction_used": {"type": "number"}
+        }
+      },
+      "comparator_budgets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "method": {"type": "string"},
+            "epochs": {"type": "integer"},
+            "gpu_seconds": {"type": "number"}
+          }
+        },
+        "description": "Training budgets for each compared method. E06 checks declared fairness relations."
+      },
+      "lineage": {
+        "type": "object",
+        "description": "train/validation/test data lineage with hashes.",
+        "required": ["train_hash", "validation_hash", "test_hash"],
+        "properties": {
+          "train_hash": {"type": "string"},
+          "validation_hash": {"type": "string"},
+          "test_hash": {"type": "string"},
+          "disjoint_split_ids": {
+            "type": "boolean",
+            "description": "True if train/validation/test sample IDs are verified disjoint."
+          }
+        }
+      },
+      "checkpoint": {
+        "type": "object",
+        "description": "Checkpoint selection record.",
+        "required": ["candidates", "selected", "selection_criterion", "selection_split"],
+        "properties": {
+          "candidates": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "All checkpoint IDs that were available for selection."
+          },
+          "selected": {"type": "string", "description": "Checkpoint ID actually used for reporting."},
+          "selection_criterion": {"type": "string"},
+          "selection_split": {"type": "string", "enum": ["train","validation","test","none"]}
+        }
+      },
+      "evaluation": {
+        "type": "object",
+        "description": "Final evaluation record.",
+        "required": ["dataset", "metrics"],
+        "properties": {
+          "dataset": {"type": "string"},
+          "dataset_hash": {"type": "string"},
+          "metrics": {
+            "type": "object",
+            "description": "Metric name -> value, each traceable to an upstream run_id/checkpoint."
+          },
+          "evaluated_checkpoint": {"type": "string"}
+        }
+      },
+      "outputs": {
+        "type": "object",
+        "description": "Reported outputs, each recording upstream entities that produced it.",
+        "properties": {
+          "reported_value": {
+            "type": "object",
+            "required": ["value", "aggregation_rule", "upstream_runs"],
+            "properties": {
+              "value": {"type": "number"},
+              "aggregation_rule": {"type": "string"},
+              "upstream_runs": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      },
+      "timestamps": {
+        "type": "object",
+        "properties": {
+          "start": {"type": "string", "format": "date-time"},
+          "end": {"type": "string", "format": "date-time"}
+        }
+      },
+      "parent_run": {"type": ["string", "null"], "description": "Parent run_id if this is a child (multi-seed) execution."},
+      "child_runs": {"type": "array", "items": {"type": "string"}},
+      "self_hash": {
+        "type": "string",
+        "description": "SHA256 over the canonical serialisation of this trace object (excluding self_hash). Makes the trace content-addressed."
+      }
+    }
+  },
+  "identifiability_note": "Within a paired execution, code_commit, environment_hash, and the paper are held constant. Only runtime/execution fields (seed, checkpoint.selection_split, protocol.executed_preprocess, aggregation_inputs, reported_subgroups, training_budget) may differ between the clean and invalid members."
+}

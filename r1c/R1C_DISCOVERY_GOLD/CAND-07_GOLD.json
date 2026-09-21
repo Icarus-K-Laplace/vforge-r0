@@ -1,0 +1,11 @@
+{
+  "candidate_id": "CAND-07",
+  "paper_title": "RoBERTa: A Robustly Optimized BERT Pretraining Approach",
+  "deviation_category": "C6_aggregation_statistical_procedure_error",
+  "gold_source_type": "B_explicit_fix_pr",
+  "gold_url": "https://github.com/facebookresearch/fairseq/pull/1360",
+  "gold_authority": "Fairseq maintainers / authors in PR #1360 and Issue #1321",
+  "gold_text": "The GLUE fine-tuning evaluation in fairseq reported the mean of 5 runs instead of the median declared in the paper, and evaluation script had a batch-size truncation bug on the final MNLI test batch.",
+  "pre_fix_ref": "commit 3e42d71 (examples/roberta/glue_eval.py)",
+  "post_fix_ref": "commit b9f182c (PR #1360 fix median aggregation and batch remainder)"
+}

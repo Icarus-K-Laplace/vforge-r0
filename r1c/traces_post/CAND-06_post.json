@@ -1,0 +1,18 @@
+{
+  "trace_id": "CAND-06_post",
+  "protocol": {
+    "comparator_budgets": {
+      "baseline_gcn": 100,
+      "proposed_architecture": 100
+    },
+    "budgets_symmetric": true
+  },
+  "outputs": {
+    "relative_gain": 1.2,
+    "metric": "test_accuracy_gap"
+  },
+  "candidate_id": "CAND-06",
+  "paper": "A Fair Comparison of Graph Neural Networks for Graph Classification",
+  "family": "C4_comparator_asymmetry",
+  "self_hash": "316648ad1c6c510cc8047fbe4ddbf761fb4d14ed0c8e0e44f0cc81c959dd6796"
+}

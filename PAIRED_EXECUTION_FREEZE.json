@@ -1,0 +1,27 @@
+{
+  "protocol": "R1-A",
+  "frozen_at": "2026-09-20T11:47:24.720161",
+  "n_pairs": 30,
+  "n_executions": 60,
+  "families": {
+    "E01": 5,
+    "E02": 5,
+    "E03": 5,
+    "E04": 5,
+    "E05": 5,
+    "E06": 5
+  },
+  "identifiability": {
+    "shared_paper_per_pair": true,
+    "shared_repo_per_pair": true,
+    "trace_differs_within_pair": true,
+    "identifiability_holds": "30/30"
+  },
+  "final_status": "STRONG_GO",
+  "tc_psd": 0.9,
+  "clean_acceptance": 0.933,
+  "localization_rate": 1.0,
+  "best_static_psd": 0.0,
+  "families_positive": "6/6",
+  "index_sha256": "db385e6a4594e8b25e0f3f9eadcdc51e194df941d381c834d6a78512a7937cfc"
+}

@@ -1,0 +1,31 @@
+{
+  "contract_id": "CONTRACT_E01-04",
+  "source_paper": "E01-04",
+  "family": "E01",
+  "paper_text_hash": "fe8ed55e49d67d846f9916ca685b5f0c432b59e33d4c499763c1112b4cad9017",
+  "source_span": "Protein folding benchmark: mean CDR over six seeds, reported as the aggregate result.",
+  "predicates": [
+    {
+      "predicate_id": "P6_AGGREGATION",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Reported value must equal the declared mean aggregation over all N declared seeds.",
+      "trace_fields": [
+        "protocol",
+        "aggregation_rule",
+        "protocol",
+        "aggregation_inputs",
+        "protocol",
+        "declared_seeds"
+      ],
+      "condition": "protocol.aggregation_rule == 'mean' AND len(protocol.aggregation_inputs) == len(protocol.declared_seeds)",
+      "source_span": "Protein folding benchmark: mean CDR over six seeds, reported as the aggregate result.",
+      "confidence": 0.9
+    }
+  ],
+  "universal_principles": [
+    "P5_DETERMINISM_OR_SEEDS",
+    "P6_AGGREGATION_FIDELITY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "01670177634cc3e41469d33f2192a1db4004674ee22e8d3a8ba2032bfd0c427f"
+}

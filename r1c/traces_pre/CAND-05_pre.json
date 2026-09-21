@@ -1,0 +1,21 @@
+{
+  "trace_id": "CAND-05_pre",
+  "protocol": {
+    "declared_options": {
+      "doc_stride": 128,
+      "dropout": 0.0
+    },
+    "runtime_options": {
+      "doc_stride": 64,
+      "dropout": 0.1
+    }
+  },
+  "outputs": {
+    "squad_f1": 89.3,
+    "metric": "F1"
+  },
+  "candidate_id": "CAND-05",
+  "paper": "ALBERT: A Lite BERT for Self-supervised Learning of Language Representations",
+  "family": "C5_runtime_protocol_mismatch",
+  "self_hash": "c64ed4a0ac5dde273ccb2a15d2a918361531c9caa6d48f72b32edaa9716ece00"
+}

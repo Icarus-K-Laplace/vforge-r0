@@ -1,0 +1,40 @@
+{
+  "contract_id": "CONTRACT_E03-03",
+  "source_paper": "E03-03",
+  "family": "E03",
+  "paper_text_hash": "cfd9b96b29ab8e99a158d0d0be68bf09190ba6ed99893cd0fdc6ce6619ccb13c",
+  "source_span": "Both models are trained for an identical 50 epochs under the same budget.",
+  "predicates": [
+    {
+      "predicate_id": "P7_HYPERPARAMS",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "Executed hyperparameters must match the paper-declared values.",
+      "trace_fields": [
+        "protocol",
+        "declared_hyperparameters",
+        "protocol",
+        "executed_hyperparameters"
+      ],
+      "condition": "protocol.executed_hyperparameters == protocol.declared_hyperparameters",
+      "source_span": "Both models are trained for an identical 50 epochs under the same budget.",
+      "confidence": 0.8
+    },
+    {
+      "predicate_id": "P3_BUDGET",
+      "principle": "P3_SYMMETRY",
+      "natural_language": "Compared methods must be matched on the declared training/compute budget.",
+      "trace_fields": [
+        "comparator_budgets"
+      ],
+      "condition": "max(budget_value across comparator_budgets) - min(budget_value across comparator_budgets) == 0",
+      "source_span": "Both models are trained for an identical 50 epochs under the same budget.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P3_SYMMETRY",
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "ada62268265571356a6975ec8b250d43e1650bf08b885442a7773347b6d6eabb"
+}

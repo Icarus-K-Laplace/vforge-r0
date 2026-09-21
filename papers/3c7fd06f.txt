@@ -1,0 +1,658 @@
+Parameterized Explainer for Graph Neural Network
+DongshengLuo1∗ WeiCheng2∗ DongkuanXu1 WenchaoYu2 BoZong2
+HaifengChen2 XiangZhang1
+1ThePennsylvaniaStateUniversity
+2NECLabsAmerica
+1{dul262,dux19,xzz89}@psu.edu
+2{weicheng,wyu,bzong,haifeng}@nec-labs.com
+Abstract
+DespiterecentprogressinGraphNeuralNetworks(GNNs),explainingpredictions
+madebyGNNsremainsachallengingopenproblem. Theleadingmethodindepen-
+dentlyaddressesthelocalexplanations(i.e.,importantsubgraphstructureandnode
+features)tointerpretwhyaGNNmodelmakesthepredictionforasingleinstance,
+e.g. a node or a graph. As a result, the explanation generated is painstakingly
+customizedforeachinstance. Theuniqueexplanationinterpretingeachinstance
+independentlyisnotsufficienttoprovideaglobalunderstandingofthelearned
+GNNmodel,leadingtothelackofgeneralizabilityandhinderingitfrombeingused
+intheinductivesetting. Besides,asitisdesignedforexplainingasingleinstance,
+it is challenging to explain a set of instances naturally (e.g., graphs of a given
+class). Inthisstudy,weaddressthesekeychallengesandproposePGExplainer,a
+parameterizedexplainerforGNNs. PGExplaineradoptsadeepneuralnetworkto
+parameterizethegenerationprocessofexplanations,whichenablesPGExplainera
+naturalapproachtoexplainingmultipleinstancescollectively. Comparedtothe
+existingwork,PGExplainerhasbettergeneralizationabilityandcanbeutilized
+inaninductivesettingeasily. Experimentsonbothsyntheticandreal-lifedatasets
+showhighlycompetitiveperformancewithupto24.7%relativeimprovementin
+AUConexplaininggraphclassificationovertheleadingbaseline.
+1 Introduction
+GraphNeuralNetworks(GNNs)arepowerfultoolsforrepresentationlearningofgraph-structured
+data,suchassocialnetworks[46],documentcitationgraphs[33],andmicrobiologicalgraphs[44].
+GNNsbroadlyadoptamessagepassingschemetolearnnoderepresentationsbyaggregatingrep-
+resentation vectors of its neighbors [49, 16]. This scheme enables GNN to capture both node
+featuresandgraphtopology. GNN-basedmethodshaveachievedstate-of-the-artperformanceinnode
+classification,graphclassification,andlinkprediction,etc[21,45,56].
+Despitetheirremarkableeffectiveness, therationalesofpredictionsmadebyGNNsarenoteasy
+forhumanstounderstand. SinceGNNsaggregatebothnodefeaturesandgraphtopologytomake
+predictions,tounderstandpredictionsmadebyGNNs,importantsubgraphsand/orasetoffeatures,
+whicharealsoknownasexplanations,needtobeuncovered. Intheliterature,althoughavarietyof
+effortshavebeenundertakentointerpretgeneraldeepneuralnetworks,existingapproaches[6,26,
+12,31,43,19,20]inthislinefallshortintheirabilitytoexplaingraphstructures,whichisessential
+forGNNs. ExplainingpredictionsmadebyGNNsremainsachallengingopenproblem,onwhich
+fewmethodshavebeenproposed. Thecombinatorialnatureofexplaininggraphstructuresmakesit
+difficulttodesignmodelsthatarebothrobustandefficient. Recently,thefirstgeneralmodel-agnostic
+∗EqualContribution
+34thConferenceonNeuralInformationProcessingSystems(NeurIPS2020),Vancouver,Canada.
+Explanation for
+mutagens
+Mutagen 1 Mutagen 2 Nonmutagen1
+GNN PGExplainer
+Figure1: PGExplainerprovideshuman-understandableexplanationsforpredictionsmadebyGNNs.
+TheleftpartshowstheprocessofapplyingGNNsforgraphclassificationontheMUTAGdataset. A
+GNNbasedmodelistrainedtopredicttheirmutageniceffects. Asapost-hocmethod,PGExplainer
+takesthetrainedGNNmodelasinputandprovidesconsistentexplanationsforpredictionsmadeby
+theGNNmodel. Forthemutagenmoleculegraphsintheexample,theexplanationistheNO group.
+2
+approachforGNNs,GNNExplainer[53],wasproposedtoaddresstheproblem. Ittakesatrained
+GNNanditspredictionsasinputstoprovideinterpretableexplanationsforagiveninstance,e.g. a
+nodeoragraph. Theexplanationincludesacompactsubgraphstructureandasmallsubsetofnode
+featuresthatarecrucialinGNN’spredictionforthetargetinstance. Nevertheless,thereareseveral
+limitationsintheexistingapproach. First, GNNExplainerlargelyfocusesonprovidingthelocal
+interpretabilitybygeneratingapainstakinglycustomizedexplanationforasingleinstanceindividually
+andindependently. TheexplanationprovidedbyGNNExplainerislimitedtothesingleinstance,
+makingGNNExplainerdifficulttobeappliedintheinductivesettingbecausetheexplanationsarehard
+togeneralizetootherunexplainednodes. Aspointedoutinpreviousstudies,modelsinterpretingeach
+instanceindependentlyarenotsufficienttoprovideaglobalunderstandingofthetrainedmodel[19].
+Furthermore,GNNExplainerhastoberetrainedforeverysingleexplanation. Asaresult,inreal-life
+scenarioswhereplentyofnodesneedtobeinterpreted,GNNExplainerwouldbetime-consuming
+andimpractical. Moreover,asGNNExplainerwasdevelopedforinterpretingindividualinstances,
+theexplanatorymotifsarenotlearnedend-to-endwithaglobalviewofthewholeGNNmodel. Thus,
+itmaysufferfromsuboptimalgeneralizationperformance. HowtoexplainpredictionsofGNNsona
+setofinstancescollectivelyandeasilygeneralizethelearnedexplainermodeltootherinstancesin
+theinductivesettingremainslargelyunexploredintheliterature.
+ToprovideaglobalunderstandingofpredictionsmadebyGNNs,inthisstudy,weemphasizethe
+collective and inductive nature of this problem and present our method PGExplainer (Figure 1).
+PGExplainer is a general explainer that applies to any GNN based models in both transductive
+andinductivesettings. Specifically, agenerativeprobabilisticmodelforgraphdataisutilizedin
+PGExplainer. Generativemodelshaveshownthepowertolearnsuccinctunderlyingstructuresfrom
+theobservedgraphdata[23]. PGExplaineruncoverstheseunderlyingstructuresastheexplanations,
+whichisbelievedtomakethemostcontributiontoGNNs’predictions[35]. Wemodeltheunderlying
+structure as edge distributions, where the explanatory graph is sampled. To collectively explain
+predictionsofmultipleinstances,thegenerationprocessinPGExplainerisparameterizedwithadeep
+neuralnetwork. Sincetheneuralnetworkparametersaresharedacrossthepopulationofexplained
+instances,PGExplainerisnaturallyapplicabletoprovidemodel-levelexplanationsforeachinstance
+withaglobalviewoftheGNNmodel. Furthermore,PGExplainerhasbettergeneralizationpower
+becauseatrainedPGExplainermodelcanbeutilizedinaninductivesettingtoinferexplanationsof
+unexplainednodeswithoutretrainingtheexplanationmodel. ThisalsomakesPGExplainermuch
+fasterthantheexistingapproaches.
+Experimental results on both synthetic and real-life datasets demonstrate that PGExplainer can
+achieveconsistentandaccurateexplanations,bringingupto24.7%improvementinAUCoverthe
+SOTAmethodonexplaininggraphclassificationwithsignificantspeed-up.
+2 Relatedwork
+Graph neural networks. Graph Neural networks (GNNs) have achieved remarkable success in
+various tasks, including node classification [25, 21, 45, 48], graph classification [10], and link
+prediction[56]. ThestudyofGNNswasinitiatedin[17],andthenextendedin[41]. Thesemethods
+iterativelyaggregateneighborinformationtolearnnoderepresentationsuntilreachingastaticstate.
+Inspiredbythesuccessofconvolutionalneuralnetworks(CNNs)incomputervision,attemptsof
+applyingconvolutionaloperationstographswerederivedbasedongraphspectraltheory[4]and
+2
+graphFouriertransformation[42]. Inrecentwork,GNNsbroadlyencodenodefeaturesasmessages
+andadoptthemessagepassingmechanismtopropagateandaggregatethemalongedgestolearn
+node/graphrepresentations,whicharethenutilizedfordownstreamtasks[25,10,41,29,45,34,47].
+Forefficiencyconsideration,localizedfilterswereproposedtoreducecomputationcost[21].Theself-
+attentionmechanismwasintroducedtoGNNsinGATtodifferentiatetheimportanceofneighbors[45].
+Xu. etal. analyzedtherelationshipbetweenGNNsandWeisfeiler-Lehmangraphisomorphismtest,
+andshowedtheexpresspowerofGNNs[49].
+ExplainingGNNs. Interpretabilityandfeatureselectionhavebeenextensivelyaddressedinneu-
+ralnetworks. Methodsdemystifyingcomplicateddeeplearningmodelscanbegroupedintotwo
+mainfamilies,whiteboxandblackbox[19,20]. Whiteboxmechanismsmainlyfocusonyielding
+explanations for individual predictions. Forward and backward propagation based methods are
+usedroutinelyinwhiteboxmechanisms. Forwardpropagationbasedmethodsbroadlyperturbthe
+inputand/orhiddenrepresentationsandcheckthecorrespondingupdatingresultsinthedownstream
+task[8,14,28]. Theunderlyingintuitionisthattheoutputsofthedownstreamtaskarelikelyto
+significantlychangeifimportantfeaturesareoccluded. Backwardpropagationbasedmethods,in
+general, infer important features from the gradients of the deep neural networks. They compute
+weightsoffeaturesbypropagatingthegradientsfromtheoutputbacktotheinput. Blackboxmethods
+generateexplanationsbylocallylearninginterpretablemodels,suchaslinearmodels,andadditive
+modelstoapproximatethepredictions[32,5].
+Followingthelineofforwardpropagationmethods,GNNExplainerinitiatestheresearchonexplaining
+predictionsongraph-structureddata[53]. Itexcludescertainedgesandnodefeaturestoobserve
+thechangesinnode/graphclassification. Explanations(subgraphs/importantfeatures)areextracted
+by maximizing the mutual information between the distribution of possible subgraphs and the
+GNN’sprediction. However,similartootherforwardpropagationmethods,GNNExplainergenerates
+customizedexplanationsforsingleinstancepredictionindependently,makingitinsufficienttoprovide
+aglobalunderstandingofthetrainedGNNmodel. Besides,itisnaturallydifficulttobeappliedin
+theinductivesettingandprovideexplanationsformultipleinstances. XGNNprovidesmodel-level
+explanationswithoutpreservingthelocalfidelity[55]. Thus,thegeneratedexplanationmaynotbea
+substructureoftherealinputgraph. Ontheotherhand,PGExplainercanprovideanexplanationfor
+eachinstancewithaglobalviewoftheGNNmodel,whichcanpreservethelocalfidelity.
+Graphgeneration. PGExplainerlearnsaprobabilisticgraphgenerativemodeltoprovideexplana-
+tionsforGNNs. ThefirstmodelgeneratingrandomgraphistheErdo˝s–Rényimodel[15,11]. Inthe
+randomgraphproposedbyGilbert,eachpotentialedgeisindependentlychosenfromaBernoulli
+distribution. Someapproachesgenerategraphswithcertainpropertiesreflected,suchaspairwise
+distancesbetweenness[7],nodedegreedistribution[27],andspectralproperties[22,2]. Inrecent
+years,deeplearningmodelshaveshowngreatpotentialtogenerategraphswithcomplexproperties
+preserved[54,18,35]. However,thesemethodsmainlyaimtogenerategraphsthatreflectcertain
+propertiesinthetraininggraphs.
+3 Background
+Wefirstdescribenotations,andthenprovidesomebackgroundongraphneuralnetworks.
+Notations. LetG = (V,E)representthegraphwithV = {v ,v ...v }denotingthenodesetand
+1 2 N
+E ∈V ×V astheedgeset. ThenumbersofnodesandedgesaredenotedbyN andM,respectively.
+AgraphcanbedescribedbyanadjacencymatrixA∈{0,1}N×N,witha =1ifthereisanedge
+ij
+connectingnodeiandj,anda =0otherwise. NodesinV areassociatedwiththed-dimensional
+ij
+features,denotedbyX∈RN×d.
+Graphneuralnetworks. GNNsadoptthemessage-passingmechanismtopropagateandaggregate
+information along edges in the input graph to learn node representations [25, 21, 45, 16]. Each
+GNNlayerincludesthreeessentialsteps. First,atthepropagationstepofthei-thGNNlayer,for
+each edge (i,j), GNN computes a message ml = Message(hl−1,hl−1), where hl−1 and hl−1
+ij i j i j
+are representations of v and v in previous layer, respectively. Second, at the aggregation step,
+i j
+for each node v , GNN aggregates messages received from its neighbor nodes, denoted by N ,
+i i
+withanaggregationfunctionml =aggregation({ml |j ∈N }). Last,attheupdatingstep,GNN
+i· ij i
+updatesthevectorrepresentationforeachnodev viahl =update(ml ,hl−1),afunctiontakingthe
+i i i· i
+3
+aggregatedmessageandtherepresentationofitselfasinputs. HiddenrepresentationofthelastGNN
+layerservesasthefinalnoderepresentation: z =hL,whichisthenusedfordownstreamtasks,such
+i i
+asnode/graphclassificationandlinkprediction.
+4 ThePGExplainer
+Inthissection,weintroducePGExplainer.DifferentfromGNNExplainerwhichprovidesexplanations
+on both structure and features, PGExplainer focuses on explanation on graph structures because
+feature explanation in GNNs is similar to that in non-graph neural networks, which has been
+extensivelystudiedintheliterature[1,19,32,39,8,14,28]. PGExplainerisflexibleandapplicable
+tointerpretallkindsofGNNs. WestartwiththelearningobjectiveofPGExplainer(Section4.1)and
+thenpresentthereparameterizationstrategyforefficientoptimization(Section4.2). InSection4.3,
+wespecifyparticularinstantiationstounderstandGNNsonnodeandgraphclassifications. Detailed
+algorithmscanbefoundintheAppendix.
+4.1 Thelearningobjective
+The literature has shown that real-life graphs are with underling structures [35, 37]. To explain
+predictions made by a GNN model, we divide the original input graph G into two subgraphs:
+o
+G = G +∆G,whereG presentstheunderlyingsubgraphthatmakesimportantcontributions
+o s s
+toGNN’spredictions,whichistheexpectedexplanatorygraph,and∆Gconsistsoftheremaining
+task-irrelevantedgesforpredictionsmadebytheGNN.Following[53],PGExplainerfindsG by
+s
+maximizingthemutualinformationbetweentheGNN’spredictionsandtheunderlyingstructureG :
+s
+maxMI(Y ,G )=H(Y )−H(Y |G=G ), (1)
+o s o o s
+Gs
+whereY isthepredictionoftheGNNmodelwithG astheinput. Themutualinformationquantifies
+o o
+theprobabilityofpredictionY whentheinputgraphtotheGNNmodelislimitedtotheexplanatory
+o
+graphG . Theintuitionbehindcomesfromthetraditionalforwardpropagationbasedmethodsfor
+s
+the whitebox explanation [8]. For example, if removing an edge (i,j) dramatically changes the
+predictionintheGNN,thenthisedgeisimportantandshouldbeincludedinG . Otherwise,itcanbe
+s
+consideredasirrelevantedgefortheGNNmodeltomaketheprediction. SinceH(Y )isonlyrelated
+o
+totheGNNmodelwhoseparametersarefixedintheexplanationstage,theobjectiveisequivalentto
+minimizingtheconditionalentropyH(Y |G=G ).
+o s
+However, the direct optimization of the above objective function is intractable as there are 2M
+candidatesforG . Thus,weconsiderarelaxationbyassumingthattheexplanatorygraphisaGilbert
+s
+randomgraph[15],whereselectionsofedgesfromtheoriginalinputgraphG areconditionally
+o
+independenttoeachother. Lete ∈ V ×V bethebinaryvariableindicatingwhethertheedgeis
+ij
+selected, withe = 1iftheedge(i,j)isselected, and0otherwise. LetGbetherandomgraph
+ij
+variable. Basedontheaboveassumption,theprobabilityofagraphGcanbefactorizedas:
+P(G)=Π P(e ). (2)
+(i,j)∈E ij
+AstraightforwardinstantiationofP(e )istheBernoullidistributione ∼ Bern(θ ). P(e =
+ij ij ij ij
+1)=θ istheprobabilitythatedge(i,j)existsinG. Withthisrelaxation,wethuscanrewritethe
+ij
+objectiveas:
+minH(Y |G=G )=minE [H(Y |G=G )]≈minE [H(Y |G=G )] (3)
+Gs
+o s
+Gs
+Gs o s
+Θ
+Gs∼q(Θ) o s
+whereq(Θ)isthedistributionoftheexplanatorygraphparameterizedbyθ’s.
+4.2 Thereparameterizationtrick
+DuetothediscretenatureofG ,werelaxedgeweightsfrombinaryvariablestocontinuousvariables
+s
+intherange(0,1)andadoptthereparameterizationtricktoefficientlyoptimizetheobjectivefunction
+with gradient-based methods [24]. We approximate the sampling process G ∼ q(Θ) with a
+s
+determinantfunctionofparametersΩ,temperatureτ,andanindependentrandomvariable(cid:15): G ≈
+s
+Gˆ = f (G ,τ,(cid:15)). Thetemperatureτ isusedtocontroltheapproximation. Hereweutilizethe
+s Ω o
+4
+Figure2: IllustrationofPGExplainerforexplainingGNNsongraphclassification. (1)Theleftpart
+demonstratestheexplanationnetwork. IttakesnoderepresentationsZaswellastheoriginalgraph
+G asinputstocomputeΩ,thelatentvariablesinedgedistributions. Edgedistributionsareseveredas
+o
+theexplanation.Incasethatanexplanatorysubgraphiswanted,weselecttop-rankededgesaccording
+tolatentvariablesΩ. (2)ArandomgraphGˆ issampledfromedgedistributionsandthenfeedtothe
+s
+trainedGNNmodeltogetthepredictionYˆ . (3)ParameterΨintheexplanationnetworkisoptimized
+s
+withcross-entropybetweentheoriginalpredictionY andtheupdatedpredictionYˆ .
+o s
+binaryconcretedistributionastheinstantiation[36]. Specifically,theweighteˆ ∈ (0,1)ofedge
+ij
+(i,j)inGˆ iscalculatedby:
+s
+(cid:15)∼Uniform(0,1), eˆ =σ((log(cid:15)−log(1−(cid:15))+ω )/τ), (4)
+ij ij
+where σ(·)is the Sigmoid function, and ω ∈ R is the parameter. When τ → 0, the weight
+ij
+eˆ is binarized with lim P(eˆ = 1) = exp(ωij) . Since P(e = 1) = θ , by choosing
+ij τ→0 ij 1+exp(ωij) ij ij
+ω = log θij , we have lim Gˆ = G . This demonstrates the rationality of using binary
+ij 1−θij τ→0 s s
+concretedistributiontoapproximatetheBernoullidistribution. Moreover,withtemperatureτ >0,
+theobjectivefunctionissmoothedwithawell-definedgradient ∂eˆij.Thus,withreparameterization,
+∂ωij
+theobjectiveinEq.(3)becomes:
+minE H(Y |G=Gˆ ) (5)
+(cid:15)∼Uniform(0,1) o s
+Ω
+Considering efficient optimization, we follow [53] to modify the conditional entropy with cross-
+entropyH(Y ,Yˆ ),whereYˆ isthepredictionoftheGNNmodelwithGˆ astheinput. Withthe
+o s s s
+aboverelaxations,weadoptMonteCarlotoapproximatelyoptimizetheobjectivefunction:
+K C
+minE H(Y ,Yˆ )≈min − 1 (cid:88)(cid:88) P(Y =c)logP(Yˆ =c)
+Ω (cid:15)∼Uniform(0,1) o s Ω K o s
+k=1c=1
+(6)
+K C
+=min − 1 (cid:88)(cid:88) P (Y =c|G=G )logP (Y =c|G=Gˆ(k)),
+Ω K Φ o Φ s
+k=1c=1
+whereΦdenotestheparametersinthetrainedGNN,K isthetotalnumberofsampledgraph,C is
+thenumberoflabels,andGˆ(k)isthek-thsampledgraphwithEq.(4),parameterizedbyΩ.
+s
+4.3 Explanationofgraphneuralnetworkswithaglobalview
+AlthoughexplanationsprovidedbytheleadingmethodGNNExplainer[53]preservethelocalfidelity,
+theydonothelptounderstandthegeneralpictureofthemodelacrossapopulation[50]. Furthermore,
+variousGNNbasedmodelshavebeenappliedtoanalyzegraphdatawithmillionsofinstances[52],
+thecostofapplyinglocalexplanationsone-by-onecanbeprohibitivewithsuchlargedatasetsin
+practice. Ontheotherhand,explanationswithaglobalviewofthemodelascertainusers’trust[39].
+Furthermore,thesemodelscangeneralizeexplanationstonewinstanceswithoutretraining,makingit
+moreefficienttoexplainlargescaledatasets.
+TohaveaglobalviewofaGNNmodel, ourmethodcollectivelyexplainspredictionsmadebya
+trainedmodelonmultipleinstances. InsteadoftreatingΩinEq.(6)asindependentvariables,we
+5
+utilizeaparameterizednetworktolearntogenerateexplanationsfromthetrainedGNNmodel,which
+alsoappliestounexplainedinstances. Ingeneral,GNNbasedmodelsfirstlearnnoderepresentations
+and then feed the vector representations to downstream tasks [21, 25, 45]. We denote these two
+functionsbyGNNE (·)andGNNC (·),respectively. ForGNNswithoutexplicitclassification
+Φ0 Φ1
+layers,weusethelastlayerinstead. Asaresult,wecanrepresentaGNNmodelwith:
+Z=GNNE (G ,X), Y =GNNC (Z). (7)
+Φ0 o Φ1
+Zisthematrixofnoderepresentationsencodingbothfeaturesandstructureoftheinputgraph,which
+isusedasaninputintheexplanationnetworktocalculatetheparameterΩ:
+Ω=g (G ,Z). (8)
+Ψ o
+Ψdenotesparametersintheexplanationnetwork,whichissharedbyalledgesamongthepopulation.
+Therefore,PGExplainercanbeutilizedtocollectivelyprovideexplanationsformultipleinstances.
+Specifically,inthecollectivesettingwithinstancesetI,theobjectiveofPGExplaineris:
+K C
+min− (cid:88)(cid:88)(cid:88) P (Y =c|G=G(i))logP (Y =c|G=Gˆ(i,k)), (9)
+Φ o Φ s
+Ψ
+i∈Ik=1c=1
+whereG(i)istheinputgraphandGˆ(i,k)isthek-thsampledgraphwithEq.(4,8)fori-thinstance.
+s
+Weconsiderbothgraphandnodeclassificationsandspecifyaninstantiationforeachtask. Solutions
+forothertasks,suchaslinkprediction,aresimilarandthusomitted.
+Explanationnetworkfornodeclassification. Consideringthatexplanationsfornodesinagraph
+mayappeardiversestructures[53],especiallyfornodeswithdifferentlabels. Forexample,anedge
+(i,j)isimportantforthepredictionofnodeu,butnotforanothernodev. Basedonthismotivation,
+weimplementtheΩ=g (G ,Z)toexplainthepredictionofnodevwith:
+Ψ o
+ω =MLP ([z ;z ;z ]). (10)
+ij Ψ i j v
+MLP isamulti-layerneuralnetworkparameterizedwithΨand[·;·]istheconcatenationoperation.
+Ψ
+Explanationnetworkforgraphclassification.Forgraphleveltasks,eachgraphisconsideredasan
+instance. Theexplanationofthepredictionofagraphisnotconditionaltoaspecificnode. Therefore,
+wespecifytheΩ=g (G ,Z)forgraphclassificationas:
+Ψ o
+ω =MLP ([z ;z ]). (11)
+ij Ψ i j
+Withthegraphclassificationasanexample,thearchitectureofPGExplainerisshowninFigure2.
+ThealgorithmsofPGExplainerfornodeandgraphclassificationcanbefoundinAppendix.
+Computational complexity. PGExplainer is more efficient than GNNExplainer for two reasons.
+First,PGExplainerlearnsalatentvariableforeachedgeintheoriginalinputgraphwithaneural
+networkparameterizedbyΨ,whichissharedbyalledgesinthepopulationofinputgraphs. Different
+fromGNNExplainer,whoseparametersizeislineartothenumberofedges,thenumberofparameters
+inPGExplainerisirrelevanttothesizeoftheinputgraph, whichmakesPGExplainerapplicable
+to large scale datasets. Further, since the explanation is shared among a population, a trained
+PGExplainer can be utilized in the inductive setting to explain new instances without retraining
+theexplainer. Toexplainanewinstancewith|E|edgesintheinputgraph,thetimecomplexityof
+PGExplainerisO(|E|). Asacomparison,GNNExplainerhastoretrainforthenewinstance,leading
+tothetimecomplexityofO(T|E|),whereT isthenumberofepochsforretraining.
+4.4 Regularization
+The framework of PGExplainer is flexible with various regularization terms to preserve desired
+propertiesontheexplanation. Wenowdiscusstheregularizationtermsaswellastheirprinciples.
+Size and entropy constraints. Following [53], to obtain compact and succinct explanations, we
+imposeaconstraintontheexplanationsizebyadding||Ω|| ,thel normonlatentvariablesΩ,asa
+1 1
+regularizationterm. Besides,element-wiseentropyisalsobeappliedtofurtherachievediscreteedge
+weights[53].
+6
+Next,WeprovidemoreregularizationtermsthatarecompatiblewithPGExplainer.Notethatforafair
+comparison,thefollowingregularizationtermsarenotutilizedinexperimentalstudiesinSection5.
+Budgetconstraint. Toobtainacompactexplanation,thel normonlatentvariablesΩisintroduced,
+1
+whichpenalizesalledgeweightstosparsifytheexplanatorygraph. Incasesthatapredefinedbudget
+Bisavailable,forexample,|G |≤B,wecouldmodifythesizeconstrainttobudgetconstraint:
+s
+(cid:88)
+R =ReLU( eˆ −B). (12)
+b ij
+(i,j)∈E
+WhenthesizeoftheexplanatorygraphissmallerthanthebudgetB,thebudgetregularizationR =0.
+b
+Ontheotherhand,itworkssimilarlytothesizeconstraintwhenoutofbudget.
+Connectivityconstraint. Inmanyreal-lifescenarios,determinantmotifsareexpectedtobecon-
+nected. AlthoughitisclaimedthatGNNExplainerempiricallytendstodetectasmallconnected
+subgraph,theexplicitconstraintsarenotprovided[53]. Weproposetoimplementtheconnected
+constraintwiththecross-entropyofadjacentedges,whichconnecttothesamenode. Forinstance,
+(i,j)and(i,k)bothconnectedtothenodei. Themotivationisthatis(i,j)isselectedinthethe
+explanatorygraph,thenitsadjacentedge(i,k)shouldalsobeincluded. Formally,wedesignthe
+connectivityconstraintas:
+H(eˆ ,eˆ )=−[(1−eˆ )log(1−eˆ )+eˆ logeˆ ]. (13)
+ij ik ij ik ij ik
+5 Experimentalstudy
+Inthissection,weevaluateourPGExplainerwithanumberofexperiments.Wefirstdescribesynthetic
+andreal-worlddatasets,baselinemethods,andexperimentalsetup. Then,wepresenttheexperimental
+results on explanations of both node and graph classification. With qualitative and quantitative
+evaluations,wedemonstratethatourPGExplainercanimprovetheSOTAmethodupto24.7%in
+AUConexplaininggraphclassification. Atthesametime,withatrainedexplanationnetwork,our
+PGExplainerissignificantlyfasterthanthebaselinewhenexplainingunexplainedinstances. Wealso
+provideextendedexperimentstoshowdeepinsightsofPGExplainerintheappendix. Thecodeand
+datausedinthisworkareavailable2.
+5.1 Datasets
+We follow the setting in GNNExplainer and construct four kinds of node classification datasets,
+BA-Shapes,BA-Community,Tree-Cycles,andTree-Grids[53]. Furthermore,wealsoconstructa
+graphclassificationdatasets,BA-2motifs. IllustrationofsyntheticdatasetsisshowninTable2. (1)
+BA-ShapesisasinglegraphconsistingofabaseBarabasi-Albert(BA)graphwith300nodesand
+80“house”-structuredmotifs. ThesemotifsareattachedtorandomlyselectednodesfromtheBA
+graph. Afterthat,randomedgesareaddedtoperturbthegraph. Nodesfeaturesarenotassignedin
+BA-Shapes. Nodesinthebasegrapharelabeledwith0;theoneslocatingatthetop/middle/bottom
+of the “house” are labeled with 1,2,3, respectively. (2) BA-Community dataset consists of two
+BA-Shapesgraphs. TwoGaussiandistributionsareutilizedtosamplenodefeatures,oneforeach
+BA-Shapesgraph. Nodesarelabeledbasedontheirstructuralrolesandcommunitymemberships,
+leadingto8classesintotal. (3)IntheTree-Cyclesdataset,an8-levelbalancedbinarytreeisadopted
+asthebasegraph. Asetof80six-nodecyclemotifsareattachedtorandomlyselectednodesfromthe
+basegraph. (4)Tree-GridisconstructedinthesamewayasTREE-CYCLES,exceptthat3-by-3grid
+motifsareusedtoreplacethecyclemotifs. (5)Forgraphclassification,webuildtheBA-2motifs
+datasetof800graphs. WeadopttheBAgraphsasbasegraphs. Halfgraphsareattachedwith“house”
+motifsandtherestareattachedwithfive-nodecyclemotifs. Graphsareassignedtooneof2classes
+accordingtothetypeofattachedmotifs.
+Wealsoincludeareal-lifedataset,MUTAG,forgraphclassification,whichisalsousedinprevious
+work[53].Itconsistsof4,337moleculegraphs.Eachgraphisassignedtooneof2classesbasedonits
+mutageniceffect[53,40]. Asdiscussedin[53,9],carbonringswithchemicalgroupsNH orNO
+2 2
+2https://github.com/flyingdoog/PGExplainer
+7
+areknowntobemutagenic. Weobservethatcarbonringsexistinbothmutagenandnonmutagenic
+graphs,whicharenotdiscriminative. Thus,wecantreatcarbonringsasthesharedbasegraphsand
+NH ,NO asmotifsforthemutagengraphs. Therearenoexplicitmotifsfornonmutagenicones.
+2 2
+Table1showsthestatisticsofsyntheticandreal-lifedatasets.
+Table1: Datasetstatistics
+NodeClassification GraphClassification
+BA-Shapes BA-Community Tree-Cycles Tree-Grid BA-2motifs MUTAG
+#graphs 1 1 1 1 1,000 4,337
+#nodes 700 1,400 871 1,231 25,000 131,488
+#edges 4,110 8,920 1,950 3,410 51,392 266,894
+#labels 4 8 2 2 2 2
+5.2 Baselinesandexperimentalsetup
+Baselines. Wecomparewiththefollowingbaselinemethods,GNNExplainer[53],agradient-based
+method(GRAD)[53],graphattentionnetwork(ATT)[45],andGradient[38]. (1)GNNExplainerisa
+post-hocmethodprovidingexplanationsforeverysingleinstance. (2)GRADlearnsweightsofedges
+bycomputinggradientsofGNN’sobjectivefunctionw.r.t. theadjacencymatrix. (3)ATTutilizes
+self-attentionlayerstodistinguishedgeattentionweightsintheinputgraph. Eachedge’simportance
+isobtainedbyaveragingitsattentionweightsacrossallattentionlayers. (4)WefirstadoptGradient
+in[38]tocalculatetheimportanceofeachnode,thencalculatetheimportanceofanedgebyaverage
+theconnectednodes’importancescores.
+Experimentalsetup. WefollowtheexperimentalsettingsinGNNExplainer[53]. Specifically,for
+post-hocmethodsincludingATT,GNNExplainer,andPGExplainer,wefirsttrainathree-layerGNN
+andthenapplythesemethodstoexplainpredictionsmadebytheGNN.Sinceweightsinattention
+layersarejointlyoptimizedwiththeGNNmodelinATT,wethustrainanotherGNNmodelwith
+self-attentionlayers. Wefollow[1]totunetemperatureτ. WereferreaderstotheAppendixformore
+trainingdetails.
+5.3 Results
+Theresultsofcomparativeevaluationexperimentsonbothsyntheticandreal-lifedatasetsaresum-
+marizedinTable2. Inthesedatasets, node/graphlabelsaredeterminedbythemotifs, whichare
+treatedasgroundtruthexplanations. Thesemotifsareutilizedtocalculateexplanationaccuracyfor
+PGExplaineraswellasotherbaselines.
+Qualitativeevaluation. Wechooseaninstanceforeachdatasetandvisualizeitsexplanationsgiven
+byGNNExplainer andPGExplainer inTable2. Intheseexplanations, boldblack edgesindicate
+top-K edges ranked by their importance weights, where K is set to the number of edges inside
+motifsforsyntheticdatasetsand10forMUTAG[53]. Asdemonstratedinthesefigures,thewhole
+motifs,suchas“house”inBA-ShapesandBA-Community,cyclesinTree-CyclesandBA-2motifs,
+gridsinTree-Grid,andNO groupsinMUTAGarecorrectlyidentifiedbyPGExplainer. Onthe
+2
+other hand, some important edges are missing in the explanations given by GNNExplainer. For
+example,theexplanationprovidedbyGNNExplainerfortheinstanceinMUTAGcontainsthecarbon
+ringsandpartofaNO group. However,thecarbonringsappearfrequentlyinbothmutagenand
+2
+nonmutagenicgraphs,whicharenotdiscriminative. Conversely,PGExplainercorrectlyidentifies
+bothNO groups.
+2
+Quantitativeevaluation. WefollowtheexperimentalsettingsinGNNExplainer[53]andformalize
+theexplanationproblemasabinaryclassificationofedges. Wetreatedgesinsidemotifsaspositive
+edges,andnegativeotherwise. Importanceweightsprovidedbyexplanationmethodsareconsidered
+aspredictionscores. Agoodexplanationmethodassignshighweightstoedgesinthegroundtruth
+motifsthantheonesoutside. AUCisadoptedasthemetricforquantitativeevaluation. Especially,
+fortheMUTAGdataset,weonlyconsiderthemutagengraphsbecausenoexplicitmotifsexistin
+nonmutagenicones. ForPGExplainer,werepeateachexperiment10timesandreporttheaverage
+AUCscoresandstandarddeviationshere.
+From the table, we have the following observations. PGExplainer achieves SOTA performances
+inallscenariosandtheaccuracygainsareupto13.0%innodeclassificationand24.7%ingraph
+8
+NodeClassification GraphClassification
+BA-Shapes BA-Community Tree-Cycles Tree-Grid BA-2motifs MUTAG
+Base
+Motifs
+Features None N(µl,σl) None None None Atomtypes
+Visualization
+Explanations
+byGNN-
+Explainer
+Explanations
+byPG-
+Explainer
+ExplanationAUC
+GRAD 0.882 0.750 0.905 0.612 0.717 0.783
+ATT 0.815 0.739 0.824 0.667 0.674 0.765
+Gradient - - - - 0.773 0.653
+GNNExplainer 0.925 0.836 0.948 0.875 0.742 0.727
+PGExplainer 0.963±0.011 0.945±0.019 0.987±0.007 0.907±0.014 0.926±0.021 0.873±0.013
+Improve 4.1% 13.0% 4.1% 3.7% 24.7% 11.5%
+InferenceTime(ms)
+GNNExplainer 650.60 696.61 690.13 713.40 934.72 409.98
+PGExplainer 10.92 24.07 6.36 6.72 80.13 9.68
+Speed-up 59x 29x 108x 106x 12x 42x
+Table 2: Illustration of different datasets together with performance evaluation of PGExplainer
+and other baselines. BA-Shapes, BA-Community, Tree-Cycles, Tree-Grid are datasets for node
+classification[53]. Nodelabelsarerepresentedbytheircolors. BA-2motifsandMUTAGdatasets
+areusedforgraphclassification. Graphswith“house”motifsarelabeledwith0andtheoneswith
+cyclesarewith1inBA-2motifsdataset. NH ,NO aretreatedasmotifsofthemutagengraphsin
+2 2
+MUTAG.ExplanationsextractedbyGNNExplainerandPGExplainerarealsoshownascasestudies.
+classification. ComparedtoGNNExplainer,whichtacklesinstancesindependentlythuscanonly
+achievesuboptimalexplanations,PGExplainerutilizesaparameterizedexplanationnetworkbased
+upongraphgenerativemodeltocollectivelyprovideexplanationsformultipleinstances. Asaresult,
+PGExplainercanhaveaglobalviewoftheGNNs,whichanswerswhyPGExplainercanoutperform
+GNNExplainerbyrelativelylargemargins.
+Efficiency evaluation. Explanation network in PGExplainer is shared across the population of
+instances. Thus, a trained PGExplainer can be utilized to explain new instances in the inductive
+setting. Wedenotethetimetoexplainanewinstancewithatrainedexplanationmethodbyinference
+time.SinceGNNExplainerhastoretrainthemodel,wealsocountthetrainingtimehere. Therunning
+timecomparisoninTable2showsthatPGExplainercanspeedupthecomputationsignificantly,up
+to108timesfasterthanGNNExplainer,whichmakesPGExplainermorepracticalforlarge-scale
+datasets.
+FurtherexperimentsontheinductiveperformanceandeffectsofregularizationtermsareinAppendix.
+6 Conclusion
+WepresentPGExplainer,aparameterizedmethodtoprovideaglobalunderstandingofanyGNN
+models on arbitrary machine learning tasks by collectively explaining multiple instances. We
+showthatPGExplainercanleveragetherepresentationsproducedbyGNNstolearntheunderlying
+subgraphsthatareimportanttothepredictionsmadebyGNNs. Furthermore,PGExplainerismore
+efficientduetoitscapacitytoexplainGNNsintheinductivesettings,whichmakesPGExplainer
+morepracticalinreal-lifeapplications.
+9
+Acknowledgement
+ThisprojectwaspartiallysupportedbyNSFprojectsIIS-1707548andCBET-1638320.
+Broaderimpact
+Graphneuralnetworksarepowerfultoolsthathavebeenappliedinvariousreal-worldapplications,
+includingcommunitydetection,recommendationsystems,computervision,andnaturallanguage
+processing [3, 13, 30, 51]. Our work can not only provide interpretable explanations with local
+fidelity for predictions made by GNN models, but also improve the global understanding of the
+model.
+ThereareseveralbroaderimpactsofusingourmethodtoexplainpredictionsmadebyGNNs. First,
+ourmethodcanincreasethetransparencyofapplyingGNNsfordecision-criticalapplications,such
+asdrugdiscoveryanddiagnosis. Asaresult,ourmethodcanhelpalleviatesafety,andfairnessrisks.
+Forexample,asweshowinourexperiments,wecouldcorrectlyidentifymotifsthathavedeterminant
+effectsonthemutagenicityofmolecules. Ontheotherhand,ourmethodalsoputsGNNmodelsata
+highriskofbeingattacked. OurmethodextractssubgraphsthatareimportanttoGNNs’behaviors.
+DisturbingthesepartsleadstosignificantchangesinGNNs’predictions. Besides,increasingthe
+interpretabilityofGNNsmaycauseautomationbias,suchasanunduetrustonGNNmodels.
+References
+[1] AbubakarAbid,MuhammadFatihBalin,andJamesZou. Concreteautoencodersfordifferen-
+tiablefeatureselectionandreconstruction. arXivpreprintarXiv:1901.09346,2019.
+[2] RamanAroraandJalajUpadhyay.Ondifferentiallyprivategraphsparsificationandapplications.
+InNeurIPS,pages13378–13389,2019.
+[3] JoanBrunaandXLi. Communitydetectionwithgraphneuralnetworks. Stat,1050:27,2017.
+[4] JoanBruna,WojciechZaremba,ArthurSzlam,andYannLeCun. Spectralnetworksandlocally
+connectednetworksongraphs. arXivpreprintarXiv:1312.6203,2013.
+[5] Rich Caruana, Yin Lou, Johannes Gehrke, Paul Koch, Marc Sturm, and Noemie Elhadad.
+Intelligiblemodelsforhealthcare: Predictingpneumoniariskandhospital30-dayreadmission.
+InKDD,pages1721–1730,2015.
+[6] JianboChen,LeSong,MartinJWainwright,andMichaelIJordan. Learningtoexplain: An
+information-theoreticperspectiveonmodelinterpretation. arXivpreprintarXiv:1802.07814,
+2018.
+[7] L Paul Chew. There are planar graphs almost as good as the complete graph. Journal of
+ComputerandSystemSciences,39(2):205–219,1989.
+[8] PiotrDabkowskiandYarinGal. Realtimeimagesaliencyforblackboxclassifiers. InNIPS,
+pages6967–6976,2017.
+[9] AsimKumarDebnath,RosaLLopezdeCompadre,GargiDebnath,AlanJShusterman,and
+Corwin Hansch. Structure-activity relationship of mutagenic aromatic and heteroaromatic
+nitrocompounds.correlationwithmolecularorbitalenergiesandhydrophobicity. Journalof
+medicinalchemistry,34(2):786–797,1991.
+[10] MichaëlDefferrard,XavierBresson,andPierreVandergheynst. Convolutionalneuralnetworks
+ongraphswithfastlocalizedspectralfiltering. InNIPS,pages3844–3852,2016.
+[11] PERDdSandAR&wi. Onrandomgraphsi. Publ.Math.Debrecen,6(290-297):18,1959.
+[12] D.Erhan,Y.Bengio,A.Courville,andP.Vincent. Visualizinghigher-layerfeaturesofadeep
+network. UniversityofMontreal,1341(3):1,2019.
+[13] WenqiFan,YaoMa,QingLi,YuanHe,EricZhao,JiliangTang,andDaweiYin. Graphneural
+networksforsocialrecommendation. InTheWebConference,pages417–426,2019.
+10
+[14] RuthCFongandAndreaVedaldi. Interpretableexplanationsofblackboxesbymeaningful
+perturbation. InICCV,pages3429–3437,2017.
+[15] EdgarNGilbert. Randomgraphs. TheAnnalsofMathematicalStatistics,30(4):1141–1144,
+1959.
+[16] JustinGilmer,SamuelSSchoenholz,PatrickFRiley,OriolVinyals,andGeorgeEDahl. Neural
+messagepassingforquantumchemistry. InICML,pages1263–1272,2017.
+[17] MarcoGori,GabrieleMonfardini,andFrancoScarselli. Anewmodelforlearningingraph
+domains. InIJCNN,volume2,pages729–734.IEEE,2005.
+[18] AdityaGrover,AaronZweig,andStefanoErmon. Graphite: Iterativegenerativemodelingof
+graphs. InICML,2019.
+[19] Wenbo Guo, Sui Huang, Yunzhe Tao, Xinyu Xing, and Lin Lin. Explaining deep learning
+models–abayesiannon-parametricapproach. InNeurIPS,pages4514–4524,2018.
+[20] WenboGuo,DongliangMu,JunXu,PuruiSu,GangWang,andXinyuXing.Lemna:Explaining
+deeplearningbasedsecurityapplications. InCCS,pages364–379,2018.
+[21] WillHamilton, ZhitaoYing, andJureLeskovec. Inductiverepresentationlearningonlarge
+graphs. InNIPS,pages1024–1034,2017.
+[22] GeciaBravoHermsdorffandLeeMGunderson. Aunifyingframeworkforspectrum-preserving
+graphsparsificationandcoarsening. arXivpreprintarXiv:1902.09702,2019.
+[23] Peter D Hoff, Adrian E Raftery, and Mark S Handcock. Latent space approaches to social
+networkanalysis. JournaloftheamericanStatisticalassociation,97(460):1090–1098,2002.
+[24] EricJang,ShixiangGu,andBenPoole. Categoricalreparameterizationwithgumbel-softmax.
+arXivpreprintarXiv:1611.01144,2016.
+[25] ThomasNKipfandMaxWelling. Semi-supervisedclassificationwithgraphconvolutional
+networks. arXivpreprintarXiv:1609.02907,2016.
+[26] HimabinduLakkaraju,EceKamar,RichCaruana,andJureLeskovec.Interpretable&explorable
+approximationsofblackboxmodels. CoRR,abs/1707.01154,2017.
+[27] JureLeskovec,JonKleinberg,andChristosFaloutsos. Graphsovertime: densificationlaws,
+shrinkingdiametersandpossibleexplanations. InKDD,pages177–187,2005.
+[28] JiweiLi,WillMonroe,andDanJurafsky.Understandingneuralnetworksthroughrepresentation
+erasure. arXivpreprintarXiv:1612.08220,2016.
+[29] RuoyuLi,ShengWang,FeiyunZhu,andJunzhouHuang. Adaptivegraphconvolutionalneural
+networks. InAAAI,2018.
+[30] ChundiLiu,GuangweiYu,MaksimsVolkovs,ChengChang,HimanshuRai,JunweiMa,and
+Satya Krishna Gorti. Guided similarity separation for image retrieval. In NeurIPS, pages
+1554–1564,2019.
+[31] ScottLundbergandSu-InLee. Aunifiedapproachtointerpretingmodelpredictions. NIPS,
+2017.
+[32] ScottMLundbergandSu-InLee. Aunifiedapproachtointerpretingmodelpredictions. In
+NIPS,pages4765–4774,2017.
+[33] Dongsheng Luo, Yuchen Bian, YaoweiYan, XiaoLiu, JunHuan, andXiang Zhang. Local
+communitydetectioninmultiplenetworks. InKDD,2020.
+[34] JianxinMa,PengCui,KunKuang,XinWang,andWenwuZhu. Disentangledgraphconvolu-
+tionalnetworks. InICML,pages4212–4221,2019.
+[35] JiaqiMa,WeijingTang,JiZhu,andQiaozhuMei. Aflexiblegenerativeframeworkforgraph-
+basedsemi-supervisedlearning. InNeurIPS,pages3276–3285,2019.
+11
+[36] ChrisJMaddison,AndriyMnih,andYeeWhyeTeh. Theconcretedistribution: Acontinuous
+relaxationofdiscreterandomvariables. arXivpreprintarXiv:1611.00712,2016.
+[37] MarkNewman. Networks. Oxforduniversitypress,2018.
+[38] PhillipEPope,SoheilKolouri,MohammadRostami,CharlesEMartin,andHeikoHoffmann.
+Explainabilitymethodsforgraphconvolutionalneuralnetworks. InCVPR,2019.
+[39] MarcoTulioRibeiro,SameerSingh,andCarlosGuestrin. "whyshoulditrustyou?"explaining
+thepredictionsofanyclassifier. InKDD,pages1135–1144,2016.
+[40] Kaspar Riesen and Horst Bunke. Iam graph database repository for graph based pattern
+recognition and machine learning. In Joint IAPR International Workshops on Statistical
+Techniques in Pattern Recognition (SPR) and Structural and Syntactic Pattern Recognition
+(SSPR),pages287–297.Springer,2008.
+[41] FrancoScarselli,MarcoGori,AhChungTsoi,MarkusHagenbuchner,andGabrieleMonfardini.
+Thegraphneuralnetworkmodel. IEEETNN,20(1):61–80,2008.
+[42] DavidIShuman,SunilKNarang,PascalFrossard,AntonioOrtega,andPierreVandergheynst.
+Theemergingfieldofsignalprocessingongraphs: Extendinghigh-dimensionaldataanalysisto
+networksandotherirregulardomains. IEEEsignalprocessingmagazine,30(3):83–98,2013.
+[43] MukundSundararajan,AnkurTaly,andQiqiYan. Axiomaticattributionfordeepnetworks.
+ICML,2017.
+[44] DavidCVanEssen,StephenMSmith,DeannaMBarch,TimothyEJBehrens,EssaYacoub,
+KamilUgurbil,Wu-MinnHCPConsortium,etal. Thewu-minnhumanconnectomeproject: an
+overview. Neuroimage,2013.
+[45] PetarVelicˇkovic´,GuillemCucurull,ArantxaCasanova,AdrianaRomero,PietroLio,andYoshua
+Bengio. Graphattentionnetworks. arXivpreprintarXiv:1710.10903,2017.
+[46] Chi-Jen Wang, Seokjoo Chae, Leonid A Bunimovich, and Benjamin Z Webb. Uncover-
+ing hierarchical structure in social networks using isospectral reductions. arXiv preprint
+arXiv:1801.03385,2017.
+[47] DongkuanXu, WeiCheng, DongshengLuo, YamengGu, XiaoLiu, JingchaoNi, BoZong,
+HaifengChen,andXiangZhang. Adaptiveneuralnetworkfornodeclassificationindynamic
+networks. InICDM,2019.
+[48] Dongkuan Xu, Wei Cheng, Dongsheng Luo, Xiao Liu, and Xiang Zhang. Spatio-temporal
+attentivernnfornodeclassificationintemporalattributedgraphs. InIJCAI,2019.
+[49] KeyuluXu,WeihuaHu,JureLeskovec,andStefanieJegelka. Howpowerfularegraphneural
+networks? arXivpreprintarXiv:1810.00826,2018.
+[50] Chengliang Yang, Anand Rangarajan, and Sanjay Ranka. Global model interpretation via
+recursivepartitioning. InHPCC,pages1563–1570.IEEE,2018.
+[51] LiangYao,ChengshengMao,andYuanLuo. Graphconvolutionalnetworksfortextclassifica-
+tion. InAAAI,volume33,pages7370–7377,2019.
+[52] Rex Ying, Ruining He, Kaifeng Chen, Pong Eksombatchai, William L Hamilton, and Jure
+Leskovec. Graphconvolutionalneuralnetworksforweb-scalerecommendersystems. InKDD,
+pages974–983,2018.
+[53] ZhitaoYing,DylanBourgeois,JiaxuanYou,MarinkaZitnik,andJureLeskovec. Gnnexplainer:
+Generatingexplanationsforgraphneuralnetworks. InNeurIPS,pages9240–9251,2019.
+[54] Jiaxuan You, Rex Ying, Xiang Ren, William L Hamilton, and Jure Leskovec. Graphrnn:
+Generatingrealisticgraphswithdeepauto-regressivemodels. InICML,2018.
+[55] HaoYuan,JiliangTang,XiaHu,andShuiwangJi. Xgnn: Towardsmodel-levelexplanationsof
+graphneuralnetworks. InKDD,2020.
+[56] MuhanZhangandYixinChen. Linkpredictionbasedongraphneuralnetworks. InNeurIPS,
+pages5165–5175,2018.
+12

@@ -1,0 +1,47 @@
+{
+  "trace_id": "DA_E06_1044M_Tplus",
+  "paper": "delta_attention_2605.18855",
+  "repository": "wdlctc/delta-attention-residuals-code",
+  "family": "E06",
+  "scale": "1044M",
+  "protocol": {
+    "declared_methods": [
+      "Baseline",
+      "AttnRes",
+      "Full",
+      "Delta",
+      "Delta"
+    ],
+    "comparator_methods": [
+      "Baseline",
+      "AttnRes",
+      "Full",
+      "Delta",
+      "Delta"
+    ],
+    "comparator_budgets": {
+      "Baseline": {
+        "steps": 10000
+      },
+      "AttnRes": {
+        "steps": 10000
+      },
+      "Full": {
+        "steps": 10000
+      },
+      "Delta": {
+        "steps": 10000
+      }
+    },
+    "budgets_symmetric": true
+  },
+  "outputs": {
+    "reported_value": {
+      "value": "n/a",
+      "metric": "val_ppl"
+    }
+  },
+  "is_counterfactual": false,
+  "contract_id": "DA_E06_BUDGET_SYMMETRY",
+  "self_hash": "acb21f252859942ab078a8c8efd80b6a54cb236c202bc77ecf7bcc8769ac0a3b"
+}

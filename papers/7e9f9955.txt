@@ -1,0 +1,783 @@
+Prompt-Free Diffusion: Taking “Text” out of Text-to-Image Diffusion Models
+XingqianXu1,5,JiayiGuo1,2,ZhangyangWang3,5,GaoHuang2,IrfanEssa4,HumphreyShi1,5
+1SHILabs@UIUC&Oregon,2TsinghuaUniversity,3UTAustin,4GeorgiaTech,5PicsartAIResearch(PAIR)
+https://github.com/SHI-Labs/Prompt-Free-Diffusion
+Text Prompt
+OptionalStructural Cond
+Pretrained
+T2I Diffuser
+Ref Image
+Initial Noise
+Figure 1: Given a pre-trained Text-to-Image (T2I) diffusion model, Prompt-Free Diffusion modifies it to intake a reference image as
+“context”,anoptionalimagestructuralconditioning(i.e. cannyedgeinthiscase),andaninitialnoise. Notextpromptisneeded:instead,
+thereferenceimagegovernsthesemanticsandappearance,andtheoptionalconditioningprovidesadditionalcontroloverthestructure.
+Notethatthegeneratedimageinstancesarepreciselycontrolled(withonlysmallvariations,aslargervariationswouldmeanlesscontrol
+precision),tofaithfullyreflectthedesiredstyle(referenceimage)andstructure(conditioning).
+Abstract (SeeCoder), substituting the commonly used CLIP-based
+or LLM-based text encoder. The reusability of SeeCoder
+also makes it a convenient drop-in component: one can
+Text-to-image (T2I) research has grown explosively in
+also pre-train a SeeCoder in one T2I model and reuse it
+thepastyear,owingtothelarge-scalepre-traineddiffusion
+for another. Through extensive experiments, Prompt-Free
+modelsandmanyemergingpersonalizationandeditingap-
+Diffusion is experimentally found to (i) outperform prior
+proaches. Yet, one pain point persists: the text prompt
+exemplar-based image synthesis approaches; (ii) perform
+engineering, and searching high-quality text prompts for
+on par with state-of-the-art T2I models using prompts fol-
+customized results is more art than science. Moreover, as
+lowingthebestpractice;and(iii)benaturallyextensibleto
+commonlyargued: “animageisworthathousandwords”
+otherdownstreamapplicationssuchasanimefiguregener-
+- the attempt to describe a desired image with texts of-
+ation and virtualtry-on, with promising quality. Our code
+ten ends up being ambiguous and cannot comprehensively
+and models are open-sourced at https://github.com/SHI-
+cover delicate visualdetails, hence necessitating more ad-
+Labs/Prompt-Free-Diffusion.
+ditional controls from the visual domain. In this paper,
+we take a bold step forward: taking “Text” out of a pre-
+trained T2I diffusion model, to reduce the burdensome 1.Introduction
+promptengineeringeffortsforusers. Ourproposedframe-
+work,Prompt-FreeDiffusion,reliesononlyvisualinputs The high demand for personalized synthetic results has
+togeneratenewimages:ittakesareferenceimageas“con- promoted several text-to-image (T2I) related technologies,
+text”, an optional image structural conditioning, and an including model finetuning, prompt engineering, and con-
+initial noise, with absolutely no text prompt. The core ar- trollable editing, to a new level of importance. A consid-
+chitecture behind the scene is Semantic Context Encoder erable number of recent works such as [47, 36, 62, 23,
+1
+3202
+nuJ
+1
+]VC.sc[
+2v32261.5032:viXra
+70, 37, 24, 20, 16, 59] also emerge to address personal- conditional inputs of an arbitrary T2I model, generating
+ization tasks from different angles. By far, it remains an high-performingcustomizedoutputsonparwiththecurrent
+openquestionofwhatisthemostconvenientwaytoachieve state-of-the-art. OnemaynoticethatourPrompt-FreeDif-
+such personalization. One straightforward approach is to fusionsharessimilargoalsasexemplar-baseimagegenera-
+fine-tune a T2I model with exemplar images. Personal- tion[39,71,72,10,31]andimage-variation[44,62]. But
+ized tuning techniques [47, 36, 23, 67] such as Dream- itstandsoutfrompriorapproacheswithqualityandconve-
+Booth [47] have shown promising quality by finetuning nience. Explicitly speaking, SeeCoder is reusable to most
+model weights. Their downsides are yet obvious: finetun- open-sourced T2I models in which one can easily convert
+ingamodelremainstoberesource-costlyforaverageusers, theT2IpipelinetoourPrompt-Freepipelinewithoutmuch
+despite the growing effort of more efficient tuning [23]. effort. While this is mostly infeasible in prior works (i.e.
+Prompt-engineering [60,20] servesas a litealternative for exemplar-base generation, image-variation) in which they
+personalizingT2Imodels.Ithasbeenwidelyadoptedinthe requireeitherspecificmodelsforspecificdomainsorfine-
+industryduetoitsexcellentcostmargin,i.e.improvingout- tuningmodelsdeviatedfromT2Ipurpose.
+putqualityfromalmostzerocost. Nevertheless, searching Ourmaincontributionsareconcludedinthefollowing:
+high-qualitytextpromptsforcustomizedresultsismoreart • We proposed Prompt-Free Diffusion, an effective so-
+than science. Moreover, as commonly argued: “an image lutiongeneratinghigh-qualityimagesutilizingtext-to-
+is worth a thousand words” - the attempt to describe a de- imagediffusionmodelswithouttextprompts.
+siredimagewithtextsoftenendsupbeingambiguous,and
+• EmpoweredbythereusabilityofSemanticContextEn-
+cannotcomprehensivelycoverdelicatevisualdetails.
+coder(SeeCoder),theproposedPrompt-Freeproperty
+Tobetterhandlepersonalizedneeds,severalT2Icontrol- can be available in many other existing text-to-image
+ling techniques and adaptive models are proposed [70, 37, models without extra training, creating a convenient
+24,59,16]. RepresentativeworkssuchasControlNet[70], pipelineforpersonalizedimagegeneration.
+T2I-Adapter [37], etc. proposed the adaptive siamese net-
+• Ourmethodcanbeextendedtomanydownstreamap-
+works that take user-customized structural conditionings
+plicationswithcompetitivequality,suchasexemplar-
+(i.e.cannyedge, depth, pose, etc.)asgenerativeguidances
+basedvirtualtry-on,andanimefiguregeneration.
+in additional to prompts. Such an approach has become
+oneofthemostpopularamongdownstreamuserssinceit: 2.RelatedWorks
+a)disentanglementofstructurefrom content enablesmore
+precisecontrolsoverresultsthanprompt,b)theseplug-and- 2.1.Text-to-ImageDiffusion
+runmodulesarereusabletomostT2Imodelsthatsaveusers
+Diffusionmodels(DM)[53,21,54,12,44,48,46]nowa-
+fromextratrainingstages.
+days is the de facto workhorsse for Text-to-Image (T2I)
+Do methods like ControlNet [70] etc. resolve all the generation. Diffusion-basedT2Imodels[38,44,48,46,34,
+challenges in personalized T2I? Unfortunately, the answer 18]generatephotorealisticimagesviaiterativerefinements.
+is not quite. For example, it still faces the following is- GLIDE [38] introduced a cascaded diffusion structure and
+sues:a)thecurrentapproachmeetschallengesingenerating utilized classifier-free guidance [22] for image generation
+user-designatedtextures,objects,andsemantics;b)search- andediting. DALL-E2[44]proposedamodelwithseveral
+ing prompt-in-need sometimes is problematic and incon- stages,encodingtextwithCLIP[40],decodingimagesfrom
+venient; and c) prompt engineering for quality purposes is textencoding,andupsamplingthemfrom642to10242.Im-
+stillrequired. Inconclusion,alltheseissuescomefromthe agen[48]discoveredthatscalingupthesizeofthetexten-
+fundamental knowledge gap between vision and language. coder [11, 43, 40] improves both sample fidelity and text-
+Captionsalonemaynotprovideacomprehensiverepresen- image alignment. VQ-Diffusion [18] learned T2I diffu-
+tation of all visual cues, and providing structural guidance sion models on the discrete latent space of VQ-VAE [57].
+doesnoteliminatethisproblem. The popular latent diffusion model (LDM, i.e. Stable Dif-
+To overcome the aforementioned challenges, we intro- fusion) [46] investigated the diffusion process over the la-
+duced the novel Prompt-Free Diffusion, replacing the reg- tentspaceofpre-trainedencoders,improvingbothtraining
+ular prompts input with reference images. Speaking with andsamplingefficiencywithoutqualitydegradation.Versa-
+moredetails,weutilizethenewlyproposedSemanticCon- tileDiffusion[62]furtherenablesLDMacrossmultimodal
+text Encoder (SeeCoder), in which the pixel-based im- generationandnativelysupportsimagevariation.
+ages with arbitrary resolutions can be auto-transformed Although generative adversarial networks (GANs) [17,
+intomeaningfulvisualembeddings. Suchembeddingscan 4, 28]) and autoregressive (AR) models [5, 41, 42] show
+represent low-level information, such as textures, effects, T2Icapabilitytosomeextent,mostofthem[68,69,61,74,
+etc., and high-level information, such as objects, seman- 56,8]generateimagesonspecificdomainsinsteadofopen-
+tics, etc. We then use these visual embeddings as the world text sets. With theadvances of large-scale language
+2
+encoder [40, 43, 6], GANs [73, 55, 49, 27] and AR mod-
+els[45,13,15,64]recentlystarttohandlegenerationwith
+(cid:20) (cid:21)
+arbitrarytextswithpromisingqualitiestoo. L=E[−logp (x )]≤E −log p θ (x 0:T )
+θ 0 q(x |x )
+1:T 0
+2.2.Exemplar-basedGeneration
+CLIP[40]isadouble-encodernetworkthatbridgestext-
+Given an exemplar image, exemplar-based genera-
+imagepairsbyminimizingthecontrastiveloss(i.e.cosine-
+tion[39,71,72,65,19,66,33,51,2,70,63]aimstotrans-
+similarity) between their embeddings. CLIP has served as
+form structural inputs, e.g., mask, edge or pose, to pho-
+an important prior module for nowadays T2I models such
+torealistic images according to exemplars’ content. Park
+as DALLE-2 [44] and Stable Diffusion [46]. Also, it had
+et al. [39] trained SPADE, in which exemplars’ global
+been proved by prior works [45, 44] that its well-aligned
+styleswerecapturedbyanencoderandwerepassedtothe
+cross-modal latent space is one of the core reasons for the
+spatially-adaptive normalization to synthesize images. A
+T2Imodels’success.
+better style control was proposed in CoCosNet [71], con-
+Image-Variation defines a task that generates images
+structing dense semantic correspondence between a struc-
+withsimilarhigh-levelsemanticsaccordingtoanotherim-
+tural input and its exemplar. Zhou et al. [72] improve Co-
+age [44, 62]. Prompt-Free Diffusion is closer to Image-
+CosNet by leveraging a hierarchical PatchMatch method
+Variation than exemplar-based generation approaches, in
+to fast compute full-resolution correspondence. Recent
+whichtheformerfinetunesexistingT2ImodelsusingCLIP
+progresshasalsobeenmadetointroduceunbalancedopti-
+image encoder with frozen weights, while the latter pro-
+mal transport [65], automatic assessment [19], contrastive
+posed domain-specific networks for tasks such as virtual
+learning [66], and dynamic sparse mechanism [33] for
+try-on,makeup,etc.
+effective semantic correspondence learning. Meanwhile,
+techniques for diffusion models [51, 2, 70, 24, 63, 16, 59]
+3.2.Prompt-FreeDiffusion
+also step into this field, in which [70, 37] setup adaptive
+encoders for diffuser, [24] disentangle and reassemble at-
+As mentioned in earlier sections, we aim to propose
+tributes of images, [63] use CLIP image encoding for in-
+an effective solution to handle nowadays high-demanding
+painting, [16] utilize semantic masks, and [59] uses all
+personalizedT2Iwhileaggressivelymaintainingallmerits
+typesofconditionalinputsincludingimages.
+from prior approaches, i.e. high-quality, training-free, and
+reusable to most open-sourced models. Table 1 explains
+3.Method
+the pros and cons of varieties of approaches, in which we
+Inthissection,wewillfirstbrieflyreviewsomeprelim- gauge from three angles: personalization quality, easy in-
+inaries, includingdiffusionmodel[53,21, 54], CLIP[40], stallation & domain adaptation, and input complexity &
+and image-variation [44, 62]. We will then introduce our flexibility. The design of Prompt-Free Diffusion inherits
+Prompt-Free Diffusion consisting of a T2I-based diffuser T2I and Image-Variation models, consisting of a diffuser
+andSemanticContextEncoder(SeeCoder),andexplainits and a context encoder as two core modules, as well as an
+designmotivations. Lastly,wewillgothroughthestructure optionalVAEthatreducesdimensionalityindiffusion. Par-
+oftheSeeCoderindetail. ticularlyinthiswork,wehavekeptapreciselatentdiffusion
+structurelikeStableDiffusion[46],showninFigure2.
+3.1.Prelimiaries
+Recall that text prompts are first tokenized and then
+encoded into N-by-C context embeddings using CLIP in
+Diffusion process q(x |x ) and p (x |x ) are T-step
+T 0 θ T 0
+commonT2I.N andC representthecountanddimension
+Markov Chains [21] that gradually degrade x to x with
+0 T
+oftheembeddings.Later,theseembeddingsarefedintothe
+randomnoisesandrecoverx fromthesenoises:
+T
+diffuser’s cross-attention layers as inputs. In our Prompt-
+Free Diffusion, we replace the CLIP text encoder with the
+T T
+q(x |x )= (cid:89) q(x |x )= (cid:89) N( (cid:112) 1−β x ;β I) newly proposed SeeCoder (see Figure 2). Instead of text
+T 0 t t−1 t t−1 t
+prompts, SeeCoder is designed to take image inputs only.
+t=1 t=1
+Itcapturesvisualcuesandtransformsthemintocompatible
+p (x |x )=N(µ (x ,t),Σ (x ,t))
+θ t−1 t θ t θ t N-by-C embeddings representing textures, objects, back-
+inwhichβ isthestandarddeviationofthemixed-innoiseat grounds,etc.Wethenproceedwiththesamecross-attention
+t
+step t, µ (x ,t) and Σ (x ,t) are network predicted mean layersindiffusers. OurPrompt-FreeDiffusionalsodoesn’t
+θ t θ t
+and standard deviation under parameter θ of the denoised needanyimagedisentanglementaspriors(suchasinCom-
+signal at step t. The loss function of training is the varia- poser[24])becauseSeeCodercandetermineaproperway
+tional bound for negative log-likelihood [21] shown as the to encode low- and high-level visual cues in an unsuper-
+following: visedmanner. Formoredetails,pleaseseeSection3.3.
+3
+EasyInstallation&Domain
+Methodsvs.Properties PersonalizationQuality InputComplexity&Flexibility
+Adaptation
+Noeasyinstallation&adaptation;
+OKwhenspecialtokensare
+ModelFinetuning DataandGPUsarerequired;
+Fullpersonalization learned;Subjecttoinputprompt
+(DreamBooth[47]etc.) Individualweightsarerequiredfor
+quality
+individualdomains
+Personalizationisonlyavailable
+PromptSearching& Noinstallationrequired;Reusable Promptsearching&engineeringis
+withinalimitedrange,andislikely
+Engineering toallT2Imodels&domains forsurerequired
+infeasibleincomplexcases
+Userscancustomizetheoutput
+AdaptiveLayerswith Structuralinputssuchasdepthand
+structurebutstillhasinsufficient Easyinstallation;Reusabletomost
+StructuralInputs edgesarerequired;Subjecttoinput
+controloverotheraspectssuch T2Imodels&domains
+(ControlNet[70]etc.) promptquality
+textures,styles,backgrounds,etc.
+Image-Variation Userscancontrolonlyhigh-level
+Separatemodelsarerequired;Not Imageinputsonly;Nopromptsare
+(VersatileDiffusion[62] semanticsbuthasinsufficient
+reusabletoT2Imodels&domains. needed
+etc.) controloverstructuresandothers
+Nearlyfullpersonalization;Users
+Easyinstallationbyreplacing Structuralinputssuchasdepthand
+Prompt-FreeDiffusion maycontroloutputstructures,
+CLIPwithSeeCoder;Reusableto edgesareoptional;Imageinputs
+(ours) textures,andbackgroundsusing
+mostT2Imodels&domains only;Nopromptsareneeded
+conditionalimageinputs
+Table1: Thistablecomparesthepros(green)andcons(red)fromdifferentmethodologieswithourPrompt-FreeDiffusionalongthree
+aspects:Personalizationquality;Easyinstallation&domainadaptation;Inputcomplexity&flexibility.Yellowrepresentsneutral.
+Figure3). BackboneEncoderusesSWIN-L[35]because
+CLIPText
+Encoder it transforms arbitrary-resolution images into feature pyra-
+SeeCoder midsthatbettercapturevisualcuesindifferentscales. For
+the Decoder, we proposed a transformer-based network
+with several convolutions. Specifically speaking, the De-
+coder takes features from different levels; uses convolu-
+C C
+En
+V
+c
+A
+o
+E
+der
+… ss or
+A-
+… ss or
+A-
+…
+D
+V
+ec
+A
+o
+E
+der
+t
+t
+i
+u
+o
+r
+n
+es
+s
+;
+to
+th
+e
+e
+q
+n
+ua
+p
+l
+a
+iz
+ss
+e
+es
+ch
+i
+a
+t
+n
+t
+n
+h
+e
+r
+l
+o
+s
+u
+;
+g
+c
+h
+on
+6
+ca
+m
+te
+u
+n
+l
+a
+t
+t
+i
+e
+-h
+s
+e
+a
+a
+l
+d
+l fl
+se
+a
+l
+t
+f
+t
+-
+e
+a
+n
+t
+e
+te
+d
+nt
+f
+i
+e
+o
+a
+n
+-
+ntt ntt
+modules [58] with linear projections and LayerNorms [1].
+Diffusers
+The final outputs are split and shaped back into 2D, then
+Figure2: GraphicillustrationofourPrompt-FreeDiffusionwith sumwithlateral-linkedinputfeatures.
+latentdiffusionpipelineinwhichCLIPtextencoderisreplacedby
+ThelastpartofSeeCoderisQueryTransformerwhich
+thenewlyproposedSeeCoder.
+finalizes multi-level visual features into a single 1D visual
+embedding. The network started with 4 freely-learning
+3.3.SemanticContextEncoder global queries and 144 local queries. It holds a mixture
+of cross-attention and self-attention layers, one after an-
+As the core module in Prompt-Free Diffusion, our Se- other. The cross-attentions take local queries as Q and vi-
+mantic Context Encoder (SeeCoder) aims to take only im- sualfeaturesasK andV. Theself-attentionsusethecon-
+age inputs and encode all visual cues into an embedding. catenation of global and local queries as QKV. Such de-
+OnemaynoticethatCLIPmayalsoencodeimages. Butin signpromptsahierarchicalknowledgepassinginwhichthe
+practice, CLIP’s ViT [14] shows limited capacity because cross-attentionstransitvisualcuestolocalqueries,andself-
+a)unabletotakeinputshigherthanresolution3842;b)does
+attentionsdistilllocalqueriesintoglobalqueries. Besides,
+notcapturedetailtextures,objects,etc.;c)trainedwithcon- the network also contains free-learned query embeddings,
+trastivelossmakingitanindirectwayofprocessingvisual level embeddings, and optional 2D spatial embeddings.
+cues. ThereforeweproposeSeeCoder,asolutionbetterfits Theoptionalspatialembeddingsaresine-cosineencodings
+visiontasksthanCLIP. followed by several MLP layers. We name the network
+SeeCoder can be breakdown into three components: SeeCoder-PA when there exist 2D spatial embeddings,
+Backbone Encoder, Decoder, and Query Transformer (see where PA is short for Position-Aware. Finally, global and
+4
+Local Query Global Query
+Encoder Layers Decoder Transformer Layer 6 Cross-Attention Q
+Self-Attention nar
+T-
+Cross-Attention ofs
+Self-Attention
+mr
+Encoder Layer Res3 …
+Cross-Attention B
+re
+ol
+Self-Attention kc
+Encoder Layer Res4 Decoder Transformer Layer 2
+Q-Transformer Block
+Encoder Layer Res5 Decoder Transformer Layer 1 Q-Transformer Block
+To Diffuser
+(a) Backbone Encoder (b) Decoder (c) Query Transformer
+Figure3: TheoverallstructureofourproposedSemanticContextEncoder(SeeCoder),whichincludesaBackboneEncoder,aDecoder,
+andaQueryTransformer.Forsimplicity,wehindseveraldetaildesigns:lateralconnectionsbetweenencoderanddecoder;learnablequery,
+level,and2Dspatialembeddings.
+localqueriesareconcatenatedandpassedtothediffuserfor 4.2.Training
+contentgeneration. Noticethatournetworksharessimilar-
+The pretrained models’ selection impacts Prompt-Free
+itieswithsegmentationapproaches,suchas[25,32,9,26].
+Diffusion’s final model due to its unique training proce-
+Nevertheless,theirendpurposesvary:tocapturevisualem-
+dure with frozen weights. As mentioned in Section 3.3,
+beddingsfordiscriminativevs.generativetasks.
+we chose SWIN-L [35] as SeeCoder’s Backbone Encoder,
+Training. SeeCoder and Prompt-Free Diffusion is sur- and SD2.0’s [46] as VAE. We used our in-house T2I dif-
+prisingly straightforward. We conducted regular training fuser,whichoutperformedSD1.5asthepretraineddiffuser
+with variation lower-bound loss [21] and required gradi- forPrompt-FreeDiffusion. Despiteinvolvingourin-house
+ent for only SeeCoder’s Decoder and Query Transformer. model, we demonstrated that a well-trained SeeCoder is
+Allotherweights(i.e.VAE,Diffuser,andSeeCoder’sBack- reusabletootheropen-sourceT2ImodelsinSection4.4.
+boneEncoder)remainedfrozen. Formoretrainingdetails, Other training settings are listed as the following: We
+pleaseseeSection4.2. used DDPM with T = 1000 diffusion timesteps with lin-
+earlyincreasedβfrom8.5×10−5to1.2×10−2. Foreach
+iteration,wesampledDDPMtimestept∈T uniformly.We
+4.Experiments
+trainedthemodelwith100kiterations,50kwithalearning
+rate10−4,andtheother50kwith10−5. Ourtrainingbatch
+Inthissession,wewilldescribethedataandthesetting sizewassetto512,8samplesperGPU,atotalof16A100
+totrainourPrompt-FreeDiffusion. Wewillthenstudythe GPUsacrosstwonodes,andagradientaccumulationof4.
+performance and the adaptivity of SeeCoder over various Besides, we also train a separate position-aware model
+T2Imodels. Lastly,wewillshowtwohighlightedapplica- with2Dspatialembeddings,namelySeeCoder-PA.Prompt-
+tions: zero-shotanime-figuregenerationandvirtualtry-on. Free Diffusion with SeeCoder-PA performs better than
+SeeCoder when no structural conditionings are used (see
+Sec4.3),anexplainablephenomenonasthespatialembed-
+4.1.Data
+dingspartlycoverthemissingstructuralinputs. SeeCoder-
+PAistrainedfroma50kSeeCodercheckpointandfinetuned
+Alignedwithmanypriorworks[44,46,62],weadopted
+additional20kstepswithalearningrate5×10−5.
+Laion2B-en[50]andCOYO-700M[7]asourtrainingdata.
+Laion2B and COYO are large-scale image-text pairs that
+4.3.Performance
+contain 2 billion and 700 million web-collected samples.
+Both datasets were frequently used in T2I research. Since We demonstrate the performance of Prompt-Free Dif-
+Prompt-Free Diffusion requires no prompts, we actually fusion in Figure 4, in which our method generates high-
+onlyusedthesedatasets’imagecollectionsformodeltrain- quality images replicating details from reference inputs.
+ingandevaluation. Inthisexperiment,Prompt-FreeDiffusionextensivelyuses
+5
+Scribble
+Depth
+Mlsd
+Canny
+Reference Structural
+Three Sample Outputs
+Image Conditioning
+Figure4:ThisfigureshowsresultsfromPrompt-FreeDiffusion,inwhichwesamplethreeoutputsforeachcaseusingonereferenceimage
+andonestructuralconditioning(i.e.cannyedge,depth,mlsd,andscribble)asinput.Nopromptsarerequired.
+ControlNets[70]tohandleavarietyofstructuralcondition- the performance comparison between our Prompt-Free
+ings,includingbutnotlimitedtocanny-edge,depth, mlsd, Diffusion and the traditional prompt-based Control-
+andscribble. Also,Prompt-FreeDiffusionisinsensitiveto Net+T2I [70, 46] (see Figure 5). Specifically, we use
+input resolution and aspect ratios. Examples are shown in prompt inputs with progressive complexities and check
+Figure4withthreescales:5122,512×768,and768×512. which level of prompt complexity is equivalent to our
+Thereferencedimensiondoesnotneedtomatchtheoutput Prompt-Free Diffusion in performance. As shown in Fig-
+dimension,Figure4showscaseswithmatcheddimensions ure5,ourapproachroughlyreachesthetoptwolevels: be-
+merelyforbetterexhibition. RecallthatinSection4.2,we tween“requiringsemanticandstyledecorativeprompt”and
+mentioned that an in-house T2I diffuser that outperforms “requiring extra prompt engineering”. We also noticed a
+SD1.5 are used in training. Such a diffuser is also used to trickycolorshiftusingControlNet+T2I,whichwegaveup
+generatetheresultsinthisexperimentandallfollowingex- fixingafternumeroustries.
+perimentsunlessseparatelymentioned.
+Image-Variation: Next, we evaluate Image-Variation
+Compare with T2I: The following experiment shows (IV): generating images from other reference images. No-
+6
+medieval dystopian city fantasymedieval dystopian fantasy medieval dystopian
+medieval streets, yellow and streets landscape, wide shot, city streets … yellow and city streets … vibrant light,
+blue, rain and fog thousands of yellow and blue blue candles, rain and fog, hyper detailed, realistic, Prompt-Free Diffusion Reference Image
+candles, rain and fog dim light, vibrant light dynamic lighting, 8k Outputs (Ours)
+T2I Prompt Complexity Ours Performance
+Figure5: ThisfiguregatherstheperformanceofControlNet+T2Iusingpromptswithprogressivecomplexity. Itstartswiththeprompt
+“medievalstreets,yellowandblue,rainandfog”whichgivesbasicsemanticsandstyles.Laterweimprovetheperformancewithsemantic
+decorative prompts such as “dystopian” and “wide shot”, style prompts such as “fantasy”, and common prompt engineering such as
+“realistic”and“8k”(displayedingreen).OurPrompt-FreeDiffusionmatchesthequalityofthetoptwomostsophisticatedprompts.
+Input
+Versatile
+Diffusion
+Image-Variation
+ControlNet
+Shuffle
+(v1.1 released 4/13/23)
+ControlNet
+Reference-Only
+(v1.1.173 released 5/13/23)
+Prompt-Free
+Diffusion
+w. SeeCoder
+(Ours)
+Prompt-Free
+Diffusion
+w. SeeCoder-PA
+(Ours)
+(a) In-domain samples (b) Out-of-domain samples
+Figure6: Image-VariationcomparisonbetweenVD[62],ControlNet[70],andPrompt-FreeDiffusion. Testingsamplessarecategorized
+into a) in-domain and b) out-of-domain, meaning whether the input can be generated using the pretrained T2I diffuser. In conclusion,
+Prompt-FreeDiffusionw.SeeCoder-PAbeatsControlNetShuffleandReference-Onlyforbothin-domainandout-of-domaincases.
+7
+(a) (b) (c) (d) (e) (f) (g)
+Figure8:SeeCoder’sadaptabilityexaminationon7open-sourced
+&in-housemodels: (a)SD1.5[46];(b)OAM-V2;(c)Anything-
+V4; (d)In-housemodel(i.e.thediffuserSEEwastrainedwith);
+Input ControlNet ControlNet Prompt-Free (e)OpenJourney-V4;(f)Deliberate-V2;(g)RealisticVision-V2
+Shuffle+𝑥 RefOnly+𝑥 Diffusion (Ours)
+.
+strengthinreplicatingtextures,colors,styles,backgrounds,
+Figure7:PerformancecomparisonbetweenDual-ControlNet[70]
+etc.fromreference.
+(i.e. Shuffle+x and Reference-Only+x, x representing an arbi-
+trary ControlNet other than Shuffle or Reference-Only) and our 4.4.Reusability
+Prompt-Free Diffusion. From which we notice that our method
+outperformsbothControlNetsolutionsintermsoftexturequality, AcriticalpropertyofourSeeCoderisitcanbereusedfor
+colorconsistency,stylereplication,etc.(seethezoomed-inviews). other T2I diffusers after being (pre-)trained on one model.
+One may customize their T2I model by directly replacing
+tice that IV is a natural setup for Prompt-Free Diffusion CLIP with SeeCoder, making the latter a convenient drop-
+when no ControlNet is involved. Prior baseline such as inreplacementoftheformer.
+VD [62] finetunes a diffusion model for IV. Concurrently, We test the property by directly plugging in a pre-
+theControlNetteamalsoproposedtwonewmodels,“shuf- trained SeeCoder with six other open-source models, in-
+fle”and“reference-only”(v1.1.173) [70],sowecompared cluding the base model SD1.5 [46]; art-focused mod-
+both. Testing samples are categorized into in-domain and els OpenJourney-V4 and Deliberate-V2; anime models
+out-of-domain,meaningwhetherthereferenceimageswere OAM-V2 and Anything-V4; and the photorealistic model
+generated by the pre-trained T2I diffuser, or from a differ- RealisticVision-V2. We emphasize that the pre-trained
+entsource. Wedrawthefollowingconclusionsinthistest: SeeCoderisfrozeninthosecases-nore-trainingisneeded.
+a)VDhasthebestoverallperformance,meaningfinetuning The results are shown in Figure 8, demonstrating that
+still yields good performance; b) ControlNet Shuffle and SeeCoderishighlyreusabletootherT2Imodels.
+Reference-Onlyhavesignificantperformancedropsinout-
+4.5.DownstreamApplications
+of-domain tests. Reference-Only outperforms Shuffle on
+in-domain samples and vice versa on out-of-domain sam- Image-based Anime Figure Generation is one of the
+ples. These results reflect ControlNet’s weakness in gen- practical uses of Prompt-Free Diffusion in anime or game
+erality and show its limitation of not having quality and design. In Figure 9, we generate anime figures based on
+generality in both hands. c) Prompt-Free Diffusion bet- SeeCoder-captured visual cues and conditional poses. To
+ter replicates the reference images (i.e. semantic, texture, better accommodate anime data that is “out-of-domain”,
+background, etc.), which aligns with its training objective. SeeCoderhereisfinetunedonOAM-V2anditssynthesized
+SeeCoder-PA(i.e.SeeCoderwithspatialencoding)outper- images for 30k iterations. From the results, Prompt-Free
+formsSeeCoderintermsofquality(seeSection4.2). Both Diffusiondemonstratespromisingresultsforthistask.
+models also do well on in-domain samples and have qual- VirtualTry-onisatraditionalexemplar-basedtasktar-
+ity gaps on out-of-domain samples. Overall, our approach getbypriorworkssuchas[10]and[31]. OurPrompt-Free
+beatsControlNetforImage-Variation. Diffusion can also handle this task with minor modifica-
+ComparewithDual-ControlNet:Wealsocompareour tions: We obtain cloth masks from SAM [30] and inputs
+structural-guided performance (i.e. Prompt-Free Diffusion these masks as conditions of ControlNet. Then like other
+withSingleControlNet)withDual-ControlNetsetup. Fig- applications,weuseSeeCoder’svisualembeddingtoguide
+ure 7 shows the overall performance with zoomed-in de- our generation. Results are shown in Figure 10. Other
+tails, from which we demonstrate that our approach has applications such as model cognitive study [67] and video
+8
+While our proposed Prompt-Free Diffusion can assist
+artistsanddesignersincreativecontentgeneration,itisim-
+portanttoacknowledgethatthemisuseorabuseofoursys-
+temmaycausenegativesocialimpactsandethicalconcerns
+similar to other controllable image synthesis approaches.
+In addition, open-source pretrained text-to-image models
+used in conjunction with Prompt-Free Diffusion may con-
+tainharmfulbias, stereotypes, etc. Asacrucialsteptoad-
+dresstheseconcerns,weencourageuserstodeployanduti-
+lizeourapproachinaresponsiblewaywithethicalregula-
+tionsandenhancedtransparency.
+References
+[1] Jimmy Lei Ba, Jamie Ryan Kiros, and Geoffrey E Hin-
+ton. Layernormalization. arXivpreprintarXiv:1607.06450,
+2016. 4
+Figure 9: Demo of anime figure generation using Prompt-Free
+[2] Ankan Kumar Bhunia, Salman Khan, Hisham Cholakkal,
+Diffusionwithareferenceimageandconditioningpose.
+RaoMuhammadAnwer,JormaLaaksonen,MubarakShah,
+and Fahad Shahbaz Khan. Person image synthesis via de-
+noisingdiffusionmodel. InCVPR,2023. 3
+[3] AndreasBlattmann,RobinRombach,HuanLing,TimDock-
+horn, Seung Wook Kim, Sanja Fidler, and Karsten Kreis.
+Alignyourlatents: High-resolutionvideosynthesiswithla-
+tent diffusion models. arXiv preprint arXiv:2304.08818,
+2023. 9
+[4] AndrewBrock,JeffDonahue,andKarenSimonyan. Large
+scalegantrainingforhighfidelitynaturalimagesynthesis.
+arXivpreprintarXiv:1809.11096,2018. 2
+[5] Tom Brown, Benjamin Mann, Nick Ryder, Melanie Sub-
+biah,JaredDKaplan,PrafullaDhariwal,ArvindNeelakan-
+tan,PranavShyam,GirishSastry,AmandaAskell,etal.Lan-
+guagemodelsarefew-shotlearners. InNeurIPS,2020. 2
+[6] Tom Brown, Benjamin Mann, Nick Ryder, Melanie Sub-
+biah,JaredDKaplan,PrafullaDhariwal,ArvindNeelakan-
+tan,PranavShyam,GirishSastry,AmandaAskell,etal.Lan-
+Cloth Model VITON-HD HR-VITON Ours
+guagemodelsarefew-shotlearners. Advancesinneuralin-
+Figure 10: Demo of virtual try-on using Prompt-Free Diffusion formationprocessingsystems,33:1877–1901,2020. 3
+andstate-of-the-artexemplar-basedapproaches. [7] Minwoo Byeon, Beomhee Park, Haecheon Kim, Sungjun
+Lee, Woonhyuk Baek, and Saehoon Kim. Coyo-
+generation[29,52,3]canbefutureapplicationssupported 700m: Image-textpairdataset. https://github.com/
+bySeeCoder. kakaobrain/coyo-dataset,2022. 5
+[8] MarkChen,AlecRadford,RewonChild,JeffreyWu,Hee-
+5.ConclusionandEthicalDiscussion wooJun, DavidLuan, andIlyaSutskever. Generativepre-
+trainingfrompixels. InICML,2020. 2
+In this article, we propose Prompt-Free Diffusion, a
+[9] BowenCheng,IshanMisra,AlexanderG.Schwing,Alexan-
+novelpipelinethatgeneratespersonalizedoutputsbasedon
+der Kirillov, and Rohit Girdhar. Masked-attention mask
+exemplar images, not text prompts. Through experiments,
+transformerforuniversalimagesegmentation. 2022. 5
+we show that our core module, SeeCoder, can generate
+[10] SeunghwanChoi, SunghyunPark, MinsooLee, andJaegul
+high-quality results and can easily plug-and-use in various
+Choo. Viton-hd: High-resolution virtual try-on via
+well-established T2I pipelines through CLIP replacement. misalignment-awarenormalization. InCVPR,2021. 2,8
+Last but not least, SeeCoder shows great potential in han-
+[11] Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina
+dling practical tasks such as anime figure generation and Toutanova. Bert: Pre-training of deep bidirectional
+virtual try-on with surprising quality, making it a further transformers for language understanding. arXiv preprint
+solutionfordownstreamusers. arXiv:1810.04805,2018. 2
+9
+[12] PrafullaDhariwalandAlexanderNichol. Diffusionmodels [26] JiteshJain,AnukritiSingh,NikitaOrlov,ZilongHuang,Ji-
+beatgansonimagesynthesis. AdvancesinNeuralInforma- achenLi,StevenWalton,andHumphreyShi. Semask: Se-
+tionProcessingSystems,34:8780–8794,2021. 2 manticallymaskedtransformersforsemanticsegmentation.
+[13] Ming Ding, Zhuoyi Yang, Wenyi Hong, Wendi Zheng, arXivpreprintarXiv:2112.12782,2021. 5
+Chang Zhou, Da Yin, Junyang Lin, Xu Zou, Zhou Shao, [27] Minguk Kang, Jun-Yan Zhu, Richard Zhang, Jaesik Park,
+HongxiaYang,etal.Cogview:Masteringtext-to-imagegen- Eli Shechtman, Sylvain Paris, and Taesung Park. Scal-
+eration via transformers. Advances in Neural Information ing up GANs for text-to-image synthesis. arXiv preprint
+ProcessingSystems,34:19822–19835,2021. 3 arXiv:2303.05511,2023. 3
+[28] Tero Karras, Samuli Laine, Miika Aittala, Janne Hellsten,
+[14] Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov,
+Jaakko Lehtinen, and Timo Aila. Analyzing and improv-
+Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner,
+ing the image quality of stylegan. In Proceedings of
+MostafaDehghani,MatthiasMinderer,GeorgHeigold,Syl-
+the IEEE/CVF conference on computer vision and pattern
+vain Gelly, et al. An image is worth 16x16 words: Trans-
+recognition,pages8110–8119,2020. 2
+formers for image recognition at scale. arXiv preprint
+arXiv:2010.11929,2020. 4 [29] Levon Khachatryan, Andranik Movsisyan, Vahram Tade-
+vosyan, Roberto Henschel, Zhangyang Wang, Shant
+[15] Oran Gafni, Adam Polyak, Oron Ashual, Shelly Sheynin,
+Navasardyan,andHumphreyShi. Text2video-zero:Text-to-
+Devi Parikh, and Yaniv Taigman. Make-a-scene: Scene-
+imagediffusionmodelsarezero-shotvideogenerators.arXiv
+basedtext-to-imagegenerationwithhumanpriors. InCom-
+preprintarXiv:2303.13439,2023. 9
+puter Vision–ECCV 2022: 17th European Conference, Tel
+[30] AlexanderKirillov,EricMintun,NikhilaRavi,HanziMao,
+Aviv, Israel, October 23–27, 2022, Proceedings, Part XV,
+ChloeRolland,LauraGustafson,TeteXiao,SpencerWhite-
+pages89–106.Springer,2022. 3
+head,AlexanderCBerg,Wan-YenLo,etal. Segmentany-
+[16] Vidit Goel, Elia Peruzzo, Yifan Jiang, Dejia Xu, Nicu
+thing. arXivpreprintarXiv:2304.02643,2023. 8
+Sebe,TrevorDarrell,ZhangyangWang,andHumphreyShi.
+[31] Sangyun Lee, Gyojung Gu, Sunghyun Park, Seunghwan
+Pair-diffusion: Object-level image editing with structure-
+Choi,andJaegulChoo. High-resolutionvirtualtry-onwith
+and-appearance paired diffusion models. arXiv preprint
+misalignmentandocclusion-handledconditions. InECCV,
+arXiv:2303.17546,2023. 2,3
+2022. 2,8
+[17] Ian Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing
+[32] KunchangLi,YaliWang,JunhaoZhang,PengGao,Guanglu
+Xu,DavidWarde-Farley,SherjilOzair,AaronCourville,and
+Song,YuLiu,HongshengLi,andYuQiao.Uniformer:Uni-
+YoshuaBengio. Generativeadversarialnetworks. Commu-
+fying convolution and self-attention for visual recognition.
+nicationsoftheACM,63(11):139–144,2020. 2 arXivpreprintarXiv:2201.09450,2022. 5
+[18] Shuyang Gu, Dong Chen, Jianmin Bao, Fang Wen, Bo [33] SonghuaLiu,JingwenYe,SuchengRen,andXinchaoWang.
+Zhang, DongdongChen, LuYuan, andBainingGuo. Vec- DynaST: Dynamic sparse transformer for exemplar-guided
+torquantizeddiffusionmodelfortext-to-imagesynthesis.In imagegeneration. InECCV,2022. 3
+CVPR,2022. 2 [34] Xihui Liu, Dong Huk Park, Samaneh Azadi, Gong Zhang,
+[19] Jiayi Guo, Chaoqun Du, Jiangshan Wang, Huijuan Huang, Arman Chopikyan, Yuxiao Hu, Humphrey Shi, Anna
+PengfeiWan,andGaoHuang. Assessingasingleimagein Rohrbach, and Trevor Darrell. More control for free! im-
+reference-guidedimagesynthesis. InAAAI,2022. 3 agesynthesiswithsemanticdiffusionguidance. InWACV,
+[20] JiayiGuo,ChaofeiWang,YouWu,EricZhang,KaiWang, 2023. 2
+Xingqian Xu, Shiji Song, Humphrey Shi, and Gao Huang. [35] ZeLiu,YutongLin,YueCao,HanHu,YixuanWei,Zheng
+Zero-shot generative model adaptation via image-specific Zhang, Stephen Lin, and Baining Guo. Swin transformer:
+promptlearning. InCVPR,2023. 2 Hierarchical vision transformer using shifted windows. In
+Proceedings of the IEEE/CVF international conference on
+[21] JonathanHo,AjayJain,andPieterAbbeel. Denoisingdiffu-
+computervision,pages10012–10022,2021. 4,5
+sionprobabilisticmodels. AdvancesinNeuralInformation
+[36] Haoming Lu, Hazarapet Tunanyan, Kai Wang, Shant
+ProcessingSystems,33:6840–6851,2020. 2,3,5
+Navasardyan, Zhangyang Wang, and Humphrey Shi. Spe-
+[22] Jonathan Ho and Tim Salimans. Classifier-free diffusion
+cialistdiffusion: Plug-and-playsample-efficientfine-tuning
+guidance. arXivpreprintarXiv:2207.12598,2022. 2
+oftext-to-imagediffusionmodelstolearnanyunseenstyle.
+[23] Edward J Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-
+InCVPR,2023. 2
+Zhu,YuanzhiLi,SheanWang,LuWang,andWeizhuChen.
+[37] ChongMou,XintaoWang,LiangbinXie,JianZhang,Zhon-
+Lora: Low-rankadaptationoflargelanguagemodels. arXiv
+gangQi,YingShan,andXiaohuQie. T2i-adapter:Learning
+preprintarXiv:2106.09685,2021. 2
+adapterstodigoutmorecontrollableabilityfortext-to-image
+[24] LianghuaHuang,DiChen,YuLiu,YujunShen,DeliZhao, diffusionmodels.arXivpreprintarXiv:2302.08453,2023.2,
+andJingrenZhou. Composer:Creativeandcontrollableim- 3
+age synthesis with composable conditions. arXiv preprint [38] Alex Nichol, Prafulla Dhariwal, Aditya Ramesh, Pranav
+arXiv:2302.09778,2023. 2,3 Shyam,PamelaMishkin,BobMcGrew,IlyaSutskever,and
+[25] Jitesh Jain, Jiachen Li, MangTik Chiu, Ali Hassani, Nikita MarkChen. Glide:Towardsphotorealisticimagegeneration
+Orlov,andHumphreyShi. Oneformer: Onetransformerto andeditingwithtext-guideddiffusionmodels.arXivpreprint
+ruleuniversalimagesegmentation. InCVPR,2023. 5 arXiv:2112.10741,2021. 2
+10
+[39] TaesungPark,Ming-YuLiu,Ting-ChunWang,andJun-Yan OranGafni, etal. Make-a-video: Text-to-videogeneration
+Zhu. Semanticimagesynthesiswithspatially-adaptivenor- without text-video data. arXiv preprint arXiv:2209.14792,
+malization. InCVPR,2019. 2,3 2022. 9
+[40] Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya [53] JaschaSohl-Dickstein, EricWeiss, NiruMaheswaranathan,
+Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, and Surya Ganguli. Deep unsupervised learning using
+AmandaAskell,PamelaMishkin,JackClark,etal. Learn- nonequilibrium thermodynamics. In International Confer-
+ingtransferablevisualmodelsfromnaturallanguagesuper- enceonMachineLearning,pages2256–2265.PMLR,2015.
+vision. In International Conference on Machine Learning, 2,3
+pages8748–8763.PMLR,2021. 2,3 [54] Jiaming Song, Chenlin Meng, and Stefano Ermon.
+[41] Alec Radford, Karthik Narasimhan, Tim Salimans, Ilya Denoising diffusion implicit models. arXiv preprint
+Sutskever,etal. Improvinglanguageunderstandingbygen- arXiv:2010.02502,2020. 2,3
+erativepre-training. 2018. 2 [55] MingTao, Bing-KunBao, HaoTang, andChangshengXu.
+[42] AlecRadford,JeffreyWu,RewonChild,DavidLuan,Dario GALIP: Generative adversarial clips for text-to-image syn-
+Amodei, Ilya Sutskever, et al. Language models are unsu- thesis. arXivpreprintarXiv:2301.12959,2023. 3
+pervisedmultitasklearners. OpenAIblog,1(8):9,2019. 2 [56] MingTao,HaoTang,SongsongWu,NicuSebe,Xiao-Yuan
+[43] ColinRaffel,NoamShazeer,AdamRoberts,KatherineLee, Jing,FeiWu,andBingkunBao.Df-gan:Deepfusiongener-
+Sharan Narang, Michael Matena, Yanqi Zhou, Wei Li, Pe- ativeadversarialnetworksfortext-to-imagesynthesis.arXiv
+ter J Liu, et al. Exploring the limits of transfer learning preprintarXiv:2008.05865,2020. 2
+withaunifiedtext-to-texttransformer. J.Mach.Learn.Res., [57] AaronVanDenOord, OriolVinyals, etal. Neuraldiscrete
+21(140):1–67,2020. 2,3 representationlearning.Advancesinneuralinformationpro-
+[44] AdityaRamesh,PrafullaDhariwal,AlexNichol,CaseyChu, cessingsystems,30,2017. 2
+and Mark Chen. Hierarchical text-conditional image gen- [58] XiaolongWang,RossGirshick,AbhinavGupta,andKaim-
+erationwithcliplatents. arXivpreprintarXiv:2204.06125, ingHe. Non-localneuralnetworks. InProceedingsofthe
+2022. 2,3,5 IEEE conference on computer vision and pattern recogni-
+[45] Aditya Ramesh, Mikhail Pavlov, Gabriel Goh, Scott Gray, tion,pages7794–7803,2018. 4
+ChelseaVoss,AlecRadford,MarkChen,andIlyaSutskever. [59] Zhendong Wang, Yifan Jiang, Yadong Lu, Yelong Shen,
+Zero-shottext-to-imagegeneration.InInternationalConfer- Pengcheng He, Weizhu Chen, Zhangyang Wang, and
+enceonMachineLearning,pages8821–8831.PMLR,2021. MingyuanZhou. In-contextlearningunlockedfordiffusion
+3 models. arXivpreprintarXiv:2305.01115,2023. 2,3
+[46] Robin Rombach, Andreas Blattmann, Dominik Lorenz, [60] Sam Witteveen and Martin Andrews. Investigating
+PatrickEsser,andBjo¨rnOmmer.High-resolutionimagesyn- prompt engineering in diffusion models. arXiv preprint
+thesiswithlatentdiffusionmodels. InCVPR,2022. 2,3,5, arXiv:2211.15462,2022. 2
+6,8 [61] Tao Xu, Pengchuan Zhang, Qiuyuan Huang, Han Zhang,
+[47] Nataniel Ruiz, Yuanzhen Li, Varun Jampani, Yael Pritch, ZheGan,XiaoleiHuang,andXiaodongHe. Attngan: Fine-
+MichaelRubinstein,andKfirAberman. Dreambooth: Fine grainedtexttoimagegenerationwithattentionalgenerative
+tuning text-to-image diffusion models for subject-driven adversarialnetworks. InCVPR,2018. 2
+generation. InCVPR,2023. 2,4 [62] Xingqian Xu, Zhangyang Wang, Eric Zhang, Kai Wang,
+[48] Chitwan Saharia, William Chan, Saurabh Saxena, Lala and Humphrey Shi. Versatile diffusion: Text, images
+Li, Jay Whang, Emily Denton, Seyed Kamyar Seyed and variations all in one diffusion model. arXiv preprint
+Ghasemipour, Burcu Karagol Ayan, S Sara Mahdavi, arXiv:2211.08332,2022. 2,3,4,5,7,8
+Rapha Gontijo Lopes, et al. Photorealistic text-to-image [63] Binxin Yang, Shuyang Gu, Bo Zhang, Ting Zhang, Xue-
+diffusionmodelswithdeeplanguageunderstanding. arXiv jin Chen, Xiaoyan Sun, Dong Chen, and Fang Wen. Paint
+preprintarXiv:2205.11487,2022. 2 by Example: Exemplar-based image editing with diffusion
+[49] Axel Sauer, Tero Karras, Samuli Laine, Andreas Geiger, models. InCVPR,2023. 3
+andTimoAila. StyleGAN-T:Unlockingthepowerofgans [64] JiahuiYu,YuanzhongXu,JingYuKoh,ThangLuong,Gun-
+for fast large-scale text-to-image synthesis. arXiv preprint janBaid,ZiruiWang,VijayVasudevan,AlexanderKu,Yin-
+arXiv:2301.09515,2023. 3 fei Yang, Burcu Karagol Ayan, et al. Scaling autoregres-
+[50] Christoph Schuhmann, Richard Vencu, Romain Beaumont, sivemodelsforcontent-richtext-to-imagegeneration. arXiv
+Robert Kaczmarczyk, Clayton Mullis, Aarush Katta, Theo preprintarXiv:2206.10789,2022. 3
+Coombes,JeniaJitsev,andAranKomatsuzaki.Laion-400m: [65] FangnengZhan,YingchenYu,KaiwenCui,GongjieZhang,
+Open dataset of clip-filtered 400 million image-text pairs. ShijianLu,JianxiongPan,ChanggongZhang,FeiyingMa,
+arXivpreprintarXiv:2111.02114,2021. 5 Xuansong Xie, and Chunyan Miao. Unbalanced feature
+[51] JunyoungSeo,GyuseongLee,SeokjuCho,JiyoungLee,and transport for exemplar-based image translation. In CVPR,
+SeungryongKim. MIDMs: Matchinginterleaveddiffusion 2021. 3
+modelsforexemplar-basedimagetranslation.arXivpreprint [66] FangnengZhan,YingchenYu,RongliangWu,JiahuiZhang,
+arXiv:2209.11047,2022. 3 ShijianLu,andChanggongZhang.Marginalcontrastivecor-
+[52] UrielSinger,AdamPolyak,ThomasHayes,XiYin,JieAn, respondenceforguidedimagegeneration. InCVPR,2022.
+Songyang Zhang, Qiyuan Hu, Harry Yang, Oron Ashual, 3
+11
+[67] EricZhang,KaiWang,XingqianXu,ZhangyangWang,and
+HumphreyShi.Forget-me-not:Learningtoforgetintext-to-
+imagediffusionmodels. arXivpreprintarXiv:2211.08332,
+2023. 2,8
+[68] HanZhang,TaoXu,HongshengLi,ShaotingZhang,Xiao-
+gangWang,XiaoleiHuang,andDimitrisNMetaxas. Stack-
+gan: Text to photo-realistic image synthesis with stacked
+generativeadversarialnetworks. InICCV,2017. 2
+[69] HanZhang,TaoXu,HongshengLi,ShaotingZhang,Xiao-
+gangWang,XiaoleiHuang,andDimitrisNMetaxas. Stack-
+gan++:Realisticimagesynthesiswithstackedgenerativead-
+versarialnetworks. TPAMI,2018. 2
+[70] LvminZhangandManeeshAgrawala. Addingconditional
+control to text-to-image diffusion models. arXiv preprint
+arXiv:2302.05543,2023. 2,3,4,6,7,8
+[71] PanZhang,BoZhang,DongChen,LuYuan,andFangWen.
+Cross-domain correspondence learning for exemplar-based
+imagetranslation. InCVPR,2020. 2,3
+[72] XingranZhou,BoZhang,TingZhang,PanZhang,Jianmin
+Bao,DongChen,ZhongfeiZhang,andFangWen. CoCos-
+Net v2: Full-resolution correspondence learning for image
+translation. InCVPR,2021. 2,3
+[73] Yufan Zhou, Ruiyi Zhang, Changyou Chen, Chunyuan Li,
+Chris Tensmeyer, Tong Yu, Jiuxiang Gu, Jinhui Xu, and
+TongSun.Lafite:Towardslanguage-freetrainingfortext-to-
+imagegeneration.arXivpreprintarXiv:2111.13792,2021.3
+[74] Minfeng Zhu, Pingbo Pan, Wei Chen, and Yi Yang. Dm-
+gan: Dynamicmemorygenerativeadversarialnetworksfor
+text-to-imagesynthesis. InCVPR,2019. 2
+12

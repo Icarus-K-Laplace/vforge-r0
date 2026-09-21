@@ -1,0 +1,113 @@
+[
+  {
+    "invariant_id": "I1_SPLIT_INDEPENDENCE_study_04",
+    "invariant_class": "I1_SPLIT_INDEPENDENCE",
+    "natural_language": "The train/test split must be independent: no information from test set leaks into training or preprocessing.",
+    "machine_readable": {
+      "type": "split_independence",
+      "condition": "intersection(train_set, test_set) = empty",
+      "check_method": "verify_no_overlap"
+    },
+    "executable_predicate": "len(set(train_ids) & set(test_ids)) == 0",
+    "provenance_requirements": [
+      "split_evidence",
+      "data_identities"
+    ],
+    "abstention_conditions": [
+      "no_split_info_available"
+    ],
+    "confidence": 0.7
+  },
+  {
+    "invariant_id": "I2_SELECTION_EVALUATION_SEPARATION_study_04",
+    "invariant_class": "I2_SELECTION_EVALUATION_SEPARATION",
+    "natural_language": "Model selection must use validation set, not test set. Test set must remain held-out until final evaluation.",
+    "machine_readable": {
+      "type": "selection_separation",
+      "condition": "selection_process != test_evaluation",
+      "check_method": "verify_selection_chain"
+    },
+    "executable_predicate": "selection_node != evaluation_node",
+    "provenance_requirements": [
+      "selection_trace",
+      "evaluation_trace"
+    ],
+    "abstention_conditions": [
+      "no_selection_info"
+    ],
+    "confidence": 0.7
+  },
+  {
+    "invariant_id": "I3_COMPARATOR_SYMMETRY_study_04",
+    "invariant_class": "I3_COMPARATOR_SYMMETRY",
+    "natural_language": "Comparisons must be symmetric: both methods evaluated under identical conditions on the same test set.",
+    "machine_readable": {
+      "type": "comparator_symmetry",
+      "condition": "evaluation_conditions_equal(method_a, method_b)",
+      "check_method": "verify_evaluation_fairness"
+    },
+    "executable_predicate": "all_eval_on_same_test",
+    "provenance_requirements": [
+      "evaluation_configs"
+    ],
+    "abstention_conditions": [
+      "insufficient_comparison_info"
+    ],
+    "confidence": 0.7
+  },
+  {
+    "invariant_id": "I4_EVIDENCE_CLOSURE_study_04",
+    "invariant_class": "I4_EVIDENCE_CLOSURE",
+    "natural_language": "All evidence supporting a claim must be accessible and reproducible from the reported artifacts.",
+    "machine_readable": {
+      "type": "evidence_closure",
+      "condition": "required_evidence \u2286 available_artifacts",
+      "check_method": "verify_artifact_completeness"
+    },
+    "executable_predicate": "set(required) <= set(available)",
+    "provenance_requirements": [
+      "artifact_manifest"
+    ],
+    "abstention_conditions": [
+      "no_artifact_list"
+    ],
+    "confidence": 0.7
+  },
+  {
+    "invariant_id": "I5_AGGREGATION_FAITHFULNESS_study_04",
+    "invariant_class": "I5_AGGREGATION_FAITHFULNESS",
+    "natural_language": "Aggregated metrics must faithfully represent the underlying evidence: no selective reporting or cherry-picking.",
+    "machine_readable": {
+      "type": "aggregation_faithful",
+      "condition": "aggregation_method == reported_summary",
+      "check_method": "verify_aggregation_consistency"
+    },
+    "executable_predicate": "computed_agg == reported_value",
+    "provenance_requirements": [
+      "raw_metrics",
+      "aggregation_config"
+    ],
+    "abstention_conditions": [
+      "no_raw_data"
+    ],
+    "confidence": 0.7
+  },
+  {
+    "invariant_id": "I6_SCOPE_EVIDENCE_CONSISTENCY_study_04",
+    "invariant_class": "I6_SCOPE_EVIDENCE_CONSISTENCY",
+    "natural_language": "The scope of evidence must match the scope of the claim: population and conditions must align.",
+    "machine_readable": {
+      "type": "scope_consistency",
+      "condition": "claim_population == evidence_population",
+      "check_method": "verify_scope_alignment"
+    },
+    "executable_predicate": "claim_scope == evidence_scope",
+    "provenance_requirements": [
+      "population_specs"
+    ],
+    "abstention_conditions": [
+      "no_scope_info"
+    ],
+    "confidence": 0.7
+  }
+]

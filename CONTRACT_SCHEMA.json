@@ -1,0 +1,99 @@
+{
+  "schema_name": "Scientific Claim Contract",
+  "version": "1.0",
+  "description": "Machine-readable scientific contract generated from paper/protocol claims, BEFORE paired execution traces are evaluated. Contracts are the predicates checked against a runtime trace. No fault-specific rules are added after observing negative executions.",
+  "design_principles": [
+    "Generated from paper text only. The specific values (seed count, split names, subgroup labels) must come from the paper, not from ontology defaults.",
+    "Each contract predicate references concrete trace fields from TRACE_SCHEMA.json so the verifier can evaluate SATISFIED / VIOLATED / UNOBSERVABLE.",
+    "Coverage-based PASS: a sample passes only if all material observable requirements are satisfied AND evidence coverage >= pre-registered threshold. Absence of evidence is ABSTAIN, never PASS."
+  ],
+  "root_object": {
+    "type": "object",
+    "required": ["contract_id", "source_paper", "paper_text_hash", "predicates", "universal_principles", "coverage_threshold", "self_hash"],
+    "properties": {
+      "contract_id": {"type": "string"},
+      "source_paper": {"type": "string", "description": "Paper identifier (DOI or arXiv id)."},
+      "paper_text_hash": {"type": "string", "description": "SHA256 of the extracted paper text the contract was derived from. Provenance anchor."},
+      "source_span": {"type": "string", "description": "Verbatim paper text span(s) from which the requirements were induced."},
+      "predicates": {
+        "type": "array",
+        "description": "Machine-checkable scientific requirements. Each maps to a trace field.",
+        "items": {
+          "type": "object",
+          "required": ["predicate_id", "natural_language", "principle", "trace_fields", "condition"],
+          "properties": {
+            "predicate_id": {"type": "string"},
+            "principle": {
+              "type": "string",
+              "enum": ["P1_INDEPENDENCE","P2_NO_LEAKAGE","P3_SYMMETRY","P4_SELECTION_SEPARATION","P5_DETERMINISM_OR_SEEDS","P6_AGGREGATION_FIDELITY","P7_EVIDENCE_CLOSURE","P8_STATISTICAL_SUFFICIENCY"],
+              "description": "Universal principle that motivates this predicate. The concrete VALUE comes from the paper."
+            },
+            "natural_language": {"type": "string"},
+            "trace_fields": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Dot-paths into TRACE_SCHEMA root object, e.g. ['protocol', 'selection_split'], ['checkpoint', 'selected']."
+            },
+            "condition": {
+              "type": "string",
+              "description": "A boolean expression over trace fields. E.g. 'protocol.selection_split != final_test_split'."
+            },
+            "source_span": {"type": "string", "description": "Paper text that justifies this specific condition (provenance, not 'global')."},
+            "confidence": {"type": "number"}
+          }
+        }
+      },
+      "universal_principles": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "IDs of P1-P8 abstract principles applied (motivate predicate types, do not supply paper-specific values)."
+      },
+      "coverage_threshold": {
+        "type": "number",
+        "description": "Pre-registered minimum fraction of material requirements that must be SATISFIED (and observable) for a PASS. Frozen before any trace is evaluated."
+      },
+      "self_hash": {"type": "string"}
+    }
+  },
+  "example_predicates": [
+    {
+      "note": "E01 SEED_SELECTION_BIAS — paper declares mean over 5 seeds; invalid execution aggregates the best seed."
+    },
+    {
+      "predicate_id": "E01_P1",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Reported value must equal the declared aggregation over the declared seed population.",
+      "trace_fields": ["protocol", "aggregation_rule", "protocol", "aggregation_inputs", "outputs", "reported_value"],
+      "condition": "outputs.reported_value.aggregation_rule == protocol.aggregation_rule AND len(protocol.aggregation_inputs) == len(protocol.declared_seeds)",
+      "source_span": "We report the mean accuracy across five random seeds."
+    },
+    {
+      "note": "E02 TEST_CONDITIONED_CHECKPOINT_SELECTION — paper says test split only for final eval."
+    },
+    {
+      "predicate_id": "E02_P1",
+      "principle": "P4_SELECTION_SEPARATION",
+      "natural_language": "Checkpoint selection must not use the final test split.",
+      "trace_fields": ["checkpoint", "selection_split", "protocol", "final_test_split"],
+      "condition": "checkpoint.selection_split != 'test' AND checkpoint.selection_split != protocol.final_test_split",
+      "source_span": "The test set is used exclusively for final evaluation."
+    },
+    {
+      "note": "E04 SUBGROUP_SELECTIVE_REPORTING — paper declares all subgroups reported; execution reports a biased subset."
+    },
+    {
+      "predicate_id": "E04_P1",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "All declared subgroups must appear in the reported outputs.",
+      "trace_fields": ["protocol", "declared_subgroups", "protocol", "reported_subgroups"],
+      "condition": "set(protocol.reported_subgroups) == set(protocol.declared_subgroups)",
+      "source_span": "We report per-subgroup accuracy for all four demographic groups."
+    }
+  ],
+  "verdict_rules": {
+    "FAIL": "At least one material predicate is confirmed VIOLATED (condition evaluates false on observed trace fields).",
+    "PASS": "All material observable predicates SATISFIED and coverage >= coverage_threshold.",
+    "ABSTAIN": "No confirmed violation, but coverage < threshold, or a required trace field is missing/UNOBSERVABLE."
+  },
+  "localization_requirement": "Every FAIL must emit a trace witness: the violated predicate_id, the trace entities involved, the dependency path, and the reported output affected. A generic FAIL with no witness is rejected."
+}

@@ -1,0 +1,1417 @@
+Do Your Best and Get Enough Rest for Continual Learning
+HankyulKang1 GregorSeifer1 DonghyunLee2 JongbinRyu1 *
+1 AjouUniversity 2 KAIST
+Abstract
+According to the forgetting curve theory, we can enhance
+memory retention by learning extensive data and taking
+adequate rest. This means that in order to effectively re-
+tain new knowledge, it is essential to learn it thoroughly
+and ensure sufficient rest so that our brain can memorize
+without forgetting. The main takeaway from this theory is
+that learning extensive data at once necessitates sufficient
+rest before learning the same data again. This aspect of
+human long-term memory retention can be effectively uti-
+lizedtoaddressthecontinuallearningofneuralnetworks.
+Retaining new knowledge for a long period of time with-
+out catastrophic forgetting is the critical problem of con-
+tinual learning. Therefore, based on Ebbinghaus’ theory,
+weintroducetheview-batchmodelthatadjuststhelearning
+schedulestooptimizetherecallintervalbetweenretraining
+the same samples. The proposed view-batch model allows
+the network to get enough rest to learn extensive knowl-
+edge from the same samples with a recall interval of suf-
+ficient length. To this end, we specifically present two ap-
+proaches: 1) a replay method that guarantees the optimal
+recall interval, and 2) a self-supervised learning that ac-
+quires extensive knowledge from a single training sample
+at a time. We empirically show that these approaches of
+our method are aligned with the forgetting curve theory,
+whichcanenhancelong-termmemory. Inourexperiments,
+wealsodemonstratethatourmethodsignificantlyimproves
+many state-of-the-art continual learning methods in vari-
+ousprotocolsandscenarios. Weopen-sourcethisproject
+athttps://github.com/hankyul2/ViewBatchModel.
+1.Introduction
+Theforgettingcurvetheory[18]suggeststhathumanmem-
+ory tends to fade as time goes on; however, memory re-
+tentioncanbeimprovedbyrepeatedlearninginanoptimal
+recall interval. Motivated by this theory, many subsequent
+studies [6, 19, 27] have shown that spaced repetition with
+*Correspondingauthor.
+noitneter
+yromeM
+recall
+slow
+
+memory
+
+low
+ retention
+
+degree of
+ fast
+ decay
+forgetting memory
+ retention
+
+decay
+Elapsed time Elapsed time
+(a)Short-termrecallinterval
+noitneter
+yromeM middle
+
+degree of
+ forgetting
+(b)Optimalrecallinterval
+fast
+
+memory
+
+retention
+ decay
+Elapsed time
+noitneter
+yromeM
+high
+
+degree of
+
+forgetting
+Recall interval
+(c)Long-termrecallinterval
+gnittegrof
+fo
+eergeD
+optimal
+
+interval
+(d)Degreeofforgetting
+Figure1. Conceptualgraphoftheforgettingcurve. Weshow
+(a)short-termrecallinterval,(b)optimalrecallinterval,(c)long-
+termrecallinterval,and(d)degreeofforgetting. (a-b)Expanding
+therecallintervalimproveslong-termmemoryretentionofneural
+networksbyrepeatedlyrecallingmemorywithmoderatedifficulty,
+whereas(c)anexcessiverecallintervaldecreasesit. Thedepicted
+forgettingcurveregardingrecallintervalisbasedonthespacing
+effectformula[6,7]providedinthesupplementarymaterial.
+optimal recall interval enhances long-term memory reten-
+tioninthehumanbrain. Thisphenomenonisknownasthe
+spacing effect [7], where the optimal recall interval for re-
+peatedlearningiscrucialtomaintainanacceptablelevelof
+forgettingknowledge.Severalstudies[7,21,36]havemade
+significantprogressonthespacingeffect,sheddinglighton
+itseffectiveness. Therehavealsobeenstudies[28,30,31]
+highlightingtheimportanceoftherecallintervalofrepeated
+learning.
+Althoughthistheoryhasbeenwidelyrecognizedinhu-
+man brain research, it is currently very little known in the
+fieldofmachinelearning. Onlyafewworks[1,4,49]show
+thistheory’spotentialinneuralnetworksbyutilizingitasan
+analysistoolkitordynamiclearningstrategy. So,weinves-
+tigatetheimpactoftheforgettingcurvetheoryonlong-term
+memoryretentioninneuralnetworksforcontinuallearning.
+5202
+raM
+42
+]VC.sc[
+1v17381.3052:viXra
+Baseline w/ VBM
+80
+78
+76
+74
+20 10 5
+)%(
+ycaruccA
+80
+70
+60
+0 200 2000
+(a)Stepsize
+)%(
+ycaruccA
+79
+77
+75
+65
+63
+iCaRL DER TCIL
+(b)Buffersize
+)%(
+ycaruccA
+(c)Baselinemethod
+95
+94
+93
+77
+75 None IN-21K
+)%(
+ycaruccA
+80
+78
+76
+63
+62
+61 Tiny-IN C100 IN-100
+(d)Pre-trainedmodel
+)%(
+ycaruccA
+94
+92
+90
+77
+75 CIL TIL
+(e)Benchmark
+)%(
+ycaruccA
+sure that the neural networks have enough time to retrain
+the same samples, and at the same time, they can acquire
+substantialknowledgefromtrainingsamplesatatime. We
+apply our view-batch model (VBM) to both rehearsal and
+rehearsal-freecontinuallearningscenarios, whereaddress-
+ing long-term memory retention is critical. Moreover, we
+show extensive experimental results of various continual
+protocols and scenarios. As an overview, Figure 2 show-
+cases the comprehensive comparison against different step
+sizes,memorybuffersize,baselinemethods,useofthepre-
+(f)Protocol
+trained model, benchmarks, and protocols. For all these
+comparisons, our view-batch model achieves significant
+Figure2. Overviewofexperimentalresults. Weprovidecom-
+performance improvements. We have condensed our con-
+prehensivecomparisonsofvariousfactorsforcontinuallearning.
+Weperformextensiveexperimentsonstepandbuffersizes(a-b), tributionsintothefollowingpoints:
+threedifferentcontinuallearningmethods(c),whethertousethe • We propose the view-batch model that optimizes the re-
+pre-trained model (d), three different benchmarks (e), and two call interval between retraining samples in order to en-
+evaluation protocols (f). In all cases, ours improves the baseline hancememorydecayinthecontinuallearningtask. The
+performanceconsistently. proposed view-batch model includes replay and self-
+supervisedlearningcomponentstoaccomplishextensive
+learninginoptimizedintervals.
+In Ebbinghaus’ theory, we focus on the decay of mem-
+• Weshowcasetheeffectivenessofourapproachonvarious
+ory retention in the forgetting curve as shown in Figure 1.
+state-of-the-art continual learning methods, where ours
+Theforgettingcurvesuggeststhat,asshowninFigure1(a),
+consistently improves the performance. The proposed
+thesamplememoryshowsextremeknowledgedecaywhen
+methodisadrop-inreplacementapproach,soitdoesnot
+repeatingitslearningwithashorttime-space. Ontheother
+requireanyextracomputationalcostsfortheperformance
+hand,asshowninFigure1(c),ifthereisanexcessiverecall
+improvements.
+interval of repeated learning, too much memory is forgot-
+• Werevealthatenhancingmemorydecaycansignificantly
+ten,leadingtoadecreasedlevelofmemoryretentionwhen
+improvetheperformanceofthecontinuallearning. This
+relearning the same sample. However, as shown in Fig-
+confirmsthepracticalutilityoftheoreticalknowledgefor
+ure 1(b), when there is an optimal recall interval between
+neuralnetworks.
+repeated learning, the decay of memory retention also be-
+comesgentle. Thiseffectoftheoptimalrecallintervalim-
+2.RelatedWork
+pliesthatitisimperativetoimplementanappropriatelearn-
+ing schedule to retain memories efficiently in the repeated 2.1.ForgettingCurveTheoryinNeuralNetworks
+learningprocess. Thenotionbehindthisspacingeffectcan
+Severalstudies[25,26]haveemployedtheforgettingcurve
+beusefullyappliedincontinuallearning,particularlytopre-
+theory [18] to gain insights into the inherent memory re-
+ventcatastrophicforgetting.
+tention of neural networks. Recently, Tirumala et al. [39]
+However,empirically,wefoundthatthecurrentmethods
+investigatedtheforgettingcurvetheoryinneuralnetworks
+for continual learning have a short recall interval [24, 32],
+regardingdifferentmodelscales.Caoetal.[4]havealsouti-
+sotheyarelimitedtoprofitfromthespacingeffect, which
+lizedtheforgettingcurvetheorytoexaminethevariationsin
+requiresasufficientrecallinterval.
+memoryconformationoftheneuralnetworksasinfluenced
+To tackle this limitation, we introduce two approaches
+bypre-trainingmethods. Additionally,Amirietal.[1]pro-
+for training neural networks. Our first approach aims to
+posedadynamiclearningschedulertoreducetotallearning
+prevent short recall intervals through the proposed replay
+cost,leveragingoptimallearningintervalscorrespondingto
+method. We replay view-batch in the repeated training
+the forgetting curve. Zhong et al. [49] optimized memory
+schedule so that short recall intervals can be delayed suf-
+retrieval timing based on the principles of the spacing ef-
+ficiently. We augment multiple views from a single sam-
+fecttheory,enablingtheretentionofthepreviousdialogue
+ple, and thus, the recall intervals of repeated learning can
+contextexistingoveranextendedduration.
+beadjusted. Inoursecondapproach,wemakeuseofself-
+supervised learning to compensate for the delayed recall
+2.2.DataAugmentation
+interval by training each sample extensively. We leverage
+the one-to-many divergence to learn the generalized self- Data augmentation [14, 46] has been widely used in vari-
+supervised features within a view-batch, which enhances ous existing networks. It helps networks learn rich visual
+the capability of the networks. These two approaches en- information using a limited number of training samples.
+recall interval = 1 recall interval = 4
+Dataaugmentationisalsoeffectiveinself-supervisedlearn-
+epoch 1epoch 2 epoch 3 epoch 4 epoch 5 epoch 1epoch 2 epoch 3 epoch 4 epoch 5
+ing[5,11]. Unlimitedlabelscanbegeneratedwhendiffer-
+ent augmentation methods are applied to a single sample. ssuuppeerrvviisseed
+d
+ view-batch SSL
+
+Therefore,thenetworkisabletolearnwithself-supervised augment lleeaarrnniinngg w a e u a g k
+ . (+supervised learning)
+
+labels of augmented samples. We use this augmentation strong
+ +
+method to construct multiple views in a view-batch and aug.
+sample-batch logit label view-batchlogit label logit
+alsolearnself-supervisionalongwiththesupervisedinfor-
+(a)Baseline (b)View-batch
+mationofthecontinuallearningprocess. Therehavebeen
+severalstudies[2,22]onrepeatedaugmentation,whichal- Figure 3. Schematic illustration of the proposed view-batch
+lowslearningmultipleviewsfromasinglesampleatatime. model. Insubfigure(b),weshowourview-batchmodelemploy-
+However,thesestudiesonlyfocusedonimprovingtheper- ing the replay (V=4) and self-supervised learning approach. In
+formanceoftheaugmentationmethodanddidnotexamine contrast to (a) the baseline method, we learn multiple views of
+thesamesample(markedasdifferentshades)usingtheproposed
+theeffectofrecallintervals. Inaddition,theydonotapply
+view-batchself-supervisedlosstolearnitextensivelyandensure
+self-supervised learning and only use label supervision to
+enoughtime-spacebetweenrecallintervals.Forsimplicity,weas-
+trainnetworks.
+sumein(a)thattheentiretrainingdataandbatchsizearethesame
+asfour,thusasingletrainingepochconstitutesonebatch.
+2.3.ContinualLearning
+3.1.ReplaywithAugmentation
+The main problem of continual learning is preserving old
+knowledge while acquiring new one. This problem has Our view-batch model employs a replaying method with
+been recognized as catastrophic forgetting, and one com- the augmentation to adjust the recall interval of retraining
+mon strategy used to address this problem is to make use the same samples. In the conventional learning scheduler,
+of a memory buffer [32]. The approaches to this strategy asample-batchisreplayedinthetrainingprocessofneural
+can be divided into two categories: one involves the di- networks. It means a batch for training networks consists
+rect storage of a subset of training samples from a previ- of multiple unique training samples. Therefore, the recall
+ouslylearnedtask[32,33],whiletheothergeneratestrain- intervalofretrainingisthesameasthenumberoftraining
+ing samples from the learned task [37]. This approach of samples. However, the strategy on our learning scheduler
+utilizing memory buffers proves to be highly effective in alternatesthereplayingmethodattheview-batchlevel. We
+addressing the issue of catastrophic forgetting; however, it structure a view-batch to have multiple views of a single
+doescomewith thetrade-offofrequiringadditional mem- sample. Thus, the recall interval of a single sample in-
+ory space. Consequently, non-rehearsal continual learning creases with the size of view-batch. The concept of this
+methods [15, 33] have been widely studied to avoid addi- view-batch model for the replay method is shown in Fig-
+tional memory usage. In addition, studies [42, 43, 47] us- ure3.Itshowsthatwhenlearningfoursamplesinsequence,
+ing pre-trained models in non-rehearsal continual learning thetime-spaceofre-trainingisfour,whereaswhenlearning
+have been actively conducted recently. Meanwhile, there V views of a single sample, the time-space is extended by
+havebeenseveralworks[16,29]thattacklecontinuallearn- V times.
+ingfromtheperspectiveoftheregularizationmethod. The Formally,wedefinesamplesasI,sample-batchasBI =
+architecture-basedmethod[35,45]hasbeenanotherpreva- {I }B ,thenumberofbatchesinaepochasT,andlearn-
+i i=1
+lentresearchdirectionforaddressingcontinuallearning. ingschedulerasA. Intheconventionallearningalgorithm,
+wereplayeachsample-batchtoestablishthescheduler.
+3.Method A =[ BI,··· ,BI, BI,··· ,BI]. (1)
+conventional 1 T 1 T
+(cid:124) (cid:123)(cid:122) (cid:125)
+recallinterval=B×T
+We introduce a view-batch model designed to enhance the
+long-termmemoryretentionofneuralnetworksforcontin- Therefore,therecallintervalofretrainingisthesameasthe
+ual learning (CL) tasks. In existing CL methods [24, 32, numberoftrainingsamplesB×T inanepoch.However,to
+45],theneuralnetworksretrainthesamesampleswithshort extendtherecallinterval,wereplacethereplayingunitfrom
+timeintervals,whichprohibitslong-termmemoryretention. the sample-batch to the view-batch BV = {V }B . We
+i i=1
+Toaddressthisshortrecallinterval,wefirstinvestigatethe construct a view-batch by including multiple views of the
+augmentation model with the replay method to ensure a same sample V = {I }V , where V denotes the number
+i i i=1
+sufficient recall interval in Sec. 3.1. Then, Sec. 3.2 intro- of views consisting of different augmentations of a single
+ducesview-batchlearningmodeltoextensivelytrainmulti- image. By modifying the replaying unit of Equation (1)
+plesamplesofthesameinstanceinview-batch. withaconstructedview-batch, wedefineournewlearning
+Algorithm1Pseudocodeforourview-batchmodel.
+10 Require: datasetDtrain,parametersθ,learningrateγ,batch 8
+6
+sizeB,view-batchsizeV 4
+2 1: Initializenetworkparametersθ 0
+2: UpdateB ←B/V x1 x2 x3 x4 x5
+Recall interval
+3: fornumberoftrainingiterationsdo
+4: BI ={I i }B i=1 withI i i. ∼ i.d. Dtrain
+5: fori=1,··· ,Bdo
+6: V i ←{I i }V j=1 ▷replayofEquation(2)
+7: V i,1 ←A w (V i,1 )
+8: V i,2: ←A s (V i,2: )
+9: BV ←{V i }B i=1
+10: Computel sup ←L sup (θ,BV)
+11: Computel ssl ←L ssl (θ,BV) ▷SSLofEquation(3)
+12: Updateθ ←θ−γ∇ θ (l sup +l ssl )
+schedulerasfollows:
+A =[ BV,··· ,BV, BV,··· ,BV], (2)
+ours 1 T 1 T
+(cid:124) (cid:123)(cid:122) (cid:125)
+recallinterval=B×T×V
+Based on this rescheduling, the recall interval is increased
+by V times. While we process V views at a time, we de-
+creasethetotallearningepochbyV,ensuringthatthenum-
+beroftotalsamplesthatnetworkshaveseenduringtraining
+is the same as the baseline method. As a result, networks
+repeatedly forget and retrain samples during extended re-
+call intervals, thereby improving long-term memory reten-
+tion. This learning of multiple views of a single sample
+adjuststhetime-spacewhilenetworkslearnthesamesam-
+ple repeatedly. To promote extensive learning, we present
+theself-supervisedlearninginthefollowing.
+3.2.Self-supervisedLearning
+Wepresentaself-supervisedlearningmodelwithourVBM
+toextensivelylearnasampleatatime.Itiswell-knownthat
+self-supervision generalizes the networks rather than ac-
+quiringtask-specificknowledge[5]. Further, task-agnostic
+knowledge from self-supervision is more robust to catas-
+trophic forgetting of continual learning [8]. For these rea-
+sons, we propose the SSL approach to effectively learn
+view-batchina(i)simpleandan(ii)efficientmanner.For(i)
+simplicity,unlikepreviousSSLmethods[5,11,20],which
+require changes, such as architecture design [8] or teacher
+networks [12], we only modify an objective function to
+learncommonknowledgewithinaview-batchofsamesam-
+ples. To satisfy (ii) efficiency, our method does not use an
+extra training phase or longer training epochs than super-
+vised learning, ensuring the minimal training cost as ana-
+lyzed in the supplementary material. Thus, the proposed
+method could be used in most continual learning methods
+without increasing computing costs as a drop-in replace-
+gnittegrof
+fo
+eergeD
+70
+optimal
+interval 60
+50
+150 160 1701700
+Elapsed time
+(a)Degreeofforgetting
+noitneter
+yromeM
+61 formal -10.4 60
+learning stage -16.0 59
+58
+x x 1 3 x5 -19.8 5 5 6 7
+x1 x2 x3 x4 x5
+Recall interval
+(b)Forgettingcurve
+)%(
+ycarucca
+gvA
+optimal interval
+(c)Accuracy
+Figure4.Empiricalfindingsrelatedtoforgettingcurvetheory.
+(a)Wereportthedegreeofforgettingfordifferentrecallintervals
+with a 95% confidence interval denoted as shaded region. The
+degreeofforgettingismeasuredastheperformancedegradation
+ofeachsample’sclassificationaccuracybetweenrecallintervals.
+(b)Weshowthedecayofmemoryretentionasthelearningpro-
+gresses. Thisgraphshowsthatwhentheformallearningstageis
+finished, memory retention decays over time for all three cases.
+(c)Wecomparethenetwork’sclassificationaccuracyofcontinual
+learning.Itshowsthatx3achievesthebestperformancethanksto
+theslowmemoryretentiondecay.
+mentapproach.
+To implement our approach, we employ a one-to-many
+divergence loss to learn self-supervision within a view-
+batch {V }B . Our one-to-many divergence loss mini-
+i i=1
+mizestheaveragedivergencebetweenoneweak-augmented
+viewA (V )andtheremainingstrong-augmentedviews
+w i,1
+A (V )ofaview-batchatthelogitlevel. Byaggregating
+s i,2:
+different augmented views closer, networks learn common
+characteristics of objects. Specifically, leveraging KL di-
+vergenceD betweendifferentaugmentations,wedefine
+KL
+one-to-many-basedself-supervisedlossas
+B V
+1 (cid:88)(cid:88)
+L (f ,BV)= D (p1||pj), (3)
+ssl θ B·(V −1) KL i i
+i=1j=2
+where p1 and pj represent network’s prediction for weak
+i i
+augmented samples σ(f (A (V ))) and strong aug- θ w i,1
+mented samples σ(f (A (V ))), f is neural networks, θ s i,j θ
+and σ stand for the softmax. Finally, as shown in Algo-
+rithm1,wedefineourfinalobjectivefunctionas
+min L (f ,BV)+L (f ,BV), (4)
+fθ sup θ ssl θ
+where L (f ,BV) = 1 (cid:80)B (cid:80)V H(y ,pj) of each
+sup θ B·V i=1 j=1 i i
+view’s prediction pj and its label y using cross-entropy i i
+lossH. Weselectwidelyusedauto-augmentation[13]asa
+strongaugmentationmethod,whichslightlyaffectstheper-
+formanceofthebaselinemethodasshowninTab.6,while
+usinghorizontalflipasweakaugmentation.
+3.3.EmpiricalEvidence
+This subsection empirically confirms our assumption that
+optimalrecallintervalimprovesmemoryretention,andac-
+cordingly, the performance of the continual method is en-
+S-CIFAR-10 S-Tiny-ImageNet
+Buffer Method
+CIL TIL Avg* ∆ CIL TIL Avg* ∆
+- Joint 92.20±0.15 98.31±0.12 95.26 59.99±0.19 82.04±0.10 71.02
+LwF - 61.98±0.98 61.98 - 15.26±0.71 15.26
+0
+VBM-LwF - 77.53±3.06 77.53 +15.55 - 51.21±0.34 51.21 +35.95
+DER 56.58±2.08 89.32±1.32 72.95 11.56±0.58 41.67±0.63 26.62
+ER 50.27±0.70 91.66±0.79 70.97 8.67±0.23 38.03±0.79 23.35
+VBM-ER 52.56±1.59 93.58±0.23 73.07 +2.10 8.83±0.13 44.03±1.12 26.43 +3.08
+200 iCaRL 64.11±1.86 90.20±0.88 77.16 19.09±0.13 53.07±0.27 36.08
+VBM-iCaRL 69.73±0.87 92.76±0.45 81.25 +4.09 21.39±0.18 56.31±0.42 38.85 +2.77
+DER++ 61.67±1.02 90.61±1.13 76.14 12.48±1.60 41.19±0.48 26.84
+VBM-DER++ 66.99±2.98 94.30±0.21 80.65 +4.51 13.67±0.41 44.36±0.88 29.02 +2.18
+DER 65.93±5.38 92.52±0.68 79.23 18.04±1.30 52.90±0.91 35.47
+ER 56.37±0.96 94.15±0.04 75.26 10.20±0.37 49.13±0.31 29.67
+VBM-ER 63.39±2.77 94.20±0.25 78.80 +3.54 11.21±0.30 52.01±0.71 31.61 +1.94
+500 iCaRL 62.22±3.45 88.86±3.23 75.54 23.93±0.97 58.89±0.85 41.41
+VBM-iCaRL 68.97±0.38 93.10±0.66 81.04 +5.50 26.89±0.54 62.61±0.17 44.75 +3.34
+DER++ 69.94±2.04 93.49±0.26 81.72 19.39±1.09 51.71±0.35 35.55
+VBM-DER++ 75.22±0.81 94.81±0.39 85.02 +3.30 19.46±0.46 49.80±0.80 34.63 -0.92
+DER 80.79±0.75 94.46±0.30 87.63 32.92±3.09 64.77±2.14 48.85
+ER 74.23±4.18 96.86±0.28 85.55 28.07±0.37 67.58±0.30 47.83
+VBM-ER 79.29±2.29 97.02±0.13 88.16 +2.61 33.07±0.36 68.91±0.50 50.99 +3.16
+5120 iCaRL 78.49±0.38 94.84±0.82 86.67 32.16±0.24 66.75±0.36 49.46
+VBM-iCaRL 79.40±0.63 96.09±0.32 87.75 +1.08 34.40±0.12 68.86±0.26 51.63 +2.17
+DER++ 85.42±0.74 96.24±0.19 90.83 34.06±0.57 65.28±1.20 49.67
+VBM-DER++ 86.62±0.38 97.07±0.07 91.85 +1.02 35.14±0.36 67.52±0.48 51.33 +1.66
+Table1. ExperimentalresultsonCILandTILprotocols. Inthisevaluation,wereportthelasttop-1accuracy(%)ontheS-CIFAR-10
+and S-Tiny-ImageNet benchmarks with four different buffer sizes. ResNet-18 backbone is used for each continual learning method in
+this evaluation. *Avg is the averaged accuracy of CIL and TIL. We reproduce baseline methods following Buzzega et al. [3]. We run
+everymethodthreetimeswithdifferentrandomseedsforareliableresult. Oursimprovesperformanceconsistentlyinmostresults. The
+performanceofJointistheupperboundofthisexperiment,wherealloldtrainingsamplesareusedineverystep.
+Method Avg ∆ Last ∆ training samples, 2) the decay speed of the memory reten-
+tion, and 3) the average accuracy at which networks cor-
+Joint - 46.48±3.62
+rectlyclassifytheirclasslabels. Figure4showstheresults
+AGEM 24.88±0.57 28.94±0.67
+fortheempiricalevidenceofourassumption. Asdepicted
+AGEM-R 24.72±0.59 28.01±0.93
+FDR 34.62±0.33 34.46±0.32 in Figure 4(a), the degree of forgetting becomes larger as
+DER 39.84±0.15 40.46±0.47 the recall interval increases. It is obvious that the longer
+ER 32.38±2.88 32.02±2.39 recall interval allows the network to forget a training sam-
+VBM-ER 35.80±0.55 +3.42 34.72±0.37 +2.70 plebeforeretrainingitagain. Figure4(b)demonstratesthe
+DER++ 34.56±3.42 34.75±2.41
+different levels of memory retention decay due to the re-
+VBM-DER++ 42.16±0.20 +7.24 41.81±0.08 +7.06
+call intervals. The experiment results show that memory
+decays slowest in the x3 case, which has an interval three
+Table 2. Experimental results on DIL protocol. This evalua-
+timeslongerthanthebaselinex1case.Notably,ourmethod
+tion shows Avg and Last top-1 accuracy (%) on the DomainNet
+benchmark.WeutilizeResNet-18asthebackbonenetworkinthis achievesconsiderablyhigherperformanceattheendofthe
+evaluation. formal learning stage. This result is attributed to the fact
+thatmultipleepochsareusedintrainingnetworks,andthe
+memoryretentiondecaybetweenepochsisslowforthex3
+hanced. Specifically, the logical development of our as- case. Accordingly,x3withourreplaymethodachievesim-
+sumptionisthat1)ifthenetworksufficientlyforgetsasam- provedaccuracycomparedtootherrecallintervalcases,as
+ple at the optimal recall interval and then extensively re- shown in Figure 4(c). We conduct more experiments to
+trains it, 2) memory retention is enhanced as training pro- showempiricalproofsondifferentdatasets, backbonenet-
+gresses,andtherefore,3)theaccuracyofcontinuallearning works, andbuffersizesin Figure6. Thedefinitionoffor-
+isalsoimproved. Toevaluateourassumption,wemeasure gettingisgiveninthesupplementarymaterial.
+1)thedegreeofforgettingbetweenaretrainingsessionfor
+5Step 10Step 20Step
+Method
+Avg ∆ Last ∆ Avg ∆ Last ∆ Avg ∆ Last ∆
+Joint 80.40 - 80.41 - 81.49 -
+iCaRL 71.14±0.34 59.71 65.27±1.02 50.74 61.20±0.83 43.75
+UCIR 62.77±0.82 47.31 58.66±0.71 43.39 58.17±0.30 40.63
+BiC 73.10±0.55 62.10 68.80±1.20 53.54 66.48±0.32 47.02
+WA 72.81±0.28 60.84 69.46±0.29 53.78 67.33±0.15 47.31
+DyTox - - 73.66±0.02 60.67 72.27±0.18 56.32
+DER 76.77±0.01 68.06±0.00 75.72±0.08 64.32±0.05 74.96±0.01 61.80±0.07
+VBM-DER 78.60±0.23 +1.83 70.60±0.12 +2.54 78.12±0.07 +2.40 67.04±0.11 +2.72 76.95±0.02 +1.99 64.29±0.04 +2.49
+TCIL 77.33±0.08 69.48±0.14 76.33±0.15 65.66±0.02 74.32±0.01 62.54±0.02
+VBM-TCIL 79.23±0.01 +1.90 71.23±0.04 +1.75 78.02±0.03 +1.69 68.14±0.08 +2.48 76.83±0.00 +2.51 67.16±0.09 +4.62
+Table3. Experimentalresultsonrehearsal-basedCILprotocol. Inthisevaluation, weprovideAvgandLast top-1accuracy(%)on
+theS-CIFAR-100benchmarkwiththreedifferentclassincrementalsteps.ResNet-18backboneisutilizedtoevaluateeachrehearsal-based
+method. Thisevaluationalsoshowsthatoursachievesconsistentperformanceimprovements. ResultsofDyToxareimportedfromits
+originalwork[17].WereproduceresultsofDERandTCILusingofficialimplementation,whileotherresultscomefromYanetal.[45].
+5Step 10Step monlyadoptedclassorderinglists,followingexistingworks
+Method
+Avg ∆ Last ∆ Avg ∆ Last ∆ ofYanetal.[45]andHuangetal.[24].
+Joint 80.40 - 80.41 -
+LwF-MC 32.89 11.42 20.71 6.36 Protocols. Inourexperiments, weutilizethreecontinual
+BiC 54.74 35.42 45.08 24.42
+learning protocols. First, we make use of task incremen-
+LwM 39.31 16.70 25.47 8.57
+WA 63.67 49.36 45.68 26.14 tallearning(TIL),whichinvolvestrainingneuralnetworks
+DER 40.05±0.00 17.11±0.00 26.67±0.00 8.71±0.00 on a series of tasks in a sequential manner while evalu-
+VBM-DER40.47±0.00+0.4217.47±0.01+0.3626.95±0.00+0.288.90±0.00+0.19
+ating their performance on both newly acquired and pre-
+TCIL 64.40±0.15 52.37±0.08 56.84±0.75 40.31±1.04
+VBM-TCIL66.40±0.07+2.0054.69±0.02+2.3261.12±0.02+4.2845.92±0.25+5.61 viously learned tasks. Specifically, the TIL protocol con-
+sists of the following detailed configurations: 1) a task is
+Table 4. Experimental results on non-rehearsal-based CIL defined by a set of label classes, and 2) we evaluate net-
+protocol. For this evaluation, we measure Avg and Last top-1
+works knowing the task identity of test samples. Second,
+accuracy(%)ontheS-CIFAR-100benchmarkwithtwodifferent
+we adopt class incremental learning (CIL), which is iden-
+classincrementalsteps. ResNet-18backboneisappliedtoexist-
+tical to TIL except that it evaluates test samples without
+ing and our methods. We report original results from LwF-MC
+knowing their task identity. Third, we use domain incre-
+and LwM [15]. We reproduce the results of DER and TCIL by
+mental learning (DIL), which focuses on learning the new
+ourselvesusingofficialimplementation.Otherresultsarereported
+fromHuangetal.[24]. samplesacrossmultiplesequentialdomainsratherthanac-
+quiring new classes. In addition to these three protocols,
+we also include both rehearsal and non-rehearsal scenar-
+4.Experiments ios,dividedbytheuseofamemorybufferduringcontinual
+learning. For the non-rehearsal scenario, we evaluate both
+This section demonstrates the capabilities of the proposed scratch-andpre-training-basedlearningscenariostoshow-
+view-batch model in various continual learning protocols caseextensiveexperimentalresults. Foralltheseprotocols
+and scenarios through extensive performance evaluation. andscenarios,weprovidethemeanandstandarddeviation
+Weperformexperimentsforthreecontinuallearningproto- ofthreerunsforreliableexperimentalresults.Thedetailsof
+cols, suchasclass, task, anddomainincrementallearning. theexperimentcanbefoundinthesupplementarymaterial.
+Further, we also assess our view-batch model in both re-
+hearsalandnon-rehearsal,aswellasunderthepre-training-
+Baseline Methods. We apply our view-batch to recent
+basedcontinuallearningscenarios.
+baseline continual learning methods such as iCaRL [32],
+ER[34],DER[3,45],TCIL[24],andSLCA[47]. Wealso
+4.1.ExperimentalSettings
+include results from A-GEM [10], LwM [15], UCIR [23],
+Datasets. We evaluate our methods on widely used BiC[44],WA[48],DyTox[17],L2P[43],S-iPrompt[41],
+benchmarks such as S-CIFAR-10/100, S-Tiny-ImageNet, DualPrompt [42], and CODA-Prompt [38]. We follow the
+S-ImageNet-R,andDomainNetwheretheprefixof‘S-’de- baseline’s hyper-parameters for a fair comparison between
+notes the sequential data configuration. We use the com- ours and its respective baseline methods. Specifically, we
+S-CIFAR-100 S-ImageNet-R
+Top-1 Top-5 Top-1 Top-5
+Method
+Avg Last Avg Last Avg Last Avg Last
+Joint - 92.54±0.14 - 99.24±0.02 - 82.41±0.02 - 93.27±0.07
+L2P 90.42±0.56 83.76±0.42 98.89±0.03 98.08±0.15 76.76±0.33 73.56±0.42 89.39±0.16 86.61±0.03
+DualPrompt 90.17±0.38 85.10±0.23 98.90±0.07 97.68±0.12 73.31±0.19 69.12±0.18 89.19±0.09 85.46±0.04
+CODA-Prompt 91.27±0.66 86.86±0.58 99.29±0.09 98.64±0.07 81.89±0.59 76.79±0.17 93.30±0.34 90.49±0.15
+S-iPrompt 92.19±0.40 88.43±0.42 99.19±0.05 98.63±0.05 71.47±0.14 68.77±0.27 88.44±0.19 84.91±0.31
+SLCA 94.31±1.12 91.57±0.46 99.64±0.04 99.26±0.03 83.58±0.65 78.81±0.21 94.39±0.26 92.02±0.25
+VBM-SLCA 94.52±0.85 91.78±0.18 99.64±0.03 99.29±0.03 84.61±0.59 80.07±0.12 94.86±0.19 92.74±0.14
+Table5. Experimentalresultsonpre-trainedmodel-basedCILprotocol. ThisevaluationpresentsAvgandLasttop-1,5accuracy(%)
+ontheS-CIFAR-100andS-ImageNet-Rbenchmarkswithoutusingamemorybuffer. ViT-B/16backboneisadoptedforeachpre-trained
+model-basedmethod.Wereproducebaselinemethodsusingofficialimplementationbyourselves,exceptforL2P.
+100
+50
+1 ksaT
+iCaRL VBM-iCaRL
++11.70%
+100
+50
+2 ksaT +14.75%
+100
+50
+0 1 2 3 4 5
+Elapsed time
+3
+ksaT
+100
+50
++3.00%
+(a)iCaRL
+1 ksaT
+DER++ VBM-DER++
++20.85%
+100
+50
+2 ksaT +7.60%
+100
+50
+0 1 2 3 4 5
+Elapsed time
+3
+ksaT
+Strong
+Method Replay SSL CIL TIL Avg ∆ augment
+- - - 64.11 90.20 77.16
+- ✓ - 62.04 90.17 76.11 -1.05
+iCaRL ✓ - - 67.51 91.87 79.69 +2.53
+✓ ✓ - 66.78 91.21 78.99 +1.83
++2.65% ✓ ✓ ✓ 69.73 92.76 81.25 +4.09
+- - - 61.67 90.61 76.14
+(b)DER++ - ✓ - 62.66 91.14 76.90 +0.76
+DER++ ✓ - - 64.75 92.79 78.77 +2.63
+✓ ✓ - 64.44 93.38 78.91 +2.77
+Figure 5. Experimental results on memory retention decay.
+✓ ✓ ✓ 66.99 94.30 80.65 +4.51
+This analysis reports memory retention decay of the first three
+tasks on the S-CIFAR-10 dataset, comparing the proposed ap-
+Table 6. Experimental results on factor analysis. We demon-
+proach against the baseline methods. The green numbers at the
+stratethelastaccuracy(%)ofCILandTILonS-CIFAR-10,vary-
+endofthelasttaskaretheaccuracygainoftheproposedapproach
+ingourmaincomponentswithdifferentaugmentationtypes. We
+overthebaselines.
+observe that the proposed components, such as replay and SSL,
+improve performance consistently and confirm that performance
+1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 enhancementcomesfromthem,notsimplyfromstrongaugmen-
+C1064.1165.8568.9469.7367.67 R1864.1165.8568.9469.7367.67 20064.1165.8568.9469.7367.67 tation. Inthestrongaugmentationsettingwithoutviewbatchre-
+T IN
+in
+1
+y
+0
+IN
+0
+1
+3
+9
+5
+.
+.
+0
+9
+9
+2
+2
+3
+1
+5
+.
+.
+3
+3
+9
+0
+2
+3
+0
+7
+.
+.
+9
+0
+6
+8
+1
+3
+8
+6
+.
+.
+9
+9
+4
+4
+1
+3
+7
+6
+.
+.
+9
+5
+3
+2 R
+R
+10
+5
+1
+06
+6
+5
+0
+.
+.
+1
+0
+6
+5
+7
+6
+1
+2
+.
+.
+5
+2
+0
+4
+7
+6
+3
+4
+.
+.
+8
+0
+0
+8
+7
+6
+5
+6
+.
+.
+3
+1
+5
+8
+7
+6
+2
+5
+.
+.
+9
+8
+9
+9 51
+5
+2
+0
+0
+06
+7
+2
+7
+.
+.
+2
+5
+2
+5
+6
+7
+4
+6
+.
+.
+8
+6
+3
+3
+6
+7
+6
+6
+.
+.
+7
+9
+7
+6
+6
+7
+6
+8
+.
+.
+8
+4
+8
+2
+6
+7
+7
+9
+.
+.
+4
+4
+3
+0
+play,wemaintainthesameratioofweaktostrongaugmentations.
+C1029.1023.8118.3516.0317.89 R1829.1023.8118.3516.0317.89 20029.1023.8118.3516.0317.89
+4.2.ExperimentalResults
+T IN
+in
+1
+y
+0
+IN
+0
+4
+4
+9
+9
+.
+.
+9
+3
+5
+8
+4
+4
+8
+6
+.
+.
+0
+9
+8
+8
+4
+4
+6
+3
+.
+.
+2
+4
+8
+4
+4
+4
+9
+6
+.
+.
+3
+2
+2
+7
+4
+4
+8
+6
+.
+.
+2
+0
+6
+4 R
+R
+10
+5
+1
+03
+3
+7
+8
+.
+.
+0
+1
+5
+9
+2
+3
+9
+6
+.
+.
+6
+9
+5
+5
+2
+3
+1
+2
+.
+.
+8
+4
+5
+0
+2
+2
+4
+6
+.
+.
+1
+9
+4
+7
+2
+2
+4
+7
+.
+.
+9
+2
+8
+0 51
+5
+2
+0
+0
+02
+1
+7
+9
+.
+.
+3
+4
+9
+3
+2
+2
+8
+1
+.
+.
+5
+1
+7
+1
+2
+1
+5
+8
+.
+.
+1
+9
+6
+8
+2
+1
+4
+6
+.
+.
+1
+4
+7
+4
+2
+1
+3
+6
+.
+.
+9
+5
+3
+0 Continual Learning under Three Protocols. We eval-
+(a)Dataset (b)Network (c)Buffer uate our method in the three continual learning protocols
+suchasCIL,TIL,andDIL.ForTILandCIL,weusediffer-
+Figure6. Experimentalresultsonrecallinterval. Wemeasure
+entmemorybuffersizes: 0,200,500,and5,120. ForDIL,
+the last top-1 accuracy (%) (↑) in the top row and report forget-
+weutilize50samplesperclass,resultingin17,250samples
+ting(↓)atthebottomrow, varyingrecallintervalswithdifferent
+learningfactors. Darkcolorsmeanbetter. WeusetheResNet-18 inabuffer. Weapplyourview-batchmodeltoLwFforthe
+backbone. non-rehearsalmemorybuffer(i.e.0size)andER,DER++,
+andiCaRLfortheotherbuffersizes.Tabs.1and2showthat
+ourmethodimprovestheperformanceofcontinuallearning
+useResNetandVisionTransformer(ViT)asbackbonenet- methods for all protocols. Moreover, we demonstrate that
+works in traditional and prompt-based approaches. For baseline methods employing our view-batch are compara-
+the traditional approach, we randomly initialize backbone bletoothercontinuallearningmethods.
+weights at the beginning of every run. On the other hand, Weconductfurtherin-depthexperimentsunderthemost
+fortheprompt-basedapproach,weadoptafrozenbackbone widelyusedCILprotocol.Weconsiderthreeconfigurations
+whose weights are pre-trained on a large-scale dataset fol- withstepsizesof5,10,and20,whicharethenumberofto-
+lowingrecentprompt-basedCLstudies[43,47] tal incremental steps, as shown in Tab. 3. In addition, we
+Current Buffer iCaRL VBM-iCaRL DER++ VBM-DER++
+Method CIL TIL Avg ∆
+sample sample 90
+- - 64.11 90.20 77.16 - 80
+✓ - 64.64 94.12 79.38 +2.22
+iCaRL - ✓ 64.99 94.20 79.60 +2.44 70
+✓ ✓ 69.73 92.76 81.25 +4.09
+60
+- - 61.67 90.61 76.14 - ✓ - 64.88 93.22 79.05 +2.91 200 Bu 5 ff 0 e 0 r size 5120
+DER++ - ✓ 62.69 94.15 78.42 +2.28
+✓ ✓ 66.99 94.30 80.65 +4.51
+Table7. Experimentalresultsonsampletype. Wemeasurethe
+lastaccuracy(%)ofCILandTILonS-CIFAR-10, applyingour
+methodtodifferentsampletypes. WeusetheResNet-18asback-
+bone. Thisanalysisshowsthatourmethodworkswellwithboth
+sampletypes.
+take into account the use of a memory buffer in two sce-
+narios,suchasrehearsalandnon-rehearsalinTab.4. Both
+experimentalresultsdemonstratethatourview-batchmodel
+consistently improves the performance of continual learn-
+ingmethodsunderthevariousstepsizesandmemorybuffer
+configurations.
+Non-rehearsal Continual Learning. While the non-
+rehearsal scenario has the advantage of not using memory
+buffers, they inherently face the drawback of limited per-
+formanceduetotheinabilitytoretrainnetworksusingold
+data in the memory buffer. To overcome this limitation,
+manyrecentstudieshavefocusedonnon-rehearsalcontin-
+uallearningusingapre-trainedmodeltrainedwithalarge-
+scaledataset. Thus,weevaluateourview-batchmodelina
+scenariowheremodelsarepre-trained,suchasSCLA.Ex-
+perimentalresultsinTab.5indicatethattheproposedview-
+batchmodeliseffectiveacrossallbenchmarksforthissce-
+nario.
+5.Analysis
+Wepresenttheanalysisoftheproposedview-batchmodel.
+First, we validate that the optimal recall interval mitigates
+catastrophicforgettingofearlytasks.Figure5visualizethat
+the recall interval x3 maintains long-term memory reten-
+tionresolvingcatastrophicforgettingofinitialtasks. Also,
+Figure 6 analyzes how different factors (i.e., dataset, net-
+work scales, memory buffer size) affect the optimal recall
+intervalsintermsoflasttop-1accuracyandforgettingmet-
+rics [9, 10, 43]. We find that the recall interval x3 or x4
+improvestheaccuracyandresolvescatastrophicforgetting
+invariousscenarios. Moreexperimentalresultsofdifferent
+methodsandtasktypescanbefoundinthesupplementary
+material. Tab. 6 shows that two main factors of the pro-
+posed method consistently improve their respective base-
+lines,identifyingthattheperformanceimprovementcomes
+from the proposed components, not strong augmentation.
+)%(
+ycaruccA
+30
+20
+10
+0 200 500 5120 Buffer size
+(a)Accuracy(↑)
+)%(
+gnittegroF
+(b)Forgetting(↓)
+Figure 7. Experimental results on accuracy and forgetting.
+This analysis shows (a) the last top-1 accuracy (%) and (b) cor-
+responding forgetting measures on the S-CIFAR-10 dataset with
+differentbuffersizes.Ourmethodconsistentlyimprovesaccuracy
+andforgettingmeasures.
+Lastly,intherehearsalscenario,wehavetwodifferentsam-
+pletypes,current-andbuffer-basedsamples. Tab.7exhibit
+thatoursperformswellwithbothtypes.
+We examine the proposed method in terms of the
+last accuracy and forgetting measurement. We ap-
+ply the proposed method to two different baseline ap-
+proaches. We compute average forgetting at Tth task as
+1 (cid:80)T−1max at −at where at means tth
+T−1 t=1 j∈{t,···,T−1} j T j
+task accuracy at j step. Notably, higher forgetting means
+severe catastrophic forgetting of previous tasks. Figure 7
+shows that the view-batch model improves accuracy while
+addressingtheforgettingproblemsimultaneously.
+6.Conclusion
+We propose the view-batch model, which is generally
+applicabletovariouscontinuallearningscenarios. Inspired
+by Ebbinghaus’s forgetting curve theory, the proposed
+view-batch model optimizes the recall interval between
+retraining samples, improving neural networks’ long-term
+memory. Theproposedmethodconsistsoftwomaincom-
+ponents: replay and self-supervised learning. The replay
+optimizes the recall interval for guaranteeing sufficient
+memory forgetting by grouping multiple views of a sam-
+ple. Also, the self-supervised learning ensures extensive
+learning for the multiple views using the one-to-many
+divergence loss. Experimental results show that sufficient
+forgetting preserves long-term memory and ultimately im-
+provescontinuallearningaccuracy. Wehopetheproposed
+approachtocontinuallearningcanboostfutureresearch.
+Acknowledgment. This paper was supported in part
+by the ETRI Grant funded by Korean Government
+(Fundamental Technology Research for Human-Centric
+Autonomous Intelligent Systems) under Grant 24ZB1200,
+Artificial Intelligence Convergence Innovation Human
+Resources Development (IITP-2025-RS-2023-00255968),
+ArtificialIntelligenceInnovationHub(RS-2021-II212068),
+andtheNRFGrant(RS-2024-00356486).
+References [15] Prithviraj Dhar, Rajat Vikram Singh, Kuan-Chuan Peng,
+ZiyanWu,andRamaChellappa.Learningwithoutmemoriz-
+[1] HadiAmiri,TimothyMiller,andGuerganaSavova. Repeat
+ing. InConferenceonComputerVisionandPatternRecog-
+beforeforgetting: Spacedrepetitionforefficientandeffec-
+nition,2019. 3,6
+tivetrainingofneuralnetworks.InConferenceonEmpirical
+[16] Arthur Douillard, Matthieu Cord, Charles Ollion, Thomas
+MethodsinNaturalLanguageProcessing,2017. 1,2
+Robert,andEduardoValle. Podnet: Pooledoutputsdistilla-
+[2] Maxim Berman, Herve´ Je´gou, Andrea Vedaldi, Iasonas
+tionforsmall-tasksincrementallearning. InEuropeanCon-
+Kokkinos, and Matthijs Douze. Multigrain: a unified im-
+ferenceonComputerVision,2020. 3
+ageembeddingforclassesandinstances.arXiv:1902.05509,
+[17] Arthur Douillard, Alexandre Rame´, Guillaume Couairon,
+2019. 3
+andMatthieuCord.Dytox:Transformersforcontinuallearn-
+[3] Pietro Buzzega, Matteo Boschini, Angelo Porrello, Davide
+ingwithdynamictokenexpansion. InConferenceonCom-
+Abati, andSimoneCalderara. Darkexperienceforgeneral
+puterVisionandPatternRecognition,2022. 6
+continual learning: a strong, simple baseline. Advances in
+[18] Hermann Ebbinghaus. Memory: A contribution to experi-
+NeuralInformationProcessingSystems,2020. 5,6
+mental psychology. Annals of neurosciences, 2013. 1, 2,
+[4] BoxiCao, QiaoyuTang, HongyuLin, ShanshanJiang, Bin
+11
+Dong, Xianpei Han, Jiawei Chen, Tianshu Wang, and Le
+[19] KateGordon. Classresultswithspacedandunspacedmem-
+Sun.Retentiveorforgetful?divingintotheknowledgemem-
+orizing. JournalofExperimentalPsychology,1925. 1
+orizing mechanism of language models. In Joint Interna-
+tionalConferenceonComputationalLinguistics,Language [20] Jean-Bastien Grill, Florian Strub, Florent Altche´, Corentin
+ResourcesandEvaluation,2024. 1,2 Tallec,PierreRichemond,ElenaBuchatskaya,CarlDoersch,
+Bernardo Avila Pires, Zhaohan Guo, Mohammad Ghesh-
+[5] MathildeCaron,HugoTouvron,IshanMisra,Herve´ Je´gou,
+laghiAzar,etal. Bootstrapyourownlatent-anewapproach
+JulienMairal,PiotrBojanowski,andArmandJoulin.Emerg-
+toself-supervisedlearning. AdvancesinNeuralInformation
+ingpropertiesinself-supervisedvisiontransformers. InIn-
+ProcessingSystems,2020. 4
+ternationalConferenceonComputerVision,2021. 3,4
+[21] Karri S Hawley, Katie E Cherry, Emily O Boudreaux, and
+[6] Nicholas J Cepeda, Harold Pashler, Edward Vul, John T
+ErinMJackson. Acomparisonofadjustedspacedretrieval
+Wixted,andDougRohrer. Distributedpracticeinverbalre-
+calltasks: Areviewandquantitativesynthesis. Psychologi- versus a uniform expanded retrieval schedule for learn-
+calbulletin,2006. 1 ing a name–face association in older adults with probable
+alzheimer’s disease. Journal of Clinical and Experimental
+[7] Nicholas J Cepeda, Edward Vul, Doug Rohrer, John T
+Neuropsychology,2008. 1
+Wixted,andHaroldPashler. Spacingeffectsinlearning: A
+temporalridgelineofoptimalretention. Psychologicalsci- [22] EladHoffer,TalBen-Nun,ItayHubara,NivGiladi,Torsten
+ence,2008. 1,11 Hoefler, and Daniel Soudry. Augment your batch: better
+trainingwithlargerbatches. arXiv:1901.09335,2019. 3
+[8] Hyuntak Cha, Jaeho Lee, and Jinwoo Shin. Co2l: Con-
+trastivecontinuallearning. InInternationalConferenceon [23] SaihuiHou,XinyuPan,ChenChangeLoy,ZileiWang,and
+ComputerVision,2021. 4 Dahua Lin. Learning a unified classifier incrementally via
+[9] ArslanChaudhry,PuneetKDokania,ThalaiyasingamAjan- rebalancing. InConferenceonComputerVisionandPattern
+than,andPhilipHSTorr. Riemannianwalkforincremental Recognition,2019. 6
+learning:Understandingforgettingandintransigence.InEu- [24] Bingchen Huang, Zhineng Chen, Peng Zhou, Jiayin Chen,
+ropeanConferenceonComputerVision,2018. 8 andZuxuanWu. Resolvingtaskconfusionindynamicex-
+[10] ArslanChaudhry,Marc’AurelioRanzato,MarcusRohrbach, pansionarchitecturesforclassincrementallearning.InAsso-
+andMohamedElhoseiny. Efficientlifelonglearningwitha- ciationfortheAdvancementofArtificialIntelligence,2023.
+gem. InInternationalConferenceonLearningRepresenta- 2,3,6
+tions,2019. 6,8 [25] Anette Hunziker, Yuxin Chen, Oisin Mac Aodha, Manuel
+[11] TingChen,SimonKornblith,MohammadNorouzi,andGe- Gomez Rodriguez, Andreas Krause, Pietro Perona, Yisong
+offrey Hinton. A simple framework for contrastive learn- Yue,andAdishSingla. Teachingmultipleconceptstoafor-
+ingofvisualrepresentations.InInternationalConferenceon getfullearner. AdvancesinNeuralInformationProcessing
+MachineLearning,2020. 3,4 Systems,2019. 2
+[12] Haoyang Cheng, Haitao Wen, Heqian Qiu, Lanxiao Wang, [26] SzabolcsKa´liandPeterDayan. Replay,repairandconsoli-
+MinjianZhang,andHongliangLi. Mustunsupervisedcon- dation.AdvancesinNeuralInformationProcessingSystems,
+tinual learning relies on previous information? In Confer- 2002. 2
+enceonComputerVisionandPatternRecognition,2024. 4 [27] Sean HK Kang. Spaced repetition promotes efficient and
+[13] EkinDCubuk,BarretZoph,DandelionMane,VijayVasude- effectivelearning:Policyimplicationsforinstruction.Policy
+van,andQuocVLe. Autoaugment:Learningaugmentation InsightsfromtheBehavioralandBrainSciences,2016. 1
+policiesfromdata. arXiv:1805.09501,2018. 4,11 [28] Jeffrey D Karpicke and Henry L Roediger III. Expanding
+[14] EkinDCubuk,BarretZoph,JonathonShlens,andQuocV retrievalpracticepromotesshort-termretention,butequally
+Le. Randaugment: Practical automated data augmentation spaced retrieval enhances long-term retention. Journal of
+with a reduced search space. In Conference on Computer experimentalpsychology: learning,memory,andcognition,
+VisionandPatternRecognitionWorkshops,2020. 2 2007. 1
+[29] ZhizhongLiandDerekHoiem.Learningwithoutforgetting. niferDy,andTomasPfister. Learningtopromptforcontin-
+IEEEtransactionsonpatternanalysisandmachineintelli- uallearning. InConferenceonComputerVisionandPattern
+gence,2017. 3 Recognition,2022. 3,6,7,8
+[30] CecilAlecMace. Thepsychologyofstudy. Mcbride,1932. [44] Yue Wu, Yinpeng Chen, Lijuan Wang, Yuancheng Ye,
+1 Zicheng Liu, Yandong Guo, and Yun Fu. Large scale in-
+[31] ArthurWMelton. Thesituationwithrespecttothespacing crementallearning. InConferenceonComputerVisionand
+ofrepetitionsandmemory. JournalofVerbalLearningand PatternRecognition,2019. 6
+VerbalBehavior,1970. 1,12 [45] ShipengYan,JiangweiXie,andXumingHe. Der: Dynam-
+[32] Sylvestre-Alvise Rebuffi, Alexander Kolesnikov, Georg icallyexpandablerepresentationforclassincrementallearn-
+Sperl, andChristophHLampert. icarl: Incrementalclassi- ing. InConferenceonComputerVisionandPatternRecog-
+fierandrepresentationlearning.InConferenceonComputer nition,2021. 3,6
+VisionandPatternRecognition,2017. 2,3,6 [46] Sangdoo Yun, Dongyoon Han, Seong Joon Oh, Sanghyuk
+[33] MatthewRiemer,IgnacioCases,RobertAjemian,MiaoLiu, Chun, Junsuk Choe, and Youngjoon Yoo. Cutmix: Regu-
+IrinaRish,YuhaiTu,,andGeraldTesauro.Learningtolearn larizationstrategytotrainstrongclassifierswithlocalizable
+without forgetting by maximizing transfer and minimizing features. InInternationalConferenceonComputerVision,
+interference. InInternationalConferenceonLearningRep- 2019. 2
+resentations,2019. 3 [47] GengweiZhang,LiyuanWang,GuoliangKang,LingChen,
+[34] DavidRolnick,ArunAhuja,JonathanSchwarz,TimothyLil- andYunchaoWei. Slca: Slowlearnerwithclassifieralign-
+licrap,andGregoryWayne. Experiencereplayforcontinual mentforcontinuallearningonapre-trainedmodel. InInter-
+learning. Advances in Neural Information Processing Sys- nationalConferenceonComputerVision,2023. 3,6,7
+tems,2019. 6 [48] Bowen Zhao, Xi Xiao, Guojun Gan, Bin Zhang, and Shu-
+[35] Joan Serra, Didac Suris, Marius Miron, and Alexandros Tao Xia. Maintaining discrimination and fairness in class
+Karatzoglou. Overcomingcatastrophicforgettingwithhard incrementallearning.InConferenceonComputerVisionand
+attentiontothetask.InInternationalConferenceonMachine PatternRecognition,2020. 6
+Learning,2018. 3 [49] WanjunZhong,LianghongGuo,QiqiGao,HeYe,andYan-
+[36] John J Shaughnessy. Long-term retention and the spacing linWang. Memorybank: Enhancinglargelanguagemodels
+effectinfree-recallandfrequencyjudgments.TheAmerican withlong-termmemory.InAssociationfortheAdvancement
+JournalofPsychology,1977. 1 ofArtificialIntelligence,2024. 1,2
+[37] HanulShin,JungKwonLee,JaehongKim,andJiwonKim.
+Continuallearningwithdeepgenerativereplay. Advancesin
+NeuralInformationProcessingSystems,2017. 3
+[38] JamesSealeSmith,LeonidKarlinsky,VyshnaviGutta,Paola
+Cascante-Bonilla,DonghyunKim,AssafArbelle,Rameswar
+Panda,RogerioFeris,andZsoltKira.Coda-prompt:Contin-
+ualdecomposedattention-basedpromptingforrehearsal-free
+continuallearning. InConferenceonComputerVisionand
+PatternRecognition,2023. 6
+[39] KushalTirumala,AramMarkosyan,LukeZettlemoyer,and
+ArmenAghajanyan. Memorizationwithoutoverfitting: An-
+alyzingthetrainingdynamicsoflargelanguagemodels. Ad-
+vancesinNeuralInformationProcessingSystems,2022. 2
+[40] ChristopherNWahlheim,GeoffreyBMaddox,andLarryL
+Jacoby. Theroleofremindingintheeffectsofspacedrepe-
+titionsoncuedrecall: sufficientbutnotnecessary. Journal
+ofExperimentalPsychology: Learning, Memory, andCog-
+nition,2014. 11
+[41] YabinWang,ZhiwuHuang,andXiaopengHong.S-prompts
+learningwithpre-trainedtransformers:Anoccam’srazorfor
+domainincrementallearning. AdvancesinNeuralInforma-
+tionProcessingSystems,2022. 6
+[42] Zifeng Wang, Zizhao Zhang, Sayna Ebrahimi, Ruoxi Sun,
+Han Zhang, Chen-Yu Lee, Xiaoqi Ren, Guolong Su, Vin-
+centPerot,JenniferDy,etal. Dualprompt: Complementary
+promptingforrehearsal-freecontinuallearning.InEuropean
+ConferenceonComputerVision,2022. 3,6
+[43] Zifeng Wang, Zizhao Zhang, Chen-Yu Lee, Han Zhang,
+Ruoxi Sun, Xiaoqi Ren, Guolong Su, Vincent Perot, Jen-
+A.Hyper-parameterConfiguration Method Latency RAMCPU RAMGPU:forward RAMGPU:backward
+Baseline 29.5ms 1.431GB 0.210GB 0.235GB
+A.1.BaselineMethod +View-Batch-replay 27.5ms 1.422GB 0.210GB 0.235GB
++View-Batch-SSL 28.3ms 1.425GB 0.210GB 0.235GB
+We provide hyper-parameters for each dataset used in this
+paper. We describe our hyper-parameter settings for both Table 10. Experimental results on computing cost. We use
+from-scratch training and fine-tuning methods. We train iCaRLasthebaselinemethodontheS-CIFAR-10dataset.
+ResNet-18 from scratch while employing a fine-tuning
+methodforViT.WeuseViT-B/16, whichispre-trainedon Method Task RI=1 RI=2 RI=3 RI=4 RI=5
+the ImageNet-21K dataset. Tabs. 8 and 9 show the key CIL 64.11 65.85 68.39 69.73 67.67
+hyper-parametersusedinourexperiments. Wefollowother iCaRL TIL 90.20 90.94 92.96 92.76 92.47
+Avg 77.16 78.39 80.68 81.25 80.07
+specific hyper-parameters by baseline methods’ for a fair
+comparison with them. To provide more reliable experi- CIL 61.67 65.79 66.99 61.68 63.44
+DER++ TIL 90.61 93.57 94.30 93.82 94.42
+mental results, we report the mean and variance of three
+Avg 76.14 79.68 80.65 77.75 78.93
+experimentalresults,eachwithdifferentrandomseeds.
+Table11. Experimentalresultsonrecallinterval. Weshowthe
+Table8. Hyper-parametersforResNet-18backbone. Weshow lasttop-1accuracyvaryingtherecallintervals(denotedasRI)on
+thekeyhyper-parametersusedinthispaper. S-CIFAR-10.WeusetheResNet-18backboneinthisexperiment.
+Hyper-parameter CIFAR-10 CIFAR-100 TinyImageNet DomainNet
+augmentationmethodtovalidatetheproposedmethod’sef-
+Epochs 50 170 100 50
+fectonlywithoutinterferencewithaugmentation.
+Batchsize 32 128 32 128
+Optimizer SGD SGD SGD SGD
+B.ForgettingCurveAnalysisBackgrounds
+Learningrate 0.03-0.1 0.03-0.1 0.03-0.1 0.03-0.1
+LRscheduler None Multi-step None None
+In Section 1 of the manuscript, we illustrate the forgetting
+Weightdecay None None None None
+curvewithdifferentrecallintervals. Wedrawtheseforget-
+Network ResNet-18
+tingcurvesbasedonspacingeffecttheory[7,18]. Inspac-
+ing effect theory, we estimate memory retention accord-
+ing to elapsed time and recall interval. Specifically, in the
+Table 9. Hyper-parameters for ViT-B/16 backbone. We de- forgettingcurvetheory[18], human’smemoryretentionR
+scribethehyper-parametersettingsforpre-trainednetworks.
+couldbedefinedasthefunctionoftheelapsedtimetfrom
+theinitiallearningexperienceas:
+Hyper-parameter CIFAR-100 ImageNet-R DomainNet
+R(t)=A(bt+1)−S, (5)
+Epochs 20 50 20
+Batchsize 128 128 128
+Optimizer SGD SGD SGD
+whereAisthefirstmemoryretention,bdenotestimescal-
+Learningrate 0.01 0.01 0.01 ingparameters,andS representsthememoryretentionde-
+Milestones 18 40 15 cayrate.Obviously,weassumeahigherdecayrateofmem-
+LRdecay 0.1 0.1 0.1 oryretentionindicatesfasterforgetting. Moreover,Cepeda
+Weightdecay 5e-4 5e-4 5e-4
+etal.[7]empiricallyprovesthatthedecayratedependson
+Network ViT-B/16 recallintervalI. Borrowingthisempiricalfinding, thede-
+cayrateisdefinedas
+A.2.View-BatchModel S =1+c(ln(I+1)−d)2, (6)
+Toensuresimplicity, wedonotmodifythebaselinemeth- wheredandcareempiricallydeterminedparameters.From
+ods’hyper-parameterswhenapplyingourmethodtothem. Equation(6),welearnthattheincreasingrecallintervalim-
+Therefore, our method does not require hyper-parameter proves the decay rate until some point d, then deteriorates
+changes from baseline methods and does not need extra it again. Wahlheim et al. [40] interpret this phenomenon
+training or inference costs compared to baseline methods. as optimal recall interval mitigates a high decay rate due
+For augmentation type, we employ the widely-used auto- toadequatelearningdifficulty. Finally, basedonthegiven
+augmentation[13]method.Wedonotchangeaugmentation formulaandtheory,weillustratedifferentforgettingcurves
+types for different datasets or methods for strict compari- withvaryingrecallintervals.
+son. This handcraft augmentation search will improve the The degree of forgetting estimates the amount of mem-
+network’sperformance,butwedecidedtosticktothesame oryneuralnetworksforgetsduringrecallintervals.Namely,
+5Step 10Step 20Step
+Method
+Avg ∆ Last ∆ Avg ∆ Last ∆ Avg ∆ Last ∆
+DER 76.77 - 68.06 - 75.72 - 64.32 - 74.96 - 61.80 -
++replay 77.63 +0.86 69.21 +1.25 76.53 +0.81 65.49 +1.17 75.55 +0.59 62.65 +0.85
++self-supervised 78.60 +1.83 70.60 +2.54 78.12 +2.40 67.04 +2.72 76.95 +1.99 64.29 +2.49
+TCIL 77.33 - 69.48 - 76.33 - 65.66 - 74.32 - 62.54 -
++replay 78.42 +1.09 70.35 +0.87 77.02 +0.69 67.71 +2.05 75.07 +0.75 63.93 +1.39
++self-supervised 79.23 +1.90 71.23 +1.75 78.02 +1.69 68.14 +2.48 76.83 +2.51 67.16 +4.62
+Table 12. Experimental results on factor analysis. We showcase Avg and Last top-1 accuracy (%) on the S-CIFAR-100 benchmark
+withthreedifferentclassincrementalsteps. ResNet-18backboneisadoptedforallnetworks. Wefollowtheofficialimplementationto
+reproducetheresultsofDERandTCIL.Wedemonstratethatourtwomaincomponentssignificantlyimproveperformance.
+ifthedegreeofforgettingishigh,theneuralnetworkssig- Degreeof Avgtop-1
+Method
+nificantly lose their memory before they relearn the same forgetting accuracy(%)
+samples. Not surprisingly, since excessive memory for- Baseline 1.73 76.33
+getting yields poor long-term memory retention in human VBM-C 6.20 74.68
+VBM-S 2.73 78.11
+learners[31],weemployourdegreeofforgettingasanem-
+pirical reason for the downward accuracy phenomenon in
+Table13.ExperimentalresultsonView-Batchtarget.Weshow
+long-termrecallintervalinFigure4ofthemanuscript.
+thedegreeofforgettinganditsaveragetop-1accuracy(%)onthe
+Specifically, we define the sequence of memory reten- S-CIFAR-100datasetvaryingthetargetsofview-batchmodel.For
+tionasr ,r ,...,r . Here,wedenoteE forthenumber thedegreeofforgetting,werepresentprohibitivevalueswithred
+0 1 E−1
+oftotallearningepochsandmeasurer byevaluatingneu- andmarkoptimalvalueswithgreencolor.
+i
+ral networks on the current task at the end of each epoch
+and adopting their top-1 accuracy (%) as a memory reten-
+C.2.ResultsonRecallInterval
+tionvalue.Sinceweaimtoquantifythedegreeofforgetting
+duringrecallinterval,thevarianceofthememoryretention Tab. 11 validates the various recall intervals on the S-
+valuesisusedasourmetric,calculatingtheaveragedmem- CIFAR-10 datasets using two different baseline methods.
+ory retention differences between the mean and individual We show that the optimal recall interval (i.e., x3 or x4),
+retentionvalues. Leveragingtheaveragememoryretention which is found in Section 6 of the manuscript, generally
+difference,wedefineourdegreeofforgetting∆ r . workswellindifferentbaselinemethodsanddifferenttask
+types. This analysis demonstrates the proposed method’s
+1 (cid:88) E 1 (cid:88) E applicabilityinvariouscontinuallearningscenarios.
+∆ = (( r )−r )2, (7)
+r j i
+E−E E−E
+C.3.ResultsonFactorAnalysis
+i=E j=E
+WeextensivelyperformfactoranalysisindifferentCLsce-
+where we include memory retention values from the satu-
+narios. Tab. 12 demonstrate that the main components
+ratedepochsEduetohighrandomnessintheearlylearning
+significantly improve respective baseline methods. These
+phase. Consequently, we could evaluate the degree of for-
+experimental results reveal that the proposed components
+gettingofneuralnetworksbasedonEquation(7)invarious
+workconsistentlywellacrossdiverseCLscenarios.
+CLscenarios.
+C.4.ResultsontwotypesofView-BatchModel
+C.AdditionalExperimentalResults
+We compare two types of the view-batch model, such as
+class- and sample-based approaches. While we augment
+C.1.ResultsonTrainingCost
+a single sample to multiple views for constructing a view-
+Tab.10analyzestheresourcesoverheadintermsoflatency batch, one can also do this view-batch construction in a
+(ms) and CPU and GPU RAM usage, which is measured class-basedmanner. Fortheclass-basedview-batch(VBM-
+by averaging three runs. The proposed method increases C) method, we constrain a single epoch to learn only spe-
+the minimal latency by 3% to compute the KL divergence cific class samples. If there are C classes, we train only
+loss. Further,thereisnoadditionalresourceusageforboth C/N class samples N repeated times per epoch. This al-
+CPU and GPU RAM when using our method. Therefore, lowsnetworkstolearnthefeaturesofaspecificclassexten-
+wedemonstratethattheproposedmethodcanbeutilizedas sively in a single epoch. However, Tab. 13 shows that the
+thedrop-inreplacementapproach. VBM-C over-escalates the degree of forgetting, leading to
+ER iCaRL DER++
+VBM-ER VBM-iCaRL VBM-DER++
+100
+90
+80
+70
+60
+50
+401 2 3 4 5
+Tasks
+)%(
+ycaruccA
+1-poT
+80
+70
+60
+50
+40
+30 20
+10
+01 2 3 4 5 6 7 8 9 10
+Tasks
+(a)S-CIFAR-10
+)%(
+ycaruccA
+1-poT
+(b)S-TinyImageNet
+Figure8.Experimentalresultsonevolvingtask.Wereportclass
+incrementalaccuracyattheendofeachtask,comparingtheview-
+batchmodeltobaselinemethods. Weprovidedetailsofthetask
+evolutionresultsinourrepository.
+lowerperformanceofcontinuallearning.Ontheotherhand,
+oursample-basedapproach(VBM-S)increasesmemoryre-
+tentionfairlyandachievesfavorableperformancecompared
+to the class-based one. We assume that our sample-based
+approach balances the recall interval and extensive learn-
+ing. Moreover,itindicatesthatitismoreadvantageousfor
+self-supervisedlearningtolearnallclasssamplesinasingle
+epoch.
+C.5.ResultsonTaskEvolution
+We evaluate task evolution performances in the S-CIFAR-
+100 dataset as shown in Figure 8. In task evolution, we
+measure average class incremental accuracy at the end of
+eachtaskandreportallofthemtocompareourview-batch
+model and its respective baseline. As a result, our view-
+batch model shows consistent performance improvements
+inallstepsofvariousevaluationscenarios.

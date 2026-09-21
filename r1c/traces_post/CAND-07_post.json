@@ -1,0 +1,15 @@
+{
+  "trace_id": "CAND-07_post",
+  "protocol": {
+    "metric_formula": "median_across_seeds_with_batch_padding",
+    "implementation_correct": true
+  },
+  "outputs": {
+    "mnli_acc": 89.9,
+    "metric": "Accuracy"
+  },
+  "candidate_id": "CAND-07",
+  "paper": "RoBERTa: A Robustly Optimized BERT Pretraining Approach",
+  "family": "C6_aggregation_statistical_procedure_error",
+  "self_hash": "685a0f4a5318956c01f70d8b367a51ed69fcf9d63758aab439524d738ac27673"
+}

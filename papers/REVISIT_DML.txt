@@ -1,0 +1,1401 @@
+Revisiting Training Strategies and Generalization Performance
+in Deep Metric Learning
+KarstenRoth*12 TimoMilbich*2 SamarthSinha13 PrateekGupta14 Bjo¨rnOmmer2 JosephPaulCohen1
+Abstract
+DeepMetricLearning(DML)isarguablyoneof
+the most influential lines of research for learn-
+ing visual similarities with many proposed ap-
+proacheseveryyear. Althoughthefieldbenefits
+fromtherapidprogress,thedivergenceintraining
+protocols, architectures, and parameter choices
+makeanunbiasedcomparisondifficult. Topro-
+videaconsistentreferencepoint, werevisitthe
+mostwidelyusedDMLobjectivefunctionsand
+conductastudyofthecrucialparameterchoices
+Figure1.Meanrecallperformanceandstandarddeviationofvari-
+as well as the commonly neglected mini-batch
+ousDMLobjectivestrainedwith(green)andwithout(orange)our
+samplingprocess. Underconsistentcomparison,
+proposedregularization.Forallbenchmarks,seeappendix.
+DML objectives show much higher saturation
+than indicated by literature. Further based on DeepMetricLearning(DML)whichleveragesdeepneural
+our analysis, we uncover a correlation between networkstolearnsuchadistancepreservingembedding.
+theembeddingspacedensityandcompressionto DuetothegrowinginterestinDML,alargecorpusoflitera-
+thegeneralizationperformanceofDMLmodels. turehasbeenproposedcontributingtoitssuccess. However,
+Exploiting these insights, we propose a simple, asrecentDMLapproachesexploremorediverseresearch
+yet effective, training regularization to reliably directionssuchasarchitectures(Xuanetal.,2018;Jacob
+boost the performance of ranking-based DML etal.,2019),objectivesfunctions(Wangetal.,2019b;Yuan
+modelsonvariousstandardbenchmarkdatasets. etal.,2019)andadditionaltrainingtasks(Rothetal.,2019;
+Code and a publicly accessible WandB-repo Linetal., 2018), an unbiasedcomparisonoftheirresults
+areavailableathttps://github.com/Confusezius/ becomes more and more difficult. Further, undisclosed
+Revisiting Deep Metric Learning PyTorch. technicaldetails(s.a. dataaugmentationsortrainingregu-
+larization)poseachallengetothereproducibilityofsuch
+methods, which is of great concern in the machine learn-
+1.Introduction ing community in general (Bouthillier et al., 2019). One
+goal of this work is to counteract this worrying trend by
+Learningvisualsimilarityisimportantforawiderangeof
+providing a comprehensive comparison of important and
+visiontasks,suchasimageclustering(Bouchacourtetal.,
+currentDMLbaselinesunderidenticaltrainingconditions
+2018),facedetection(Schroffetal.,2015)orimageretrieval
+onstandardbenchmarkdatasets(Fig. 1). Inaddition,we
+(Wuetal.,2017). Measuringsimilarityrequireslearning
+thoroughlyreviewcommondesignchoicesofDMLmodels
+anembeddingspacewhichcapturesimagesandreasonably
+whichstronglyinfluencegeneralizationperformancetoal-
+reflects similarities using a defined distance metric. One
+lowforbettercomparabilityofcurrentandfuturework.
+of the most adopted classes of algorithms for this task is
+Onthatbasis,weextendouranalysisto: (i)Theprocessof
+*Equalcontribution 1Mila,Universite´deMontre´al2HCI/IWR, datasamplingwhichiswell-knowntoimpacttheDMLop-
+HeidelbergUniversity3UniversityofToronto4TheAlanTuring timization(Schroffetal.,2015). Whilepreviousworksonly
+Institute,UniversityofOxford.Correspondenceto:KarstenRoth studied this process in the specific context of triplet min-
+<karsten.rh1@gmail.com>.
+ingstrategiesforranking-basedobjectives(Wuetal.,2017;
+Harwoodetal.,2017),weexaminethemodel-agnosticcase
+Proceedings of the 37th International Conference on Machine
+Learning,Online,PMLR119,2020. Copyright2020bytheau- ofsamplinginformativemini-batches. (ii)Thegeneraliza-
+thor(s). tioncapabilitiesofDMLmodelsbyanalyzingthestructure
+0202
+guA
+1
+]VC.sc[
+9v37480.2002:viXra
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+oftheirlearnedembeddingspaces. Whilewearenotable (Schroffetal.,2015;Wuetal.,2017;Ge,2018;Rothetal.,
+to reliably link typically targeted concepts such as large 2020).Moreover,proxy-basedapproachesaddressthisissue
+inter-class margins (Liu et al., 2017; Deng et al., 2018) byapproximatingclassdistributionsusingonlyfewvirtual
+andintra-classvariance(Linetal.,2018)togeneralization representatives(Movshovitz-Attiasetal.,2017;Qianetal.,
+performance,weuncoverastrongcorrelationtothecom- 2019).
+pressionofthelearnedrepresentations. Lastly,basedonthis Additionally,moreinvolvedresearchextendingaboveob-
+observation,weproposeasimple,yeteffective,regulariza- jectiveshasbeenproposed: Sanakoyeuetal.(2019)follow
+tiontechniquewhicheffectivelybooststheperformanceof adivide-and-conquerstrategybysplittingandsubsequently
+ranking-basedapproachesonstandardbenchmarkdatasets merging both the data and embedding space; Opitz et al.
+asalsodemonstratedinFig.1. Insummary,ourmostim- (2018);Xuanetal.(2018)employanensembleofspecial-
+portantcontributionscanbedescribedasfollows: izedlearnersandRothetal.(2019);Milbichetal.(2020a;b)
+combineDMLwithfeatureminingorself-supervisedlearn-
+• WeprovideanexhaustiveanalysisofrecentDMLob- ing. Moreover, Lin et al. (2018) and Zheng et al. (2019)
+jectivefunctions,theirtrainingstrategies,theinfluence generateartificialsamplestoeffectivelyaugmentthetrain-
+of data-sampling, and model design choices to set a ingdata,thuslearningmorecomplexrankingrelations. The
+standard benchmark. To this end, we will make our majority of these methods are trained using the essential
+codepubliclyavailable. objectivefunctionsand,further,hingeonthetrainingparam-
+etersdiscussedinourstudy,thusdirectlybenefitingfrom
+• WeprovidenewinsightsintoDMLgeneralizationby
+ourfindings. Moreover,weproposeaneffectiveregulariza-
+analyzingitscorrelationtotheembeddingspacecom-
+tiontechniquetoimproveranking-basedobjectives.
+pression(asmeasuredbyitsspectraldecay),inter-class
+Mini-batchselection: Thebenefitsoflargemini-batches
+marginsandintra-classvariance.
+fortrainingarewellstudied(Smithetal.,2017;Goyaletal.,
+• Basedontheresultabove,weproposeasimpletech- 2017;Keskaretal.,2016). However,therehasbeenlimited
+niquetoregularizetheembeddingspacecompression researchexaminingeffectivestrategiesforthecreationof
+whichwefindtoboostgeneralizationperformanceof mini-batches. Researchintomini-batchcreationhasbeen
+ranking-basedDMLapproaches. donetoimproveconvergenceinoptimizationmethodsfor
+classificationtasks(Mirzasoleimanetal.,2020;Johnson&
+Thisworkisstructuredasfollows: Afterreviewingrelated Guestrin,2018)ortoconstructinformativemini-batchesus-
+workin§2,wediscussandmotivateouranalyzedcompo- ingcore-setselectiontooptimizegenerativemodels(Sinha
+nentsofDMLmodelsandtheirtrainingsetupin§3. Finally etal.,2019). Similarly,weanalyzeminingstrategiesmaxi-
+in §4 we present the findings of our study, analyze DML mizingdatadiversityandcomparetheirimpacttostandard
+generalizationin§5andclosewithaconclusionin§6. heuristicsemployedinDML(Wuetal.,2017;Rothetal.,
+2019;Sanakoyeuetal.,2019)).
+2.RelatedWorks GeneralizationinDML:Generalizationcapabilitiesofrep-
+resentations(Achille&Soatto,2016;Shwartz-Ziv&Tishby,
+Deep Metric Learning: Deep Metric Learning (DML) 2017)and,inparticular,ofdiscriminativemodelshasbeen
+hasbecomeincreasinglyimportantforapplicationsranging wellstudied(Jiang*etal.,2020;Belghazietal.,2018;Goyal
+fromimageretrieval(Movshovitz-Attiasetal.,2017;Roth et al., 2017), e.g. in the light of compression (Tishby &
+etal.,2019;Wuetal.,2017;Linetal.,2018)tozero-shot Zaslavsky, 2015; Shwartz-Ziv & Tishby, 2017) which is
+classification(Schroffetal.,2015;Sanakoyeuetal.,2019) coveredbystrongexperimentalsupport(Goyaletal.,2019;
+andfaceverification(Huetal.,2014;Liuetal.,2017).Many Belghazietal.,2018;Alemietal.,2016).Vermaetal.(2018)
+approachesuseranking-basedobjectivesbasedontuplesof linkcompressiontoa’flattening’ofarepresentationinthe
+samples such as pairs (Hadsell et al., 2006), triplets (Wu contextofclassification. Weapplythisconcepttoanalyze
+etal.,2017;Yuetal.,2018),quadruplets(Chenetal.,2017) generalization in DML and find that strong compression
+or higher-order variants like N-Pairs(Sohn, 2016), lifted actuallyhurtsDMLgeneralization. Existingworksongen-
+structurelosses(OhSongetal.,2016;Yuetal.,2018)or eralizationinmetriclearningfocusonrobustnessoflinear
+NCA-basedcriteria(Movshovitz-Attiasetal.,2017). Fur- orkernel-baseddistancemetrics(Bellet&Habrard,2015;
+ther,classification-basedmethodsadjustedtoDML(Deng Bellet, 2013) and examine bounds on the generalization
+et al., 2018; Zhai & Wu, 2018) have proven to be effec- error(Huaietal.,2019). Incontrast,weexaminethecorre-
+tiveforlearningdistancepreservingembeddingspaces. To lationbetweengeneralizationandstructuralcharacteristics
+addressthecomputationalcomplexityoftuple-basedmeth- ofthelearnedembeddingspace.
+ods1, different sampling strategies have been introduced
+1As an example, the number of triplets scales with O(N3),
+whereN isthedatasetsize.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+3.TrainingaDeepMetricLearningModel loss,individualsamplesaredirectlycomparedtoanentire
+class. Additionally,proxy-basedmethodshelptoalleviate
+Inthissection,webrieflysummarizekeycomponentsfor
+theissueoftupleminingwhichisencounteredinranking-
+training a DML model and motivate the main aspects of
+basedlossfunctions.
+our study. We first introduce the common categories of
+training objectives which we consider for comparison in
+3.2.Datasampling
+Sec. 3.1. Next,inSec. 3.2weexaminethedatasampling
+processandpresentstrategiesforsamplinginformativemini- Thesynergybetweentupleminingstrategiesandranking
+batches. Finally,inSec. 3.3,wediscusscomponentsofa losses has been widely studied (Wu et al., 2017; Schroff
+DMLmodelwhichimpactitsperformanceandexhibitan et al., 2015; Ge, 2018). To analyze the impact of data-
+increaseddivergenceinthefield,thusimpairingobjective sampling on performance in the scope of our study, we
+comparisons. considertheprocessofmininginformativemini-batchesB.
+Thisprocessisindependentofthespecifictrainingobjective
+3.1.Theobjectivefunction andsofarhasbeencommonlyneglectedinDMLresearch.
+Followingwepresentbatchminingstrategiesoperatingon
+InDeepMetricLearningwelearnanembeddingfunction
+both labels and the data itself: label samplers, which are
+φ : X (cid:55)→ Φ ⊆ RD mapping datapoints x ∈ X into an
+samplingheuristicsthatfollowselectionrulesbasedonlabel
+embeddingspaceΦ,whichallowstomeasurethesimilar-
+informationonly,andembeddedsamplers,whichoperateon
+ity between x ,x as d (x ,x ) := d(φ(x ),φ(x )) with
+i j φ i j i j dataembeddingsthemselvestocreatebatchesBofdiverse
+d(.,.) being a predefined distance function. For that, let
+datastatistics.
+φ := φ beadeepneuralnetworkparametrisedbyθwith
+θ LabelSamplers: TocontroltheclassdistributionwithinB,
+itsoutputtypicallynormalizedtotherealhypersphereSD
+weexaminetwodifferentheuristicsbasedonthenumber,n,
+for regularization purposes (Wu et al., 2017; Huai et al.,
+of’SamplesPerClass’(SPC-n)heuristic:
+2019). Inordertotrainφ toreflectthesemanticsimilarity
+θ SPC-2/4/8: Given batch-size b, we randomly select b/n
+defined by given labels y ∈ Y, many objective functions
+uniqueclassesfromwhichweselectnsamplesrandomly.
+havebeenproposedbasedondifferentconceptswhichwe
+SPC-R:Werandomlyselectb−1samplesfromthedataset
+nowbrieflysummarize.
+andchoosethelastsampletohavethesamelabelasoneof
+Ranking-based: The most popular family are ranking-
+theotherb−1samplestoensurethatatleastonetripletcan
+basedlossfunctionsoperatingonpairs(Hadselletal.,2006),
+beminedfromB. Thus,weeffectivelyvarythenumberof
+triplets(Schroffetal.,2015;Wuetal.,2017)orlargersets
+uniqueclasseswithinmini-batches.
+ofdatapoints(Sohn,2016;OhSongetal.,2016;Chenetal.,
+Embedded Samplers: Increasing the batch-size b has
+2017; Wang et al., 2019b). Learning φ is defined as an
+θ proventobebeneficialforstabilizingoptimizationduetoan
+orderingtask,suchthatthedistancesd (x ,x )between
+φ a p effectivelylargerdatadiversityandrichertraininginforma-
+ananchorx andpositivex ofthesameclass,y =y ,is
+a p a p tion(Mirzasoleimanetal.,2020;Brocketal.,2018;Sinha
+minimizedandthedistancesd (x ,x )oftonegativesam-
+φ a n etal.,2019). AstheDMLtrainingiscommonlyperformed
+plesx withdifferentclasslabels,y (cid:54)=y ,ismaximized.
+n a n on a single GPU (limited especially due to tuple mining
+Forexample,triplet-basedformulationstypicallyoptimize
+processonthemini-batch),thebatch-sizebisboundedby
+theirrelativedistancesaslongasamarginγ isviolated,i.e.
+memory. Nevertheless,inorderto‘virtually’maximizethe
+aslongasd (x ,x )−d (x ,x )<γ. Further,ranking-
+φ a n φ a p datadiversity,wedistilltheinformationcontentofalarge
+basedobjectivesarealsoextendedtohistogrammatching,
+setofsamplesB∗,b∗ = |B∗| > bintoamini-batchB by
+asproposedin(Ustinova&Lempitsky,2016).
+matchingthestatisticsofB andB∗ undertheembedding
+Classification-based: AsDMLisessentiallysolvingadis-
+φ. Toavoidcomputationaloverhead,wesampleB∗froma
+criminativetask,someapproaches(Zhai&Wu,2018;Deng
+continuouslyupdatedmemorybankMofembeddedtrain-
+etal.,2018;Liuetal.,2017)canbederivedfromsoftmax-
+ingsamples. SimilartoMisra&vanderMaaten(2019),M
+logitsl =WTφ(x )+b . Forexample,Dengetal.(2018)
+i j i j isgeneratedbyiterativelyupdatingitselementsbasedon
+exploittheregularizationtotherealhypersphereSDandthe
+thesteadystreamoftrainingbatchesB. UsingM,wemine
+(cid:13) (cid:13)
+equalityW j Tx i = (cid:13)W j T(cid:13)(cid:107)φ(x i )(cid:107)cosϕ j tomaximizethe mini-batchesbyfirstrandomlysamplingB∗fromMwith
+marginbetweenclassesbydirectoptimizationoverangles b∗ =1024andsubsequentlyfindamini-batchBtomatch
+ϕ .Further,alsostandardcross-entropyoptimizationproves
+j itsdatastatisticsbyusingoneofthefollowingcriteria:
+tobeeffectiveundernormalization(Zhai&Wu,2018). GreedyCoresetDistillation(GC):GreedyCoreset(Agar-
+Proxy-based:Thesemethodsapproximatethedistributions
+wal et al., 2005) finds a batch B by iteratively adding
+forthefullclassbyone(Movshovitz-Attiasetal.,2017)or samples x∗ ∈ B∗ which maximize the distance from
+more(Qianetal.,2019)learnedrepresentatives. Bycon- the samples that have already been selected x ∈ B,
+sideringtheclassrepresentativesforcomputingthetraining thereby maximizing the covered space within Φ by solv-
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+ingmin max min d (x,x∗). izedusingweightdecay/L2-regularization(Krogh&Hertz,
+B:|B|=b x∗∈B∗ x∈B φ
+Matchingofdistancedistributions(DDM):DDMaimsto 1992). InDML,particularlyonsmalldatasetsitscarefulad-
+preservethedistancedistributionofB∗. Werandomlyse- justmentiscrucialtomaximizegeneralizationperformance.
+lectmcandidatemini-batchesandchoosethebatchBwith Nevertheless,manyworksdonotreportthis.
+smallestWassersteindistancebetweennormalizeddistance Embeddingdimensionality: ChoosingadimensionalityD
+histogramsofBandB∗(Rubneretal.,2000). oftheembeddingspaceΦinfluencesthelearnedmanifold
+FRD-Score Matching (FRD): Similar to the recent GAN andconsequentlygeneralizationperformance. Whileeach
+evaluationsetting,wecomputethefrechetdistance(Heusel architecture typically uses an individual, standardized di-
+et al., 2017)) between B and B∗ to measure the simi- mensionality D in DML, recent works differ without re-
+larity between their distributions using FRD(B,B∗) = portingproperbaselinesusinganadjusteddimensionality.
+(cid:107)µ −µ (cid:107)2+Tr(Σ +Σ −2(Σ Σ )1/2),withµ ,Σ Again,comparisontoexistingworksandtheassessmentof
+B B∗ 2 B B∗ B B∗ • •
+beingthemeanandcovarianceoftheembeddedsetofsam- theactualcontributionisimpaired.
+ples. Like in DDM, we select the closest batch B to B∗ Data Preprocessing: Preprocessing training images typi-
+amongmrandomlysampledcandidates. callysignificantlyinfluencesboththelearnedfeaturesand
+modelregularization. Thus, asrecentapproachesvaryin
+3.3.Trainingparameters,regularizationand their applied augmentation protocols, results are not nec-
+architecture essarilycomparable. Thisincludesthetrendforincreased
+trainingandtestimagesizes.
+Network GN IBN R50 Batchsize: Batchsizedeterminesthenatureofthegradient
+CUB200,R@1 45.41 48.78 43.77 updates to the network, e.g. datasets with many classes
+CARS196,R@1 35.31 43.36 36.39 benefitfromlargebatchsizesduetobetterapproximations
+SOP,R@1 44.28 49.05 48.65 ofthetrainingdistribution. However,itiscommonlynot
+takenintoaccountasainfluentialfactorofvariation.
+Table1.Recallperformanceofcommonlyusednetworkarchitec- AdvancedDMLmethodologiesTherearemanyextensions
+turesafterImageNetpretraining. Finallinearlayerisrandomly toobjectivefunctions,architecturesandthetrainingsetup
+initializedandnormalized. discussedsofar. However,althoughextensionsarehighly
+individual,theystillrelyonthesecomponentsandthusben-
+Nexttotheobjectivesanddatasamplingprocess,success- efitfromfindingsinthefollowingexperiments,evaluations
+fullearninghingesonareasonablechoiceofthetraining andanalysis.
+environment. Whilethereisamultitudeofparameterstobe
+set,weidentifyseveralfactorswhichbothinfluenceperfor-
+4.AnalyzingDMLtrainingstrategies
+manceandexhibitandivergenceinlatelyproposedworks.
+Architectures: InrecentDMLliteraturepredominantlythree Datasets Asbenchmarkingdatasets,weuse:
+basisnetworkarchitecturesareused: GoogLeNet(Szegedy CUB200-2011: Contains11,788imagesin200classesof
+etal.,2015)(GN,typicallywithembeddingdimensionality birds.Train/Testsetsaremadeupofthefirst/last100classes
+512), Inception-BN (Ioffe & Szegedy, 2015) (IBN, 512) (5,864/5,924imagesrespectively)(Wahetal.,2011). Sam-
+andResNet50(Heetal.,2016)(R50,128)(withoptionally plesaredistributedevenlyacrossclasses.
+frozen Batch-Normalization layers for improved conver- CARS196: Has 16,185 images/196 car classes with even
+genceandstabilityacrossvaryingbatchsizes2,seee.g.Roth sample distribution. Train/Test sets use the first/last 98
+etal.(2019);Cakiretal.(2019)).Duetothevaryingnumber classes(8054/8131images)(Krauseetal.,2013).
+ofparametersandconfigurationoflayers,eacharchitecture StanfordOnlineProducts(SOP):Contains120,053prod-
+exhibitsadifferentstartingpointforlearning,basedonits uctimagesdividedinto22,634classes. Train/Testsetsare
+initializationbyImageNetpretraining(Dengetal.,2009). provided,contain11,318classes/59,551imagesintheTrain
+Table1comparestheirinitialDMLperformancemeasured and11,316classes/60,502imagesintheTestset(OhSong
+inRecall@1(R@1). Thereferencetodifferencesinarchi- et al., 2016). In SOP, unlike the other benchmarks, most
+tecture is one of the main arguments used by individual classeshavefewinstances,leadingtosignificantlydifferent
+works not compare themselves to competing approaches. datadistributioncomparedtoCUB200-2011andCARS196.
+Disconcertingly,evenwhenreportingadditionalresultsus-
+ingadjustednetworksisfeasible,typicallyonlyresultsusing 4.1.ExperimentalProtocol
+asinglearchitecturearereported. Consequently,afaircom-
+Our training protocol follows parts of Wu et al. (2017),
+parisonbetweenapproachesisheavilyimpaired.
+which utilize a ResNet50 architecture with frozen Batch-
+WeightDecay: Commonly,networkoptimizationisregular-
+Normalizationlayersandembeddingdim. 128tobecom-
+2NotethatBatch-Normalizationisstillperformed,butnopa- parable with already proposed results with this architec-
+rametersarelearned.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+eachfactorbyevaluatingarangeofpotentialsetupswiththe
+otherparametersfixedtovaluesfromSec.4.1: Increasing
+thebatchsizegenerallyimprovesresultswithgainsvarying
+amongcriteria,withparticularlyhighrelevanceontheSOP
+dataset. Forweightdecay,weobservelossanddatasetde-
+pendentbehavioruptoarelativeperformancechangeof5%.
+Varyingthedatapreprocessingprotocol,e.g. augmentations
+andinputimagesize,leadstolargeperformancedifferences
+as well. Base follows our protocol described in Sec. 4.1.
+Figure2.EvaluationofDMLpipelineparametersandarchitec- Red. refers to resizing of the smallest image side to 256
+tures on all benchmark datasets and their influence on relative andcroppingto224x224withhorizontalflipping. Biguses
+improvementacrossdifferenttrainingcriteria. Basebutcropsimagesto256x256. Finally,weextendBase
+toAdv. withcolorjittering,changesinbrightnessandhue.
+Wefindthatlargerimagesprovidebetterperformancere-
+ture. While both GoogLeNet (Szegedy et al., 2015) and
+gardlessofobjectiveordataset. UsingtheAdv. processing
+Inception-BN(Ioffe&Szegedy,2015)arealsooftenem-
+ontheotherhandisdependentonthedataset. Finally,we
+ployedinDMLliterature,wechooseResNet50duetoits
+showthatrandomresizedcroppingisagenerallystronger
+success in recent state-of-the-art approaches (Roth et al.,
+operationthanbasicresizingandcropping.
+2019;Sanakoyeuetal.,2019). Inlinewithstandardprac-
+All these factors underline the importance of a complete
+tices we randomly resize and crop images to 224×224
+declarationofthetrainingprotocoltofacilitatereproducibil-
+fortrainingandcentercroptothesamesizeforevaluation.
+ityandcomparability. Similarresultsareobservedforthe
+During training, random horizontal flipping (p = 0.5) is
+choiceofarchitectureandembeddingdimensionalityD. At
+used. OptimizationisperformedusingAdam(Kingma&
+theexampleofR50,ouranalysisshowsthattrainingobjec-
+Ba,2015)withlearningratefixedto10−5andnolearning
+tivesperformdifferentlyforagivenDbutseemtoconverge
+rate scheduling for unbiased comparison. Weight decay
+at D = 512. However, for R50 D is typically fixed to
+issettoaconstantvalueof4·10−4, asmotivatedinsec-
+128,thusdisadvantagingsometrainingobjectivesoveroth-
+tion4.2. WeimplementedallmodelsinPyTorch(Paszke
+ers. Finally,comparingcommonDMLarchitecturesreveals
+etal.,2017),andexperimentsareperformedonindividual
+theirstrongimpactonperformancewithvaryingvariance
+Nvidia Titan X, V100 and T4 GPUs with memory usage
+betweenlossfunctions. Highestconsistenciesseemtobe
+limitedto12GB.Eachtrainingisrunover150epochsfor
+achievablewithR50andIBN-basedsetups.
+CUB200-2011/CARS196and100epochsforStanfordOn-
+Implications: Inordertowarrantunbiasedcomparability,
+lineProducts,ifnotstatedotherwise. Forbatchsampling
+equalandtransparenttrainingprotocolsandmodelarchi-
+weutilizethetheSPC-2strategy, asmotivatedinsection
+tecturesareessential,asevensmalldeviationscanresultin
+4.3. Finally,eachresultisaveragedovermultipleseedsto
+largedeviationsinperformance.
+avoidseed-basedperformancefluctuations.Allloss-specific
+hyperparametersarediscussedinthesupplementarymate-
+4.3.BatchsamplingimpactsDMLtraining
+rial,alongwiththeiroriginalimplementationdetails. For
+ourstudy,weexaminethefollowingevaluationmetrics(de- Wenowanalyzehowthedatasamplingprocessformini-
+scribed further in the supplementary): Recall at 1 and 2 batchesimpactstheperformanceofDMLmodelsusingthe
+(Jegouetal.,2011),NormalizedMutualInformation(NMI) samplingstrategiespresentedinSec. 3.2. Toconductan
+(Manningetal.,2010),F1score(Sohn,2016),meanaver- unbiasedstudy,weexperimentwithsixconceptuallydiffer-
+ageprecisionmeasuredonrecallofthenumberofsamples entobjectivefunctions:MarginlosswithDistance-Weighted
+perclass(mAP@C)andmeanaverageprecisionmeasured Sampling,TripletLosswithRandomSampling,ProxyNCA,
+ontherecallof1000samples(mAP@1000). Pleaseseethe Multi-SimilarityLoss,HistogramlossandNormalizedSoft-
+supplementary(supp. A.3)formoreinformation. max loss. To aggregate our evaluation metrics (cf. 4.1),
+weutilizethesamenormalizationprocedurediscussedin
+4.2.StudyingDMLparametersandarchitectures Sec. 4.2. Fig. 3summarizestheresultsforeachsampling
+strategybyreportingthedistributionsofnormalizedscores
+Nowwestudytheinfluenceofparameters&architectures
+ofallpairwisecombinationsoftraininglossandevaluation
+discussed in Sec. 3.3 using five different objectives. For
+metrics. Ouranalysisrevealsthatthebatchsamplingpro-
+eachexperiment,allmetricsnotedinSec.4.1aremeasured.
+cessindeedeffectsDMLtrainingwithadifferenceinmean
+Foreachloss,everymetricisnormalizedbythemaximum
+performance up to 1.5%. While there is no clear winner
+acrosstheevaluatedvaluerange.Thisenablesanaggregated
+across all datasets, we observe that the SPC-2 and FRD
+summaryofperformanceacrossallmetrics,wherediffer-
+samplersperformverywelland,inparticular,consistently
+encescorrespondtorelativeimprovement. Fig.2analyzes
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+(a)CUB200-2011 (b)CARS196 (c)SOP
+Figure3.Comparisonofmini-batchminingstrategiesonthreedifferentdatasets.PerformancemeasuresRecall@1and2,NMI,mAPand
+F1arenormalizedacrossmetricsandlossfunction.Weplotthedistributionsofrelativeperformancesforeachstrategy.
+ticularlyonCUB200-2011andCARS196wefindahigher
+performancesaturationbetweenmethodsascomparedto
+SOP due to strong differences in data distribution. Gen-
+erally,performancebetweencriteriaismuchmoresimilar
+thanliteratureindicates,(seealsoconcurrentworkbyMus-
+graveetal.(2020)). Wefindthatrepresentativesofranking-
+basedobjectivesoutperformtheirclassification/NCE-based
+counterparts,thoughnotsignificantly. Onaverage,margin
+Figure4.MetricsCorrelationmatrixforstandard(Recall,NMI) loss(Wuetal.,2017)andmultisimilarityloss(Wangetal.,
+andunderreportedretrievalmetrics.mAPdenotesmAP@C.Please 2019a)offerthebestperformanceacrossdatasets,though
+refertothesupplementaryformoreinformation. notbyanotablemargin. Remarkably,underourcarefully
+chosen training setting, a multitude of losses compete or
+even outperform more involved state-of-the-art DML ap-
+outperformtheSPC-4strategywhichiscommonlyreported
+proachesontheSOPdataset. Foradetailedcomparisonto
+tobeusedinliterature(Wuetal.,2017;Schroffetal.,2015).
+thestate-of-the-art,werefertothesupplementary(supp. F).
+Implications: OurstudyindicatesthatDMLbenefitsfrom
+Implications:Underthesamesetup,performancesaturates
+datadiversityinmini-batches,independentofthechosen
+across methods, contrasting results reported in literature.
+trainingobjective. Thiscoincideswiththegeneralbenefit
+Taking into account standard deviations, usually left un-
+oflargerbatchsizesasnotedinsection4.2. Whilecomplex
+reported, improvements become even less significant. In
+miningstrategiesmayperformbetter,simpleheuristicslike
+addition,carefullytrainedbaselinemodelsareabletoout-
+SPC-2aresufficient.
+performstate-of-the-artapproacheswhichuseconsiderable
+strongerarchitectures. Thus,toevaluatethetruebenefitof
+4.4.ComparingDMLmodels
+proposedcontributions,baselinemodelsneedtobecompet-
+Basedonourtrainingparameterandbatch-samplingeval- itiveandimplementedundercomparablesettings.
+uationswecomparealargeselectionof14differentDML
+objectivesand4miningmethodsunderfixedtrainingcondi-
+5.GeneralizationinDeepMetricLearning
+tions(see4.1&4.2),mostofwhichclaimstate-of-the-art
+byanotablemargin. Forranking-basedmodels,weemploy Theprevioussectionshowedhowdifferentmodelandtrain-
+distance-based tuple mining (D) (Wu et al., 2017) which ingparameterchoicesresultinvastlydifferentperformances.
+provedmosteffective. Wealsoincluderandom,semihard However, how such differences can be explained best on
+sampling(Schroffetal.,2015)andasoftversionofhard basisofthelearnedembeddingspaceisanopenquestion
+sampling(Roth&Brattoli,2019)forourtupleminingstudy and, for instance, studied under the concept of compres-
+using the classic triplet loss. Loss-specific hyperparame- sion (Tishby & Zaslavsky, 2015). Recent work (Verma
+tersaredeterminedviasmallcross-validationgridsearches etal.,2018)linkscompressiontoclass-conditionedflatten-
+aroundoriginallyproposedvaluestoadjustforourtraining ing of representation, indicated by an increased decay of
+setup. Exact parameters and method details are listed in singularvaluesobtainedbySingularValueDecomposition
+supp. A.1. Table2summarizesourevaluationresultsonall (SVD)onthedatarepresentations. Thus,classrepresenta-
+benchmarks(withothermetricrankingss.a. mAP@Cor tionsoccupyamorecompactvolume,therebyreducingthe
+mAP@1000inthesupplementary(supp. I)),whileFig. 4 numberofdirectionswithsignificantvariance. Thesubse-
+measurescorrelationsbetweenallevaluationmetrics. Par-
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+Benchmarks→ CUB200-2011 CARS196 SOP
+Approaches↓ R@1 NMI R@1 NMI R@1 NMI
+Imagenet(Dengetal.,2009) 43.77 57.56 36.39 37.96 48.65 58.64
+Angular(Wangetal.,2017) 62.10±0.27 67.59±0.26 78.00±0.32 66.48±0.44 73.22±0.07 89.53±0.01
+ArcFace(Dengetal.,2018) 62.67±0.67 67.66±0.38 79.16±0.97 66.99±1.08 77.71±0.15 90.09±0.03
+Contrastive(Hadselletal.,2006)(D) 61.50±0.17 66.45±0.27 75.78±0.39 64.04±0.13 73.21±0.04 89.78±0.02
+GenLifted(Hermansetal.,2017) 59.59±0.60 65.63±0.14 72.17±0.38 63.75±0.35 75.21±0.12 89.84±0.01
+Hist.(Ustinova&Lempitsky,2016) 60.55±0.26 65.26±0.23 76.47±0.38 64.15±0.36 71.30±0.10 88.93±0.02
+Margin(D,β =0.6)(Wuetal.,2017) 62.50±0.24 67.02±0.37 77.70±0.32 65.29±0.32 77.38±0.11 90.45±0.03
+Margin(D,β =1.2)(Wuetal.,2017) 63.09±0.46 68.21±0.33 79.86±0.33 67.36±0.34 78.43±0.07 90.40±0.03
+Multisimilarity(Wangetal.,2019a) 62.80±0.70 68.55±0.38 81.68±0.19 69.43±0.38 77.99±0.09 90.00±0.02
+Npair(Sohn,2016) 61.63±0.58 67.64±0.37 77.48±0.28 66.55±0.19 75.86±0.08 89.79±0.03
+Pnca(Movshovitz-Attiasetal.,2017) 62.80±0.48 66.93±0.38 78.48±0.58 65.76±0.22 − −
+Quadruplet(D)(Chenetal.,2017) 61.71±0.63 66.60±0.41 76.34±0.27 64.79±0.50 76.95±0.10 90.14±0.02
+SNR(D)(Yuanetal.,2019) 62.88±0.18 67.16±0.25 78.69±0.19 65.84±0.52 77.61±0.34 90.10±0.08
+SoftTriple(Qianetal.,2019) 60.83±0.47 64.27±0.36 75.66±0.46 62.66±0.16 − −
+Softmax(Zhai&Wu,2018) 61.66±0.33 66.77±0.36 78.91±0.27 66.35±0.30 76.92±0.64 89.82±0.15
+Triplet(D)(Wuetal.,2017) 62.87±0.35 67.53±0.14 79.13±0.27 65.90±0.18 77.39±0.15 90.06±0.02
+Triplet(H)(Roth&Brattoli,2019) 61.61±0.21 65.98±0.41 77.60±0.33 65.37±0.26 73.50±0.09 89.25±0.03
+Triplet(R)(Schroffetal.,2015) 58.48±0.31 63.84±0.30 70.63±0.43 61.09±0.27 67.86±0.14 88.35±0.04
+Triplet(S)(Schroffetal.,2015) 60.09±0.49 65.59±0.29 72.51±0.47 62.84±0.41 73.61±0.14 89.35±0.02
+R-Contrastive(D) 63.57±0.66 67.63±0.31 81.06±0.41 67.27±0.46 74.36±0.11 89.94±0.02
+R-Margin(D,β =0.6) 64.93±0.42 68.36±0.32 82.37±0.13 68.66±0.47 77.58±0.11 90.42±0.03
+R-Margin(D,β =1.2) 63.32±0.33 67.91±0.66 81.11±0.49 67.72±0.79 78.52±0.10 90.33±0.02
+R-SNR(D) 62.97±0.32 68.04±0.34 80.38±0.35 67.60±0.20 77.69±0.25 90.02±0.06
+R-Triplet(D) 63.28±0.18 67.86±0.51 81.17±0.11 67.79±0.23 77.33±0.14 89.98±0.04
+Table2.ComparisonofRecall@1andNMIperformancesforallobjectivesaveragedover5runs. Eachmodelistrainedusingthe
+sametrainingsettingover150epochsforCUB/CARSand100epochsforSOP.’R-’denotesmodeltrainedwithρ-regularization.Bold
+denotesbestresultsexcludingregularization.Boldbluemarksoverallbestresults.Pleasenotethatarankingonallothermetrics(s.a.
+mAP@C,mAP@1000)aswellasavisualsummarycanbefoundinthesupplementary(supp.I,supp.C)!
+quentstrongfocusonthemostdiscriminativedirectionsis CUB200-2011,CARS196andSOP6.ComparingR@1and
+showntobebeneficialforclassicclassificationscenarios ρ(Φ)revealssignificantinversecorrelation(≤ −0.63)be-
+withi.i.d. trainandtestdistributions. However,thisoverly tweengeneralizationandthespectraldecayofembedding
+discardsfeatureswhichcouldcapturedatacharacteristics spacesΦ,whichhighlightsthebenefitofmoredirectionsof
+outsidethetrainingdistribution. Hence,generalizationin varianceinthepresenceoftrain-testdistributionshifts.
+transferproblemslikeDMLishinderedduetotheshiftin We now compare our finding to commonly exploited
+trainingandtestingdistribution(Bellet&Habrard,2015). concepts for training such as (i) larger margins between
+Wethushypothesizethatactuallyretainingaconsiderable classes (Deng et al., 2018; Liu et al., 2017), i.e. an
+amountofdirectionsofsignificantvariance(DoV)iscrucial increase in average inter-class distances π (Φ) =
+inter
+tolearnawellgeneralizingembeddingfunctionφ. 1 (cid:80) d(µ(Φ ),µ(Φ ));(ii)explicitlyintroduc-
+Zinter yl,yk,l(cid:54)=k yl yk
+To verify this assumption, we analyze the spectral decay ingintra-classvariance(Linetal.,2018),whichisindicated
+oftheembeddedtrainingdataΦ := {φ(x)|x ∈ X}via by an increase in average intra-class distance π (Φ) =
+X intra
+SVD. We then normalize the sorted spectrum of singular 1 (cid:80) (cid:80) d(φ ,φ ). We also investi-
+values (SV) S ΦX 3 and compute the KL-divergence to a g Z a in t tr e a (ii y i l ) ∈Y their φi r , e φ l j a ∈ ti Φ o y n l ,i b (cid:54)= y j usin i g j the ratio π ratio (Φ) =
+D-dim. discrete uniform distribution U D , i.e. ρ(Φ) = π intra (Φ)/π inter (Φ), which can be regarded as an embed-
+KL(U D || S ΦX )4. We don’t consider individual training ding space density. Here, Φ yl = {φ i := φ θ (x i )|x i ∈
+classrepresentations,astestingandtrainingdistributionare X,y =y }denotesthesetofembeddedsamplesofaclass
+i l
+shifted5. Lower values of ρ(Φ) indicate more directions y ,µ(Φ )theirmeanembeddingandZ ,Z normaliza-
+l yl inter intra
+ofsignificantvariance. Usingthismeasure,weanalyzea tionconstants. Fig. 5comparesthesemeasureswithρ(Φ).
+largeselectionofDMLobjectivesinFig. 5(rightmost)on It is evident that neither of the distance related measures
+π (Φ)consistentlyexhibitssignificantcorrelationwithgen-
+3ExcludinghighestSVwhichcanobfuscateremainingDoVs. •
+eralizationperformancewhentakingallthreedatasetsinto
+4Forsimplicityweusethenotationρ(Φ)insteadofρ(Φ ).
+X
+5Forcompleteness,class-conditionedsingularvaluespectraas
+6Adetailedcomparisoncanbefoundinsupp.I.
+Vermaetal.(2018)areexaminedinsupp.H.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+Figure7.Sing.ValueSpectrumformodelstrainedwith(red)and
+without(blue)ρ-regularizationforvariousranking-basedcriteria.
+Figure5.Correlationbetweengeneralizationandstructuralprop-
+x inagivenranking-lossformulation(cf. Sec. 3.1)with
+ertiesderivedfromΦ usingdifferentDMLobjectivesoneach p
+X probabilityp . Thispushessamplesofthesameclass
+dataset. Left-to-Right: Meanintra-classdistancesπ &inter- switch
+intra
+apart, enabling a DML model to capture extra non-label-
+classdistancesπ ,theratioπ /π andspectraldecayρ.
+inter intra inter
+discriminativefeatureswhiledampeningthecompression
+inducedbystrongdiscriminativetrainingsignals.
+Fig.6depictsa2Dtoyexample(detailssupp.G)illustrating
+theeffectofourproposedregularizationwhilehighlighting
+theissueofoverlycompresseddatarepresentations. Even
+thoughthetrainingdistributionexhibitsfeaturesneededto
+separatealltestclasses,thesefeaturesaredisregardedby
+thestrongdiscriminativetrainingsignal. Regularizingthe
+Figure6.Toyexampleillustratingtheeffectof ρ-regularization. compressionbyattenuatingthespectraldecayρ(Φ)enables
+(Leftmost) training and test data. (Mid-left) A small, normal- themodeltocapturemoreinformationandexhibitstronger
+izedtwo-layerfully-connectednetworktrainedwithstandardcon- generalizationtotheunseentestclasses. Inaddition,Fig. 7
+trastivelossfailstoseparatealltestclassesduetoexcessivecom- verifiesthattheρ-regularizationalsoleadstoadecreased
+pressionofthelearnedembedding. (Mid-right)Theregularized
+spectral decay on DML benchmark datasets, resulting in
+embeddingsuccessfullyseparatesthetestclassesbyintroducing
+improvedrecallperformance(cf. Tab. 2(bottom)),while
+a lower spectral decay. (Rightmost) Singular value spectra of
+beingreasonablyrobusttochangesinp (seesupp. B).
+trainingembeddingslearnedwithandwithoutregularization. switch
+Incontrast, intheappendixwealsoseethatencouraging
+highercompressionseemstobedetrimentaltoperformance.
+Implications: Implicitlyregularizingthenumberofdirec-
+account. For CUB200-2011 and CARS196, we however
+tionsofsignificantvariancecanimprovegeneralization.
+find that an increased embedding space density (π ) is
+ratio
+linkedtostrongergeneralisation. ForSOP,itsestimateis
+likelytoonoisyduetothestrongimbalancebetweendataset 6.Conclusion
+sizeandamountofsamplesperclass.
+Inthiswork,wecounteracttheworryingtrendofdiverging
+Implications: Generalization in DML exhibits strong in-
+trainingprotocolsinDeepMetricLearning(DML).Wecon-
+versecorrelationtotheSVspectrumdecayoflearnedrepre-
+ductalarge,comprehensivestudyofimportanttrainingcom-
+sentations,aswellasaweakercorrelationtotheembedding
+ponentsandobjectivesinDMLtocontributetoimproved
+space density. This indicates that representation learning
+comparabilityofrecentandfutureapproaches.Onthisbasis,
+underconsiderableshiftsbetweentrainingandtestingdis-
+westudygeneralizationinDMLanduncoverastrongcorre-
+tributionishurtbyexcessivefeaturecompression,butmay
+lationtothelevelofcompressionandembeddingdensityof
+benefitfromamoredenselypopulatedembeddingspace.
+learneddatarepresentation. Ourfindingsrevealthathighly
+compressedrepresentationsdisregardhelpfulfeaturesfor
+5.1.ρ-regularizationforimprovedgeneralization
+capturingdatacharacteristicsthattransfertounknowntest
+We now exploit our findings to propose a simple ρ- distributions. Tothisend,weproposeasimpletechnique
+regularizationforranking-basedapproachesbycounteract- forranking-basedmethodstoregularizethecompression
+ingthecompressionofrepresentations. Werandomlyalter ofthelearnedembeddingspace,whichresultsinboosted
+tuplesbyswitchingnegativesamplesx withthepositive performanceacrossallbenchmarkdatasets.
+n
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+Acknowledgements Bouthillier,X.,Laurent,C.,andVincent,P. Unreproducible
+researchisreproducible. InInternationalConferenceon
+We would like to thank Alex Lamb for insightful discus-
+MachineLearning,pp.725–734,2019.
+sions, and Sharan Vaswani & Dmitry Serdyuk for their
+valuablefeedback(allMila). WealsothankNvidiafordo- Brock,A.,Donahue,J.,andSimonyan,K.LargescaleGAN
+natingNVIDIADGX-1,andComputeCanadaforproviding trainingforhighfidelitynaturalimagesynthesis. CoRR,
+resourcesforthisresearch. abs/1809.11096, 2018. URL http://arxiv.org/abs/1809.
+11096.
+ReviewerComments
+Cakir,F.,He,K.,Xia,X.,Kulis,B.,andSclaroff,S. Deep
+metric learning to rank. In The IEEE Conference on
+Re: Data Augmentation/Different Spatial Resolution:
+ComputerVisionandPatternRecognition(CVPR),June
+Weagreethatdataaugmentationisanimportantfactorto
+2019.
+regularizetraining. Wehavemadesuretoanalyzetheim-
+pactofdifferentimageaugmentationsandresolutionson Chen, W., Chen, X., Zhang, J., and Huang, K. Beyond
+theperformance. triplet loss: a deep quadruplet network for person re-
+identification. InProceedingsoftheIEEEConferenceon
+Re: In-Shopdatasetexperiments: Thedatadistribution
+ComputerVisionandPatternRecognition,2017.
+of the In-Shop dataset is very similar to the SOP dataset,
+thusrelativeresultsaregenerallytransferable,whichiswhy
+Deng, J., Dong, W., Socher, R., Li, L.-J., Li, K., andFei-
+wehavedecidednottoincludeitinthiswork.
+Fei, L. ImageNet: A Large-Scale Hierarchical Image
+Re: Grammar and typos: We thank the reviewers for Database. InIEEEConferenceonComputerVisionand
+pointing out these errors and have made sure to correct PatternRecognition(CVPR),2009.
+them.
+Deng, J., Guo, J., Xue, N., and Zafeiriou, S. Arcface:
+Re: Missing references: All mentioned references have Additiveangularmarginlossfordeepfacerecognition,
+beenadded. 2018.
+Ge,W. Deepmetriclearningwithhierarchicaltripletloss.
+References
+InProceedingsoftheEuropeanConferenceonComputer
+Vision(ECCV),pp.269–285,2018.
+Achille,A.andSoatto,S. Informationdropout: Learning
+optimalrepresentationsthroughnoisycomputation,2016.
+Goyal, A., Islam, R., Strouse, D., Ahmed, Z., Botvinick,
+M.,Larochelle,H.,Bengio,Y.,andLevine,S. Infobot:
+Agarwal,P.K.,Har-Peled,S.,andVaradarajan,K.R. Ge- Transferandexplorationviatheinformationbottleneck,
+ometricapproximationviacoresets. Combinatorialand 2019.
+computationalgeometry,52:1–30,2005.
+Goyal, P., Dolla´r, P., Girshick, R., Noordhuis, P.,
+Alemi,A.A.,Fischer,I.,Dillon,J.V.,andMurphy,K.Deep Wesolowski, L., Kyrola, A., Tulloch, A., Jia, Y., and
+variationalinformationbottleneck,2016. He,K. Accurate,largeminibatchsgd: Trainingimagenet
+in1hour. arXivpreprintarXiv:1706.02677,2017.
+Belghazi,M.I.,Baratin,A.,Rajeswar,S.,Ozair,S.,Ben-
+Hadsell,R.,Chopra,S.,andLeCun,Y. Dimensionalityre-
+gio,Y.,Courville,A.,andHjelm,R.D. Mine: Mutual
+ductionbylearninganinvariantmapping. InProceedings
+informationneuralestimation,2018.
+oftheIEEEConferenceonComputerVisionandPattern
+Recognition,2006.
+Bellet,A. Supervisedmetriclearningwithgeneralization
+guarantees,2013. Harwood,B.,Kumar,B.,Carneiro,G.,Reid,I.,Drummond,
+T., et al. Smart mining for deep metric learning. In
+Bellet,A.andHabrard,A. Robustnessandgeneralization Proceedings of the IEEE International Conference on
+formetriclearning. Neurocomputing,151:259–267,Mar ComputerVision,pp.2821–2829,2017.
+2015. ISSN0925-2312. doi: 10.1016/j.neucom.2014.09.
+He,K.,Zhang,X.,Ren,S.,andSun,J. Deepresiduallearn-
+044. URLhttp://dx.doi.org/10.1016/j.neucom.2014.09.
+ingforimagerecognition. InProceedingsoftheIEEE
+044.
+conferenceoncomputervisionandpatternrecognition,
+pp.770–778,2016.
+Bouchacourt,D.,Tomioka,R.,andNowozin,S. Multi-level
+variationalautoencoder: Learningdisentangledrepresen- Hermans, A., Beyer, L., and Leibe, B. In defense of the
+tationsfromgroupedobservations. InAAAI2018,2018. tripletlossforpersonre-identification,2017.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+Heusel,M.,Ramsauer,H.,Unterthiner,T.,Nessler,B.,and Krause, J., Stark, M., Deng, J., and Fei-Fei, L. 3d ob-
+Hochreiter,S. Ganstrainedbyatwotime-scaleupdate ject representations for fine-grained categorization. In
+ruleconvergetoalocalnashequilibrium,2017. Proceedings of the IEEE International Conference on
+ComputerVisionWorkshops,pp.554–561,2013.
+Hu, J., Lu, J., and Tan, Y. Discriminative deep metric
+learningforfaceverificationinthewild. In2014IEEE Krogh,A.andHertz,J.A. Asimpleweightdecaycanim-
+ConferenceonComputerVisionandPatternRecognition, provegeneralization. InAdvancesinNeuralInformation
+2014. ProcessingSystems.1992.
+Huai, M., Xue, H., Miao, C., Yao, L., Su, L., Chen, C., Lin, X., Duan, Y., Dong, Q., Lu, J., and Zhou, J. Deep
+and Zhang, A. Deep metric learning: The generaliza- variationalmetriclearning. InTheEuropeanConference
+tionanalysisandanadaptivealgorithm. InProceedings onComputerVision(ECCV),September2018.
+oftheTwenty-EighthInternationalJointConferenceon
+Artificial Intelligence, IJCAI-19, pp. 2535–2541. Inter- Liu, W., Wen, Y., Yu, Z., Li, M., Raj, B., and Song, L.
+nationalJointConferencesonArtificialIntelligenceOr- Sphereface: Deephypersphereembeddingforfacerecog-
+ganization,72019. doi: 10.24963/ijcai.2019/352. URL nition. IEEEConferenceonComputerVisionandPattern
+https://doi.org/10.24963/ijcai.2019/352. Recognition(CVPR),2017.
+Ioffe,S.andSzegedy,C. Batchnormalization:Accelerating Lloyd,S.P. Leastsquaresquantizationinpcm. IEEETrans.
+deepnetworktrainingbyreducinginternalcovariateshift. InformationTheory,28:129–136,1982.
+InternationalConferenceonMachineLearning,2015.
+Manning,C.,Raghavan,P.,andSchu¨tze,H. Introductionto
+Jacob, P., Picard, D., Histace, A., and Klein, E. Metric informationretrieval. NaturalLanguageEngineering,16
+learningwithhorde: High-orderregularizerfordeepem- (1):100–103,2010.
+beddings. InTheIEEEConferenceonComputerVision
+andPatternRecognition(CVPR),2019. Milbich,T.,Roth,K.,Bharadhwaj,H.,Sinha,S.,Bengio,Y.,
+Ommer,B.,andCohen,J.P. Diva: Diversevisualfeature
+Jegou,H.,Douze,M.,andSchmid,C. Productquantization aggregationfordeepmetriclearning. 2020a.
+fornearestneighborsearch.IEEEtransactionsonpattern
+analysisandmachineintelligence,33(1):117–128,2011. Milbich,T.,Roth,K.,Brattoli,B.,andOmmer,B. Sharing
+mattersforgeneralizationindeepmetriclearning,2020b.
+Jiang*,Y.,Neyshabur*,B.,Krishnan,D.,Mobahi,H.,and
+Bengio,S. Fantasticgeneralizationmeasuresandwhere Mirzasoleiman,B.,Bilmes,J.,andLeskovec,J.Coresetsfor
+to find them. In International Conference on Learn- acceleratingincrementalgradientmethods,2020. URL
+ingRepresentations,2020. URLhttps://openreview.net/ https://openreview.net/forum?id=SygRikHtvS.
+forum?id=SJgIPJBFvH.
+Misra,I.andvanderMaaten,L. Self-supervisedlearning
+Johnson, T. B. and Guestrin, C. Training deep models ofpretext-invariantrepresentations,2019.
+fasterwithrobust,approximateimportancesampling. In
+Bengio, S., Wallach, H., Larochelle, H., Grauman, K., Movshovitz-Attias,Y.,Toshev,A.,Leung,T.K.,Ioffe,S.,
+Cesa-Bianchi, N., and Garnett, R. (eds.), Advances in andSingh,S.Nofussdistancemetriclearningusingprox-
+Neural Information Processing Systems 31, pp. 7265– ies. InProceedingsoftheIEEEInternationalConference
+7275.CurranAssociates,Inc.,2018. onComputerVision,pp.360–368,2017.
+Keskar, N. S., Mudigere, D., Nocedal, J., Smelyanskiy, Musgrave,K.,Belongie,S.,andLim,S.-N. Ametriclearn-
+M.,andTang,P.T.P. Onlarge-batchtrainingfordeep ingrealitycheck,2020.
+learning: Generalizationgapandsharpminima. arXiv
+preprintarXiv:1609.04836,2016. OhSong,H.,Xiang,Y.,Jegelka,S.,andSavarese,S. Deep
+metriclearningvialiftedstructuredfeatureembedding.
+Kim, W., Goyal, B., Chawla, K., Lee, J., and Kwon, K. In Proceedings of the IEEE Conference on Computer
+Attention-basedensemblefordeepmetriclearning. In VisionandPatternRecognition,pp.4004–4012,2016.
+ProceedingsoftheEuropeanConferenceonComputer
+Vision(ECCV),2018. Opitz,M.,Waltner,G.,Possegger,H.,andBischof,H. Deep
+metriclearningwithbier: Boostingindependentembed-
+Kingma,D.P.andBa,J. Adam: Amethodforstochastic dings robustly. IEEE transactions on pattern analysis
+optimization. 2015. andmachineintelligence,2018.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+Paszke,A.,Gross,S.,Chintala,S.,Chanan,G.,Yang,E., Tishby,N.andZaslavsky,N. Deeplearningandtheinfor-
+DeVito,Z.,Lin,Z.,Desmaison,A.,Antiga,L.,andLerer, mationbottleneckprinciple,2015.
+A. Automatic differentiation in pytorch. In NIPS-W,
+Ustinova,E.andLempitsky,V. Learningdeepembeddings
+2017.
+withhistogramloss. InAdvancesinNeuralInformation
+Qian,Q.,Shang,L.,Sun,B.,Hu,J.,Li,H.,andJin,R. Soft- ProcessingSystems,2016.
+tripleloss: Deepmetriclearningwithouttripletsampling.
+Verma,V.,Lamb,A.,Beckham,C.,Najafi,A.,Mitliagkas,
+2019.
+I.,Courville,A.,Lopez-Paz,D.,andBengio,Y. Manifold
+Roth, K. and Brattoli, B. Deep-metric-learning- mixup: Better representations by interpolating hidden
+baselines. https://github.com/Confusezius/ states,2018.
+Deep-Metric-Learning-Baselines,2019.
+Wah,C.,Branson,S.,Welinder,P.,Perona,P.,andBelongie,
+S. Thecaltech-ucsdbirds-200-2011dataset. 2011.
+Roth, K., Brattoli, B., and Ommer, B. Mic: Mining in-
+terclasscharacteristicsforimprovedmetriclearning. In
+Wang, J., Zhou, F., Wen, S., Liu, X., and Lin, Y. Deep
+Proceedings of the IEEE International Conference on
+metriclearningwithangularloss. InProceedingsofthe
+ComputerVision,pp.8000–8009,2019.
+IEEEInternationalConferenceonComputerVision,pp.
+2593–2601,2017.
+Roth,K.,Milbich,T.,andOmmer,B. Pads: Policy-adapted
+samplingforvisualsimilaritylearning,2020. Wang,X.,Han,X.,Huang,W.,Dong,D.,andScott,M.R.
+Multi-similaritylosswithgeneralpairweightingfordeep
+Rubner,Y.,Tomasi,C.,andGuibas,L.J. Theearthmover’s
+metriclearning,2019a.
+distanceasametricforimageretrieval. Int.J.Comput.
+Vision,40(2):99–121,November2000. ISSN0920-5691. Wang, X., Hua, Y., Kodirov, E., Hu, G., Garnier, R., and
+doi: 10.1023/A:1026543900054. URLhttps://doi.org/10. Robertson,N.M. Rankedlistlossfordeepmetriclearn-
+1023/A:1026543900054. ing. TheIEEEConferenceonComputerVisionandPat-
+ternRecognition(CVPR),2019b.
+Sanakoyeu,A.,Tschernezki,V.,Buchler,U.,andOmmer,
+B. Divideandconquertheembeddingspaceformetric Wu, C.-Y., Manmatha, R., Smola, A.J., andKrahenbuhl,
+learning. InTheIEEEConferenceonComputerVision P. Sampling matters in deep embedding learning. In
+andPatternRecognition(CVPR),2019. Proceedings of the IEEE International Conference on
+ComputerVision,pp.2840–2848,2017.
+Schroff,F.,Kalenichenko,D.,andPhilbin,J. Facenet: A
+unifiedembeddingforfacerecognitionandclustering. In Xuan, H., Souvenir, R., and Pless, R. Deep randomized
+ProceedingsoftheIEEEconferenceoncomputervision ensembles for metric learning. In Proceedings of the
+andpatternrecognition,pp.815–823,2015. EuropeanConferenceonComputerVision(ECCV),pp.
+723–734,2018.
+Shwartz-Ziv,R.andTishby,N. Openingtheblackboxof
+deepneuralnetworksviainformation,2017. Yu,B.,Liu,T.,Gong,M.,Ding,C.,andTao,D. Correcting
+thetripletselectionbiasfortripletloss. InProceedingsof
+Sinha, S., Zhang, H., Goyal, A., Bengio, Y., Larochelle, theEuropeanConferenceonComputerVision(ECCV),
+H.,andOdena,A. Small-gan: Speedingupgantraining pp.71–87,2018.
+usingcore-sets. arXivpreprintarXiv:1910.13540,2019.
+Yuan,T.,Deng,W.,Tang,J.,Tang,Y.,andChen,B. Signal-
+Smith, S. L., Kindermans, P.-J., Ying, C., and Le, Q. V. to-noiseratio: Arobustdistancemetricfordeepmetric
+Don’t decay the learning rate, increase the batch size. learning. TheIEEEConferenceonComputerVisionand
+arXivpreprintarXiv:1711.00489,2017. PatternRecognition(CVPR),2019.
+Zhai,A.andWu,H.-Y. Classificationisastrongbaseline
+Sohn,K. Improveddeepmetriclearningwithmulti-class
+n-pairlossobjective. InAdvancesinNeuralInformation fordeepmetriclearning,2018.
+ProcessingSystems,pp.1857–1865,2016.
+Zheng,W.,Chen,Z.,Lu,J.,andZhou,J. Hardness-aware
+deepmetriclearning. TheIEEEConferenceonComputer
+Szegedy, C., Liu, W., Jia, Y., Sermanet, P., Reed, S.,
+VisionandPatternRecognition(CVPR),2019.
+Anguelov,D.,Erhan,D.,Vanhoucke,V.,andRabinovich,
+A. Going deeper with convolutions. In Proceedings
+oftheIEEEconferenceoncomputervisionandpattern
+recognition,pp.1–9,2015.
+Supplementary: Revisiting Training Strategies and Generalization
+Performance in Deep Metric Learning
+A.DescriptionofMethods
+In this section, we briefly describe each DML training objective and triplet mining strategy used in our study, as well
+as the choice of their individual hyperparameters. General training parameters and details of the training protocol are
+alreadydiscussedinthemainpaperinSec. 4.1. Fornotation,werefertotheembeddingofanimagex includingoutput
+i
+normalizationasφ = φ(x ). Thenon-normalizedversionisdenotedasφ∗. Allmethodsoperateonthemini-batchB
+i i i
+containingimageindices. Ifnotmentionedotherwise,allembeddingsoperateindimensionD =128.
+A.1.TrainingCriteria
+Contrastive(Hadselletal.,2006) Thecontrastivetrainingformalismissimple: GivenembeddingpairsP (sampledfrom
+amini-batchofsizeb)containingananchorφ fromclassy andeitherapositiveφ withy =y oranegativeφ froma
+a a p p a n
+differentclass,y (cid:54)=y ,thenetworkφistrainedtominimize
+n a
+b
+1 (cid:88)
+L = I d (φ ,φ )+I [γ−d (φ ,φ )] (1)
+contr b yi=yj e i j yi(cid:54)=yj e i j +
+(i,j)∈P
+withmarginγ,whichwesetto1. Themarginensuresthatembeddingsarenotprojectedarbitrarilyfarapartfromeachother.
+Forourdistancefunctionweutilizethestandardeuclideandistanced (x,y)=(cid:107)x−y(cid:107) . Wecombinethecontrastiveloss
+e 2
+withthedistance-weightingnegativesamplingmentionedbelow.
+Triplet(Huetal.,2014) Tripletsextendthecontrastiveformalismtoprovideaconcurrentrankingsurrogateforboth
+negativeandpositivesampleembeddingsusingtripletsT sampledfromamini-batch:
+b
+1 (cid:88)
+L = [d (φ ,φ )−d (φ ,φ )+γ] (2)
+tripl b e a p e a n +
+(a,p,n)∈T
+ya=yp(cid:54)=yn
+withmarginγ =0.2,thusfollowingrecentimplementationsine.g. Rothetal.(2019)or(Wuetal.,2017). Initialworks
+(Schroffetal.,2015)usingthetripletlosscommonlyutilizedrandomorsemihardtripletsamplingandaGoogLeNet-based
+architecture. Recentmethodstypicallyemploythemoreeffectivedistance-weightedsampling(Wuetal.,2017)andmore
+powerfulnetworks(Rothetal.,2019;Sanakoyeuetal.,2019). Forcompleteness,wecomparethetriplet-lossperformance
+combindewithrandom,semihardanddistance-weightedsamplingschemesintroducedbelow.
+GeneralizedLiftedStructure(Hermansetal.,2017) TheGeneralizedLiftedStructurelossextendsthestandardlifted
+structureloss(OhSongetal.,2016)toincludeallavailableanchor-positiveandanchor-negativedistancepairswithina
+mini-batchB,insteadofutilizingonlyasingleanchor-positivecombination:
+ 
+L
+genlift
+= (cid:88) log (cid:88) exp (cid:0) d
+e
+(φ∗
+a
+,φ∗
+p
+) (cid:1) +log (cid:88) exp(γ−d
+e
+(φ∗
+a
+,φ∗
+n
+)) + ν
+b
+· (cid:88) (cid:107)φ∗
+a
+(cid:107)2
+2
+(3)
+a∈B p∈B,ya=yp n∈B,yn(cid:54)=ya
++
+a∈B
+withmini-batchsamplesofaclasscgroupedintoC,andsetsofC containedinC. φ∗denotesthenon-normalizedversion
+ofφ. Themarginγ =1servesthestandardpurposeofavoidingover-distancingalreadycorrectimagepairs. Toaccountfor
+increasingvalues,ν =0.005regularizestheembeddings.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+N-Pair(Sohn,2016) N-PairorN-Tuplelossesextendthetripletformalismtoincorporateallnegativesinthemini-batch
+Bby
+ 
+L = 1 (cid:88) log1+ (cid:88) exp(φ∗,Tφ −φ∗,Tφ∗)+ ν · (cid:88) (cid:107)φ∗(cid:107)2 (4)
+npair b  a n a p  b i 2
+(a,p)∈B n∈B i∈B
+ya=yp,a(cid:54)=p ya(cid:54)=yn
+withembeddingregularizationν =0.005,as(Sohn,2016)notedaslowconvergencefornormalizedembeddings.
+Angular(Wangetal.,2017) Byintroducinganangle-basedpenalty,theangularlosseffectivelyintroducesscaleinvariance
+andhigher-ordergeometricconstraintsthatarenotexplicitlyintroducedinnormalcontrastivelosses:
+ 
+L =L (φ∗)+ λ (cid:88) log(1+ (cid:88) exp (cid:0) 4tan2(cid:0) α(φ +φ )Tφ (cid:1)(cid:1) −2 (cid:0) 1+tan2(α) (cid:1) φTφ  (5)
+ang npair b  a p n a n
+(a,p)∈B n∈B
+ya=yp,a(cid:54)=p yn(cid:54)=ya
+withangularmarginα,which,asproposedintheoriginalpaper,issettoπ/4. λ = 2isthetrade-offbetweenstandard
+rankinglossesandtheangularconstraint. TheN-Pairparametersaresetasabove.
+Arcface(Dengetal.,2018) Arcfacetransformsthestandardsoftmaxformulationtypicallyusedinclassificationproblem
+toretrieval-basedproblemsbyenforcinganangularmarginbetweentheembeddingsφandanapproximatecenterW ∈Rc×d
+foreachclass,resultingin
+L =− 1(cid:88) log exp(s·cos(W y T i φ i +γ =0.5)) (6)
+arc b exp(s·cos(WTφ +γ =0.5))+ (cid:80) exp(s·cos(WTφ ))
+i∈B yi i j∈B yj i
+yi(cid:54)=yj
+Further, this training objective also introduces the additive angular margin penalty γ = 0.5 for increased inter-class
+discrepancy, while the scaling s = 16 denotes the radius of the effective utilized hypersphere S. The class centers are
+optimizedwithlearningrate0.0005.
+Histogram(Ustinova&Lempitsky,2016) Incontrasttomanysample-basedrankingobjectivefunctions,Histogram
+Loss learns to minimize the probability of a positive sample pair having a higher similarity score than a negative pair.
+Given a mini-batch B, the sets of positive similarities S+ = {φTφ |(i,j) ∈ P,y = y } and negative similarities
+i j i j
+S− ={φTφ |(i,j)∈P,y (cid:54)=y },oneoptimises
+i j i j
+δ(s,r)= 1 (cid:0)I ·(s−t )+I ·(t −s) (cid:1) (7)
+∆ s∈[tr−1,tr] r−1 s∈[tr−1,tr] r+1
+1 (cid:88)
+h+/−(r)= δ(s,r) (8)
+(cid:107)S+/−(cid:107)
+s∈S+/−
+(cid:32) r (cid:33)
+(cid:88) (cid:88)
+L = h−(r) h+(q) (9)
+hist
+r∈R q=1
+resultinginsoft,differentiablehistogramassignments. ThefinalobjectiveL thenpenalizesstrongoverlapbetweenthe
+hist
+probabilityofpositivepairshavinghigherdistance(i.e. itscumulativedistributiontopointr)thanrespectivenegativepairs.
+Suchahistogramlossintroducesasinglehyperparameter,namelythedegreeofhistogramdiscretisationR,whichwesetto
+65forCUB200-2011andCARS196and11forSOPinourstudy. Ingeneral,ourimplementationborrowsfromtheoriginal
+codebaseusedin(Ustinova&Lempitsky,2016).
+Margin(Wuetal.,2017) Marginlossextendsthestandardtripletlossbyintroducingadynamic,learnableboundary
+β betweenpositiveandnegativepairs. Thistransfersthecommontripletrankingproblemtoarelativeorderingofpairs
+P ={(i,j)|i,j ∈B,y (cid:54)=y }:
+i j
+(cid:88)
+L = γ+I (d(φ ,φ )−β)−I (d (φ ,φ )−β) (10)
+margin yi=yj i j yi(cid:54)=yj e i j
+(i,j)∈P
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+Thelearningrateoftheboundaryβ issetto0.0005,withinitialvalueeither0.6or1.2andtripletmarginγ =0.2. Forour
+implementation,weutilisethedistance-weightedtripletsamplingmethodhighlightedbelow.
+MultiSimilarity (Wang et al., 2019a) Unlike contrastive and triplet based ranking methods, the MultiSimilarity loss
+concurrently evaluates similarities between anchor and negative, anchor and positive, as well as positive-positive and
+negative-negativepairsinrelationtoananchor:
+
+s (φ ,φ ) s (φ ,φ )>min s (φ ,φ )−(cid:15)
+ c i j c i j j∈Pi c i j
+s∗(i,j)= s (φ ,φ ) s (φ ,φ )<max s (φ ,φ )+(cid:15) (11)
+c c i j c i j k∈Ni c i k
+0
+otherwise
+ 
+1(cid:88) 1 (cid:88) 1 (cid:88)
+L multisim = b  α log[1+ exp(−α(s∗ c (φ i ,φ j )−λ))]+ β log[1+ exp(β(s∗ c (φ i ,φ k )−λ))] (12)
+i∈B j∈Pi k∈Ni
+whereP andN denotethesetofpositiveandnegativesamplesforasamplex,withcosinesimilaritys (x,y)=xTyfor
+x x c
+twonormalizedvectorsx,y ∈Rd. Forourhyperparameters,weuseα=2,β =40,λ=0.5and(cid:15)=0.1.
+ProxyNCA(Movshovitz-Attiasetal.,2017) Thesamplingcomplexityoftuplesheavilyaffectsthetrainingconvergence.
+ProxyNCAintroducesaremedybyintroducingclassproxies,whichactasapproximationstoentireclasses. Thiswayonly
+ananchorissampledandcomparedagainsttherespectivepositiveandnegativeclassproxies. Utilizingoneproxyψ ∈Rd
+c
+perclassc∈C,ProxyNCAisthendefinedas
+(cid:32) (cid:33)
+L =−
+1(cid:88)
+log
+exp(−d
+e
+(φ
+i
+,ψ
+yi
+)
+(13)
+proxy b (cid:80) exp(−d(φ ,ψ )
+i∈B c∈C\{yi} i c
+Quadruplet(Chenetal.,2017) Thequadrupletlossisanextensiontothetripletloss, whichintroduceshigherlevel
+orderingconstraintonsampleembeddings. Byusingananchor,apositiveandtwoexclusivenegatives,thequadruplet
+criterionisdefinedas:
+(cid:88) (cid:88)
+L = [d(φ ,φ )−d(φ ,φ )+γ ] + [d(φ ,φ )−d(φ ,φ )+γ ] (14)
+Quadr i j i k 1 + i k l k 2 +
+i,j,k∈B i,j,k,l∈B
+yi=yj,yj(cid:54)=yk yi=yj,yj(cid:54)=yk,yl(cid:54)=yk,yl(cid:54)=yj
+withmarginparametersγ =1andγ =0.5. Weutilizedistance-weightedsamplingtoproposethefirstnegativesamplek,
+1 2
+whichwefoundtoworkbetterthanthequadrupletsamplingschemeoriginallyproposedinthepaper.
+SNR(Yuanetal.,2019) TheSignal-to-Noise-Ratioloss(SNR)introducesanoveldistancemetricbasedontheratio
+betweenanchorembeddingvarianceandvarianceofnoise,whichissimplydefinedasthedifferencebetweenanchorand
+comparedembedding. Thisoptimisestheembeddingspacedirectlyforinformativeness. Thecompletelosscanthenbe
+writtenas
+L = (cid:88) (cid:34)(cid:80)D m=1 (φ i,m −φ j,m ) − (cid:80)D m=1 (φ i,m −φ k,m ) +γ (cid:35) + λ(cid:88) (cid:13) (cid:13) (cid:13) (cid:88) D φ (cid:13) (cid:13) (cid:13) (15)
+SNR (cid:80)D φ2 (cid:80)D φ2 b (cid:13) (cid:13) i,m(cid:13) (cid:13)
+i,j,k∈T m=1 i,m m=1 i,m + i∈B m=1
+withmarginparameterγ =0.2andregularizationλ=0.005toensurezero-meandistributions. Notethatφ =φ(x ) .
+i,m i m
+SoftTriple(Qianetal.,2019) SimilartoProxyNCA,theSoftTripleobjectivefunctionutilizeslearnabledataproxies
+totacklethesamplingproblem. However,insteadofclass-discriminativeproxies,asetofnormalizedintra-classproxies
+ψ ∈ΨcperclasscarelearnedusingtheNCA-basedsimilaritymeasureScofasampleitoallproxiesofaclassc. Denoting
+i
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+thesetofavailableclassesasC andthetotalsetofproxiesasΨ,weget
+exp(1φTψ)
+Sc = (cid:88) γ i (16)
+i (cid:80) exp(1φTψ)
+ψ∈Ψc ψ∈Ψc γ i
+1(cid:88) exp(λ(Syi −δ))
+L =− log i (17)
+STBase b exp(λ(Syi −δ))+ (cid:80) exp(λSy)
+i∈B i y∈Y\{yi} i
+(cid:80) (cid:80) (cid:112) 2−2ψTψ
+L =L +τ · c∈C ψ1,ψ2∈Ψc,ψ1(cid:54)=ψ2 1 2 (18)
+SoftTriple STBase |C|·|Ψ|·(|Ψ|−1)
+Thesecondtermdenotesaregularizationonthelearnedproxiestoensuresparsenessintheclasssetofproxies. Forour
+tests,weutilisedthefollowinghyperparametervalues(borrowingfromtheofficialimplementationin(Qianetal.,2019)):
+τ = 0.2,λ = 8,δ = 0.01,γ = 0.1andthenumberofproxiesperclass|Ψc| = 2(highervaluesresultedinmuchworse
+performance). Theproxylearningrateissetto0.00001.
+Normalized Softmax (Zhai & Wu, 2018) Similar to other classification-based losses in DML that are based on re-
+formulationsofthestandardsoftmaxfunction(suchasL ),thenormalizedsoftmaxlossisoptimizedbycomparinginput
+arc
+embeddingsφ toclassproxiesψ ∈RD perclassc∈C:
+i
+ 
+(cid:88) exp(
+φT
+i
+ψyi)
+L NormSoft =− log (cid:80) e T xp(φT i ψc)  (19)
+i∈B c∈C\{yi} T
+withtemperatureT =0.05forgradientboostingandclassproxylearningratesetto10−5.
+A.2.TupleMining
+Basiccontrastive,tripletorhigherorderrankinglossescommonlyneedtominetheirtrainingtuplesfromtheavailablemini-
+batch.Inourstudy,wemeasuretheinfluenceoftuplesamplingonthestandardtripletloss,whileutilisingDistance-Weighted
+Miningforallranking-basedobjectivefunctionsexceptN-Pairbasedmethods.
+RandomTupleMining(Huetal.,2014) Thetrivialwayinvolvestherandomsamplingoftuples. Simplyput,persample
+{x } weselectarespectivepositive{j|y =y ,i(cid:54)=j,j ∈B}ornegativesample{k|y (cid:54)=y ,i(cid:54)=k,k ∈B}.
+i i∈B j i j i
+SemihardTripletMining(Schroffetal.,2015) Thepotentialnumberoftripletsscalescubicintrainingsetsize. During
+learning,moreandmoreofthosetripletsarecorrectlyorderedandeffectivelyprovidenotrainingsignal(Schroffetal.,
+2015),thusimpairingtheremainingtrainingprocess. Toalleviatethis,negativesamplesarecarefullyselectedbasedonthe
+anchor-positivesampledistance(whicharesampledatrandom). Givenananchorembeddingφ anditspositiveφ ,the
+a p
+negativeissampledrandomlyfromtheset
+φ ∈{φ |n∈B,y (cid:54)=y ,(cid:107)φ −φ (cid:107)2 <(cid:107)φ −φ (cid:107)2}. (20)
+n n n a a p 2 a n 2
+Thisway, onlynegativesareconsideredwhicharereasonablyhardtoseparatefromananchor. Moreover, thismining
+strategyavoidsthesamplingofoverlayhardnegatives,whichoftencorrespondtodatanoiseandpotentiallyleadtomodel
+collapsesandbadlocalminima(Schroffetal.,2015).
+SofthardTripletMining(Roth&Brattoli,2019) Whileitwasjustifiablynotedin(Schroffetal.,2015)thataselection
+of ’hard’ samples hurts training, (Roth & Brattoli, 2019) show that a probabilistic (soft) selection of potentially hard
+candidatescanactuallybenefitperformance. Givenananchorembeddingφ ,positiveφ andφ arerandomlyselected
+a p n
+from
+φ ∈{φ |n∈B,y (cid:54)=y ,(cid:107)φ −φ (cid:107)2 < argmax (cid:107)φ −φ (cid:107)2} (21)
+n n n a a n 2 a p 2
+p∈B,ya=yp
+and
+φ ∈{φ |a∈B,y =y ,(cid:107)φ −φ (cid:107)2 > argmin (cid:107)φ −φ (cid:107)2}. (22)
+a a n a a n 2 a n 2
+n∈B,ya(cid:54)=yp
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+Doingsoprovidesaselectionof’hard’positiviesandnegatives. Thisreducestheriskofpotentialmodelcollapsesandbad
+localminima(asnotedinSchroffetal.(2015)).
+Distance-WeightedTupleMining(Wuetal.,2017) InDML,theembeddingspacesaretypicallynormalizedtoaD-
+dimensional(unit)hypersphereSD−1forregularisationpurposes(Wuetal.,2017). Theanalyticaldistributionofpairwise
+distancesonahyperspherefollows
+1
+q(d e (φ i ,φ j ))∝d e (φ i ,φ j )D−2[1− 4 d e (φ i ,φ j )] D 2 −3 (23)
+forarbitraryembeddingpairsφ ,φ ∈SD−1. Inordertosamplenegativesfromthewholerangeofpossibledistancestoan
+i j
+anchor,Wuetal.(2017)proposetosamplenegativesbasedonadistancedistributioninversetoq,i.e.
+P(n|a)∝min(λ,q−1(d (φ ,φ )) (24)
+e a n
+Wesetλ=0.5andlimitthedistancesto1.4.
+A.3.EvaluationMetrics
+Inthissection,weexaminetheevaluationmetricstomeasuretheperformanceofthestudiedmodelsonathetestsetX .
+test
+Recall@k(Jegouetal.,2011) Let
+(cid:88)
+Fk = argmin d (φ(x ),φ(x )) (25)
+q e q f
+F⊂Xtest,|F|=k
+xf∈F
+bethesetofthefirstknearestneighboursofasamplex ,thenwemeasureRecall@kas
+p
+(cid:40)
+R@k = 1 (cid:88) 1 ∃x i ∈F q k s.t.y i =y q (26)
+|X | 0 otherwise
+test
+xq∈Xtest
+whichmeasurestheaveragenumberofcasesinwhichforagivenqueryx thereisatleastonesampleamongitstopk
+q
+nearestneighboursx withthesameclass,i.e. y =y .
+i i q
+Normalized Mutual Information (NMI) (Manning et al., 2010) To measure the clustering quality using NMI, we
+embedallsamplesx ∈X toobtainΦ andperformaclustering(e.g. K-Means(Lloyd,1982)). Following,weassign
+i test Xtest
+all samples x a cluster label w indicating the closest cluster center and define Ω = {ω }K with ω = {i|w = k}
+i i k k=1 k i
+and K = |C| being the number of classes and clusters. Similarly for the true labels y we define Υ = {υ }K with
+i c c=1
+υ ={i|y =c}. Thenormalizedmutualinformationisthencomputedas
+c i
+I(Ω,Υ)
+NMI(Ω,Υ)= (27)
+2(H(Ω)+H(Υ)
+withmutualInformationI(·,·)betweenclusterandlabels,andentropyH(·,·)ontheclustersandlabelsrespectively.
+F1-Score(Sohn,2016) TheF1-scoremeasurestheharmonicmeanbetweenprecisionandrecallandisacommonlyused
+retrievalmetric,placingequalimportancetobothprecisionandrecall. Itisdefinedas
+2PR
+F1= (28)
+P +R
+withprecisionP andRecallRdefinedovernearestneighbourretrievalasdoneforRecall@k.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+Figure8.Analysisoftheinfluenceof p onRecall@1usingmarginlosswithβ =0.6. Dashedlinesdenoteperformancewithout
+switch
+ρ-regularization.
+MeanAveragePrecisionmeasuredonRecall(mAP)@Cand@1000: ThemAP-scoremeasuredonrecallfollowsthe
+samedefinitionasstandardmAP,howevertherecalledsamplesaredeterminedbythenearestneighbourranking. Inourcase,
+weproposetousemAP@CandmAP@C.mAP@Cisequivalenttothemeanovertheclass-wiseaverageprecision@k with
+c
+k beingthenumberofsampleswithlabelc∈C,whichonlyrecallsasmanysamplesastherearemembersinaclass. For
+c
+completeness,wealsousemAP@1000,whichrecallsthe1000nearestsamples. WithFkc definedasineq. 25,thisgives
+q
+(cid:12) (cid:12)
+mAP@C= 1 (cid:88) (cid:88) (cid:12){x i ∈F q kc|y i =y q }(cid:12) (29)
+|X | k
+test c
+c∈Cxq∈Xtest∧yq=c
+(cid:12) (cid:12)
+mAP@1000= 1 (cid:88) (cid:88) (cid:12){x i ∈F q 1000|y i =y q }(cid:12) (30)
+|X | 1000
+test
+c∈Cxq∈Xtest∧yq=c
+B.Evaluatingtherobustnessofp choices
+switch
+For all benchmarks, we evaluate the change in performance for varying values of p . As can be seen in figure 8,
+switch
+performancesteadilyincreasesuptoapointofsaturation,wheretheregulatorysignalovershadowsthediscriminativeone.
+Inaddition,itsclearthatperformanceincreasesarereasonablyrobustagainstchangesinp .
+switch
+C.VisualcomparisonofDMLobjectivesonbenchmarks
+Thisfigureisthefullversionofthefirstpagefigure(Fig. 1). Itqualitativelysupportsthesaturationofperformancenotedin
+section4andtable2.
+D.Correlationbetweenperformanceandspectraldecayρ
+Similar to Fig. 5 (rightmost) in the main paper, we now provide a more detailed illustration in Fig. 10 comparing the
+performanceofthetrainingobjectivesandtheircorrespondingspectraldecayρ(Φ). Forrankinglosses,wefurtherinclude
+theresultsusingρ-regularizationwhiletraining,whichfurthershowsthatineachcaseagaininperformanceisrelatedtoa
+decreaseofρ(Φ). Especiallythecontrastiveloss(Hadselletal.,2006)greatlyprofitsfromourproposedregularization,
+asalsoindicatedbytheanalysisofthesingularvaluespectra(cf. Fig. 8ofmainpaper). Itslargegains,morethen5%on
+theCARS196dataset,iswellexplainedbycomparisonofitstrainingobjectivewiththoseoftriplet-basedformulations.
+Thelatteroptimizesoverrelativepositive(d (x ,x )))andnegativedistances(d (x ,x ))uptoafixedmarginγ,which
+φ a p φ a n
+counteracts a compression of the embedding space to a certain extend. On the other hand, the constrastive loss, while
+controlling only the negative distances by γ, is able to perform an unconstrained contraction of entire classes, which
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+Figure9.MeanrecallperformanceandstandarddeviationofvariousDMLobjectivefunctionstrainedwith(green)andwithout(orange)
+ourproposedregularization.
+Approach Architecture Dim R@1R@10R@100 NMI
+DVML(Linetal.,2018) GoogLeNet 512 70.2 85.2 93.8 90.8
+HTL(Ge,2018) Inception-BN 512 74.8 88.3 94.8 -
+MIC(Rothetal.,2019) ResNet50 128 77.2 89.4 95.6 90.0
+D&C(Sanakoyeuetal.,2019) ResNet50 128 75.9 88.4 94.9 90.2
+Rank(Wangetal.,2019b) Inception-BN 1536 79.8 91.3 96.3 90.4
+ABE(Kimetal.,2018) GoogLeNet 512 76.3 88.4 94.8 -
+Margin(ours)(Wuetal.,2017) ResNet50 128 78.4 - - 90.4
+Table3.Comparisontothestate-of-the-artDMLmethodsonSOP(OhSongetal.,2016).Dimdenotesthedimensionalityofφ .
+θ
+facilitatesoverlycompressedembeddingspacesΦ.
+E.Analysisofper-classsingularvaluespectra
+InSec. 5ofourmainpaperweanalyzegeneralizationinDMLbyconsideringthedecayofthesingularvaluespectrum
+overallembeddedsamplesΦ . Thus,weanalyzethegeneralcompressionoftheentireembeddingspaceΦasunseentest
+X
+classescanbeprojectedanywhereinΦ,incontrasttoVermaetal.(2018)whichconductaclass-conditionedanalysisfor
+i.i.d. classificationproblems. Inordertoshowthattheeffectofρ-regularization(asshowninFig. 8inmainpaper)isalso
+reflectedintheclass-conditionedsingularvaluespectrum,weperformSVDonΦ andsubsequentlyaverageoverallclasses
+yl
+y ∈Y. Fig. 11comparesthesorted,first35singularvaluesforboth,modelstrainedwithandwithoutρ-regularization. We
+l
+clearlyseethattheregularizationdecreasestheaveragedecayofsingularvaluessimilartothetotalsingularvaluespectra
+showninthemainpaper.
+F.Comparisontostate-of-the-artapproachesonSOPdataset
+Inthissectionweprovideadetailedcomparisonbetweencurrentstate-of-the-artDMLapproachesandourstrongestbaseline
+model, marginloss(D,β = 1.2)(Wuetal.,2017), ontheSOPdatasetinTab. 6. Theresultsfortheseapproachesare
+takenfromtheirpublicmanuscripts. Weobservethatourbaselinemodeloutperformseachofthemodelsusingvarying
+architectures,butespeciallyotherResNet50-basedimplementations. WhileR50provestobeastrongerbasenetwork(cf.
+Fig. 2ofmainpaper)thanGoogLeNetbasedmodel,improvementsoverMICandD&Cusingthesamebackbonebyat
+least0.9%andmethodsbasedonthesimilarlystrongInception-BNshowcasetherelevanceofawell-definedbaseline.
+Additionally,eventhoughRankandABEemployconsiderablemorepowerfulnetworkensembles,ourcarefullymotivated
+baselineexhibitscompetitiveperformance.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+Figure10.Relationbetweenρ(Φ)andgeneralizationperformanceonRecall@1formodelstrainedwith(orange)andwithout(blue)
+ρ-regularization.Wereportmeanresultsanderror-bars(gray).Whenerrorissmall,barsarecovered.
+G.2DToyExamples
+Forourtoyexamples,weuseafully-connectednetworkwithtwo30neuronlayers. Bothinputandembeddingdimension
+are2D,whilethelatterisnormalizedontotheunitcircle. Eachofthefourtrainingandtestlinescontain15samplestaken
+fromeitherthediagonalorvertical/horizontallinesegments,respectively. Wetrainthenetworksbothwithandwithout
+regularizationfor200iterations,abatchsizeof24andlearningrateof0.03usingastandardcontrastiveloss(eq. 1)with
+marginγ =0.1. Forregularisation,wesetp =0.001. SimilartoFig.6inthemainpaper,Fig. 12showsanother2Dtoy
+switch
+examplebasedonverticallineswhichagaindemonstratestheeffectofcompressionandofourproposedρ-regularization.
+Theexampleconsistsoffourtraininglinesthatareseparableonlybytheirx-coordinateandatestsetoflineswhichare
+separablebytheiry-coordinate. Asweobserve,thetestsamplesarecollapsedontoasinglepointinthenon-regularized
+embeddingspace,thuscannotbedistinguished. Incontrast,theregularizedrepresentationallowsustoseparatethetest
+classesand,further,exhibitsadecreaseddecayinthesingularvaluespectrum.
+H.InfluenceofManifoldMixuponDML
+Now,weexaminetheeffectofapplyingtheregularizationproposedinManifoldMixup(Vermaetal.,2018)ontheDML
+transferlearningsetting. AsManifoldMixuphasbeenproposedtoincreasethecompressionofalearnedrepresentation
+inthecontextofstandardsupervisedclassification,itisexpectedtodecreasetheperformanceofDMLmodels. Forthat,
+wetrainthreedifferentDMLmodelsontheCUB200-2011dataset: (1)NormalizedSoftmax,(2)TripletwithDistance
+Sampling and (3) Margin loss with β = 0.6 and Distance Sampling. For (1), the implementation directly follows the
+standardimplementationnotedinVermaetal.(2018). Fortheranking-basedtrainingobjectives,weperformmixupinour
+ResNet50andgeneratethemixedclasslabels,whichconsequentlyhaveeitherone(ifimagefromthesameclassaremixed)
+ortwoentries(ifimagesfromdifferentclassesaremixed). Per(mixed)anchorembedding,thisgivesrisetouptotwo
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+Figure11.Averagedclass-conditionedspectraofsingularvaluesformodelstrainedwith(red)andwithout(blue)ρ-regularizationfor
+variousranking-basedlossfunctions.
+Figure12.Toyexamplebasedonhorizontallydiscriminativetrainingdata,wheretogoalistogeneralizetoverticallydiscriminative
+testdata. (Leftmost)trainingandtestdata. (Mid-left)Asmall,normalizedtwo-layerfully-connectednetworktrainedwithstandard
+contrastivelossfailstoseparatebothtestclassesasitneverhastoutilizeverticaldiscrimination.(Mid-right)Theregularizedembedding
+successfullyseparatesthetestclassesbyintroducingadditionalfeaturesanddecreasingthespectraldecay.(Rightmost)Singularvalue
+spectraoftrainingembeddingslearnedwithandwithoutregularization.
+possiblesetsoftriplets,forwhichwecomputethelossandweighitbytherespectivemixupcoefficientλ :
+k
+2 b
+LMix = 1(cid:88) (cid:88) λ · (cid:2) d (φλ,φλ)−d (φλ,φλ)+γ (cid:3) (31)
+tripl b k e a p e a n +
+k=1(a,p,n)∈Tk
+ya=yp(cid:54)=yn
+whereTk denotesthesetoftripletsgiventhek-thmixupclass-labelentryandλ therespectiveinterpolationvalue. Weuse
+k
+thenotationφλtodenotethatwenowoperateonmixupembeddings. Fortraining,weusethestandardhyperparametersas
+x
+describedinSec. 4.1. ofthemainpaperandamixup-αof2tosampletheinterpolationvaluesλ∼β(α,α)(seeVermaetal.
+(2018)).
+Theresultsafterrerunningbaselinesandmixup-variantsareshowninFig. 13. Asexpected,applyingManifoldMixupleads
+tomorecompressedrepresentations(indicatedbyastrongerspectraldecayandlowerρ(Φ)-scores)atthecostofreduced
+generalizationperformance. Thisholdsbothforthespectrumacrossthefullyembeddeddatasetaswellasonaclasslevel.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+(a)SingularValueSpectrumforallembeddings
+(b)SingularValueSpectrumforper-classembeddings
+Figure13. EvaluationofMixupInfluenceonzero-shotgeneralizationunderheavydistributionshift.
+I.DetailedResults
+Thissectioncontainsdetailedresultspermethodandevaluationmetricforthemethodcomparisons(Tab. 2inthemain
+paper)andevaluationofbatch-creationmethods(Fig. 3inmainpaper). Theresp. tablesforthemethodcomparisonsareTab.
+4forCUB200-2011(Wahetal.,2011),Tab. 5forCARS196(Krauseetal.,2013)andTab. 6forStanfordOnlineProducts
+(SOP)(OhSongetal.,2016). Inaddition,theswitchprobabilityp foreachregularisedmethodisnotedaswell. The
+switch
+batch-creationmethodsareevaluatedindetailinTab. 7forCUB200-2011,Tab. 8forCARS196andTab. 9forSOP.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+CUB200-2011(Wahetal.,2011)
+Approach R@1 R@2 F1 mAP@C mAP@1000 NMI
+Imagenet 43.77 57.56 19.14 9.48 14.62 52.91
+Angular 62.10±0.27 73.68±0.39 37.53±0.13 22.06±0.20 30.56±0.27 67.59±0.26
+ArcFace 62.67±0.67 74.38±0.25 37.33±0.51 23.05±0.43 31.62±0.68 67.66±0.38
+Contrastive(D) 61.50±0.17 72.95±0.32 35.40±0.75 23.46±0.18 32.38±0.21 66.45±0.27
+GenLifted 59.59±0.60 71.63±0.38 34.86±0.16 22.03±0.14 30.30±0.13 65.63±0.14
+Histogram 60.55±0.26 72.08±0.20 33.88±0.56 22.65±0.20 31.24±0.27 65.26±0.23
+Multisimilarity 62.80±0.70 74.37±0.52 39.03±0.63 22.58±0.37 30.92±0.49 68.55±0.38
+Margin(D,β =0.6) 62.50±0.24 74.15±0.33 36.34±0.61 23.83±0.20 32.90±0.29 67.02±0.37
+Margin(D,β =1.2) 63.09±0.46 74.41±0.37 38.36±0.66 23.61±0.31 32.63±0.40 68.21±0.33
+NPair 61.63±0.58 73.33±0.42 37.29±0.42 22.16±0.29 30.83±0.30 67.64±0.37
+ProxyNCA 62.80±0.48 74.03±0.15 36.20±0.73 23.94±0.37 33.13±0.59 66.93±0.38
+Quadruplet(D) 61.71±0.63 73.26±0.33 35.74±0.62 23.20±0.24 31.87±0.29 66.60±0.41
+SNR(D) 62.88±0.18 74.33±0.26 36.91±0.42 23.48±0.14 32.24±0.21 67.16±0.25
+SoftTriple 60.83±0.47 71.61±0.58 32.16±0.50 22.43±0.29 31.33±0.29 64.27±0.36
+Softmax 61.66±0.33 73.31±0.39 35.94±0.59 22.19±0.20 30.67±0.26 66.77±0.36
+Triplet(D) 62.87±0.35 74.31±0.28 37.30±0.32 23.59±0.12 32.64±0.13 67.53±0.14
+Triplet(R) 58.48±0.31 70.51±0.24 31.95±0.44 21.12±0.10 29.08±0.12 63.84±0.30
+Triplet(S) 60.09±0.49 71.75±0.27 34.46±0.54 22.49±0.26 31.40±0.39 65.59±0.29
+Triplet(H) 61.61±0.21 72.94±0.34 35.10±0.37 22.63±0.23 31.22±0.27 65.98±0.41
+R-Contrastive(D) 63.57±0.66 74.57±0.63 37.70±0.53 23.54±0.37 32.40±0.66 67.63±0.31
+R-Margin(D,β =0.6) 64.93±0.42 75.58±0.25 38.93±0.54 24.11±0.20 33.38±0.27 68.36±0.32
+R-Margin(D,β =1.2) 63.32±0.33 74.80±0.27 38.09±0.97 22.80±0.46 31.44±0.67 67.91±0.66
+R-SNR(D) 62.97±0.32 74.66±0.06 38.25±0.41 23.13±0.23 32.23±0.47 68.04±0.34
+R-Triplet(D) 63.28±0.18 74.97±0.28 38.03±0.77 23.28±0.28 32.36±0.47 67.86±0.51
+Table4.ComparisonofDMLsetupsforCUB200-2011.Wereportallrelevantperformancemetrics.Trainingisdoneover150epochs.
+CARS196(Krauseetal.,2013)
+Approach R@1 R@2 F1 mAP@C mAP@1000 NMI
+Imagenet 36.39 48.11 8.90 4.03 6.92 37.96
+Angular 78.00±0.32 85.97±0.18 36.40±0.75 22.18±0.35 29.29±0.37 66.48±0.44
+ArcFace 79.16±0.97 87.02±0.54 36.36±1.97 23.44±0.68 31.36±0.99 66.99±1.08
+Contrastive(D) 75.78±0.39 84.17±0.27 33.10±0.63 23.19±0.33 30.43±0.51 64.04±0.13
+GenLifted 72.17±0.38 81.94±0.30 32.46±0.43 21.66±0.24 28.66±0.31 63.75±0.35
+Histogram 76.47±0.38 84.50±0.36 33.04±0.67 23.21±0.10 30.31±0.14 64.15±0.36
+Multisimilarity 81.68±0.19 88.86±0.14 40.95±0.72 24.22±0.27 31.92±0.44 69.43±0.38
+Margin(D,β =0.6) 77.70±0.32 85.67±0.19 35.04±0.49 24.08±0.27 31.99±0.29 65.29±0.32
+Margin(D,β =1.2) 79.86±0.33 87.46±0.20 38.44±0.64 24.72±0.21 32.50±0.28 67.36±0.34
+NPair 77.48±0.28 85.73±0.18 35.88±0.40 23.15±0.25 30.70±0.14 66.55±0.19
+ProxyNCA 78.48±0.58 86.20±0.50 34.66±0.48 23.82±0.36 31.86±0.34 65.76±0.22
+Quadruplet(D) 76.34±0.27 84.67±0.23 34.28±0.88 23.49±0.32 31.30±0.48 64.79±0.50
+SNR(D) 78.69±0.19 86.44±0.22 35.88±0.71 24.20±0.43 32.17±0.60 65.84±0.52
+SoftTriple 75.66±0.46 83.72±0.29 31.07±0.56 22.90±0.25 30.42±0.31 62.66±0.16
+Softmax 78.91±0.27 86.66±0.23 35.51±0.85 22.81±0.14 29.84±0.13 66.35±0.30
+Triplet(D) 79.13±0.27 86.74±0.17 35.89±0.25 24.38±0.18 32.26±0.25 65.90±0.18
+Triplet(R) 70.63±0.43 80.43±0.26 29.02±0.47 19.48±0.20 25.97±0.28 61.09±0.27
+Triplet(S) 72.51±0.47 81.53±0.29 31.61±0.41 21.63±0.26 28.32±0.56 62.84±0.41
+Triplet(H) 77.60±0.33 85.63±0.27 34.71±0.31 23.84±0.13 31.31±0.15 65.37±0.26
+R-Contrastive(D) 81.06±0.41 88.06±0.21 37.72±0.84 24.55±0.34 32.53±0.43 67.27±0.46
+R-Margin(D,β =0.6) 82.37±0.13 89.14±0.12 39.28±0.41 25.67±0.32 34.57±0.30 68.66±0.47
+R-Margin(D,β =1.2) 81.11±0.49 88.20±0.22 38.76±0.94 24.17±0.50 31.60±0.79 67.72±0.79
+R-SNR(D) 80.38±0.35 87.95±0.37 38.62±0.47 24.72±0.15 33.02±0.23 67.60±0.20
+R-Triplet(D) 81.17±0.11 88.43±0.18 38.72±0.31 25.27±0.22 33.18±0.48 67.79±0.23
+Table5.ComparisonofDMLsetupsforCARS196.Wereportallrelevantperformancemetrics.Trainingisdoneover150epochs.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+StanfordOnlineProducts(OhSongetal.,2016)
+Approach R@1 R@2 F1 mAP@C mAP@1000 NMI
+Imagenet 48.65 53.82 11.97 17.47 18.58 58.64
+Angular 73.22±0.07 78.14±0.06 34.20±0.07 36.96±0.07 40.76±0.08 89.53±0.01
+ArcFace 77.71±0.15 82.23±0.09 37.15±0.13 41.20±0.11 45.76±0.14 90.09±0.03
+Contrastive(D) 73.21±0.04 77.87±0.04 35.66±0.14 37.43±0.05 41.21±0.06 89.78±0.02
+GenLifted 75.21±0.12 80.25±0.04 35.93±0.09 39.03±0.09 43.06±0.14 89.84±0.01
+Histogram 71.30±0.10 76.18±0.08 31.58±0.14 34.88±0.10 38.55±0.13 88.93±0.02
+Multisimilarity 77.99±0.09 82.64±0.08 36.75±0.18 41.52±0.07 46.23±0.08 90.00±0.02
+Margin(D,β =0.6) 77.38±0.11 81.78±0.12 39.04±0.16 41.69±0.14 45.92±0.17 90.45±0.03
+Margin(D,β =1.2) 78.43±0.07 82.83±0.09 38.63±0.18 42.43±0.12 46.90±0.16 90.40±0.03
+Npair 75.86±0.08 80.73±0.06 35.40±0.15 39.09±0.10 43.22±0.11 89.79±0.03
+Quadruplet(D) 76.95±0.10 81.54±0.05 37.43±0.14 40.82±0.13 45.04±0.12 90.14±0.02
+SNR(D) 77.61±0.34 82.34±0.31 37.17±0.37 41.47±0.38 46.03±0.47 90.10±0.08
+Softmax 76.92±0.64 81.34±0.63 36.01±0.71 40.23±0.78 44.29±0.78 89.82±0.15
+Triplet(D) 77.39±0.15 82.03±0.08 36.98±0.11 41.02±0.12 45.64±0.14 90.06±0.02
+Triplet(R) 67.86±0.14 73.02±0.11 28.98±0.12 31.92±0.17 35.46±0.20 88.35±0.04
+Triplet(S) 73.61±0.14 78.36±0.14 33.65±0.13 37.11±0.06 41.24±0.06 89.35±0.02
+Triplet(H) 73.50±0.09 78.38±0.06 33.01±0.20 36.85±0.05 40.64±0.07 89.25±0.03
+R-Contrastive(D) 74.36±0.11 78.85±0.11 36.39±0.07 38.45±0.14 42.60±0.14 89.94±0.02
+R-Margin(D,β =0.6) 77.58±0.11 81.93±0.10 38.87±0.19 41.74±0.12 46.02±0.12 90.42±0.03
+R-Margin(D,β =1.2) 78.52±0.10 82.95±0.07 38.36±0.16 42.55±0.10 46.77±0.11 90.33±0.02
+R-SNR(D) 77.69±0.25 82.46±0.17 36.78±0.36 41.44±0.31 45.74±0.38 90.02±0.06
+R-Triplet(D) 77.33±0.14 82.01±0.12 36.63±0.20 40.91±0.12 45.57±0.14 89.98±0.04
+Table6.ComparisonofDMLsetupsforStanfordOnlineProducts.Wereportallrelevantperformancemetrics..Trainingisdoneover100
+epochs.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+CUB200-2011(Wahetal.,2011)
+Approach R@1 R@2 F1 mAP@C NMI
+Histogram,SPC-2 57.92±0.26 69.74±0.03 31.21±0.18 21.27±0.28 63.26±0.18
+Histogram,SPC-4 57.88±0.35 70.18±0.28 31.15±0.17 21.39±0.26 63.37±0.12
+Histogram,SPC-8 57.87±0.40 70.09±0.41 31.72±0.09 21.56±0.07 63.51±0.13
+Histogram,DDM 58.22±0.33 70.61±0.26 32.08±0.21 21.69±0.26 63.55±0.20
+Histogram,GC 57.51±0.40 69.64±0.25 30.98±0.43 21.16±0.25 63.08±0.18
+Histogram,SPC-R 57.62±0.11 69.37±0.22 30.82±0.29 21.03±0.12 63.03±0.28
+Histogram,FRD 58.36±0.19 70.79±0.31 32.12±0.29 21.67±0.21 63.81±0.24
+Margin(D),SPC-2 62.66±0.28 73.98±0.08 37.77±0.51 23.40±0.22 67.76±0.19
+Margin(D),SPC-4 62.37±0.25 74.05±0.23 37.84±0.30 23.34±0.16 67.90±0.15
+Margin(D),SPC-8 62.04±0.12 73.87±0.22 37.03±0.44 23.21±0.29 67.36±0.20
+Margin(D),DDM 62.50±0.23 74.31±0.24 37.90±0.41 23.32±0.19 68.00±0.25
+Margin(D),GC 62.61±0.26 74.29±0.27 37.84±0.83 23.43±0.23 67.81±0.46
+Margin(D),SPC-R 62.36±0.39 74.14±0.36 37.62±0.55 23.23±0.28 67.47±0.25
+Margin(D),FRD 62.64±0.34 74.08±0.34 38.11±0.69 23.37±0.21 67.87±0.33
+MultiSimilarity,SPC-2 62.46±0.25 74.13±0.13 38.61±0.42 22.26±0.14 68.00±0.20
+MultiSimilarity,SPC-4 62.95±0.12 74.61±0.02 38.39±0.37 22.66±0.12 68.29±0.22
+MultiSimilarity,SPC-8 62.73±0.19 74.22±0.05 37.18±0.07 22.82±0.12 67.46±0.07
+MultiSimilarity,DDM 62.57±0.31 74.49±0.25 38.58±0.70 22.31±0.16 68.25±0.32
+MultiSimilarity,GC 62.65±0.24 74.21±0.28 38.79±0.20 22.35±0.11 68.08±0.29
+MultiSimilarity,SPC-R 62.36±0.32 74.10±0.33 37.99±0.39 22.32±0.22 68.01±0.20
+MultiSimilarity,FRD 63.19±0.31 74.88±0.27 38.70±0.57 23.02±0.22 68.24±0.26
+NPair,SPC-2 60.52±0.88 73.12±0.86 36.51±0.55 22.12±0.23 66.79±0.55
+NPair,SPC-4 59.80±0.20 71.42±0.29 34.23±0.55 21.59±0.17 65.31±0.41
+NPair,SPC-8 58.22±0.07 70.29±0.02 33.07±0.38 20.84±0.09 64.29±0.11
+NPair,DDM 60.13±0.05 72.03±0.15 35.24±0.42 21.69±0.01 66.05±0.32
+NPair,GC 60.85±0.44 72.90±0.52 36.13±0.68 22.12±0.16 66.71±0.40
+NPair,SPC-R 61.32±0.07 73.08±0.26 36.45±0.19 22.28±0.17 66.87±0.25
+NPair,FRD 61.23±0.15 73.01±0.17 36.26±0.26 22.34±0.17 67.04±0.22
+ProxyNCA,SPC-2 62.67±0.43 73.96±0.36 35.66±0.26 23.64±0.52 66.88±0.29
+ProxyNCA,SPC-4 62.50±0.48 73.64±0.47 35.46±0.62 23.50±0.44 66.59±0.32
+ProxyNCA,SPC-8 62.49±0.39 74.07±0.31 35.44±0.60 23.90±0.54 66.56±0.32
+ProxyNCA,DDM 62.63±0.00 73.68±0.00 36.35±0.00 24.50±0.00 67.08±0.00
+ProxyNCA,GC 62.97±0.53 74.03±0.50 36.67±0.96 24.17±0.43 67.15±0.51
+ProxyNCA,SPC-R 62.99±0.84 74.07±0.42 36.61±0.77 23.96±0.39 67.26±0.78
+ProxyNCA,FRD 63.12±0.51 74.36±0.31 37.37±0.58 24.42±0.30 67.54±0.46
+Softmax,SPC-2 61.51±0.28 73.29±0.23 35.36±0.55 22.02±0.07 66.43±0.30
+Softmax,SPC-4 61.55±0.50 73.51±0.22 35.72±0.12 22.08±0.15 66.63±0.20
+Softmax,SPC-8 61.55±0.49 73.29±0.24 35.35±0.34 22.16±0.03 66.22±0.30
+Softmax,DDM 61.72±0.78 72.99±0.30 36.65±1.02 22.67±0.35 66.79±0.29
+Softmax,GC 61.32±0.43 72.84±0.29 36.58±0.46 22.51±0.32 66.83±0.11
+Softmax,SPC-R 61.58±0.23 73.30±0.23 35.38±0.49 21.89±0.13 66.46±0.32
+Softmax,FRD 61.52±0.69 72.75±0.63 35.98±0.89 22.23±0.37 66.48±0.36
+Triplet(R),SPC-2 58.44±0.89 70.42±0.41 31.94±0.57 20.72±0.12 63.98±0.22
+Triplet(R),SPC-4 58.67±0.43 70.79±0.32 32.18±0.45 20.86±0.25 64.24±0.35
+Triplet(R),SPC-8 58.04±0.23 70.22±0.29 32.26±0.18 20.67±0.15 63.74±0.09
+Triplet(R),DDM 58.08±0.45 70.00±0.15 31.58±0.33 20.65±0.07 63.56±0.08
+Triplet(R),GC 58.42±0.13 70.26±0.13 31.78±0.17 20.70±0.07 63.96±0.13
+Triplet(R),SPC-R 58.33±0.38 70.50±0.28 31.32±0.23 20.91±0.10 63.50±0.17
+Triplet(R),FRD 58.00±0.00 69.95±0.15 31.42±0.11 20.33±0.19 63.46±0.01
+Table7. CUB200-2011:ComparisonofBatch-Samplingmethodsforvariouslossfunctionsandsamplingmethods.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+CARS(Krauseetal.,2013)
+Approach R@1 R@2 F1 mAP@C NMI
+Histogram,SPC-2 67.24±1.04 77.37±0.85 28.93±0.65 19.89±0.49 60.82±0.59
+Histogram,SPC-4 67.40±0.53 77.53±0.43 28.54±0.74 19.85±0.24 60.97±0.58
+Histogram,SPC-8 67.53±0.77 77.69±0.56 29.14±0.76 20.04±0.35 61.22±0.38
+Histogram,DDM 66.57±0.49 76.93±0.53 27.99±0.41 19.55±0.28 60.46±0.38
+Histogram,GC 66.36±0.76 76.88±0.57 27.70±0.55 19.04±0.47 60.40±0.45
+Histogram,SPC-R 64.34±0.65 75.43±0.49 27.07±0.75 18.37±0.26 59.90±0.75
+Histogram,FRD 67.06±0.18 77.18±0.22 28.19±0.81 19.65±0.22 60.31±0.29
+Margin(D),SPC-2 79.79±0.40 87.27±0.36 38.78±0.48 24.84±0.28 67.59±0.24
+Margin(D),SPC-4 79.73±0.08 87.18±0.11 38.29±0.41 25.13±0.21 67.48±0.46
+Margin(D),SPC-8 78.93±0.23 86.71±0.18 37.18±0.29 24.51±0.37 66.83±0.24
+Margin(D),DDM 80.13±0.38 87.53±0.12 38.26±0.24 24.65±0.12 67.32±0.26
+Margin(D),GC 80.22±0.16 87.44±0.03 37.91±0.71 24.82±0.34 67.14±0.39
+Margin(D),SPC-R 80.06±0.48 87.37±0.30 38.17±1.01 24.54±0.21 67.26±0.37
+Margin(D),FRD 80.23±0.20 87.73±0.10 38.59±0.59 25.18±0.12 67.56±0.21
+MultiSimilarity,SPC-2 81.59±0.18 88.92±0.07 40.79±0.69 24.35±0.25 69.63±0.50
+MultiSimilarity,SPC-4 81.78±0.13 88.97±0.13 41.02±0.23 25.15±0.16 69.47±0.12
+MultiSimilarity,SPC-8 81.32±0.05 88.28±0.10 39.09±0.71 25.54±0.23 68.36±0.42
+MultiSimilarity,DDM 81.77±0.29 88.77±0.24 40.94±0.32 23.80±0.06 69.26±0.24
+MultiSimilarity,GC 81.63±0.11 88.72±0.22 40.38±0.21 24.27±0.27 69.36±0.22
+MultiSimilarity,SPC-R 81.52±0.16 88.74±0.16 40.66±0.31 24.67±0.17 69.63±0.22
+MultiSimilarity,FRD 81.70±0.18 88.96±0.19 41.74±0.39 24.25±0.10 69.56±0.17
+NPair,SPC-2 76.35±0.23 84.79±0.17 35.72±0.49 23.45±0.10 66.22±0.09
+NPair,SPC-4 73.57±0.15 82.76±0.20 33.94±0.21 22.83±0.15 64.96±0.18
+NPair,SPC-8 71.97±0.35 81.98±0.30 32.69±0.40 22.57±0.15 63.99±0.22
+NPair,DDM 76.02±0.32 84.47±0.03 35.35±0.07 23.40±0.03 66.11±0.11
+NPair,GC 76.09±0.11 84.64±0.24 35.03±0.26 23.23±0.19 65.83±0.15
+NPair,SPC-R 75.79±0.09 84.64±0.12 35.14±0.44 23.07±0.13 65.91±0.22
+NPair,FRD 75.83±0.49 84.49±0.25 35.65±0.70 23.32±0.36 66.08±0.53
+ProxyNCA,SPC-2 78.48±0.61 85.97±0.39 34.82±0.58 23.85±0.38 65.74±0.15
+ProxyNCA,SPC-4 78.48±0.61 85.94±0.25 34.90±0.57 23.77±0.20 65.55±0.44
+ProxyNCA,SPC-8 78.08±0.20 85.84±0.28 33.35±1.17 23.30±0.25 65.26±0.62
+ProxyNCA,DDM 78.43±0.30 86.30±0.26 34.72±0.65 23.62±0.20 65.84±0.32
+ProxyNCA,GC 78.14±0.55 85.92±0.42 34.72±0.34 23.43±0.23 65.60±0.28
+ProxyNCA,SPC-R 78.45±0.23 86.19±0.21 35.18±0.75 23.91±0.19 66.19±0.39
+ProxyNCA,FRD 78.43±0.06 87.09±0.15 34.78±0.43 23.72±0.08 65.70±0.15
+Softmax,SPC-2 79.76±0.26 87.70±0.30 35.94±0.33 24.04±0.29 67.57±0.27
+Softmax,SPC-4 79.42±0.39 87.47±0.20 35.80±0.59 23.91±0.30 67.30±0.37
+Softmax,SPC-8 79.53±0.38 87.30±0.22 35.22±0.64 24.03±0.22 67.03±0.29
+Softmax,DDM 79.23±0.32 87.40±0.29 35.38±0.59 23.52±0.21 67.02±0.27
+Softmax,GC 79.22±0.36 87.38±0.36 35.50±0.59 23.55±0.25 67.24±0.15
+Softmax,SPC-R 79.53±0.18 87.71±0.09 36.71±0.23 24.12±0.26 67.79±0.39
+Softmax,FRD 79.25±0.41 87.49±0.48 35.36±0.21 23.47±0.26 67.12±0.18
+Triplet(R),SPC-2 69.73±0.47 79.74±0.28 28.58±0.28 19.03±0.19 60.64±0.38
+Triplet(R),SPC-4 69.86±0.49 79.91±0.51 28.84±0.18 19.11±0.08 60.97±0.16
+Triplet(R),SPC-8 69.32±0.23 79.43±0.64 28.38±0.11 19.09±0.03 60.63±0.17
+Triplet(R),DDM 69.78±0.25 79.87±0.35 28.07±0.41 18.78±0.32 60.38±0.24
+Triplet(R),GC 69.34±0.29 79.41±0.18 28.68±0.78 18.89±0.30 60.87±0.36
+Triplet(R),SPC-R 69.01±0.38 79.33±0.16 27.90±0.28 18.43±0.33 60.43±0.26
+Triplet(R),FRD 69.55±0.58 79.52±0.54 28.70±0.75 18.77±0.35 60.83±0.51
+Table8. CARS196:ComparisonofBatch-Samplingmethodsforvariouslossfunctionsandsamplingmethods.
+RevisitingTrainingStrategiesandGeneralizationPerformanceinDeepMetricLearning
+StanfordOnline-Products(OhSongetal.,2016)
+Approach R@1 R@2 F1 mAP NMI
+Histogram,SPC-2 69.52±0.10 74.57±0.09 30.49±0.05 33.20±0.07 88.69±0.01
+Histogram,SPC-4 70.13±0.24 75.17±0.21 31.05±0.00 33.85±0.13 88.82±0.01
+Histogram,DDM 69.36±0.06 74.39±0.09 30.47±0.13 33.20±0.03 88.69±0.01
+Histogram,GC 68.42±0.22 73.66±0.15 30.03±0.25 32.49±0.24 88.58±0.05
+Histogram,SPC-R 59.06±0.19 64.72±0.06 22.74±0.14 25.16±0.07 86.90±0.03
+Histogram,FRD 69.71±0.19 74.84±0.17 30.65±0.21 33.45±0.07 88.71±0.05
+Margin(D),SPC-2 78.28±0.08 82.69±0.03 38.28±0.11 42.36±0.11 90.34±0.03
+Margin(D),SPC-4 77.51±0.14 81.91±0.13 37.52±0.34 41.41±0.22 90.19±0.06
+Margin(D),DDM 77.90±0.13 82.28±0.23 37.61±0.68 41.82±0.26 90.22±0.11
+Margin(D),GC 75.77±0.40 80.40±0.41 35.45±0.63 39.55±0.43 89.72±0.13
+Margin(D),SPC-R 68.28±0.08 73.37±0.09 25.64±0.23 31.31±0.13 87.55±0.05
+Margin(D),FRD 78.18±0.18 82.60±0.18 38.25±0.53 42.20±0.31 90.34±0.20
+MultiSimilarity,SPC-2 77.80±0.07 82.47±0.06 36.37±0.08 41.31±0.02 89.93±0.03
+MultiSimilarity,SPC-4 77.90±0.13 82.53±0.04 36.98±0.10 41.51±0.05 90.06±0.06
+MultiSimilarity,DDM 77.85±0.03 82.60±0.05 36.57±0.22 41.35±0.12 89.96±0.06
+MultiSimilarity,GC 76.51±0.23 81.28±0.17 35.24±0.28 39.92±0.27 89.67±0.06
+MultiSimilarity,SPC-R 72.16±0.38 76.12±0.23 31.77±0.17 35.01±0.17 88.25±0.05
+MultiSimilarity,FRD 77.97±0.17 82.60±0.22 36.44±0.31 41.54±0.27 89.95±0.03
+NPair,SPC-2 75.42±0.16 80.36±0.14 34.60±0.29 38.49±0.27 89.63±0.06
+NPair,SPC-4 70.42±0.24 75.90±0.25 32.60±0.37 34.81±0.21 89.11±0.06
+NPair,DDM 74.12±0.32 79.20±0.29 33.39±0.54 36.99±0.35 89.42±0.09
+NPair,GC 74.37±0.31 79.27±0.36 33.55±0.67 37.47±0.49 89.39±0.14
+NPair,SPC-R 68.23±0.04 73.45±0.04 28.26±0.15 31.80±0.02 88.19±0.02
+NPair,FRD 75.50±0.41 80.43±0.43 35.36±0.52 38.98±0.30 89.77±0.13
+Softmax,SPC-2 78.12±0.21 82.39±0.16 38.12±0.21 42.17±0.13 90.00±0.09
+Softmax,SPC-4 77.81±0.28 82.21±0.19 38.16±0.17 42.12±0.14 90.08±0.02
+Softmax,DDM 77.39±0.33 81.67±0.26 37.64±0.26 41.97±0.20 89.66±0.10
+Softmax,GC 78.50±0.29 82.47±0.24 38.68±0.27 42.37±0.31 90.22±0.16
+Softmax,SPC-R 78.38±0.19 82.46±0.10 38.64±0.13 42.29±0.30 90.31±0.16
+Softmax,FRD 77.58±0.22 81.93±0.23 38.01±0.43 42.23±0.19 90.08±0.06
+Triplet(R),SPC-2 66.86±0.36 72.06±0.28 27.38±0.29 30.78±0.23 88.01±0.09
+Triplet(R),SPC-4 67.13±0.45 72.29±0.39 27.46±0.15 30.99±0.18 88.02±0.04
+Triplet(R),DDM 66.96±0.11 72.18±0.10 27.47±0.02 30.79±0.01 88.01±0.01
+Triplet(R),GC 66.61±0.14 71.75±0.03 27.49±0.22 30.44±0.04 87.99±0.03
+Triplet(R),SPC-R 61.12±0.02 66.39±0.04 23.02±0.09 26.07±0.15 86.95±0.01
+Triplet(R),FRD 67.00±0.22 72.04±0.15 27.32±0.16 30.79±0.20 87.95±0.10
+Table9. SOP:ComparisonofBatch-Samplingmethodsforvariouslossfunctionsandsamplingmethods.

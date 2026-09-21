@@ -1,0 +1,792 @@
+On Explainability of Graph Neural Networks via Subgraph Explorations
+HaoYuan1 HaiyangYu1 JieWang2 KangLi3 ShuiwangJi1
+Abstract 2018; Wang et al., 2019), and graph pooling (Yuan & Ji,
+2020;Gao&Ji,2019;Zhangetal.,2018). However,these
+We consider the problem of explaining the pre-
+modelsarestilltreatedasblackboxes,andtheirpredictions
+dictionsofgraphneuralnetworks(GNNs),which
+lackexplanations. Withoutunderstandingandreasoningthe
+otherwiseareconsideredasblackboxes. Exist-
+relationshipsbehindthepredictions,thesemodelscannotbe
+ing methods invariably focus on explaining the
+understoodandfullytrusted,whichpreventstheirapplica-
+importance of graph nodes or edges but ignore
+tionsincriticalareas. Thisraisestheneedofinvestigating
+the substructures of graphs, which are more in-
+theexplainabilityofdeepgraphmodels.
+tuitiveandhuman-intelligible. Inthiswork,we
+propose a novel method, known as SubgraphX, Recently,extensiveeffortshavebeenmadetostudyexpla-
+to explain GNNs by identifying important sub- nationtechniquesfordeepmodelsonimagesandtext(Si-
+graphs. GivenatrainedGNNmodelandaninput monyanetal.,2013;Yuanetal.,2019;Smilkovetal.,2017;
+graph, our SubgraphX explains its predictions Yuanetal.,2020a;Yangetal.,2019;Duetal.,2018). These
+byefficientlyexploringdifferentsubgraphswith methodscanexplainbothgeneralnetworkbehaviorsand
+MonteCarlotreesearch. Tomakethetreesearch input-specificpredictionsviadifferentstrategies. However,
+moreeffective,weproposetouseShapleyvalues the explainability of GNNs is still less explored. Unlike
+asameasureofsubgraphimportance,whichcan imagesandtexts,graphsarenotgrid-likedataandcontain
+alsocapturetheinteractionsamongdifferentsub- importantstructuralinformation. Thus,methodsforimages
+graphs. To expedite computations, we propose andtextscannotbeapplieddirectly. Whileseveralrecent
+efficientapproximationschemestocomputeShap- studies have developed GNN explanation methods, such
+ley values for graph data. Our work represents as GNNExplainer (Ying et al., 2019), PGExplainer (Luo
+thefirstattempttoexplainGNNsviaidentifying etal.,2020),andPGM-Explainer(Vu&Thai,2020),they
+subgraphsexplicitlyanddirectly. Experimental invariably focus on explainability at node, edge, or node
+results show that our SubgraphX achieves sig- featurelevels, andonlyconsidersubgraphsindirectlyvia
+nificantlyimprovedexplanations,whilekeeping regularizationterms. Wearguethatsubgraph-levelexpla-
+computationsatareasonablelevel. nationsaremoreintuitiveanduseful,sincesubgraphscan
+besimplebuildingblocksofcomplexgraphsandarehighly
+relatedtothefunctionalitiesofgraphs(Alon,2007;Milo
+1.Introduction etal.,2002).
+Graphneuralnetworkshavedrawnsignificantattentionre- In this work, we propose the SubgraphX, a novel GNN
+centlyduetotheirpromisingperformanceonvariousgraph explanationmethodthatcanidentifyimportantsubgraphs
+tasks, including graph classification, node classification, to explain GNN predictions. Specifically, we propose to
+linkprediction,andgraphgeneration. Differenttechniques employtheMonteCarlotreesearchalgorithm(Silveretal.,
+have been proposed to improve the performance of deep 2017)toefficientlyexploredifferentsubgraphsforagiven
+graphmodels,suchasgraphconvolution(Kipf&Welling, inputgraph. Sincetheinformationaggregationprocedures
+2017; Gilmer et al., 2017; Gao et al., 2018; Wang et al., in GNNs can be interpreted as interactions among differ-
+2020;Yuan&Ji,2021),graphattention(Velicˇkovic´ etal., ent graph structures, we propose to employ Shapley val-
+ues(Kuhn&Tucker,1953)tomeasuretheimportanceof
+1DepartmentofComputerScience&Engineering,TexasA&M
+subgraphsbycapturingsuchinteractions. Furthermore,we
+University,TX,USA2DepartmentofElectronicEngineeringand
+proposeefficientapproximationschemestoShapleyvalues
+Information Science, University of Science and Technology of
+China, Hefei, China3WestChinaBiomedicalBigDataCenter, byconsideringinteractionsonlywithintheinformationag-
+WestChinaHospital,Chengdu,China.Correspondenceto:Shui- gregationrange. Altogether,ourworkrepresentsthefirstat-
+wangJi<sji@tamu.edu>. tempttoexplainGNNsviaidentifyingsubgraphsexplicitly.
+Weconductbothqualitativeandquantitativeexperimentsto
+Proceedings of the 38th International Conference on Machine
+evaluatetheeffectivenessandefficiencyofourSubgraphX.
+Learning,PMLR139,2021.Copyright2021bytheauthor(s).
+OnExplainabilityofGraphNeuralNetworksviaSubgraphExplorations
+Experimental results show that our proposed SubgraphX BP(Springenbergetal.,2015). Whilethesemethodsare
+canprovidebetterexplanationsforavarietyofGNNmod- simple and efficient, they cannot incorporate the special
+els. Inaddition,ourmethodhasareasonablecomputational propertiesofgraphdata. Meanwhile,decompositionmeth-
+costgivenitssuperiorperformance. ods,suchasLRP(Schwarzenbergetal.,2019),Excitation
+BP(Popeetal.,2019),andGNN-LRP(Schnakeetal.,2020),
+explainGNNsbydecomposingtheoriginalmodelpredic-
+2.RelatedWork
+tions into several terms and associating these terms with
+2.1.GraphNeuralNetworks graph nodes or edges. These methods generally follow a
+backpropagationmannertodecomposepredictionslayerby
+Graphneuralnetworkshavedemonstratedtheireffective-
+layeruntilinputspace.Inaddition,existingmethods(Huang
+nessondifferentgraphtasks. Severalapproachesarepro-
+etal.,2020;Vu&Thai,2020)employasimpleandinter-
+posedtolearnrepresentationsfornodesandgraphs,such
+pretable model as the surrogate method to capture local
+asGCNs(Kipf&Welling,2017),GATs(Velicˇkovic´ etal.,
+relationshipsofdeepgraphmodelsaroundtheinputdata.
+2018),andGINs(Xuetal.,2019),etc. Thesemethodsgen-
+Thentheexplanationsofthesurrogatemethodaretreated
+erally follow an information aggregation scheme that the
+astheexplanationsoftheoriginalpredictions. Furthermore,
+featuresofatargetnodeareobtainedbyaggregatingand
+recentworkXGNN(Yuanetal.,2020b)proposestostudy
+combiningthefeaturesfromitsneighboringnodes. Here
+generalandhigh-levelexplanationsofGNNsbygenerating
+weuseGCNsasanexampletoillustratesuchinformation
+graphpatternstomaximizeacertainprediction.
+aggregationprocedures. Formally,agraphG withmnodes
+canberepresentedbyanadjacencymatrixA∈{0,1}m×m Inaddition,apopulardirectiontoexplainGNNsisknown
+andafeaturematrixX ∈ Rm×d assumingthateachnode astheperturbation-basedmethod. Itmonitorsthechanges
+isassociatedwithad-dimensionalfeaturevector. Thenthe inthepredictionsbyperturbingdifferentinputfeaturesand
+aggregationoperationinGCNscanbemathematicallywrit- identifiesthefeatures affectingpredictionsthemost. For
+ten as X i+1 = σ(D− 2 1AˆD−1 2X i W i ), where X i denotes example,GNNExplainer(Yingetal.,2019)optimizessoft
+the output feature matrix of i−th GCN layer and X is masksforedgesandnodefeaturestomaximizethemutual
+0
+set to X = X. The node features are transformed from informationbetweentheoriginalpredictionsandnewpre-
+0
+X
+i
+∈ Rm×ci toX
+i+1
+∈ Rm×ci+1. NotethatAˆ = A+I dictions. Thentheoptimizedmaskscanidentifyimportant
+is employed to add self-loops and D is a diagonal node edgesandfeatures. Meanwhile, PGExplainer(Luoetal.,
+degreematrixtoperformnormalizationonAˆ. Inaddition, 2020)learnsaparameterizedmodeltopredictwhetheran
+W
+i
+∈Rci×ci+1 isalearnableweightmatrixtoperformlin- edge is important, which is trained using all edges in the
+eartransformationsonfeaturesandσ(·)isthenon-linear dataset. Itemploysthereparameterizationtrick(Jangetal.,
+activationfunction. 2016)toobtainapproximateddiscretemasksinsteadofsoft
+masks. Inaddition,GraphMask(Schlichtkrulletal.,2021a)
+2.2.ExplainabilityinGraphNeuralNetworks followsasimilarideaasPGExplainerthattrainaclassifier
+topredictifanedgecanbedroppedwithoutaffectingmodel
+EventhoughexplainingGNNsiscrucialtounderstandand
+predictions. However, it studies the edges in every GNN
+trustdeepgraphmodels,theexplainabilityofGNNsisstill
+layerwhilePGExplaineronlyfocusesontheinputspace.
+less studied, compared with the image and text domains.
+Recently,severalmethodsareproposedspecificallytoex-
+3.TheProposedSubgraphX
+plaindeepgraphmodels. Thesemethodsmainlyfocuson
+explaining GNNs by identifying important nodes, edges,
+WhilemostcurrentmethodsforGNNexplanationsarein-
+nodefeatures. However,noneofthemcanprovideinput-
+variablybasedondirectlyidentifyingimportantnodesor
+dependentsubgraph-levelexplanations,whichisimportant
+edges,wearguethatdirectlystudyingimportantsubgraphs
+forunderstandinggraphmodels. Followingarecentsurvey
+ismorenaturalandmayleadtobetterexplainability. Inthis
+work(Yuanetal.,2020c),wecategorizethesemethodsinto
+work,weproposeanovelapproach,knownasSubgraphX,
+several classes; those are, gradients/features-based meth-
+to explain GNNs by exploring and identifying important
+ods,decompositionmethods,surrogatemethods,generation-
+subgraphs.
+basedmethods,andperturbation-basedmethods.
+First, several methods employ gradient values or feature 3.1.FromNodeandEdgetoSubgraphExplanations
+valuestostudytheimportanceofinputgraphnodes,edges,
+Unlikeimagesandtexts,graphdatacontainimportantstruc-
+ornodefeatures(Baldassarre&Azizpour,2019;Popeetal.,
+turalinformation,whichishighlyrelatedtotheproperties
+2019). Thesemethodsgenerallyextendexistingimageex-
+ofgraphs. Forexample,networkmotifs,whichcanbecon-
+planationtechniquestothegraphdomain,suchasSA(Zeiler
+sideredasgraphsubstructures,aresimplebuildingblocksof
+& Fergus, 2014), CAM (Zhou et al., 2016), and Guided
+complexnetworksandmaydeterminethefunctionalitiesof
+OnExplainabilityofGraphNeuralNetworksviaSubgraphExplorations
+Coalition 1 1 Coalition 2 6 Coalition 3 1 6
+5 5 5
+1 6 6 1 Shapley value
+2 0.75 2 0.57 2 0.85
+4 3 4 3 4 3 0.50 0.30 0.55
+GNNs GNNs GNNs
+1 0.25 6 0.27 6 1 0.30 0.45
+0.50 0.30 0.55
+Root Leaves
+5 5 5
+6 1 1 2 2
+2 2 2 4 3 4
+4 3 4 3 4 3
+Update Update Update Update
+Figure1.AnillustrationofourproposedSubgraphX.Thebottomshowsoneselectedpathfromtheroottoleavesinthesearchtree,which
+correspondstooneiterationofMCTS.Foreachnode,itssubgraphisevaluatedbycomputingtheShapleyvalueviaMonte-Carlosampling.
+Inthisexample,weshowthecomputationofShapleyvalueforthemiddlenode(showninreddashedbox)wherethreecoalitionsare
+sampledtocomputethemarginalcontributions.Notethatnodesthatarenotselectedareignoredforsimplicity.
+graphsinmanydomains,suchasbiochemistry,ecology,neu- of generality, we introduce our proposed SubgraphX by
+robiology,andengineering(Alon,2007;Miloetal.,2002; consideringf(·)asagraphclassificationmodel. Givenan
+Shen-Orr et al., 2002; Alon, 2019). Hence, investigating inputgraphG,itspredictedclassisrepresentedasy. The
+graphsubstructuresisacrucialsteptowardsthereverseen- goalofourexplanationtaskistofindthemostimportant
+gineeringandunderstandingoftheunderlyingmechanisms subgraphforthepredictiony. Sincedisconnectednodesare
+of GNNs. In addition, subgraphs are more intuitive and hardtounderstand,weonlyconsiderconnectedsubgraphs
+human-intelligible(Yuanetal.,2020c). to enable the explanations to be more human-intelligible.
+Then the set of connected subgraphs of G is denoted as
+While different methods are proposed to explain GNNs,
+{G ,··· ,G ,··· ,G } where n is the number of different
+noneofthemcandirectlyprovidesubgraph-levelexplana- 1 i n
+connectedsubgraphsinG. Theexplanationofpredictiony
+tionsforindividualinputexamples. TheXGNNcanobtain
+forinputgraphG canthenbedefinedas
+graphpatternstoexplainGNNsbutitsexplanationsarenot
+input-dependentandlessprecise. Theothermethods,such G∗ = argmax Score(f(·),G,G ), (1)
+i
+asGNNExplainerandPGExplainer,mayobtainsubgraph- |Gi|≤Nmin
+level explanations by combining nodes or edges to form
+whereScore(·,·,·)isascoringfunctionforevaluatingthe
+subgraphsinapost-processingmanner.However,theimpor-
+importanceofasubgraphgiventhetrainedGNNsandthe
+tantnodesoredgesintheirexplanationsarenotguaranteed
+inputgraph. WeuseN asanupperboundonthesize
+to be connected. Meanwhile, since GNNs are very com- min
+ofsubgraphssothattheobtainedexplanationsaresuccinct
+plex,node/edgeimportancecannotbedirectlyconvertedto
+enough. AstraightforwardwaytoobtainG∗istoenumerate
+subgraphimportance. Furthermore,thesemethodsignore
+allpossibleG andselectthemostimportantoneastheex-
+the interactions among different nodes and edges, which i
+planation.However,suchabrute-forcemethodisintractable
+maycontainimportantinformation. Hence,inthiswork,we
+whenthegraphiscomplexandlarge-scale. Hence,inthis
+proposeanovelmethod,knownasSubgraphX,todirectly
+work, we propose to incorporate search algorithms to ex-
+studythesubgraphstoprovideexplanations. Theexplana-
+ploresubgraphsefficiently. Specifically,weproposetoem-
+tionsofourSubgraphXareconnectedsubgraphs,whichare
+ployMonteCarloTreeSearch(MCTS)(Silveretal.,2017;
+morehuman-intelligible.Inaddition,byincorporatingShap-
+Jinetal.,2020)asthesearchalgorithm. Inaddition,since
+leyvalues,ourmethodcancapturetheinteractionsamong
+theinformationaggregationproceduresinGNNscanbeun-
+differentgraphstructureswhenprovidingexplanations.
+derstoodasinteractionsbetweendifferentgraphstructures,
+weproposetoemploytheShapleyvalue(Kuhn&Tucker,
+3.2.ExplainingGNNswithSubgraphs
+1953)asthescoringfunctiontomeasuretheimportanceof
+We first present a formal problem formulation. Let f(·) differentsubgraphsbyconsideringsuchinteractions. We
+denote the trained GNNs to be explained. Without loss illustrateourproposedSubgraphXinFigure1. Aftersearch-
+OnExplainabilityofGraphNeuralNetworksviaSubgraphExplorations
+ing, the subgraph with the highest score is considered as Aftersearchingforseveraliterations,weselectthesubgraph
+theexplanationofthepredictionyforinputgraphG. Note withthehighestscorefromtheleavesastheexplanation.
+thatourproposedSubgraphXcanbeeasilyextendedtouse Notethatinearlyiterations,theMCTStendstoselectchild
+othersearchalgorithmsandscoringfunctions. nodes with low visit counts in order to explore different
+possible pruning actions. In later iterations, the MCTS
+3.3.SubgraphExplorationviaMCTS tends to select child nodes that yield higher rewards, i.e.,
+moreimportantsubgraphs.
+InourproposedSubgraphX,weemploytheMCTSasthe
+searchalgorithmtoguideoursubgraphexplorations. We
+3.4.AGame-TheoreticalScoringFunction
+buildasearchtreeinwhichtherootisassociatedwiththe
+inputgraphandeachofothernodescorrespondstoacon- InourproposedSubgraphX,boththeMCTSrewardsandthe
+nectedsubgraph. Eachedgeinoursearchtreedenotesthat explanationselectionarehighlydependingonthescoring
+thegraphassociatedwithachildnodecanbeobtainedby functionScore(·,·,·). Itiscrucialtoproperlymeasurethe
+performingnode-pruningfromthegraphassociatedwithits importanceofdifferentsubgraphs. Onepossiblesolutionis
+parentnode.Formally,wedefineanodeinthissearchtreeas todirectlyfeedthesubgraphstothetrainedGNNsf(·)and
+N ,andN denotestherootnode. Theedgesinthesearch usethepredictedscoresastheimportancescores. However,
+i 0
+treerepresentthepruningactionsa. Notethateachnode itcannotcapturetheinteractionsbetweendifferentgraph
+mayhavemanypruningactions,andtheseactionscanbe structures,thusaffectingtheexplanationresults. Hence,in
+definedbasedonthedatasetathandordomainknowledge. thiswork,weproposetoadopttheShapleyvalues(Kuhn&
+ThentheMCTSalgorithmrecordsthestatisticsofvisiting Tucker,1953;Lundberg&Lee,2017;Chenetal.,2018a)as
+countsandrewardstoguidetheexplorationandreducethe thescoringfunction.TheShapleyvalueisasolutionconcept
+searchspace. Specifically,forthenodeandpruningaction fromthecooperativegametheoryforfairlyassigningatotal
+pair(N ,a ),weassumethatthesubgraphG isobtained gamegaintodifferentgameplayers. Toapplyittograph
+i j j
+byactiona fromG . ThentheMCTSalgorithmrecords modelexplanationtasks,weusetheGNNpredictionasthe
+j i
+fourvariablesfor(N ,a ),whicharedefinedas: gamegainanddifferentgraphstructuresasplayers.
+i j
+• C(N ,a ) denotes the number of counts for selecting Formally, given the input graph G with m nodes and the
+i j
+actiona fornodeN . trainedGNNf(·),westudytheShapleyvalueforatarget
+j i
+• W(N ,a )isthetotalrewardforall(N ,a )visits. subgraphG withknodes. LetV ={v ,··· ,v ,··· ,v }
+i j i j i 1 i m
+• Q(N ,a ) = W(N ,a )/C(N ,a )anddenotestheav- denoteallnodesinG andweassumethatthenodesinG
+i j i j i j i
+eragedrewardformultiplevisits. are {v ,··· ,v } while the other nodes {v ,··· ,v }
+1 k k+1 m
+• R(N ,a )istheimmediaterewardforselectinga onN , belong to G \ G . Then the set of players is defined as
+i j j i i
+whichisusedtomeasuretheimportanceofsubgraphG . P = {G ,v ,··· ,v }, where we consider the whole
+j i k+1 m
+WeproposetouseR(N ,a )=Score(f(·),G,G ). subgraphG asoneplayer. Finally,theShapleyvalueofthe
+i j j i
+playerG canbecomputedas
+Ineachiteration,theMCTSselectsapathstartingfromthe i
+rootN 0 toaleafnodeN (cid:96) . Notethattheleafnodescanbe (cid:88) |S|!(|P|−|S|−1)!
+φ(G )= m(S,G ), (6)
+definedbasedonthenumbersofnodesinsubgraphssuch i |P|! i
+that|N
+(cid:96)
+|≤N
+min
+. Formally,theactionselectioncriteriaof S⊆P\{Gi}
+nodeN aredefinedas m(S,G )=f(S∪{G })−f(S), (7)
+i i i
+a∗ =argmaxQ(N ,a )+U(N ,a ), (2) whereS isthepossiblecoalitionsetofplayers. Notethat
+i j i j
+aj m(S,G )representsthemarginalizedcontributionofplayer
+i
+(cid:112)(cid:80)
+C(N ,a ) G given the coalition set S. It can be computed by the
+U(N ,a )=λR(N ,a ) k i k , (3) i
+i j i j 1+C(N i ,a j ) differenceofpredictionsbetweenincorporatingG i withand
+without the coalition set S. The obtained Shapley value
+whereλisahyperparametertocontrolthetrade-offbetween φ(G ) considers all different coalitions to capture the in-
+(cid:80) i
+exploration and exploitation. In addition, k C(N i ,a k ) teractions. It is the only solution that satisfies four de-
+denotesthetotalvisitingcountsforallpossibleactionsof sirable axioms, including efficiency, symmetry, linearity,
+nodeN i .ThenthesubgraphintheleafnodeN (cid:96) isevaluated and dummy axiom (Lundberg & Lee, 2017), which can
+andtheimportancescoreisdenotedasScore(f(·),G,G
+(cid:96)
+).
+guaranteethecorrectnessandfairnessoftheexplanations.
+Finally,allnodeandactionpairsselectedinthispathare However,computingShapleyvaluesusingEqs. (6)and(7)
+updatedas istime-consumingasitenumeratesallpossiblecoalitions,
+especiallyforlarge-scaleandcomplexgraphs. Hence, in
+C(N ,a )=C(N ,a )+1, (4)
+i j i j thiswork,weproposetoincorporatetheGNNarchitecture
+W(N ,a )=W(N ,a )+Score(f(·),G,G ). (5)
+i j i j (cid:96) informationf(·)toefficientlyapproximateShapleyvalues.
+OnExplainabilityofGraphNeuralNetworksviaSubgraphExplorations
+Algorithm1ThealgorithmofourproposedSubgraphX. Algorithm2ThealgorithmofsubgraphShapleyvalue.
+Input: GNNmodelf(·),inputgraphG,MCTSiteration Input: GNN model f(·) with L layers, input graph G
+numberM,theleafthresholdnodenumberN ,h(N ) withnodesV ={v ,...,v },subgraphG withknodes
+min i 1 m i
+denotestheassociatedsubgraphoftreenodeN . {v ,...,v },Monte-CarlosamplingstepsT.
+i 1 k
+Initialization:foreach(N ,a )pair,initializeitsC,W, Initialization: Obtain the L-hop neighboring nodesof
+i j
+Q, andR variables as0. Therootof searchtreeisN G ,denotedas{v ,··· ,v }. Thenthesetofplayersis
+0 i k+1 r
+associatedwithgraphG. TheleafsetissettoS ={}. P(cid:48) ={G ,v ,··· ,v }.
+(cid:96) i k+1 r
+fori=1toM do fori=1toT do
+curNode=N ,curPath=[N ] SamplingacoalitionsetS fromP(cid:48)\{G }.
+0 0 i i
+while h(curNode)hasmorenodethanN do SetnodesfromV \(S ∪{G })withzerofeaturesand
+min i i
+forallpossiblepruningactionsofh(curNode) do feedtotheGNNsf(·)toobtainf(S ∪{G }).
+i i
+ObtainchildnodeN anditssubgraphG . SetnodesfromV \S withzerofeaturesandfeedto
+j j i
+ComputeR(curNode,a )=Score(f(·),G,G )) theGNNsf(·)toobtainf(S ).
+j j i
+withAlgorithm2. Thenm(S ,G )=f(S ∪{G })−f(S ).
+i i i i i
+endfor endfor
+SelectthechildN followingEq.(2,3). Return: Score(f(·),G,G )= 1 (cid:80)T m(S ,G ).
+next i T t=1 i i
+curNode=N ,curPath=curPath+N .
+next next
+endwhile
+S =S ∪{curNode}
+(cid:96) (cid:96) theaveragedcontributionscoreformultiplesamplingsteps
+UpdatenodesincurPathfollowingEq.(4,5). isregardedastheapproximationofφ(G ). Formally,itcan
+i
+endfor bemathematicallywrittenas
+SelectsubgraphwiththehighestscorefromS .
+(cid:96)
+T
+1 (cid:88)
+φ(G )= (f(S ∪{G })−f(S )), (9)
+i T i i i
+3.5.GraphInspiredEfficientComputations t=1
+Ingraphneuralnetworks,thenewfeaturesofatargetnode whereT isthetotalsamplingsteps. Inaddition,tocompute
+are obtained by aggregating information from a limited the marginalized contribution, we follow a zero-padding
+neighboringregion. AssumingthereareLlayersofGNN strategy. Specifically, to compute f(S i ∪{G i }), we con-
+inthegraphmodelf(·),thenonlytheneighboringnodes siderthenodesV \(S i ∪{G i })whicharenotbelongingto
+withinL-hopsareusedforinformationaggregation. Note thecoalitionorthesubgraphandsettheirnodefeaturesto
+thattheinformationaggregationschemacanbeconsidered allzeros. ThenwefeedthenewgraphtotheGNNsf(·)and
+asinteractionsbetweendifferentgraphstructures. Hence, use the predicted probability as f(S i ∪{G i }). Similarly,
+thesubgraphG i mostlyinteractswiththeneighborswithin wecancomputef(S i )bysettingnodesV \S i withzero
+L-hops. Basedonsuchobservations,weproposetocom- features and feeding to the GNNs. It is noteworthy that
+pute the Shapley value of G by only considering its L- weonlyperturbthenodefeaturesinsteadofremovingthe
+i
+hop neighboring nodes. Specifically, assuming there are nodesfromtheinputgraphbecausegraphsareverysensitive
+r (r ≤ m−k) nodes within L-hop neighboring of sub- tostructuralchanges(Schlichtkrulletal.,2021b). Finally,
+graphG ,wedenotethesenodesas{v ,··· ,v }. Then we conclude the computation steps of our proposed Sub-
+i k+1 r
+thenewsetofplayersweneedtoconsiderisrepresentedas graphXinAlgorithm1and2. NotethatN min determines
+P(cid:48) ={G ,v ,··· ,v }.ByincorporatingP(cid:48),theShapley thestopconditioninMCTS,andwecanselectsubgraphs
+i k+1 r
+valueofG canbedefinedas withspecificsizesfrominternalnodesofthesearchtreeas
+i
+needed.
+(cid:88) |S|!(|P(cid:48)|−|S|−1)!
+φ(G )= m(S,G ). (8)
+i |P(cid:48)|! i 3.6.SubgraphXforGenericGraphTasks
+S⊆P(cid:48)\{Gi}
+We have described our proposed SubgraphX using graph
+However,sincegraphdataarecomplexthatdifferentnodes classificationmodelsasanexample. Itisnoteworthythat
+havevariablenumbersofneighbors,thenP(cid:48)maystillcon- ourSubgraphXcanbeeasilygeneralizedtoexplaingraph
+tainalargenumberofplayers,thusaffectingtheefficiency modelsonothertasks,suchasnodeclassificationandlink
+ofcomputation. Hence,inourSubgraphX,wefurtherincor- prediction. Fornodeclassificationmodels,theexplanation
+poratetheMonte-Carlosampling(Sˇtrumbelj&Kononenko, targetisthepredictionofasinglenodev giventheinput
+i
+2014)tocomputeφ(G ). Specifically,forsamplingstepi, graphG. AssumingthereareLlayersintheGNNmodels,
+i
+wesampleacoalitionsetS fromtheplayersetP(cid:48)\{G } the prediction of v only relies on its L-hop computation
+i i i
+andcomputeitsmarginalizedcontributionm(S ,G ). Then graph,denotedasG . Theninsteadofsearchingfromthe
+i i c
+OnExplainabilityofGraphNeuralNetworksviaSubgraphExplorations
+Table1. Statisticsandpropertiesoffivedatasets.
+Dataset
+MUTAG BBBP GRAPH-SST2 BA-2MOTIFS BA-SHAPE
+#ofEdges(avg) 19.79 25.95 9.20 25.48 2055
+#ofNodes(avg) 17.93 24.06 10.19 25.0 700
+#ofGraphs 188 2039 70042 1000 1
+#ofClasses 2 2 2 2 4
+input graph G, our SubgraphX sets G as the correspond- motiforafive-nodecyclemotif. Thegraphsarelabeled
+c
+ing graph of the search tree root N . In addition, when based on the type of motifs. All node embeddings are
+0
+computingthemarginalizedcontributions,thezero-padding initializedasvectorscontainingall1s.
+strategyshouldexcludethetargetnodev . Meanwhile,for • BA-Shapeisasyntheticnodeclassificationdataset. Each
+i
+linkpredictiontasks,theexplanationtargetistheprediction graphcontainsabaseBAgraphandseveralhouse-like
+of a single link (v ,v ). Then the root of the search tree five-nodemotifs. Thenodelabelsaredeterminedbythe
+i j
+correspondstotheL-hopcomputationgraphofnodev and membershipsandlocationsofdifferentnodes. Allnode
+i
+v . Similarly,thezero-paddingstrategyignoresthev and embeddingsareinitializedasvectorscontainingall1s.
+j i
+v whenperturbingnodefeatures. NotethatourSubgraphX
+j WeexplorethreevariantsofGNNsonthesedatasets,includ-
+treatstheGNNsasblackboxesduringtheexplanationstage
+ingGCNs,GATs,andGINs. AllGNNmodelsusedinour
+andonlyneedstoaccesstheinputsandoutputs. Hence,our
+experimentalstudiesaretrainedtoobtainreasonableper-
+proposedSubgraphXcanbeappliedtoageneralfamilyof
+formance. ThenwecompareourSubgraphXwithseveral
+GNNmodels,includingbutnotlimitedtoGCNs(Kipf&
+baselines, including MCTS GNN, GNNExplainer (Ying
+Welling,2017),GATs(Velicˇkovic´ etal.,2018),GINs(Xu
+etal.,2019),PGExplainer(Luoetal.,2020). NotethatGN-
+etal.,2019),andLine-GraphNNs(Chenetal.,2018b).
+NExplainerandPGExplainerrepresentthestate-of-the-art
+methodsforGNNexplanations. HereMCTS GNNdenotes
+4.ExperimentalStudies themethodusingMCTStoexploresubgraphsbutdirectly
+employingtheGNNpredictionsofthesesubgraphsasthe
+4.1.DatasetsandExperimentalSettings
+scoringfunction. Wewishtomentionthatallmethodsare
+Weconductextensiveexperimentsondifferentdatasetsand comparedwithafairsetting. Weusethesamenumberto
+GNNmodelstodemonstratetheeffectivenessofourpro- controlthemaximumnumberofnodesintheexplanations
+posedmethod. Thestatisticsandpropertiesofthedatasets forallmethods.
+arereportedinTable1. WeevaluateourSubgraphXwith
+WeconductourexperimentsusingoneNvidiaV100GPU
+fivedatasetsforbothgraphclassificationandnodeclassifi-
+onanIntelXeonGold6248CPU.Ourimplementationsare
+cationtasks,includingsyntheticdata,biologicaldata,and
+basedonPython3.7.6,PyTorch1.6.0,andTorch-geometric
+textdata. Wesummarizethesedatasetsasbelow:
+1.6.3. ForourproposedSubgraphXandotheralgorithms
+• MUTAG (Debnath et al., 1991) and BBBP (Wu et al., with MCTS, the MCTS iteration number M is set to 20.
+2018)aremoleculardatasetsforgraphclassificationtasks. Toexploreasuitabletrade-offbetweenexplorationandex-
+Inthesedatasets,eachgraphrepresentsamoleculewhile ploitation, wesetthehyperparameterλinEq.(3)to5for
+nodes are atoms and edges are bonds. The labels are Graph-SST2 (GATs) and BBBP (GCNs) models, and 10
+determinedbythechemicalfunctionalitiesofmolecules. forothermodels. SinceallGNNmodelscontain3network
+• Graph-SST2 (Yuan et al., 2020c) is sentiment graph layers,weconsider3-hopcomputationalgraphstocompute
+datasetforgraphclassification. Itconvertstextsentences Shapley values for our SubgraphX. For the Monte-Carlo
+tographswithBiaffineparser(Gardneretal.,2018)that samplinginourSubgraphX,wesettheMonte-Carlosam-
+nodesdenotewordsandedgesrepresenttherelationships plingstepsT to100foralldatasets. ForMCTS†, weset
+betweenwords.Notethatnodeembeddingsareinitialized Monte-Carlosamplingstepsto1000toobtaingoodapprox-
+asthepre-trainedBERTwordembeddings(Devlinetal., imationssinceitsamplesfromallnodesinagraph. More
+2019). Eachgraphislabeledbyitssentiment,whichcan details regarding the datasets, trained GNN models, and
+bepositiveornegative. experimentalsettingscanbefoundinSupplementarySec-
+• BA-2Motifs is a synthetic graph classification dataset. tionA.Ourcodeanddataarenowpubliclyavailableinthe
+EachgraphcontainsabasedgraphgeneratedbyBaraba´si- DIGlibrary(Liuetal.,2021)1.
+Albert(BA)model,whichisconnectedwithahouse-like
+1https://github.com/divelab/DIG
+OnExplainabilityofGraphNeuralNetworksviaSubgraphExplorations
+“lathan and diggs have considerable personal charm, and their screen rapport makes the old story new.”
+charm , diggs and charm , diggs and charm , diggs and charm , diggs and
+their have lathan the their have lathan the their have lathan the their have lathan the
+screen makes new story screen makes new story screen makes new story screen makes new story
+rapport seem . old rapport seem . old rapport seem . old rapport seem . old
+“maybe it is asking too much, but if a movie is truly going to inspire me, I want a little more than this.”
+is but asking , is but asking , is but asking , is but asking ,
+if truly going much if truly going much if truly going much if truly going much
+movie want inspire to movie want inspire to movie want inspire to movie want inspire to
+little more than me little more than me little more than me little more than me
+SubgraphX MCTS_GNN PGExplainer GNNExplainer
+Figure2.ExplanationresultsontheGraph-SST2datasetwithaGATgraphclassifier. Theinputsentencesareshownonthetopof
+explanations.Notethatsome“unimportant”wordsareignoredforsimplicity.Thefirstrowshowsexplanationsforacorrectprediction
+andthesecondrowreportstheresultsforanincorrectprediction.
+SubgraphX MCTS_GNN PGExplainer GNNExplainer SubgraphX MCTS_GNN PGExplainer GNNExplainer
+Figure3.Explanation results on the BA-2Motifs dataset with a Figure4.ExplanationresultsontheMUTAGdatasetwithaGIN
+GCN graph classifier. The first row shows explanations for a graphclassifier.Weshowtheexplanationsfortwocorrectpredic-
+correctpredictionandthesecondrowreportstheresultsforan tions. HereCarbon,Oxygen,andNitrogenareshowninyellow,
+incorrectprediction. red,andblue,respectively.
+4.2.ExplanationsforGraphClassificationModels PGExplainerandGNNExplaineridentifydiscreteedges.
+We first visually compare our SubgraphX with the other WealsoshowtheexplanationresultsoftheMUTAGdataset
+baselinesusinggraphclassificationmodels. Theresultsare in Figure 4. Note that GINs are employed as the graph
+reportedinFigure3,4,and2whereimportantsubstructures classification model to be explained. Since the MUTAG
+areshowninthebold. datasetisareal-worlddatasetandthereisnogroundtruth
+forexplanations,weevaluatetheexplanationresultsbased
+TheexplanationresultsoftheBA-2Motifsdatasetarevisu-
+on chemical domain knowledge. The graphs in MUTAG
+alizedinFigure3. WeusetheGCNsasthegraphclassifier
+arelabeledbasedonthemutageniceffectsonabacterium.
+andreportexplanationsforbothcorrectandincorrectpre-
+ItisknownthatcarbonringsandNO groupstendtobe
+dictions. Sinceitisasyntheticdataset,wemayconsiderthe 2
+mutagenic (Debnath et al., 1991). We study whether the
+motifsasreasonableapproximationsofexplanationground
+explanationsprovidedbydifferentmethodscanmatchthe
+truth. Inthefirstrow,themodelpredictioniscorrectand
+carbon rings and NO groups identified in chemistry. In
+ourSubgraphXcanpreciselyidentifythehouse-likemotif 2
+both examples, the predictions are “mutagenic” and our
+as the most important subgraph. In the second row, our
+SubgraphXsuccessfullyandpreciselyidentifiesthecarbon
+SubgraphXexplainstheincorrectpredictionthattheGNN
+ringsasimportantsubgraphs. Meanwhile,theMCTS GNN
+modelcannotcapturethefive-nodecyclemotifastheimpor-
+cancapturethekeysubgraphsbutincludeseveraladditional
+tantstructure,andhencethepredictioniswrong. Forboth
+edges. TheresultsofthePGExplainerandGNNExplainer
+cases, our SubgraphX can provide better visual explana-
+stillcontainseveraldiscreteedges.
+tionssinceourmethodcanpreciselyidentifiesthesuccinct
+subgraphsthatcanreasonablyexplainthepredictions. In ForthedatasetGraph-SST2,weemployGATsasthegraph
+addition,ourexplanationsareconnectedsubgraphswhile model and report the results in Figure 2. In the first row,
+OnExplainabilityofGraphNeuralNetworksviaSubgraphExplorations
+Figure5.Thequantitativestudiesfordifferentexplanationmethods.NotethatsincetheSparsityscorescannotbefullycontrolled,we
+comparedifferentmethodswithFidelityscoresundersimilarsimilarlevelsofSparsity.
+thepredictioniscorrectandthelabelispositive. Bothour
+SubgraphXandtheMCTS GNNcanfindwordphraseswith
+positivesemanticmeaning,suchas“makesoldstorynew”,
+which can reasonably explain the prediction. The expla-
+nationsprovidedbyPGExplainerandGNNExplainerare,
+however,lesssemanticallyrelated. Inthesecondrow,the
+inputisnegativebutthepredictionispositive. Allmethods
+exceptPGExplainercanexplainthedecisionthattheGNN
+SubgraphX MCTS_GNN PGExplainer GNNExplainer
+modelregardspositivephrases“trulygoingtoinspire”as
+important,thusyieldingapositivebutincorrectprediction.
+It is noteworthy that our method tends to include fewer Figure6.ExplanationresultsontheBA-Shapedataset.Thetarget
+neuralwords,suchas“the”,“me”,and“screen”,etc. nodeisshowninalargersize.Differentcolorsdenotenodelabels.
+Overall,ourSubgraphXcanexplainbothcorrectandincor-
+rectpredictionsfordifferentgraphdataandGNNmodels. 4.4.QuantitativeStudies
+Ourexplanationsaremorehuman-intelligiblethancompar-
+Whilevisualizationsareimportanttoevaluatedifferentex-
+ingmethods. Moreresultsforgraphclassificationmodels
+planationmethods,humanevaluationsmaynotbeaccurate
+arereportedinSupplementarySectionB.
+duetothelackofgroundtruths. Hence,wefurtherconduct
+quantitativestudiestocomparethesemethods. Specifically,
+4.3.ExplanationsforNodeClassificationModels
+we employ the metrics Fidelity and Sparsity to evaluate
+Wealsocomparedifferentmethodsonthenodeclassifica- explanationresults(Popeetal.,2019;Yuanetal.,2020c).
+tiontasks. WeusetheBA-ShapedatasetandtrainaGCN TheFidelitymetricmeasureswhethertheexplanationsare
+modeltoperformnodeclassification. Thevisualizationre- faithfullyimportanttothemodel’spredictions. Itremoves
+sultsarereportedinFigure6wheretheimportantsubstruc- the important structures from the input graphs and com-
+turesareshowninbold. Wecanverifyiftheexplanations putesthedifferencebetweenpredictions. Inaddition,the
+areconsistentwiththerules(themotifs)tolabeldifferent Sparsitymetricmeasuresthefractionofstructuresthatare
+nodes. For both examples, the target nodes are correctly identifiedasimportantbyexplanationmethods. Notethat
+classified. Obviously, our SubgraphX is precisely target- highSparsityscoresmeansmallerstructuresareidentified
+ingthemotifsastheexplanations,whichisreasonableand as important, which can affect the Fidelity scores since
+promising. Forothermethods,theirexplanationsonlycover smallerstructures(highSparsity)tendtobelessimportant
+partialmotifsandincludeotherstructures. Moreresultsare (low Fidelity). Hence, for fair comparisons, we compare
+reportedinSupplementarySectionC. differentmethodsusingFidelityundersimilarlevelsofSpar-
+sity. TheresultsarereportedinFigure5whereweplotthe
+curvesofFidelityscoreswithrespecttotheSparsityscores.
+Obviously, for five out of six experiments, our proposed
+OnExplainabilityofGraphNeuralNetworksviaSubgraphExplorations
+Table2. Efficiencystudiesofdifferentmethods.
+Method MCTS∗ MCTS† SubgraphX GNNExplainer PGExplainer
+TIME >10hours 865.4±1.6s 77.8±3.8s 16.2±0.2s 0.02s(Training362s)
+FIDELITY N/A 0.53 0.55 0.19 0.18
+methodoutperformsthecomparingmethodssignificantly
+Table3. Thestudiesofdifferentpruningstrategies.
+andconsistentlyunderdifferentsparsitylevels. FortheBA-
+Shape(GCN)experiment,ourSubgraphXobtainsslightly Method Time Fidelity
+lowerbutstillcompetitiveFidelityscorescomparedwith
+LOW2HIGH 107.24s 0.66149
+thePGExplainer. Overall,suchresultsindicatethattheex-
+HIGH2LOW 21.52s 0.61046
+planationsofourmethodaremorefaithfulandimportant
+totheGNNmodels. Moredetailsofevaluationmetricsare
+introducedinSupplementarySectionA.
+nodepruningactions,weexploretwostrategies: Low2high
+4.5.EfficiencyStudies andHigh2low. First,Low2higharrangesthenodesbased
+ontheirnodedegreesfromlowtohighandonlyconsiders
+Finally, we study the efficiency of our proposed method.
+thepruningactionscorrespondingtothefirstklowdegree
+For 50 graphs with an average of 24.96 nodes from the
+nodes. Meanwhile,High2lowarrangesthenodesinorder
+BBBPdataset,weshowtheaveragingtimecosttoobtain
+fromhighdegreetolowdegreeandonlyconsidersthefirstk
+explanationsforeachgraph. Werepeattheexperiments3
+highdegreenodesforpruning.Intuitively,High2lowismore
+timesandreporttheresultsTable2. HereMCTS∗denotes
+efficientbutmayignoretheoptimalsolutions. Inthiswork,
+thebaselinethatfollowsEq. (8)tocomputeShapleyvalues.
+we employ the High2low strategy for BA-Shape(GCNs),
+ComparedwithourSubgraphX,thedifferenceistheusage
+andLow2highstrategyforothermodels, andsetthekto
+of Monte Carlo sampling. In addition, MCTS† indicates
+12forallthedatasets. Weconductexperimentstoanalyze
+thebaselinecomputingShapleyvalueswithMonteCarlo
+thesetwopruningstrategiesforourSubgraphXalgorithm
+samplingbutwithoutourproposedapproximationschemes.
+andshowtheaveragetimecostandFidelityscoreinTable3.
+Specifically,MCTS†samplescoalitionsetsfromtheplayer
+Specifically,werandomlyselect50graphsfromtheBBBP
+set P instead of the reduced set P(cid:48). First, the time cost
+datasetswithanaveragenodenumberof24.96, whichis
+of MCTS∗ is extremely high since it needs to enumerate
+thesameinSection 4.5. Inaddition,wesetMonte-Carlo
+all possible coalition sets. Next, compared with MCTS†,
+samplingstepsT to100,andselectthesubgraphswiththe
+our SubgraphX is 11 times faster while the obtained ex-
+highest Shapley values and contain less than 15 nodes to
+planations have similar Fidelity scores. It demonstrates
+calculatetheFidelity. Obviously,High2lowis5timesfaster
+ourapproximationschemesarebotheffectiveandefficient.
+thanLow2highbuttheFidelityscoresareinferior.
+EventhoughourmethodisslowerthanGNNExplainerand
+PGExplainer, the Fidelity scores of our explanations are
+5.Conclusions
+300% higher than theirs. Furthermore, the PGExplainer
+requirestotrainitsmodelusingthewholedataset. While
+Whileconsiderableeffortshavebeendevotedtostudythe
+offlinemodeltrainingcostisnotdirectlycomparable,the
+explainabilityofGNNs,noneofexistingmethodscanex-
+additionalandsignificanttimecostmaybeanissuewhen
+plainGNNpredictionswithsubgraphs. Wearguethatsub-
+thedatasetislarge-scale. Consideringourexplanationsare
+graphsarebuildingblocksofcomplexgraphsandaremore
+withhigher-qualityandmorehuman-intelligible,webelieve
+human-intelligible. Tothisend,weproposetheSubgraphX
+suchtimecomplexityisreasonableandacceptable.
+toexplainGNNsbyidentifyingimportantsubgraphsexplic-
+itly. WeemploytheMonteCarlotreesearchalgorithmto
+4.6.StudyofPruningActions
+efficientlyexploredifferentsubgraph. Foreachsubgraph,
+we propose to employ Shapley values to measure its im-
+Finally,wediscussthepruningactionsinourMCTS.For
+portance by considering the interactions among different
+thegraphassociatedwitheachnon-leaftreesearchnode,
+graph structures. To expedite computations, we propose
+weperformnodepruningtoobtainitschildrensubgraphs.
+efficientapproximationschemestocomputeShapleyvalues
+Specifically,whenanodeisremoved,alledgesconnected
+byconsideringinteractionsonlywithintheinformationag-
+with it are also removed. In addition, if multiple discon-
+gregationrange. ExperimentalresultsshowourSubgraphX
+nectedsubgraphsareobtainedafterremovinganode,only
+obtainhigher-qualityandmorehuman-intelligibleexplana-
+thelargestsubgraphiskept.Insteadofexploringallpossible
+tionswhilekeepingtimecomplexityacceptable.
+OnExplainabilityofGraphNeuralNetworksviaSubgraphExplorations
+References OpenSourceSoftware(NLP-OSS),pp.1–6,Melbourne,
+Australia,July2018.AssociationforComputationalLin-
+Alon, U. Network motifs: theory and experimental ap-
+guistics. doi: 10.18653/v1/W18-2501. URL https:
+proaches. NatureReviewsGenetics,8(6):450–461,2007.
+//www.aclweb.org/anthology/W18-2501.
+Alon,U. Anintroductiontosystemsbiology: designprinci-
+Gilmer,J.,Schoenholz,S.S.,Riley,P.F.,Vinyals,O.,and
+plesofbiologicalcircuits. CRCpress,2019.
+Dahl,G.E. Neuralmessagepassingforquantumchem-
+Baldassarre, F. and Azizpour, H. Explainability tech- istry. InInternationalConferenceonMachineLearning,
+niquesforgraphconvolutionalnetworks.InInternational pp.1263–1272.PMLR,2017.
+Conference on Machine Learning (ICML) Workshops,
+Huang,Q.,Yamada,M.,Tian,Y.,Singh,D.,Yin,D.,and
+2019WorkshoponLearningandReasoningwithGraph-
+Chang, Y. Graphlime: Local interpretable model ex-
+StructuredRepresentations,2019.
+planations for graph neural networks. arXiv preprint
+Chen,J.,Song,L.,Wainwright,M.J.,andJordan,M.I. L- arXiv:2001.06216,2020.
+shapleyandc-shapley: Efficientmodelinterpretationfor
+Jang,E.,Gu,S.,andPoole,B. Categoricalreparameteriza-
+structureddata. InInternationalConferenceonLearning
+tionwithgumbel-softmax. InInternationalConference
+Representations,2018a.
+onLearningRepresentations,2016.
+Chen,Z.,Li,L.,andBruna,J. Supervisedcommunityde-
+Jin, W., Barzilay, R., and Jaakkola, T. Multi-objective
+tectionwithlinegraphneuralnetworks. InInternational
+moleculegenerationusinginterpretablesubstructures. In
+ConferenceonLearningRepresentations,2018b.
+InternationalConferenceonMachineLearning,pp.4849–
+4859.PMLR,2020.
+Debnath,A.K.,LopezdeCompadre,R.L.,Debnath,G.,
+Shusterman,A.J.,andHansch,C. Structure-activityrela-
+Kipf, T. N. and Welling, M. Semi-supervised classifica-
+tionshipofmutagenicaromaticandheteroaromaticnitro
+tionwithgraphconvolutionalnetworks. InInternational
+compounds.correlationwithmolecularorbitalenergies
+ConferenceonLearningRepresentations,2017.
+andhydrophobicity. Journalofmedicinalchemistry,34
+(2):786–797,1991. Kuhn,H.W.andTucker,A.W. ContributionstotheTheory
+ofGames,volume2. PrincetonUniversityPress,1953.
+Devlin,J.,Chang,M.-W.,Lee,K.,andToutanova,K.BERT:
+Pre-training of deep bidirectional transformers for lan- Liu, M., Luo, Y., Wang, L., Xie, Y., Yuan, H., Gui, S.,
+guageunderstanding. InProceedingsofthe2019Con- Yu,H.,Xu,Z.,Zhang,J.,Liu,Y.,Yan,K.,Liu,H.,Fu,
+ferenceoftheNorthAmericanChapteroftheAssocia- C., Oztekin, B., Zhang, X., and Ji, S. DIG: A turnkey
+tion for Computational Linguistics: Human Language libraryfordivingintographdeeplearningresearch.arXiv
+Technologies, Volume 1, pp. 4171–4186, Minneapolis, preprintarXiv:2103.12608,2021.
+Minnesota, June 2019. Association for Computational
+Linguistics. doi: 10.18653/v1/N19-1423. URLhttps: Lundberg,S.M.andLee,S.-I. Aunifiedapproachtointer-
+//www.aclweb.org/anthology/N19-1423. pretingmodelpredictions. InAdvancesinneuralinfor-
+mationprocessingsystems,pp.4765–4774,2017.
+Du,M.,Liu,N.,Song,Q.,andHu,X. Towardsexplanation
+Luo, D., Cheng, W., Xu, D., Yu, W., Zong, B., Chen, H.,
+of dnn-based prediction with guided feature inversion.
+andZhang,X. Parameterizedexplainerforgraphneural
+InProceedingsofthe24thACMSIGKDDInternational
+network. In Larochelle, H., Ranzato, M., Hadsell, R.,
+ConferenceonKnowledgeDiscovery&DataMining,pp.
+Balcan, M. F., and Lin, H. (eds.), Advances in Neural
+1358–1367,2018.
+InformationProcessingSystems,volume33,pp.19620–
+Gao,H.andJi,S.GraphU-Nets.Ininternationalconference 19631.CurranAssociates,Inc.,2020.
+onmachinelearning,pp.2083–2092.PMLR,2019.
+Milo, R., Shen-Orr, S., Itzkovitz, S., Kashtan, N.,
+Gao,H.,Wang,Z.,andJi,S. Large-scalelearnablegraph Chklovskii, D., and Alon, U. Network motifs: simple
+convolutionalnetworks. InProceedingsofthe24thACM buildingblocksofcomplexnetworks.Science,298(5594):
+SIGKDD International Conference on Knowledge Dis- 824–827,2002.
+coveryandDataMining,pp.1416–1424,2018.
+Pope, P. E., Kolouri, S., Rostami, M., Martin, C. E., and
+Gardner, M., Grus, J., Neumann, M., Tafjord, O., Dasigi, Hoffmann,H. Explainabilitymethodsforgraphconvo-
+P.,Liu,N.F.,Peters,M.,Schmitz,M.,andZettlemoyer, lutional neural networks. In Proceedings of the IEEE
+L. AllenNLP: A deep semantic natural language pro- ConferenceonComputerVisionandPatternRecognition,
+cessingplatform. InProceedingsofWorkshopforNLP pp.10772–10781,2019.
+OnExplainabilityofGraphNeuralNetworksviaSubgraphExplorations
+Schlichtkrull,M.S.,Cao,N.D.,andTitov,I. Interpreting In Advances in neural information processing systems,
+graphneuralnetworksfor{nlp}withdifferentiableedge 2020.
+masking. InInternationalConferenceonLearningRep-
+resentations, 2021a. URL https://openreview. Wang, X., Ji, H., Shi, C., Wang, B., Ye, Y., Cui, P., and
+net/forum?id=WznmQa42ZAx. Yu,P.S. Heterogeneousgraphattentionnetwork. InThe
+WorldWideWebConference,pp.2022–2032,2019.
+Schlichtkrull,M.S.,Cao,N.D.,andTitov,I. Interpreting
+graphneuralnetworksfor{nlp}withdifferentiableedge Wang, Z., Liu, M., Luo, Y., Xu, Z., Xie, Y., Wang, L.,
+masking. InInternationalConferenceonLearningRep- Cai, L., and Ji, S. Advanced graph and sequence neu-
+resentations, 2021b. URL https://openreview. ralnetworksformolecularpropertypredictionanddrug
+net/forum?id=WznmQa42ZAx. discovery. arXivpreprintarXiv:2012.01981,2020.
+Schnake,T.,Eberle,O.,Lederer,J.,Nakajima,S.,Schu¨tt, Wu, Z., Ramsundar, B., Feinberg, E. N., Gomes, J., Ge-
+K.T.,Mu¨ller,K.-R.,andMontavon,G. Xaiforgraphs: niesse, C., Pappu, A. S., Leswing, K., and Pande, V.
+Explaininggraphneuralnetworkpredictionsbyidenti- Moleculenet: abenchmarkformolecularmachinelearn-
+fyingrelevantwalks. arXivpreprintarXiv:2006.03589, ing. Chemicalscience,9(2):513–530,2018.
+2020.
+Xu,K.,Hu,W.,Leskovec,J.,andJegelka,S. Howpowerful
+Schwarzenberg, R., Hu¨bner, M., Harbecke, D., Alt, C., aregraphneuralnetworks? InInternationalConference
+and Hennig, L. Layerwise relevance visualization in on Learning Representations, 2019. URL https://
+convolutional text graph classifiers. arXiv preprint openreview.net/forum?id=ryGs6iA5Km.
+arXiv:1909.10911,2019.
+Yang,F.,Pentyala,S.K.,Mohseni,S.,Du,M.,Yuan,H.,
+Shen-Orr,S.S.,Milo,R.,Mangan,S.,andAlon,U. Net- Linder,R.,Ragan,E.D.,Ji,S.,andHu,X. Xfake: ex-
+workmotifsinthetranscriptionalregulationnetworkof plainablefakenewsdetectorwithvisualizations. InThe
+escherichiacoli. Naturegenetics,31(1):64–68,2002. WorldWideWebConference,pp.3600–3604,2019.
+Silver, D., Schrittwieser, J., Simonyan, K., Antonoglou, Ying,Z.,Bourgeois,D.,You,J.,Zitnik,M.,andLeskovec,J.
+I.,Huang,A.,Guez,A.,Hubert,T.,Baker,L.,Lai,M., Gnnexplainer: Generatingexplanationsforgraphneural
+Bolton, A., et al. Mastering the game of go without networks. InAdvancesinneuralinformationprocessing
+humanknowledge. nature,550(7676):354–359,2017. systems,pp.9244–9255,2019.
+Simonyan, K., Vedaldi, A., and Zisserman, A. Deep in-
+Yuan,H.andJi,S. Structpool: Structuredgraphpoolingvia
+side convolutional networks: Visualising image clas-
+conditionalrandomfields. InInternationalConference
+sification models and saliency maps. arXiv preprint
+onLearningRepresentations,2020.
+arXiv:1312.6034,2013.
+Yuan, H. and Ji, S. Node2seq: Towards trainable con-
+Smilkov,D.,Thorat,N.,Kim,B.,Vie´gas,F.,andWatten-
+volutions in graph neural networks. arXiv preprint
+berg,M. Smoothgrad: removingnoisebyaddingnoise.
+arXiv:2101.01849,2021.
+arXivpreprintarXiv:1706.03825,2017.
+Yuan,H.,Chen,Y.,Hu,X.,andJi,S.Interpretingdeepmod-
+Springenberg, J. T., Dosovitskiy, A., Brox, T., and Ried-
+elsfortextanalysisviaoptimizationandregularization
+miller,M. Strivingforsimplicity: Theallconvolutional
+methods. InAAAI-19: Thirty-ThirdAAAIConferenceon
+net. InternationalConferenceonLearningRepresenta-
+ArtificialIntelligence.AssociationfortheAdvancement
+tions,2015.
+ofArtificialIntelligence,2019.
+Sˇtrumbelj, E. and Kononenko, I. Explaining prediction
+Yuan,H.,Cai,L.,Hu,X.,Wang,J.,andJi,S. Interpreting
+modelsandindividualpredictionswithfeaturecontribu-
+image classifiers by generating discrete masks. IEEE
+tions. Knowledgeandinformationsystems,41(3):647–
+Transactions on Pattern Analysis and Machine Intelli-
+665,2014.
+gence,2020a.
+Velicˇkovic´, P., Cucurull, G., Casanova, A., Romero, A.,
+Yuan, H., Tang, J., Hu, X., and Ji, S. XGNN: Towards
+Lio`, P., and Bengio, Y. Graph attention networks. In
+model-levelexplanationsofgraphneuralnetworks. KDD
+InternationalConferenceonLearningRepresentations,
+’20,pp.430–438,NewYork,NY,USA,2020b.Associa-
+2018.
+tionforComputingMachinery. ISBN9781450379984.
+Vu, M. N. and Thai, M. T. Pgm-explainer: Probabilistic doi: 10.1145/3394486.3403085. URLhttps://doi.
+graphicalmodelexplanationsforgraphneuralnetworks. org/10.1145/3394486.3403085.
+OnExplainabilityofGraphNeuralNetworksviaSubgraphExplorations
+Yuan,H.,Yu,H.,Gui,S.,andJi,S. Explainabilityingraph
+neural networks: A taxonomic survey. arXiv preprint
+arXiv:2012.15445,2020c.
+Zeiler,M.D.andFergus,R. Visualizingandunderstand-
+ingconvolutionalnetworks. InEuropeanconferenceon
+computervision,pp.818–833.Springer,2014.
+Zhang,M.,Cui,Z.,Neumann,M.,andChen,Y. Anend-to-
+enddeeplearningarchitectureforgraphclassification. In
+AAAI,volume18,pp.4438–4445,2018.
+Zhou,B.,Khosla,A.,Lapedriza,A.,Oliva,A.,andTorralba,
+A. Learningdeepfeaturesfordiscriminativelocalization.
+In Proceedings of the IEEE Conference on Computer
+VisionandPatternRecognition,pp.2921–2929,2016.

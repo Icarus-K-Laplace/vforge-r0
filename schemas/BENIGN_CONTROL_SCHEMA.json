@@ -1,0 +1,17 @@
+{
+  "benign_control_id": "string, unique identifier",
+  "study_id": "string",
+  "claim_id": "string",
+  "transformation_type": "enum: [input_permutation, file_ordering, serialization_change, fp_perturbation, equivalent_metric]",
+  "description": "string, what transformation was applied",
+  "parameters": {
+    "seed": "number",
+    "magnitude": "number or null",
+    "tolerance": "number or null"
+  },
+  "oracle_verified": "boolean",
+  "oracle_verification_hash": "string",
+  "sha256_original_artifact": "string",
+  "sha256_transformed_artifact": "string",
+  "classifications": ["string"]
+}

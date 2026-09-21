@@ -1,0 +1,40 @@
+{
+  "trace_id": "RDML_E01_CARS_Margin_b12_Distance_Tplus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CARS_Margin_b12_Distance_s2",
+    "CARS_Margin_b12_Distance_s3",
+    "CARS_Margin_b12_Distance_s4"
+  ],
+  "protocol": {
+    "dataset": "CARS",
+    "method": "Margin_b12_Distance",
+    "declared_seeds": [
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CARS_Margin_b12_Distance_s2",
+      "RDML_E01_CARS_Margin_b12_Distance_s3",
+      "RDML_E01_CARS_Margin_b12_Distance_s4"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.7626,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CARS_Margin_b12_Distance_s2",
+        "RDML_E01_CARS_Margin_b12_Distance_s3",
+        "RDML_E01_CARS_Margin_b12_Distance_s4"
+      ]
+    }
+  },
+  "is_counterfactual": false,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "cb5b01e200aca33c55450fe0ba3f1643f4fa617e15d94971aa19efcaacce24bb"
+}

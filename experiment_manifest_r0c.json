@@ -1,0 +1,24 @@
+{
+  "experiment_id": "VForge-R0-C-001",
+  "protocol_version": "R0-C",
+  "date": "2026-09-20",
+  "parent_experiment": "VForge-R0-B-001",
+  "data_freeze": {
+    "source": "R0-B studies and mutants",
+    "studies_frozen": 5,
+    "mutants_frozen": 136,
+    "valid_mutants": 96,
+    "benign_controls": 40
+  },
+  "results": {
+    "B0_MKR": 0.417,
+    "B1_MKR": 0.500,
+    "V0_MKR": 0.500,
+    "SI_MKR": 1.000,
+    "SI_vs_V0_delta": 0.500,
+    "M03_SI_MKR": 1.000,
+    "M03_V0_MKR": 0.000
+  },
+  "verdict": "STRONG_GO",
+  "generalization_headroom": "YES"
+}

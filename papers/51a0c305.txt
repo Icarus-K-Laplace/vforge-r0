@@ -1,0 +1,816 @@
+Towards Transparent and Explainable Attention Models
+AkashKumarMohankumar1 PrekshaNema1,2 SharanNarasimhan1
+MiteshM.Khapra1,2 BalajiVasanSrinivasan3 BalaramanRavindran1,2
+1IndianInstituteofTechnologyMadras 3AdobeResearch
+2 RobertBoschCenterforDataScienceandArtificialIntelligence,IITMadras
+makashkumar99@gmail.com {preksha,miteshk,ravi}@cse.iitm.ac.in
+sharan.n21@gmail.com balsrini@adobe.com
+Abstract 1 Introduction
+Question1:Whatisthebestwaytoimprovemyspoken
+Recent studies on interpretability of attention Englishsoon?
+distributionshaveledtonotionsoffaithfuland Question2: HowcanIimprovemyEnglishspeaking
+ability?
+plausible explanations for a model’s predic-
+Isparaphrase(Actual&Predicted):Yes
+tions. Attention distributions can be consid-
+AttentionDistribution
+ered a faithful explanation if a higher atten- VanillaLSTM HowcanIimprovemy
+tion weight implies a greater impact on the Englishspeakingability?
+model’sprediction. Theycanbeconsidereda DiversityLSTM HowcanIimprovemy
+Englishspeakingability?
+plausibleexplanationiftheyprovideahuman-
+understandable justification for the model’s Passage:Sandrawenttothegarden.Danielwenttothe
+predictions. Inthiswork,wefirstexplainwhy garden.
+currentattentionmechanismsinLSTMbased Question:WhereisSandra?
+Answer(Actual&Predicted):garden
+encoders can neither provide a faithful nor a
+AttentionDistribution:
+plausible explanation of the model’s predic-
+VanillaLSTM Sandrawenttothegarden.
+tions. We observe that in LSTM based en- Danielwenttothegarden
+coders the hidden representations at different DiversityLSTM Sandrawenttothegarden.
+time-stepsareverysimilartoeachother(high Danielwenttothegarden
+conicity) and attention weights in these situa-
+Table 1: Samples of Attention distributions from
+tionsdonotcarrymuchmeaningbecauseeven
+Vanilla and Diversity LSTM models on the Quora
+arandompermutationoftheattentionweights
+QuestionParaphrase(QQP)&Babi1datasets.
+doesnotaffectthemodel’spredictions. Based
+.
+onexperimentsonawidevarietyoftasksand
+datasets,weobserveattentiondistributionsof-
+Attention mechanisms (Bahdanau et al., 2014;
+ten attribute the model’s predictions to unim-
+portant words such as punctuation and fail to Vaswani et al., 2017) play a very important role
+offer a plausible explanation for the predic- in neural network-based models for various Nat-
+tions. To make attention mechanisms more uralLanguageProcessing(NLP)tasks. Theynot
+faithful and plausible, we propose a modified onlyimprovetheperformanceofthemodelbutare
+LSTMcellwithadiversity-driventrainingob-
+also often used to provide insights into the work-
+jective that ensures that the hidden represen-
+ing of a model. Recently, there is a growing de-
+tations learned at different time steps are di-
+bate on whether attention mechanisms can offer
+verse. We show that the resulting attention
+transparencytoamodelornot. Forexample,Ser-
+distributions offer more transparency as they
+(i) provide a more precise importance rank- ranoandSmith(2019)andJainandWallace(2019)
+ing of the hidden states (ii) are better indica- showthathighattentionweightsneednotnecessar-
+tiveofwordsimportantforthemodel’spredic- ily correspond to a higher impact on the model’s
+tions (iii) correlate better with gradient-based predictionsandhencetheydonotprovideafaith-
+attribution methods. Human evaluations indi-
+ful explanation for the model’s predictions. On
+catethattheattentiondistributionslearnedby
+theotherhand,WiegreffeandPinter(2019)argues
+ourmodelofferaplausibleexplanationofthe
+thatthereisstillapossibilitythatattentiondistribu-
+model’spredictions. Ourcodehasbeenmade
+publiclyavailableathttps://github.com/ tionsmayprovideaplausibleexplanationforthe
+akashkm99/Interpretable-Attention predictions. In other words, they might provide
+4206
+Proceedingsofthe58thAnnualMeetingoftheAssociationforComputationalLinguistics,pages4206–4216
+July5-10,2020.(cid:13)c2020AssociationforComputationalLinguistics
+aplausiblereconstructionofthemodel’sdecision Wefurtherobservethatattentionweightsinour
+makingwhichcanbeunderstoodbyahumaneven models,inadditiontoaddingtransparencytothe
+ifitisnotfaithfultohowthemodelworks. model,arealsomoreexplainablei.e. morehuman-
+understandable. InTable1,weshowsamplesofat-
+Inthiswork,webeginbyanalyzingwhyatten-
+tentiondistributionsfromaVanillaLSTMandour
+tion distributions may not faithfully explain the
+proposedDiversityLSTMmodel. Weobservethat
+model’spredictions. Wearguethatwhentheinput
+inourmodels,unimportanttokenssuchaspunctua-
+representations over which an attention distribu-
+tionmarksreceiveverylittleattentionwhereasim-
+tion is being computed are very similar to each
+portantwordsbelongingtorelevantpart-of-speech
+other,theattentionweightsarenotverymeaning-
+tagsreceivegreaterattention(forexample,adjec-
+ful. Sincetheinputrepresentationsareverysimilar,
+tives in the case of sentiment classification). Hu-
+evenrandompermutationsoftheattentionweights
+man evaluation on the attention from our model
+could lead to similar final context vectors. As a
+showsthathumansprefertheattentionweightsin
+result,theoutputpredictionswillnotchangemuch
+our Diversity LSTM as providing better explana-
+even if the attention weights are permuted. We
+tionsthanVanillaLSTMin72.3%,62.2%,88.4%,
+showthatthisisindeedthecaseforLSTMbased
+99.0%ofthesamplesinYelp,SNLI,QuoraQues-
+models where the hidden states occupy a narrow
+tionParaphraseandBabi1datasetsrespectively.
+coneinthelatentspace(i.e.,thehiddenrepresen-
+tations are very close to each other). We further
+2 Tasks,DatasetandModels
+observethatforawidevarietyofdatasets,attention
+distributionsinthesemodelsdonotevenprovide
+Ourfirstgoalistounderstandwhyexistingatten-
+a good plausible explanation as they pay signifi-
+tionmechanismswithLSTMbasedencodersfail
+cantlyhighattentiontounimportanttokenssuchas
+toprovidefaithfulorplausibleexplanationsforthe
+punctuations. Thisisperhapsduetohiddenstates
+model’s predictions. We experiment on a variety
+capturingasummaryoftheentirecontextinstead
+ofdatasetsspanningdifferenttasks;here,weintro-
+ofbeingspecifictotheircorrespondingwords.
+duce these datasets and tasks and provide a brief
+Based on these observations, we aim to build recapofthestandardLSTM+attentionmodelused
+more transparent and explainable models where forthesetasks. WeconsiderthetasksofBinaryText
+theattentiondistributionsprovidefaithfulandplau- classification,NaturalLanguageInference,Para-
+sibleexplanationsforitspredictions. Oneintuitive phrase Detection, and Question Answering. We
+wayofmakingtheattentiondistributionmorefaith- useatotalof12datasets,mostofthembeingthe
+ful is by ensuring that the hidden representations sameastheonesusedin(JainandWallace,2019).
+overwhichthedistributionisbeingcomputedare WedivideTextclassificationintoSentimentAnaly-
+verydiverse. Therefore,arandompermutationof sisandOtherTextclassificationforconvenience.
+the attention weights will lead to very different SentimentAnalysis: WeusetheStanfordSen-
+contextvectors. Todoso,weproposeanorthogo- timentTreebank(SST)(Socheretal.,2013),IMDB
+nalizationtechniquewhichensuresthatthehidden MovieReviews(Maasetal.,2011),YelpandAma-
+statesarefartherawayfromeachotherintheirspa- zonforsentimentanalysis. Allthesedatasetsuse
+tialdimensions. Wethenproposeamoreflexible binarytargetvariable(positive/negative).
+modeltrainedwithanadditionalobjectivethatpro- Other Text Classification: We use the Twit-
+motes diversity in the hidden states. Through a terADR(Nikfarjametal.,2015)datasetwith8K
+series of experiments using 12 datasets spanning tweets where the task is to detect if a tweet de-
+4tasks,weshowthatourmodelismoretranspar- scribesanadversedrugreactionornot. Weusea
+ent while achieving comparable performance to subsetofthe20Newsgroupsdataset(JainandWal-
+modelscontainingvanillaLSTMbasedencoders. lace,2019)toclassifynewsarticlesintobaseball
+Specifically, we show that in our proposed mod- vshockeysportscategories. FromMIMICICD9
+els,attentionweights(i)provideusefulimportance (Johnsonetal.,2016),weuse2datasets: Anemia,
+rankingofhiddenstates(ii)arebetterindicativeof todeterminethetypeofAnemia(ChronicvsAcute)
+wordsthatareimportantforthemodel’sprediction apatientisdiagnosedwithandDiabetes,topredict
+(iii)correlatebetterwithgradient-basedfeatureim- whetherapatientisdiagnosedwithDiabetesornot.
+portancemethodsand(iv)aresensitivetorandom NaturalLanguageInference: Weconsiderthe
+permutations(asshouldindeedbethecase). SNLIdataset(Bowmanetal.,2015)forrecogniz-
+4207
+ingtextualentailmentwithinsentencepairs. The 3 AnalyzingAttentionMechanisms
+SNLI dataset has three possible classification la-
+Here,wefirstinvestigatethequestion-WhyAtten-
+bels,vizentailment,contradictionandneutral.
+tiondistributionsmaynotprovideafaithfulexpla-
+Paraphrase Detection: We utilize the Quora
+nationforthemodel’spredictions? Welaterexam-
+Question Paraphrase (QQP) dataset (part of the
+inewhetherAttentiondistributionscanprovidea
+GLUEbenchmark(Wangetal.,2018))withpairs
+plausibleexplanationforthemodel’spredictions,
+ofquestionslabeledasparaphrasedornot. Wesplit
+notnecessarilyfaithful.
+thetrainingsetinto90 : 10trainingandvalidation;
+andusetheoriginaldevsetasourtestset. 3.1 SimilarityMeasures
+QuestionAnswering: Wemadeuseofallthree
+Webeginwithdefiningsimilaritymeasuresinavec-
+QA tasks from the bAbI dataset (Weston et al.,
+torspaceforeaseofanalysis. Wemeasurethesim-
+2015). The tasks consist of answering questions
+ilaritybetweenasetofvectorsV = {v ,...,v }
+1 m
+that would require one, two or three supporting
+using the conicity measure (Chandrahas et al.,
+statements from the context. The answers are a
+2018; Sai et al., 2019) by first computing a vec-
+span in the context. We then use the CNN News
+torv ’s‘alignmenttomean’(ATM),
+i
+Articlesdataset(Hermannetal.,2015)consisting
+of90karticleswithanaverageofthreequestions m
+1 (cid:88)
+perarticlealongwiththeircorrespondinganswers.
+ATM(v
+i
+,V) = cosine(v
+i
+, v
+j
+)
+m
+j=1
+2.1 LSTMModelwithAttention
+Conicity is defined as the mean of ATM for all
+Oftheabovetasks,thetextclassificationtasksre-
+vectorsv ∈ V:
+i
+quire making predictions from a single input se-
+m
+quence(ofwords)whereastheremainingtasksuse 1 (cid:88)
+conicity(V) = ATM(v ,V)
+pairs of sequences as input. For tasks containing m i
+i=1
+twoinputsequences,weencodeboththesequences
+P = {w 1 p,...,w m p } and Q = {w 1 q,...,w n q} by Ahighvalueofconicityindicatesthatallthevec-
+passing their word embedding through a LSTM torsarecloselyalignedwiththeirmeani.etheylie
+encoder(HochreiterandSchmidhuber,1997), inanarrowconecenteredatorigin.
+hp = LSTM (e(wp),hp ) ∀t ∈ [1,m], 3.2 AttentionMechanisms
+t P t t−1
+hq = LSTM (e(wq),hq ) ∀t ∈ [1,n], Asmentionedearlier,attentionmechanismslearn
+t Q t t−1
+a weighting distribution over hidden states H =
+wheree(w)representsthewordembeddingforthe {h ,...,h } using a scoring function f such as
+1 n
+word w. We attend to the intermediate represen- (Bahdanauetal.,2014)toobtainanattendedcon-
+tationsofP,Hp = {hp,...,hp }∈ Rm×d using textvectorc .
+1 m α
+the last hidden state hq ∈ Rd as the query, using
+n n
+theattentionmechanism(Bahdanauetal.,2014), (cid:88)
+c = α h ; α = softmax(f(h ,h ))
+α t t t t query
+α˜ = vTtanh(W hp+W hq +b) ∀t ∈ [1,m] t=1
+t 1 t 2 n
+The attended context vector is a convex combi-
+α = softmax(α˜ )
+t t
+nation of the hidden states which means it will
+m
+c = (cid:88) α hp lie within the cone spanned by the hidden states.
+α t t
+Whenthehiddenstatesarehighlysimilartoeach
+t=1
+other (high conicity), even diverse sets of atten-
+where W
+1
+∈ Rd1×d,W
+2
+∈ Rd1×d,b ∈ Rd1 and tion distributions would produce very similar at-
+v ∈ Rd1 arelearnableparameters. Finally,weuse tended context vector c as they will always lie
+α
+theattendedcontextvectorc tomakeaprediction withinanarrowcone. Thiscouldresultinoutputs
+α
+yˆ= softmax(W c ). yˆ= softmax(W c )withverylittledifference. In
+o α o α
+Fortaskswithasingleinputsequence,weusea otherwords,whenthereisahigherconicityinhid-
+singleLSTMtoencodethesequence,followedby denstates,themodelcouldproducethesamepre-
+anattentionmechanism(withoutquery)andafinal dictionforseveraldiversesetsofattentionweights.
+outputprojectionlayer. In such cases, one cannot reliably say that high
+4208
+Figure2:OrthogonalLSTM:Hiddenstateatatimestep
+Figure1: Left: highconicityofhiddenstatesresultsin
+isorthogonaltothemeanofprevioushiddenstates
+similarattendedcontextvectors.Right:lowconicityof
+hiddenstatesresultsinverydifferentcontextvectors
+find that in several datasets, a significant amount
+ofattentionisgiventopunctuations. OntheYelp,
+attentionweightsoncertaininputcomponentsled
+AmazonandQQPdatasets,attentionmechanisms
+themodeltoitsprediction. Lateron,insection5.3,
+pay28.6%,34.0%and23.0%ofitstotalattention
+weshowthatwhenusingvanillaLSTMencoders
+topunctuations. Notably,punctuationsonlyconsti-
+wherethereishigherconicityinhiddenstates,even
+tute11.0%,10.5%and11.6%ofthetotaltokensin
+whenwerandomlypermutetheattentionweights,
+therespectivedatasetssignifyingthatlearnedatten-
+themodeloutputdoesnotchangemuch.
+tiondistributionspaysubstantiallygreaterattention
+3.3 ConicityofLSTMsHiddenStates topunctuationsthanevenanuniformdistribution.
+Thisraisesquestionsontheextenttowhichatten-
+Wenowanalyzeifthehiddenstateslearnedbyan
+tiondistributionsprovideplausibleexplanationsas
+LSTMencoderdoactuallyhavehighconicity. In
+theyattributemodel’spredictionstotokensthatare
+Table2,wereporttheaverageconicityofhidden
+linguisticallyinsignificanttothecontext.
+states learned by an LSTM encoder for various
+One of the potential reasons why the attention
+tasks and datasets. For reference, we also com-
+distributionsaremisalignedisthatthehiddenstates
+putetheaverageconicityobtainedbyvectorsthat
+mightcaptureasummaryoftheentirecontextin-
+areuniformlydistributedwithrespecttodirection
+steadofbeingspecifictotheircorrespondingwords
+(isotropic)inthesamehiddenspace. Weobserve
+as suggested by the high conicity. We later show
+that across all the datasets the hidden states are
+thatattentiondistributionsinourmodelswithlow
+consistentlyalignedwitheachotherwithconicity
+conicityvaluetendtoignorepunctuationmarks.
+values ranging between 0.43 to 0.77. In contrast,
+when there was no dependence between the vec-
+4 OrthogonalandDiversityLSTM
+tors,theconicityvaluesweremuchlowerwiththe
+vectorsevenbeingalmostorthogonaltoitsmeanin
+Basedonourpreviousargumentthathighconicity
+severalcases(∼ 89◦inDiabetes Anemiadatasets).
+ofhiddenstatesaffectthetransparencyandexplain-
+Theexistenceofhighconicityinthelearnedhidden
+abilityofattentionmodels,wepropose2strategies
+statesofanLSTMencoderisoneofthepotential
+toobtainreducedsimilarityinhiddenstates.
+reasonswhytheattentionweightsinthesemodels
+are not always faithful to its predictions (as even
+4.1 Orthogonalization
+randompermutationsoftheattentionweightswill
+Here,weexplicitlyensurelowconicityexistsbe-
+resultinsimilarcontextvectors,c ).
+α
+tween hidden states of an LSTM encoder by or-
+3.4 AttentionbyPOSTags thogonalizing the hidden state at time t with the
+mean of previous states as illustrated in Figure 2.
+We now examine whether attention distributions
+Weusethefollowingsetofupdateequations:
+canprovideaplausibleexplanationforthemodel’s
+predictionseven ifitis notfaithful. Intuitively, a
+f = σ(W x +U h +b )
+plausible explanation should ignore unimportant t f t f t−1 f
+tokens such as punctuation marks and focus on i t = σ(W i x t +U i h t−1 +b i )
+words relevant for the specific task. To examine o = σ(W x +U h +b )
+t o t o t−1 o
+this, we categorize words in the input sentence
+cˆ = tanh(W x +U h +b )
+t c t c t−1 c
+by its universal part-of-speech (POS) tag (Petrov
+c = f (cid:12)c +i (cid:12)cˆ
+t t t−1 t t
+etal.,2011)andcumulateattentiongiventoeach
+POStagovertheentiretestset. Surprisingly, we
+4209
+hˆ = o (cid:12)tanh(c )
+t t t
+t−1
+(cid:88)
+h = h (1)
+t i
+i=1
+hˆTh
+h = hˆ − t t h (2)
+t t T t
+h h
+t t
+where W
+f
+,W
+i
+,W
+o
+,W
+c
+∈ Rd2×d1, U
+f
+,U
+i
+,
+U
+o
+,U
+c
+∈ Rd2×d2, b
+f
+,b
+i
+,b
+o
+,b
+c
+∈ Rd2, d
+1
+and
+d are the input and hidden dimensions respec-
+2
+tively. ThekeydifferencefromavanillaLSTMis
+inthelast2equationswherewesubtractthehidden
+statevector’shˆ componentalongthemeanh of
+t t
+thepreviousstates.
+4.2 DiversityDrivenTraining
+Figure 3: Box plots of fraction of hidden representa-
+Theabovemodelimposesahardorthogonalitycon-
+tions removed for a decision flip. Dataset and models
+straintbetweenthehiddenstatesandtheprevious
+are mentioned at the top and bottom of figures. Blue
+states’ mean. We also propose a more flexible
+andYellowindicatetheattentionandrandomranking.
+approachwherethemodelisjointlytrainedtomax-
+imize the log-likelihood of the training data and
+section2.1exceptthatthevanillaLSTMisreplaced
+minimizetheconicityofhiddenstates,
+bytheorthogonalLSTMdescribedinsection4.1.
+L(θ) = −p (y|P,Q,θ)+λ conicity(HP)
+model
+5.1 ImplementationDetails
+wherey isthegroundtruthclass,PandQarethe
+For all datasets except bAbi, we either use pre-
+input sentences, HP = {hp,...,hp } ∈ Rm×d
+1 m trainedGlove(Penningtonetal.,2014)orfastText
+containsallthehiddenstatesoftheLSTM,θ isa
+(Mikolovetal.,2018)wordembeddingswith300
+collection of the model parameters and p (.)
+model dimensions. For the bAbi dataset, we learn 50
+represents the model’s output probability. λ is a
+dimensionalwordembeddingsfromscratchduring
+hyperparameter that controls the weight given to
+training. Weusea1-layeredLSTMastheencoder
+diversityinhiddenstatesduringtraining.
+with hidden size of 128 for bAbi and 256 for the
+otherdatasets. Forthediversityweightλ,weusea
+5 Analysisofthemodel
+valueof0.1forSNLI,0.2forCNN,and0.5forthe
+Wenowanalysetheproposedmodelsbyperform- remainingdatasets. WeuseAdamoptimizerwith
+ing experiments using the tasks and datasets de- alearningrateof0.001andselectthebestmodel
+scribedearlier. Throughtheseexperimentswees- basedonaccuracyonthevalidationsplit. Allthe
+tablishthat(i)theproposedmodelsperformcompa- subsequentanalysisareperformedonthetestsplit.
+rablytovanillaLSTMs(Sec. 5.2)(ii)theattention
+5.2 Empiricalevaluation
+distributionsintheproposedmodelsprovideafaith-
+fulexplanationforthemodel’spredictions(Secs. Ourmaingoalistoshowthatourproposedmodels
+5.3to5.5)and(iii)theattentiondistributionsare provide more faithful and plausible explanations
+moreexplainableandalignbetterwithahuman’s fortheirpredictions. However,beforewegothere
+interpretationofthemodel’sprediction(Secs. 5.6, weneedtoshowthatthepredictiveperformanceof
+5.7). Throughoutthissectionwewillcomparethe ourmodelsiscomparabletothatofavanillaLSTM
+followingthreemodels: modelandsignificantlybetterthannon-contextual
+1. VanillaLSTM:Themodeldescribedinsection models. In other words, we show that we do not
+2.1whichusesthevanillaLSTM. compromiseonperformancetogaintransparency
+2. DiversityLSTM:Themodeldescribedinsec- andexplainability. Wereporttheperformanceof
+tion2.1withthevanillaLSTMbuttrainedwiththe our model on the tasks and datasets described in
+diversityobjectivedescribedinsection4.2. section2. InTable2, wereporttheaccuracyand
+3. Orthogonal LSTM: The model described in conicityvaluesofvanilla,DiversityandOrthogo-
+4210
+LSTM DiversityLSTM OrthogonalLSTM Random MLP
+Dataset
+Accuracy Conicity Accuracy Conicity Accuracy Conicity Conicity Accuracy
+BinaryClassification
+SST 81.79 0.68 79.95 0.20 80.05 0.28 0.25 80.05
+IMDB 89.49 0.69 88.54 0.08 88.71 0.18 0.08 88.29
+Yelp 95.60 0.53 95.40 0.06 96.00 0.18 0.14 92.85
+Amazon 93.73 0.50 92.90 0.05 93.04 0.16 0.13 87.88
+Anemia 88.54 0.46 90.09 0.09 90.17 0.12 0.02 88.27
+Diabetes 92.31 0.61 91.99 0.08 87.05 0.12 0.02 85.39
+20News 93.55 0.77 91.03 0.15 92.15 0.23 0.13 87.68
+Tweets 87.02 0.77 87.04 0.24 83.20 0.27 0.24 80.60
+NaturalLanguageInference
+SNLI 78.23 0.56 76.96 0.12 76.46 0.27 0.27 75.35
+ParaphraseDetection
+QQP 78.74 0.59 78.40 0.04 78.61 0.33 0.30 77.78
+QuestionAnswering
+bAbI1 99.10 0.56 100.00 0.07 99.90 0.22 0.19 42.00
+bAbI2 40.10 0.48 40.20 0.05 56.10 0.21 0.12 33.20
+bAbI3 47.70 0.43 50.90 0.10 51.20 0.12 0.07 31.60
+CNN 63.07 0.45 58.19 0.06 54.30 0.07 0.04 37.40
+Table2: AccuracyandconicityofVanilla,DiversityandOrthogonalLSTMacrossdifferentdatasets. Accuracyof
+aMultilayeredPerceptron(MLP)modelandconicityofvectorsuniformlydistributedwithrespecttodirectionis
+alsoreportedforreference.
+ceptforanincreaseinaccuracyby39.9%onbAbI
+2andadropof-13.91%onCNN.SimilartotheDi-
+versityLSTM,theconicityvaluesaremuchlower
+thaninthevanillamodel. Wealsoreporttheper-
+formance of a non-contextual model: Multilayer
+Perceptron (MLP) + attention in the same table.
+WeobservethatbothDiversityLSTMandOrthog-
+onal LSTM perform significantly better than the
+MLP model, especially in difficult tasks such as
+Question Answering with an average relative in-
+creaseinaccuracyof73.73%. Havingestablished
+thattheperformanceofDiversityandOrthogonal
+LSTMs is comparable to the vanilla LSTM and
+significantly better than a Multilayer Perceptron
+model, we now show that these two models give
+morefaithfulexplanationsforitspredictions.
+Figure 4: Comparison of Median output difference
+5.3 ImportanceofHiddenRepresentation
+on randomly permuting the attention weights in the
+vanilla, DiversityandOrthogonalLSTMmodels. The We examine whether attention weights provide a
+Datasetnamesarementionedatthetopofeachfigure. useful importance ranking of hidden representa-
+Colorsindicatethedifferentmodelsasshownlegend. tions. Weusetheintermediaterepresentationera-
+sure by Serrano and Smith (2019) to evaluate an
+importance ranking over hidden representations.
+nalLSTMsondifferenttasks. Weobservethatthe Specifically, we erase the hidden representations
+performanceofDiversityLSTMiscomparableto inthedescendingorderoftheimportance(highest
+thatofvanillaLSTMwithaccuracyvalueswithin to lowest) until the model’s decision changes. In
+-7.7% to +6.7% (relative) of the vanilla model’s Figure 3, we report the box plots of the fraction
+accuracy. However,thereisasubstantialdecrease ofhiddenrepresentationserasedforadecisionflip
+intheconicityvalueswithadropbetween70.6% whenfollowingtherankingprovidedbyattention
+to 93.2% when compared to the vanilla model’s weights. For reference, we also show the same
+conicity. Similarly,fortheOrthogonalLSTM,the plotswhenarandomrankingisfollowed. Insev-
+predictive performance is mostly comparable ex- eraldatasets,weobservethatalargefractionofthe
+4211
+representationshavetobeerasedtoobtainadeci- Dataset VanillaLSTM DiversityLSTM
+Rationale Rationale Rationale Rationale
+sionflipinthevanillaLSTMmodel,similartothe Attention Length Attention Length
+SST 0.348 0.240 0.624 0.175
+observationbySerranoandSmith(2019). Thissug-
+IMDB 0.472 0.217 0.761 0.169
+geststhatthehiddenrepresentationsinthelower Yelp 0.438 0.173 0.574 0.160
+Amazon 0.346 0.162 0.396 0.240
+end of the attention ranking do play a significant Anemia 0.611 0.192 0.739 0.237
+Diabetes 0.742 0.458 0.825 0.354
+roleinthevanillaLSTMmodel’sdecision-making 20News 0.627 0.215 0.884 0.173
+Tweets 0.284 0.225 0.764 0.306
+process. Hencetheusefulnessofattentionranking
+insuchmodelsisquestionable. Incontrast,thereis Table 3: Mean Attention given to the generated ratio-
+amuchquickerdecisionflipinourDiversityand naleswiththeirmeanlengths(infraction)
+OrthogonalLSTMmodels. Thus,inourproposed
+models,thetopelementsoftheattentionranking
+cally,weselectaminimumsubsetofwordsinthe
+areabletoconciselydescribethemodel’sdecisions.
+inputsentencewithwhichthemodelcanaccurately
+Thissuggeststhatourattentionweightsprovidea
+makepredictions. Wethencomputethetotalatten-
+faithfulexplanationofthemodel’sperformance(as
+tionthatispaidtothesewords. Thesesetofwords,
+higherattentionimplieshigherimportance).
+alsoknownasrationales,areobtainedfromanex-
+Intaskssuchasparaphrasedetection,themodel
+tractiverationalegenerator(Leietal.,2016)thatis
+is naturally required to carefully go through the
+trainedusingtheREINFORCEalgorithm(Sutton
+entiresentencetomakeadecisionandtherebyre-
+etal.,1999)tomaximizethefollowingreward:
+sulting in delayed decision flips. In the QA task,
+the attention ranking in the vanilla LSTM model
+R = p (y|Z)−α||Z||
+itselfachievesaquickdecisionflip. Onfurtherin- model
+spection,wefoundthatthisisbecausethesemodels
+whereyisthegroundtruthclass,Zistheextracted
+tendtoattendontoanswerwordswhichareusually
+rationale, ||Z|| represents the length of the ratio-
+a span in the input passage. So, when the repre-
+nale,p (.)representstheclassificationmodel’s
+model
+sentationscorrespondingtotheanswerwordsare
+outputprobability, αisahyperparameterthatpe-
+erased,themodelcannolongeraccuratelypredict
+nalizeslongrationales. Withafixedα,wetrained
+theanswerresultinginadecisionflip.
+generatorstoextractrationalesfromthevanillaand
+Followingtheworkby(JainandWallace,2019),
+Diversity LSTM models. We observed that the
+we randomly permute the attention weights and
+accuracy of predictions made from the extracted
+observe the difference in the model’s output. In
+rationales was within 5% of the accuracy made
+Figure 4, we plot the median of Total Variation
+from the entire sentences. In Table 3, we report
+Distance (TVD) between the output distribution
+themeanlength(infraction)oftherationalesand
+beforeandafterthepermutationfordifferentval-
+themeanattentiongiventotheminthevanillaand
+uesofmaximumattentioninthevanilla,Diversity
+Diversity LSTM models. In general, we observe
+and Orthogonal LSTM models. We observe that
+that the Diversity LSTM model provides much
+randomly permuting the attention weights in the
+higherattentiontorationaleswhichareevenoften
+DiversityandOrthogonalLSTMmodelresultsin
+shorterthanthevanillaLSTMmodel’srationales.
+significantly different outputs. However, there is
+Onaverage,theDiversityLSTMmodelprovides
+littlechangeinthevanillaLSTMmodel’soutput
+53.52%(relative)moreattentiontorationalesthan
+for several datasets suggesting that the attention
+thevanillaLSTMacrossthe8Textclassification
+weightsarenotsomeaningful. Thesensitivityof
+datasets. Thus,theattentionweightsintheDiver-
+ourattentionweightstorandompermutationsagain
+sity LSTM are able to better indicate words that
+suggests that they provide a more faithful expla-
+areimportantformakingpredictions.
+nationforthemodel’spredictionswhereassimilar
+outputsraisesseveralquestionsaboutthereliability 5.5 Comparisonwithattributionmethods
+ofattentionweightsinthevanillaLSTMmodel.
+We now examine how well our attention weights
+agree with attribution methods such as gradients
+5.4 ComparisonwithRationales
+andintegratedgradients(Sundararajanetal.,2017).
+Fortaskswithasingleinputsentence,weanalyze For every input word, we compute these attribu-
+how much attention is given to words in the sen- tions and normalize them to obtain a distribution
+tencethatareimportantfortheprediction. Specifi- overtheinputwords. WethencomputethePearson
+4212
+PearsonCorrelation↑ JSDivergence↓
+Gradients IntegratedGradients Gradients IntegratedGradients
+Dataset (Mean±Std.) (Mean±Std.) (Mean±Std.) (Mean±Std.)
+Vanilla Diversity Vanilla Diversity Vanilla Diversity Vanilla Diversity
+TextClassification
+SST 0.71±0.21 0.83±0.19 0.62±0.24 0.79±0.22 0.10±0.04 0.08±0.05 0.12±0.05 0.09±0.05
+IMDB 0.80±0.07 0.89±0.04 0.68±0.09 0.78±0.07 0.09±0.02 0.09±0.01 0.13±0.02 0.13±0.02
+Yelp 0.55±0.16 0.79±0.12 0.40±0.19 0.79±0.14 0.15±0.04 0.13±0.04 0.19±0.05 0.19±0.05
+Amazon 0.43±0.19 0.77±0.14 0.43±0.19 0.77±0.14 0.17±0.04 0.12±0.04 0.21±0.06 0.12±0.04
+Anemia 0.63±0.12 0.72±0.10 0.43±0.15 0.66±0.11 0.20±0.04 0.19±0.03 0.34±0.05 0.23±0.04
+Diabetes 0.65±0.15 0.76±0.13 0.55±0.14 0.69±0.18 0.26±0.05 0.20±0.04 0.36±0.04 0.24±0.06
+20News 0.72±0.28 0.96±0.08 0.65±0.32 0.67±0.11 0.15±0.07 0.06±0.04 0.21±0.06 0.07±0.05
+Tweets 0.65±0.24 0.80±0.21 0.56±0.25 0.74±0.22 0.08±0.03 0.12±0.07 0.08±0.04 0.15±0.06
+NaturalLanguageInference
+SNLI 0.58±0.33 0.51±0.35 0.38±0.40 0.26±0.39 0.11±0.07 0.10±0.06 0.16±0.09 0.13±0.06
+ParaphraseDetection
+QQP 0.19±0.34 0.58±0.31 -0.06±0.34 0.21±0.36 0.15±0.08 0.10±0.05 0.19±0.10 0.15±0.06
+QuestionAnswering
+Babi1 0.56±0.34 0.91±0.10 0.33±0.37 0.91±0.10 0.33±0.12 0.21±0.08 0.43±0.13 0.24±0.08
+Babi2 0.16±0.23 0.70±0.13 0.05±0.22 0.75±0.10 0.53±0.09 0.23±0.06 0.58±0.09 0.19±0.05
+Babi3 0.39±0.24 0.67±0.19 -0.01±0.08 0.47±0.25 0.46±0.08 0.37±0.07 0.64±0.05 0.41±0.08
+CNN 0.58±0.25 0.75±0.20 0.45±0.28 0.66±0.23 0.22±0.07 0.17±0.08 0.30±0.10 0.21±0.10
+Table4: MeanandstandarddeviationofPearsoncorrelationandJensen–ShannondivergencebetweenAttention
+weightsandGradients/IntegratedGradientsinVanillaandDiversityLSTMmodels
+correlationandJSdivergencebetweentheattribu-
+tiondistributionandtheattentiondistribution. We
+notethatKendallτ asusedby(JainandWallace,
+2019)oftenresultsinmisleadingcorrelationsbe-
+causetherankingatthetailendofthedistributions
+contributestoasignificantnoise. InTable4,were-
+portthemeanandstandarddeviationofthesePear-
+son correlations and JS divergence in the vanilla
+andDiversityLSTMsacrossdifferentdatasets. We
+observethatattentionweightsinDiversityLSTM
+better agree with gradients with an average (rela-
+tive) 64.84% increase in Pearson correlation and
+anaverage(relative)17.18%decreaseinJSdiver-
+gence over the vanilla LSTM across the datasets.
+SimilartrendsfollowforIntegratedGradients.
+5.6 AnalysisbyPOStags
+Figure5showsthedistributionofattentiongivento
+differentPOStagsacrossdifferentdatasets. Weob- Figure5: Distributionofcumulativeattentiongivento
+different part-of-speech tags in the test dataset. Blue
+servethattheattentiongiventopunctuationmarks
+andOrangeindicatethevanillaandDiversityLSTMs.
+is significantly reduced from 28.6%, 34.0% and
+23.0% in the vanilla LSTM to 3.1%, 13.8% and
+3.4%intheDiversityLSTMontheYelp,Amazon
+and QQP datasets respectively. In the sentiment
+classification task, Diversity LSTM pays greater
+Overall Completness Correctness
+Dataset
+attention to the adjectives, which usually play a Vanilla/Divers. Vanilla/Divers. Vanilla/Divers.
+Yelp 27.7%/72.3% 35.1%/64.9% 10.5%/89.5%
+crucialroleindecidingthepolarityofasentence.
+SNLI 37.8%/62.2% 32.3%/67.7% 38.9%/61.1%
+Across the four sentiment analysis datasets, Di- QQP 11.6%/88.4% 11.8%/88.2% 7.9%/92.1%
+versity LSTM gives an average of 49.27 % (rela- bAbI1 1.0%/99.0% 4.2%/95.8% 1.0%/99.0%
+tive)more attention toadjectives thanthe vanilla
+Table5: PercentagepreferencegiventoVanillavsDi-
+LSTM. Similarly, for the other text classification versitymodelbyhumanannotatorsbasedon3criteria
+taskswherenounsplayanimportantrole,weob-
+servehigherattentiontonouns.
+4213
+5.7 HumanEvaluations et al., 2019) analyze attention distributions and
+attention heads learned by transformer language
+Weconductedhumanevaluationstocomparethe
+models. The idea of orthogonalizing representa-
+extent to which attention distributions from the
+tionsinanLSTMhavebeenusedby(Nemaetal.,
+vanillaandDiversityLSTMsprovideplausibleex-
+2017) but they use a different diversity model in
+planations. Werandomlysampled200datapoints
+thecontextofimprovingperformanceofNatural
+each from the test sets of Yelp, SNLI, QQP, and
+LanguageGenerationmodels
+bAbI1. Annotatorswereshowntheinputsentence,
+the attention heatmaps, and predictions made by
+7 Conclusion&Futurework
+thevanillaandDiversityLSTMsandwereaskedto
+choosetheattentionheatmapthatbetterexplained In this work, we have analyzed why existing at-
+the model’s prediction on 3 criteria 1) Overall - tentiondistributionscanneitherprovideafaithful
+which heatmap is better in explaining the predic- nor a plausible explanation for the model’s pre-
+tionoverall2)Completeness-whichheatmaphigh- dictions. We showed that hidden representations
+lightsallthewordsnecessaryfortheprediction. 3) learnedbyLSTMencoderstendtobehighlysimi-
+Correctness - which heatmap only highlights the laracrossdifferenttimesteps,therebyaffectingthe
+importantwordsandnotunnecessarywords. An- interpretabilityofattentionweights. Weproposed
+notators were given the choice to skip a sample twotechniquestoeffectivelyovercomethisshort-
+incasetheywereunabletomakeacleardecision. comingandshowedthatattentiondistributionsin
+A total of 15 in-house annotators participated in theresultingmodelsprovidemorefaithfulandplau-
+thehumanevaluationstudy. Theannotatorswere sibleexplanations. Asfuturework,wewouldlike
+ComputerSciencegraduatescompetentinEnglish. toextendouranalysisandproposedtechniquesto
+We had 3 annotators for each sample and the fi- morecomplexmodelsanddownstreamtasks.
+nal decision was taken based on majority voting.
+Acknowledgements
+In Table 5, we report the percentage preference
+given to the vanilla and Diversity LSTM models
+WewouldliketothankDepartmentofComputer
+ontheYelp,SNLI,QQP,andbAbI1datasets;the
+ScienceandEngineering,IITMadrasandRobert
+attention distributions from Diversity LSTM sig-
+BoschCenterforDataSciencesandArtificialIntel-
+nificantly outperforms the attention from vanilla
+ligence,IITMadras(RBC-DSAI)forprovidingus
+LSTMacrossallthedatasetsandcriteria.
+sufficientresources. WeacknowledgeGooglefor
+supporting Preksha Nema’s contribution through
+6 Relatedwork
+theirGoogleIndiaPh.D.fellowshipprogram. We
+also express our gratitude to the annotators who
+Our work in many ways can be seen as a contin-
+participatedinhumanevaluations.
+uation to the recent studies (Serrano and Smith,
+2019;JainandWallace,2019;WiegreffeandPinter,
+2019)onthesubjectofinterpretabilityofattention.
+Several other works (Shao et al., 2019; Martins
+andAstudillo,2016;Malaviyaetal.,2018;Nicu-
+laeandBlondel,2017;Marufetal.,2019;Peters
+etal.,2018)focusonimprovingtheinterpretabil-
+ity of attention distributions by inducing sparsity.
+However,theextenttowhichsparseattentiondistri-
+butionsactuallyofferfaithfulandplausibleexpla-
+nationshaven’tbeenstudiedindetail. Fewworks
+(Bao et al., 2018) map attention distributions to
+humanannotatedrationales. Ourworkontheother
+handdoesnotrequireanyadditionalsupervision.
+Work by (Guo et al., 2019) focus on developing
+interpretableLSTMsspecificallyformultivariate
+time series analysis. Several other works (Clark
+etal.,2019;VigandBelinkov,2019;Tenneyetal.,
+2019;Micheletal.,2019;Jawaharetal.,2019;Tsai
+4214
+References Sameen Maruf, Andre´ F. T. Martins, and Gholamreza
+Haffari.2019. Selectiveattentionforcontext-aware
+Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua
+neuralmachinetranslation. InNAACL-HLT.
+Bengio. 2014. Neural machine translation by
+jointly learning to align and translate. CoRR,
+Paul Michel, Omer Levy, and Graham Neubig. 2019.
+abs/1409.0473.
+Are sixteen heads really better than one? ArXiv,
+abs/1905.10650.
+YujiaBao,ShiyuChang,MoYu,andReginaBarzilay.
+2018. Derivingmachineattentionfromhumanratio-
+Tomas Mikolov, Edouard Grave, Piotr Bojanowski,
+nales. InEMNLP.
+Christian Puhrsch, and Armand Joulin. 2018. Ad-
+Samuel R. Bowman, Gabor Angeli, Christopher Potts, vances in pre-training distributed word representa-
+and Christopher D. Manning. 2015. A large anno- tions. In Proceedings of the International Confer-
+tatedcorpusforlearningnaturallanguageinference. enceonLanguageResourcesandEvaluation(LREC
+InEMNLP. 2018).
+Chandrahas, Aditya Sharma, and Partha P. Talukdar. PrekshaNema,MiteshM.Khapra,AnirbanLaha,and
+2018. Towards understanding the geometry of BalaramanRavindran.2017. Diversitydrivenatten-
+knowledgegraphembeddings. InACL. tion model for query-based abstractive summariza-
+tion. InACL.
+Kevin Clark, Urvashi Khandelwal, Omer Levy, and
+Christopher D. Manning. 2019. What does bert
+Vlad Niculae and Mathieu Blondel. 2017. A regular-
+look at? an analysis of bert’s attention. ArXiv,
+ized framework for sparse and structured neural at-
+abs/1906.04341.
+tention. InNIPS.
+Tian Guo, Tao Lin, and Nino Antulov-Fantulin. 2019.
+Azadeh Nikfarjam, Abeed Sarker, Karen O’Connor,
+Exploring interpretable lstm neural networks over
+Rachel E. Ginn, and Graciela Gonzalez-Hernandez.
+multi-variabledata. InICML.
+2015. Pharmacovigilance from social media: min-
+KarlMoritzHermann,Toma´sKocisky´,EdwardGrefen- ing adverse drug reaction mentions using sequence
+stette,LasseEspeholt,WillKay,MustafaSuleyman, labeling with word embedding cluster features. In
+andPhilBlunsom.2015. Teachingmachinestoread JAMIA.
+andcomprehend. InNIPS.
+JeffreyPennington,RichardSocher,andChristopherD.
+SeppHochreiterandJu¨rgenSchmidhuber.1997. Long Manning.2014. Glove:Globalvectorsforwordrep-
+short-term memory. Neural Computation, 9:1735– resentation. In Empirical Methods in Natural Lan-
+1780. guageProcessing(EMNLP),pages1532–1543.
+SarthakJainandByronC.Wallace.2019. Attentionis
+Ben Peters, Vlad Niculae, and Andre´ F. T. Martins.
+notexplanation. InNAACL-HLT.
+2018. Interpretablestructureinductionviasparseat-
+Ganesh Jawahar, Benoˆıt Sagot, and Djame´ Seddah. tention. InBlackboxNLP@EMNLP.
+2019. What does bert learn about the structure of
+language? InACL. Slav Petrov, Dipanjan Das, and Ryan T. McDonald.
+2011. Auniversalpart-of-speechtagset. InLREC.
+AlistairE.W.Johnson,TomJ.Pollard,LuShen,Liwei
+H. Lehman, Mengling Feng, Mohammad M. Ghas- Ananya Sai, Mithun Das Gupta, Mitesh M. Khapra,
+semi, Benjamin Moody, Peter Szolovits, Leo An- and Mukundhan Srinivasan. 2019. Re-evaluating
+thonyCeli, andRogerG.Mark.2016. Mimic-iii, a adem: Adeeperlookatscoringdialogueresponses.
+freelyaccessiblecriticalcaredatabase. InScientific InAAAI.
+data.
+Sofia Serrano and Noah A. Smith. 2019. Is attention
+Tao Lei, Regina Barzilay, and Tommi S. Jaakkola. interpretable? InACL.
+2016. Rationalizingneuralpredictions. InEMNLP.
+WenqiShao,TianjianMeng,JingyuLi,RuimaoZhang,
+Andrew L. Maas, Raymond E. Daly, Peter T. Pham,
+Yudian Li, Xiaogang Wang, and Ping Luo. 2019.
+Dan Huang, Andrew Y. Ng, and Christopher Potts.
+Ssn: Learning sparse switchable normalization via
+2011. Learningwordvectorsforsentimentanalysis.
+sparsestmax. InCVPR.
+InACL.
+Chaitanya Malaviya, Pedro Ferreira, and Andre´ F. T. Richard Socher, Alex Perelygin, Jean Wu, Jason
+Martins.2018. Sparseandconstrainedattentionfor Chuang, Christopher D. Manning, Andrew Y. Ng,
+neuralmachinetranslation. InACL. and Christopher Potts. 2013. Recursive deep mod-
+els for semantic compositionality over a sentiment
+Andre´ F. T. Martins and Ramo´n Ferna´ndez Astudillo. treebank. InEMNLP.
+2016. Fromsoftmaxtosparsemax: Asparsemodel
+of attention and multi-label classification. ArXiv, MukundSundararajan,AnkurTaly,andQiqiYan.2017.
+abs/1602.02068. Axiomaticattributionfordeepnetworks. InICML.
+4215
+Richard S. Sutton, David A. McAllester, Satinder P.
+Singh, and Yishay Mansour. 1999. Policy gradient
+methodsforreinforcementlearningwithfunctionap-
+proximation. InNIPS.
+Ian Tenney, Dipanjan Das, and Ellie Pavlick. 2019.
+Bertrediscoverstheclassicalnlppipeline. InACL.
+Yao-Hung Tsai, Shaojie Bai, Makoto Yamada, Louis-
+PhilippeMorency,andRuslanSalakhutdinov.2019.
+Empirical study of transformer’s attention mecha-
+nismviathelensofkernel. InIJCNLP2019.
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob
+Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz
+Kaiser, and Illia Polosukhin. 2017. Attention is all
+youneed. InNIPS.
+Jesse Vig and Yonatan Belinkov. 2019. Analyzing
+the structure of attention in a transformer language
+model. ArXiv,abs/1906.04284.
+Alex Wang, Amanpreet Singh, Julian Michael, Felix
+Hill, Omer Levy, and Samuel R. Bowman. 2018.
+Glue: A multi-task benchmark and analysis plat-
+form for natural language understanding. In Black-
+boxNLP@EMNLP.
+Jason Weston, Antoine Bordes, Sumit Chopra, and
+Tomas Mikolov. 2015. Towards ai-complete ques-
+tion answering: A set of prerequisite toy tasks.
+CoRR,abs/1502.05698.
+Sarah Wiegreffe and Yuval Pinter. 2019. Attention is
+notnotexplanation. ArXiv,abs/1908.04626.
+4216

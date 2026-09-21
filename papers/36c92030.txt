@@ -1,0 +1,1023 @@
+1
+Privacy-Preserving Collaborative Learning
+through Feature Extraction
+Alireza Sarmadi, Hao Fu, Prashanth Krishnamurthy, Member, IEEE, Siddharth Garg, Member, IEEE,
+and Farshad Khorrami, Senior Member, IEEE
+Abstract—Weproposeaframeworkinwhichmultipleentitiescollaboratetobuildamachinelearningmodelwhilepreservingprivacy
+oftheirdata.Theapproachutilizesfeatureembeddingsfromshared/per-entityfeatureextractorstransformingdataintoafeaturespace
+forcooperationbetweenentities.Weproposetwospecificmethodsandcomparethemwithabaselinemethod.InSharedFeature
+Extractor(SFE)Learning,theentitiesuseasharedfeatureextractortocomputefeatureembeddingsofsamples.InLocallyTrained
+FeatureExtractor(LTFE)Learning,eachentityusesaseparatefeatureextractorandmodelsaretrainedusingconcatenatedfeatures
+fromallentities.Asabaseline,inCooperativelyTrainedFeatureExtractor(CTFE)Learning,theentitiestrainmodelsbysharingraw
+data.Securemulti-partyalgorithmsareutilizedtotrainmodelswithoutrevealingdataorfeaturesinplaintext.Weinvestigatethe
+trade-offsamongSFE,LTFE,andCTFEinregardtoperformance,privacyleakage(usinganoff-the-shelfmembershipinference
+attack),andcomputationalcost.LTFEprovidesthemostprivacy,followedbySFE,andthenCTFE.Computationalcostislowestfor
+SFEandtherelativespeedofCTFEandLTFEdependsonnetworkarchitecture.CTFEandLTFEprovidethebestaccuracy.Weuse
+MNIST,asyntheticdataset,andacreditcardfrauddetectiondatasetforevaluations.
+IndexTerms—Collaborativelearning,privacy-preservingtraining,securemultipartycomputation,neuralnetworks,featureextractor.
+(cid:70)
+1 INTRODUCTION has huge trainable parameters, or the number of parties
+Machinelearningalgorithmstypicallyrequirelargetraining involvedintrainingislarge.
+datasets to have high accuracy on the test input dataset. In this paper, we propose a new solution that seeks to
+Unfortunately, such large training datasets may not be addressthecomputationalbottleneckofprivacy-preserving
+always available to the trainer. One solution is to obtain collaborativelearningusingfeatureextraction.Themethods
+trainingdatafromotherentities.Forexample,twoormore weproposeareSharedFeatureExtractorLearning(SFE)and
+hospitals could share their training data with each other Locally Trained Feature Extractor Learning (LTFE) along
+to collaboratively train a more accurate model than that withthebaselinesolutionthatwerefertoasCooperatively
+trainedbyeachindividualhospital.However,hospitalsmay TrainedFeatureExtractorLearning(CTFE).Ourimplemen-
+alsowanttopreservepatients’privacyasmuchaspossible. tationsoftheseapproachesarebasedonSecureMulti-Party
+Therefore, there is a need for algorithms that enable data Computation(SMPC).SMPCenablesthepartiestocollabo-
+sharingwithoutcompromisingprivacy. ratively perform computations without revealing raw data
+Federated Learning (FL) [1], [2] is one approach that andthereforeensuresinputprivacy,i.e.,protectsagainstdi-
+seeks to address this goal using a central server that coor- rectleakageofrawtrainingdatabyenablingcomputations
+dinatestrainingbetweenmultipleparties(or”local”nodes) oversecretlyshareddataratherthanrawdata.
+withprivatetrainingdatasets.Thecentralservermaintains CTFEisabaselinemethodinwhicheachpartyencrypts
+a global model that the local nodes use to perform local (using additive secret sharing) a portion of its local data
+(and private) gradient updates with respect to their own samples in the input space and shares the encrypted data
+training data. The central server then updates the global with other parties. Then, other parties train their models
+modelbycoalescingthelocalgradientupdates.Butthelocal with their local data and the shared encrypted data. The
+gradientupdatesareasourceofinformationleakageofthe proposed SFE and LTFE methods compared to CTFE are
+localnodestothecentralserver[3]–[5]. showninFig.1.SFEreducesthecomputationcostsofCTFE
+An alternate approach is that each party encrypts its by training the feature extractor publicly (on training data
+data before sending it to the central server, and all the available to all parties) and training only the classifier in
+computations are executed in the encrypted domain using the secure domain. Thus, cryptographic costs only incur in
+encryption methodologies [6]–[15]. The main bottleneck of the classifier layers of the network. In LTFE, the goal is
+encryption-based algorithms is the computation cost due to provide greater privacy compared to CTFE. Here, each
+to the communication overhead, which consists of several party trains its own local feature extractor with its own
+rounds of interactions. These algorithms become computa- local private data. Then, each party trains its own classifier
+tionally expensive when the dataset is large, the network by concatenating encrypted features from all parties. In
+LTFE, each party also performs secure inference using its
+The authors are with the Department of Electrical and Computer Engi-
+ownlocallycomputedfeaturesandencryptedfeaturesfrom
+neering, NYU Tandon School of Engineering, Brooklyn NY, 11201. E-mail:
+{as11986@nyu.edu, hf881@nyu.edu, prashanth.krishnamurthy@nyu.edu, otherparties.TheprivacybenefitsofLTFEoverCTFEarise
+sg175@nyu.edu,khorrami@nyu.edu} from the fact that only the classifier stage is collaboratively
+2202
+ceD
+31
+]GL.sc[
+1v22360.2122:viXra
+2
+trained,butthefeatureextractorsarekeptprivate.Wefocus but come at the expense of reduced utility, for example,
+on horizontal data partitioning (i.e., parties have differ- lower model accuracy [27]. On the other hand, Privacy
+ent sets of samples) in the development of the proposed Preserving Data Mining (PPDM) [28] algorithms consider
+methods. However, LTFE can also be applied to vertically the knowledge about the mining algorithm to increase the
+partitioneddata(i.e.,eachpartyhasaccesstoasubsetofthe utility of the data while achieving a level of data privacy.
+features for the same set of samples shared among parties) Thesealgorithmsdealwithpreservingprivacyintheoutput
+since its architecture is based on concatenating outputs of ofqueriesaboutthedatawithoutrevealinganyinformation
+featureextractorsfromthedifferententities. abouttheactualdatasamples,whileinPPDPthispreserva-
+tion happens in the input domain before sharing the data
+with the public. One of the well-studied PPDM methods is
+1.1 OurContributions
+DifferentialPrivacy(DP)[29]inwhichtheauthorproposed
+Thecontributionsofthispaperinclude:
+DP as a measure of information leakage between two sets
+• Twocollaborativelearningmethodsbasedonfeature of data that differ in only one specific sample. To achieve
+extraction (SFE, LTFE) are proposed and compared these goals, DP methods add noise from a carefully cho-
+withabaselinemethod(i.e.,CTFE). sen distribution to dataset entries. Several works [30]–[35]
+• The proposed methods address the computational have proposed a machine learning framework for training
+bottleneckofprivacy-preservingcollaborativelearn- models with differential privacy. DP-based machine learn-
+ingusingfeatureextraction. ing methods deal with information leakage from a trained
+• The LTFE differs from any existing methods by in- model and do not provide information leakage guarantee
+corporatinganextrafeature-concatenationlayerthat betweencollaboratingparties.
+increases the training security and model accuracy Anorthogonalapproach,whichweadoptinthispaper,
+(without even sharing any data since each party is to leverage methods from cryptography; in particular,
+benefitsfromtheotherparties’embeddings). Homomorphic Encryption [36], and SMPC [37]. In Homo-
+• Thesemethodsareevaluatedonthreedatasets. morphicEncryption,aclientencryptsandsendsitsdatato
+• Challenges,suchashighly-unbalancedtrainingdata, a central server; the server computes directly on encrypted
+accelerating training time, and increasing network data and sends the results back to the client for decryption
+accuracyareaddressed. [6],[10],[36],[38]–[40].Thustheserverlearnsnothingabout
+• Theprivacyaspectsofthesealgorithmsareevaluated the client’s input. In SMPC, two or more parties want to
+byutilizinganoff-the-shelfattackmodel. compute a joint function of their private inputs and reveal
+only the output of the function. For instance, SPDZ [6],
+SecureNN [41], SecureML [42], GAZELLE [43], and Min-
+2 RELATED WORK
+iONN[44]arewellknownprotocolsinthisarea.SMPChas
+Severalmethodshavebeenproposedinordertoallowenti- been utilized in various applications such as feature-based
+ties to share privately their training data for collaborative spam detection [45] using classification models owned by
+learning. In [16], the authors proposed a serial training a third-party and cloud-based computation of pixel-wise
+methodology. However, this algorithm suffers from catas- features of private images [46]. Additionally, there have
+trophic forgetting. A second approach, proposed in [17], beeneffortstoreducethecomputationalcostofSMPC,such
+[18], is split learning. The main idea is that during the asusinghighfan-ingatesforGarbledCircuits[47],lowering
+forwardpass,eachpartycomputestheoutputuptoalayer bandwidth using function sharing [48], and using mixed
+called the cut layer and passes that to other parties or a protocols[49].[50]exploitshigh-dimensionalcomputingfor
+server. Then during the backward pass, the gradients are encodingdataandusesSMPCtoshareglobalkeysbetween
+calculated till the cut layer and after that, the gradients parties instead of securely sharing the original data. In this
+will be backpropagated on each party’s side. Federated work,weexploittheSMPCsettingforsharingdatabetween
+learning (FL) [1], [2], [19]–[22] is another distributed learn- parties, particularly, we consider the SPDZ protocol which
+ing algorithm that aims to preserve training data privacy. issuitablefortrainingneuralnetworks.
+However, it has been shown that client information can be
+reconstructedbyamaliciousserver[3],[4].
+3 PROBLEM STATEMENT
+Another approach, referred to as Privacy Preserving
+Data Publishing (PPDP) [23], sanitizes (or anonymizes) We consider a setting with p parties, each of which has
+data before passing it to other parties in a way that the a set of labeled data called D i = {(x ij ,y ij )}N j= i 1 , where
+anonymized data itself does not reveal sensitive infor- i = 1,...,p, N i is the size of ith party’s dataset, x ij is the
+mation of individuals. One well-known model is the k- jth sample, and y ij is its corresponding label. Each party
+anonymity model of privacy [24] which led to other pri- seekstotrainaclassifierg∗ :RQ →{0,1}K whereQisthe
+i
+vacy models such as l-diversity [25], and t-closeness [26]. dimension of the inputs, and K is the number of classes.
+The k-anonymity model requires that at least k samples Eachpartyminimizesempiricalrisktotrainitsclassifier,
+in the anonymized dataset have the same feature values.
+I in n d tu is it t i i v n e g l u y, is t h h a i b s le m f o r d o e m l m at ak le e a s st su k r - e 1 t i h n a d t iv e i a d c u h a i l n s. d H iv o id w u e a v l e i r s , g i ∗ =argmin N 1 (cid:88)
+Ni
+L(g(x ij ),y ij ) (1)
+g∈G i
+j=1
+this method has limitations such as difficulties in choosing
+sensitiveattributes,curseofdimensionality,andsusceptibil- where L(.,.) is the loss function, and G is a set of parame-
+itytoattributedisclosure.PPDPalgorithmsachieveprivacy terizedclassifiers.Theproblemweseektoanswerishowparties
+3
+Fig.1:Cooperativesecurelearningscenarios.Left:CTFE.Middle:SFE.Right:LTFE.
+canimprovetheirclassificationaccuracybysharingtheirtraining 4 SECURE MULTI-PARTY COMPUTATION (SMPC)
+datasets(orfeaturesderivedfromthedatasets)witheachother,but SMPC enables a set of parties P = {1,...,p} to calculate
+without compromising privacy. The proposed methods along a function F(x 1 ,··· ,x p ) = y such that each party only
+withthebaselinemethodaredescribedinSec.5. knows y at the end of computation and x i (i.e., the ith
+ThreatModel:Thethreatmodelconsideredisasfollows:
+party’s secret input) is unknown to other parties. There
+• Parties: We consider a semi-honest (honest-but- are different ways to implement SMPC, such as garbled
+curious) adversary model, in which all the parties circuit [54], and secret sharing [55]. Moreover, to overcome
+(including the adversary party) follow the protocol the computational cost of having more than two parties,
+strictly during training, and none of the parties col- we have considered a server-aided setting [56] with a non-
+ludes with each other. The collaborative learning is colluding server. In the server-aided setting, the server is
+basedonanSMPCapproachinwhichtheprivacyof referredtoascryptographyserverprovider[57].
+theinputsisprotected. To intuitively understand the security guarantees of
+• Adversary: After collaborative learning, one of the SMPC, consider a two-party setting where x 1 and x 2 are
+parties is considered to be the adversary that at- inputs from parties 1 and 2, respectively. The protocol
+tempts to extract information on training data from preserves the privacy if each party learns nothing more
+the trained model. The adversary performs a mem- than f(x 1 ,x 2 ) assuming that neither party deviates from
+bership inference attack on the trained model to try the protocol. This is called the honest-but-curious model.
+toidentifysamplesthatwerepresentinthetraining There are many methods for designing secure protocols as
+data. The adversary does not have access to the mentioned in Sec. 4. In this paper, we use SPDZ protocol
+modeloritsgradientsduringtraining. which exploits secret sharing and guarantees the following
+• Cryptography Server Provider (CSP): The CSP used in securitydefinition[58]:
+SMPC(Sec.4)isassumedtobetrustedbyallparties Definition1.TheprotocolΠsecurelycomputesf inhonest-
+anddoesnotcolludewithanypartyorperformany but-curious model if it satisfies the following two secu-
+attacks[51]–[53]. rityguarantees:
+Goals: Our first goal is to design a methodology where 1) Correctness: The output of the protocol is correct if
+all parties can collaborate with each other to improve their foranyinputsx 1,··· andx p theoutputofthepro-
+classificationaccuracywhilekeepingtheirdataprivate.We tocol(i.e.,Πf(x 1 ,··· ,x p ))issameasf(x 1 ,··· ,x p ).
+will assume, however, that the classifier architecture and 2) Security: We require that an honest-but-curious
+hyper-parametersareknowntoallthecollaboratingparties party does not learn anything about other par-
+(e.g., if a neural network is going to be used, the number ties’ data. Therefore, we require the existence of
+of layers and their dimensions will be known). Although an efficient simulator Sim i such that View i Π ≈
+SMPC offers a way to meet this goal, it can be extremely Sim i (x i ,f(x 1 ,··· ,x p )) where View i Π represents
+time-consuming;therefore,weseektoimprovethecompu- the view of the client in the execution of Π, and
+tational cost of SMPC solutions for collaborative training, ≈denotescomputationallyindistinguishable.1
+butwithoutcompromisingprivacyoraccuracy.Thesecond In addition to the p parties (in this paper p = 2), we
+goalistoevaluatetheeffectivenessoftheproposedmethod-
+utilizeanadditionalCSPinourimplementations.ThisCSP
+ologyinpreventinginformationleakageofprivatetraining
+datawithaccesstotheoutputandthetrainedmodelbyan 1Weusetheformaldefinitionofsecurity[58]whereSimdenotesa
+honest-but-curious party (note that while SMPC preserves simulatoralgorithminwhichthesimulatorisanideal-worldadversary.
+Thesimulator’sexistenceprovesthattheadversarycannotaccomplish
+thesecrecyofshareddataduringtraining,itdoesnotitself
+anythingintherealworldthatcouldnotalsobeaccomplishedinthe
+preventinformationleakagefromtrainedmodels). idealworld.
+4
+setting is used in our work since we implement SMPC 5.3 LTFELearning
+usingPySyft[51],inwhichaCSPisusedfortheconsistent
+In this method, unlike in SFE where the global feature
+generationofrandomnumbers.
+extractor is shared and trained using data available to all
+parties, each party trains their own feature extractor using
+5 METHODS FOR COLLABORATIVE LEARNING theirdataas
+ToovercomethechallengesmentionedinSec.4,theparties 1 (cid:88) Ni
+useamappingfrominputspacetoafeaturespace(themap- g i ∗ =argmin N L(g(x ij ),y ij ) (6)
+pingiscalledfeatureextractor)f i :RQ →Rq whereqisthe g∈G i j=1
+dimensionoffeaturespace.Typicallyq <Qwhichresultsin
+where the feature extractor of g∗ (i.e., f∗) is considered as
+i i
+afeatureextractorthattransformstheinputsamplesintoa theith party’sfeatureextractor.Sincethefeatureextractors
+lowerdimensionspace,thus,themappingisnotinvertible.
+in LTFE are separately trained, the feature embeddings
+Thenthefeaturesareusedtofindthebestpossibleclassifier
+from different parties’ feature extractors are not directly
+h i :Rq →{0,1}K.Therefore,g i =h i ◦f i.Weproposethree compatible/aligned between the parties. Hence, to be able
+scenarios in which the feature extractor and classifier are
+to leverage the knowledge built into other parties’ feature
+trained. These scenarios/methods provide different trade-
+extractors,thefeatureembeddingscomputedbytheparties’
+offsbetweenperformance,speed,andprivacy.
+feature extractors are concatenated (as shown in Fig. 1)
+andtheoverallconcatenatedfeaturevectorformstheinput
+5.1 CTFELearning
+to the classifier in LTFE. For example, consider party 1’s
+Thefirstscenarioisthateachpartytrainsthefeatureextrac- first data sample (i.e., x 11). The sample will be passed
+torandtheclassifiersimultaneouslyas to each feature extractor to get the corresponding feature
+g∗ =argmin 1 (cid:80)Ni L(g(x ),y )+ embeddings (i.e., fe 1 = f 1 ∗(x 11 ) and fe 2 = f 2 ∗(x 11 )). Then
+i
+N
+g
+o
+∈
+t 1
+G
+her
+N (cid:80)i
+N u= o
+j
+t 1
+=
+he
+1
+rL(g(x
+ij
+vu ),
+i
+y
+j
+vu )
+(2) t
+w
+h
+1
+e
+1
+se
+=
+fe
+[
+a
+f
+t
+e
+u
+1
+r
+;
+e
+f
+e
+e
+m
+2 ]
+b
+.
+e
+T
+d
+h
+d
+e
+i
+r
+n
+e
+g
+fo
+s
+r
+a
+e,
+re
+th
+c
+e
+on
+p
+c
+a
+a
+r
+t
+t
+e
+ie
+n
+s
+at
+m
+ed
+ak
+t
+e
+o
+a
+fo
+n
+rm
+agr
+a
+e
+v
+em
+ec
+e
+to
+n
+r
+t
+to design their classifier which has the input size of 2×q
+where(x
+vu
+,y
+vu
+)denotesamplesfromtheset
+andeachpartytrainstheirownclassifieras
+(cid:48)
+D other ={(x vu ,y vu )|(x vu ,y vu )∈D v } (3) h∗ =argmin 1 (cid:80)Ni L(h(w ),y )+
+wherev (cid:54)=i,D v (cid:48) ⊂D v,andN other isthesizeofthisD other. i h∈ 1 H N (cid:80)i No j t = he 1 rL(h(w ij ), i y j ) (7)
+D
+v
+(cid:48) denotestheportionofD
+v
+thatiscontributedbypartyv Nother u=1 vu vu
+forcollaborativelearningofotherparties.WeconsiderCTFE wherew
+ij
+= [f
+1
+∗(x
+ij
+),f
+2
+∗(x
+ij
+)]isaconcatenationoffeature
+asabaselinescenariofortheproblemformulationinSec.3. embeddingsfromeachparty’sfeatureextractor(considering
+InCTFE,thepartiesexchangetherawdatausingSMPC. 2 parties for simplicity), and w vu = [f 1 ∗(x vu ),f 2 ∗(x vu )]
+where (x vu ,y vu ) is as in (3). The parties exchange the
+5.2 SFELearning concatenationoffeatureembeddingsusingSMPC.
+In this method, the parties come to an agreement to use a
+set of data available to all parties called D shared to find a 5.4 NeuralNetworksasCandidateFunctions
+generalfeatureextractoras
+In this paper, neural networks are considered as candidate
+1 (cid:88)
+Nsh functions.Thebestcandidatecouldbefoundbyminimizing
+g s ∗ h =argmin N L(g(x shj ),y shj ) (4) theempiricalriskonthedataas
+g∈G sh
+j=1
+1 (cid:88)
+Ni
+where (x shj ,y shj ) is the jth sample in D shared, N sh is the θ i ∗ =argmin N L(g(x ij ;θ i ),y ij ) (8)
+sizeofD shared,andthefeatureextractorofg
+s
+∗
+h
+(i.e.,f
+s
+∗
+h
+)is θi i j=1
+consideredastheglobalfeatureextractoravailabletoallthe
+where θ i is the vector of the neural network parameters
+parties. It should be noted that such an agreement is com- (weights) corresponding to the ith party. For this purpose,
+monincollaborativelearningsettings[59],[60].Eachparty
+weuseStochasticGradientDescent(SGD).InAlgorithms1,
+canchoosewhatkindofdatatheywanttoshare.Whilethe
+2,and3,thedetailedprocedureofCTFE,SFE,andLTFEare
+utilityofcooperativelearningismostusefulwhenthedata
+described, respectively. In all the algorithms, the weights’
+fromotherpartiesisdifferentfromitsowndatadistribution,
+update of the models using the SGD is represented by
+parties can choose to hide data they consider critical from
+functionality GU. The number of batches and the number
+other parties. In this context, it is to be noted that in many
+of epochs are represented by n batches, and n epochs, respec-
+applications, anomalous data is less confidential since they
+tively.InAlgorithm1,theCTFE MAIN isthemainpro-
+are non-legitimate data introduced by an adversary. Then,
+cedureinwhicheachpartytrainsitsmodel(M icorresponds
+the parties train their classifiers cooperatively by exchang- toithparty’smodel)usingitsowndatainnon-securemode
+ingfeatureembeddings(usingSMPC)as
+and then continues training on the data from other parties
+h∗ =argmin 1 (cid:80)Ni L(h(t ),y )+ in secure mode. In Algorithm 2, in the main procedure
+i h∈ 1 H N (cid:80)i No j t = he 1 rL(h(t ij ), i y j ) (5) (SFE MAIN), a general feature extractor (M s) is trained
+Nother u=1 vu vu usingtheshareddata(D s)availabletoalltheparties.Then
+where H is the set of candidate classifiers, t ij = f s ∗ h (x ij ), eachpartypassesitsowndatathroughthisfeatureextractor
+andt vu =f s ∗ h (x vu )where(x vu ,y vu )isasin(3). to find the feature embeddings (F own corresponds to the
+5
+ith party feature embeddings, and F other shared by all Algorithm3LTFE
+other parties). Then each party trains its classifier using its Input: D 1 ,D 2
+ownfeaturesandthencontinuestrainingcollaborativelythe Output: N 1 ,N 2,M 1 ,M 2
+classifier(M i correspondstoith party’sclassifier)usingthe 1: procedureTRAIN FEATURE EXTRACTOR(N,D)
+feature embeddings from other parties in secure mode. In 2: fori←1ton epochs do
+Algorithm 3, LTFE MAIN is the main procedure. The 3: forj ←1ton batches do
+partiesfirsttraintheirfeatureextractors(N i correspondsto 4: GU(N,Dj) (cid:46)UpdatingtheweightsofN
+theithpartyfeatureextractor)ontheirlocaldata.Theneach
+usingSGD
+partytrainsitsclassifier(M icorrespondstoithpartymodel)
+5: returnN
+on a concatenation of secure features from all the parties’
+6: procedureTRAIN CLASSIFIER(M,F)
+featureextractors.ThishasbeenshownbytheConcatenate
+7: fori←1ton epochs do
+function that concatenates feature vectors from all parties
+horizontally for each sample. While the Append function 8 9 : : for G j U ← (M 1t , o F n j b ) atches (cid:46) d U o pdatingtheweightsofM
+concatenatesthesevectorsvertically.Itshouldbenotedthat
+usingSGD
+inallthesealgorithms,Πdenotestheimplementationusing
+SMPC,i.e.,replacingΠf withf throughoutyieldsthenon- 10: returnM
+secure(i.e.,plain-text)implementations. 11: procedureLTFE MAIN(D 1 ,D 2)
+12: fori←1to2do
+Algorithm1CTFE 13: N i ←TRAIN FEATURE EXTRACTOR(N i,D i)
+14: fori←1to2do
+Input: D 1 ,D 2 15: F ←0 (cid:46)InitializationofthearrayF
+Output: M 1 ,M 2 16: fork ←1to2do
+1: procedureTRAIN MODEL(M,D) 17: tmp←0 (cid:46)Initializationofthearraytmp
+2: fori←1ton epochs do 18: fors←1to2do
+4 3 : : for G j U ← (M 1t , o D n j b ) atches (cid:46) d U o pdatingtheweightsofM 19: D }) tmp ← ΠConcatenate(tmp,{N s (D k (cid:48))|D k (cid:48) ⊂
+k
+usingSGD
+20: Append(F,tmp)
+5: returnM
+6: procedureCTFE MAIN(D 1 ,D 2) 21: M i ←ΠTRAIN CLASSIFIER(M i ,F)
+7: fori←1to2do 22: returnN 1,N 2,M 1,M 2
+8: M i ←TRAIN MODEL(M i ,D i )
+9: M i ← ΠTRAIN MODEL(M i ,{D j (cid:48)|j (cid:54)= i,D j (cid:48) ⊂
+D }) 5.5 ComputationalComplexity
+j
+10: returnM 1,M 2 The proposed scenarios have different computational com-
+plexities. To have a fair comparison between them, we as-
+sumethefeatureextractorshavethesamearchitecturewith
+Algorithm2SFE 4 dense layers (including the input layer) and classifiers as
+wellwith1denselayer.Assumecorrespondingweightsfor
+O In 1 u : p t u p p t r u : o t c D : e M s d , u s D r , e 1 M , T D 1 R , 2 A M IN 2 FEATURE EXTRACTOR(M,D) w ea h c e h re la n ye i r : a i re = as 1 f , o 2 ll a o r w e s t : h W e n n 1 u Q m , b W er n2 o n f 1 , n W od q e n s 2 , in an t d he W fi K rs q t
+twolayersafterinputlayerinfeatureextractor.Wetrainthe
+2: fori←1ton epochs do modelfornepochsandweassumeeachpartysharesttrain-
+3: forj ←1ton batches do ing samples. The time complexity of training such a neural
+4: GU(M,Dj) (cid:46)UpdatingtheweightsofM networkforeachpartyisO(npt×(Qn
+1
++n
+1
+n
+2
++n
+2
+q+qK)).
+usingSGD
+InCTFE,eachpartytrainsthefeatureextractorandclassifier
+5: returnM together, therefore, the time complexity is of an order of
+6: procedureTRAIN CLASSIFIER(M,F) O(npt×(Qn
+1
++n
+1
+n
+2
++n
+2
+q+qK)).TrainingthemodelinSFE
+7: fori←1ton epochs do foreachpartyisofanorderofO(npt×(qK))sincethefea-
+8: forj ←1ton batches do tureextractorisfixedduringtheclassifiertraining.InLTFE,
+9: GU(M,Fj) (cid:46)UpdatingtheweightsofM all the parties train their feature extractor simultaneously,
+usingSGD however, for training the classifier, each party concatenates
+10: returnM thefeatureembeddingsfromallthepartieswhichmakesthe
+11: procedureSFE MAIN(D s,D 1 ,D 2) inputtotheclassifiershigherindimension(i.e.,pK).There-
+12: M s ←TRAIN FEATURE EXTRACTOR(M s,D s) fore,itisoforderofO(npt×(Qn 1 +n 1 n 2 +n 2 q+qpK)+
+13: fori←1to2do npt×(pqK))=O(npt×(Qn 1 +n 1 n 2 +n 2 q+(p+1)qK).
+14: M i ←TRAIN CLASSIFIER(M i ,M s (D i )) Therefore,SFEhasalowercomputationalburdencompared
+15: M i ← ΠTRAIN CLASSIFIER(M i , {M s (D j (cid:48))|j (cid:54)= to LTFE and CTFE. When the feature extractor is relatively
+i,D(cid:48) ⊂D }) simple (e.g., a few fully connected layers), LTFE is more
+j j
+computationally expensive than CTFE. For the case when
+16: returnM s,M 1,M 2 the feature extractor has CNN layers, CTFE can be more
+computationallyexpensivethanLTFE.
+6
+TABLE1:Datasizeforeachparty.
+Dataset Global Party1 Party2 Test
+MNIST 12,600 23,700 23,700 10,000
+Synthetic 20,000 20,000 20,000 20,000
+FraudDetection 1,100 1,050 1,242 1,100
+vector is 784, and the number of classes is 10. Then the
+samples are randomly split between parties. The synthetic
+datasethas784featuresand10classes.
+Fig.2:Trade-offbetweenperformance,privacy,andcompu- For each dataset, we have split the dataset into 4 parts
+tationalspeedoftheproposedscenarios.Thisfigureshows called global, party 1, party 2, and test data. For the syn-
+the qualitative relationship between CTFE, SFE, and LTFE. theticdataset,eachparthas20,000samples.FortheMNIST
+The increase direction for each metric is depicted on the dataset, we split the 60,000 training samples into 12,600
+left side. It could be seen that LTFE is the most privacy- samplesforshared,and23,700samplesforeachparty1and
+preserving,SFEandCTFEarefasterthanLTFE(therelative 2 as shown in Table 1. For the test data, we use the 10,000
+speed of CTFE and LTFE depends on the network archi- test samples provided by the dataset. It should be noted
+tecture). In terms of performance, LTFE and CTFE perform that to see the benefit of sharing data between parties, we
+betterthanSFE. have split the training data in a way that party 1 has more
+samplesforlabelsZERO,ONE,andTWO,whileithasfewer
+samples for labels SEVEN, EIGHT, and NINE. For party 2,
+5.6 Performance,Privacy,andSpeedTrade-offs itisvice-versaandshareddatahasmoresamplesforlabels
+LTFE has the highest performance (accuracy) under no or THREE,FOUR,andFIVEthantheotherlabels.Forthefraud
+very little data sharing among the parties since during detectiondataset,eachpartyhas1,000normalsamples.The
+inference, each party benefits from the use of other parties’ fraud samples are distributed as 100 for global data, 50 for
+feature extractors. CTFE has the next higher performance party 1, 242 for party 2, and 100 for testing to study the
+andthelastisSFE.However,asmoredataissharedamong benefit of sharing. The number of epochs is 10 for each of
+parties,theSFEapproachesCTFEandbothtendtowardsthe feature extractor training and the classifier training. We set
+performanceofLTFE(especiallyifalargepercentageofthe eachpartytoshare30%oftheirdatawithotherpartiesusing
+dataisshared).Lastly,theLTFEprovidesthehighestlevelof themethodsoutlinedinSec.5.
+privacy followed by SFE and last is the CTFE. The SFE has
+the lowest computational burden. LTFE is computationally
+more expensive than SFE since combining feature embed-
+6.2 Models
+dings from feature extractors of different parties requires
+an additional step of concatenation, making the input to A four-layer fully connected neural network (FCN) is used
+the classifiers higher in dimension. In Fig. 2, the trade-off as the model to classify the pre-processed data. ReLU ac-
+among performance, privacy, and computational speed of tivation functions are used between each of the layers and
+theproposedscenariosisshown. forthelastlayerasemi-sigmoidactivationfunctionisused
+whichhasthefollowingformula:ReLU(x)−ReLU(x−1)
+6 EXPERIMENTAL SETUP where x is the input vector to the layer. The semi-sigmoid
+activationfunctionisusedinsteadofsigmoidduetoPySyft
+6.1 Datasets
+limitations. A neural network has three main components:
+We used three datasets to evaluate the scenarios described the input layer, hidden layers, and classifier layers. The
+in Sec. 5: MNIST and Credit Card Fraud Detection which input layer and hidden layers together form the feature
+are off-the-shelf datasets, and a synthetic dataset. Three extractor.Thesingleoutputlayerfunctionsastheclassifier.
+different datasets are chosen to show the independence of The pre-processed data is passed through the three-layer
+theresultsfromthechoiceofthedataset. featureextractortogeneratethefeatureembeddingsinboth
+TheMNISTdatasetcontainsimagesofhandwrittendig- the SFE and LTFE. The layer sizes are 64, 64, 64, and 10,
+itsfrom0to9.Thedatasethas60,000trainingsamplesand therefore,thedimensionofthefeatureembeddingsis64.For
+10,000 test samples. The images are grayscale and of size all the experiments, Mean Squared Error (MSE) is used as
+28×28. thelossfunction,andSGD[61]isusedastheoptimizerwith
+The Credit Card Fraud Detection dataset contains alearningrateof0.1,andanL2regularizationwithaweight
+anonymized credit card transactions labeled as fraudulent of 0.0002. For the MNIST dataset, we also evaluated the
+or genuine. The dataset has 284,807 samples that 492 of methods on the LeNet-5 [62] architecture in which the di-
+which are frauds. It also has 29 features that are obtained mensionofthefeatureembeddingsis120.However,dueto
+withPCA. thePySyftlimitations,theproposedsemi-sigmoidisusedas
+The synthetic dataset is generated using the standard theactivationfunctionforallthelayers.Itshouldbenoted
+sklearnmake classificationmodule2.Thesizeofthefeature thattobeconsistent,theinputimagesarezero-paddedsuch
+thattheinputstotheLeNet-5havethedimensionof32.The
+2sklearn.datasets.make classification SGDwithalearningrateof0.1isusedfortheoptimizer.
+7
+6.3 PerformanceBenefitsofCooperation trainedfrominputtooutputontheattacker’sside.Also,in
+SFE,theattackerhasaccessnotonlytotheclassifierbutalso
+Eachpartybenefitsfromtheotherparties’dataincoopera-
+tothesharedmodelthatisavailabletoallparties.However,
+tive learning. The more samples are available from a data
+in LTFE, the attacker has access only to the classifier and
+distribution, the more information is available for a ma-
+doesnothaveaccesstotheotherparties’featureextractors.
+chinelearningalgorithmtofindtheunderlyingdistribution.
+Foralltheattackmodels,weusethesamearchitectureand
+Therefore,itisexpectedthatfeatureembeddingcooperation
+trainingprocedureproposedin[3].
+betweenpartieshasthesameeffect.Toverifythis,wehave
+trained and evaluated the model when it has access to 0%
+to100%ofotherpartydatawithastepof20%.Fig.3shows 7 EXPERIMENTAL RESULTS
+theperformanceofparty1’strainedmodelusingCTFE,SFE,
+In this section, we investigate the trade-offs between the
+andLTFEonMNISTdatawithdifferentpercentagesofdata
+threemethodsonthethreedatasets.
+sharedbyparty2.Thefigureshows4performancemetrics
+(i.e., accuracy, precision, recall, and F1 score) for samples
+with a specific label.It is seen that as more data areshared 7.1 Performance
+byotherparties,theperformanceofthemodelincreases.It The performance of party 1’s model using the proposed
+should be noted that since most of the labels are common methods and the Non-Cooperative (NC) case are shown
+amongalltheparties,SEVEN,EIGHTandNINEarechosen in Tables 2, 3, 4, and 5 for MNIST FCN, MNIST LeNet-5,
+inFig.3whichhavedifferentdistributionsamongparties. syntheticdataset,andfrauddetectioncases,respectively.In
+these tables, the A, P, R, and F1 columns correspond to ac-
+6.4 SecureComputationImplementation curacy, precision, recall, and F1 score, respectively. The NC
+in these tables corresponds to the case using CTFE where
+In this work, we use PySyft [51] library which relies on
+the percentage of sharing is 0% which means the model
+SPDZ protocol [6]. SPDZ enables more complex operations
+does not take advantage of other parties’ data and only is
+than addition and multiplication, which makes it suitable
+trained on the local data. Comparison to the NC indicates
+for training neural networks. Also, we made the following
+improvementsinmodelperformancebyusingotherparties’
+changestoincreasetrainingspeedandmodelperformance:
+data. The LTFE has an overall better performance than
+• Modifying PySyft internals including modifying SFE. This is because LTFE uses concatenated features and
+message compression settings to trade off com- therefore can benefit from the use of other parties’ feature
+putation vs. communication time and replacing extractors,whereasSFEonlyusesaglobalfeatureextractor.
+multiprocessing-based parallelization (which we The training time and inference time are shown in Ta-
+found to be a major cause of slowdowns) in SPDZ ble 6 for all the settings. SFE takes the least time since it
+computationswithmultithreading(withatunedop- uses a shared feature extractor, which can be implemented
+timal number of threads) which is more efficient innon-securemode.Additionally,itcanbeseenthatCTFEis
+underlargerprocessmemoryfootprints morecomputationallyexpensivethanSFEsince,inCTFE,all
+• Increasing the precision fractional variable. A large of the model’s weights are updated using gradient descent
+precision fractional number allows the modified data insecuremodewhileinSFE,onlytheclassifierweightsare
+to keep more information from the raw data. The updated. LTFE could be more computationally expensive
+original precision fractional was 3 in PySyft. We thanSFEbecauseLTFEinvolvesconcatenatingfeaturesthat
+changeditto5. have to be implemented in secure mode, whereas other
+methods do not have such a process. The relative training
+timeofCTFEandLTFEisdependentonthenetworkarchi-
+6.5 AttackModels
+tecture. It could be seen that for the MNIST dataset on the
+Toquantifytheinformationleakageoftheproposedscenar-
+LeNet-5network,CTFEismorecomputationallyexpensive
+ios, we considered an off-the-shelf membership inference
+sincethefeatureextractorhasCNNlayers.However,when
+attackmodelasametric.Thepurposeoftheattackmodelis
+fully connected layers are used for the feature extractor,
+toevaluatethealgorithmsintermsofthesourceofthedata.
+LTFEismorecomputationallyexpensivethanCTFE.
+In other words, a party attempts to identify samples from
+otherparties’databyanalyzingthemodeloutput.Without
+7.2 Information Leakage Using Membership Inference
+lossofgenerality,assumewehave2partiescollaboratingto
+Attack
+traintheirmodelsusingCTFE,SFE,andLTFE,andassume
+that the attacker is on party 1’s side. For simplicity and to We evaluated the information leakage of the proposed
+moreclearlyillustratethemembershipinferenceattack,we scenarios in terms of the source of data by the method
+consider the scenario where party 1 does not have its own discussed in Sec. 6.5. Prediction uncertainty is a measure
+data and only trains its model using all the other party’s of information leakage [63]. A method with high uncer-
+data.Afterthetargetmodelsaretrained,theattackerapplies tainty in its prediction reflects the fact that the model leaks
+a membership inference attack algorithm. In this paper, we less information about the samples. In Fig. 6, membership
+usetheattackmodeldescribedin[3].However,basedonthe probabilities for the MNIST dataset are shown for member
+attacker’saccesstothetargetmodel,theattackmodeldiffers and non-member samples for the scenarios where label 1
+betweenthescenarios.Theattackmodelforeachscenariois corresponds to the member samples. The member samples
+depictedinFig.4.ItcouldbeseenthatinCTFE,theattacker probabilities are shown with dark blue and non-member
+has access to the target model weights since the model is samples with pale blue. In (c), (f), and (i) in Fig. 6, 50%
+8
+(a)ScoresforSEVEN (b)ScoresforEIGHT (c)ScoresforNINE
+Fig.3:PerformancewithdifferentsizesofMNISTshareddatasetonthefullyconnectednetworkforlabelsSEVEN,EIGHT,
+andNINEinnon-securemode.
+(a) (b) (c)
+(d) (e) (f)
+Fig. 4: Attack models are used for each model based on the availability of the model weights to the attacker. The top
+rowcorrespondstofullyconnectedtargetmodelarchitecture,andthebottomrowcorrespondstoLeNet-5architecturein
+which each CNN layer and its subsequent average pooling layer are depicted with double blocks. Also, the gradient of
+lossfunctionw.r.tW i isdepictedwithD Wi .
+TABLE 3: Performance of party 1’s models using SFE,
+TABLE2:Performanceofparty1’smodelsusingSFE,CTFE,
+CTFE, LTFE, and Non-Cooperative (NC) case on MNIST
+LTFE,andNon-Cooperative(NC)caseonMNISTdata(FCN
+data (LeNet-5 network) with 30% of sharing. A, P, R, and
+network) with 30% of sharing. A, P, R, and F1 correspond
+F1 correspond to accuracy, precision, recall, and F1 score,
+toaccuracy,precision,recall,andF1score,respectively.The
+respectively. The results are shown for labels 7, 8, and 9
+results are shown for labels 7, 8, and 9 since party 1 has
+since party 1 has less number of samples for those labels
+fewersamplesforthoselabelsthanparty2,andforbrevity.
+thanparty2,andforbrevity.
+Method Label A P R F1
+Method Label A P R F1
+SEVEN 95.12 99.09 53.02 69.07
+SEVEN 97.89 99.04 80.25 88.66
+NC EIGHT 93.85 98.12 37.58 54.34
+NC EIGHT 98.15 99.13 81.72 89.59
+NINE 93.60 95.33 38.45 54.80
+NINE 98.47 99.65 85.13 91.82
+SEVEN 95.19 97.90 54.38 69.92
+SEVEN 98.20 85.57 99.22 91.89
+SFE EIGHT 94.40 97.05 43.84 60.40
+SFE EIGHT 97.94 83.33 98.56 90.31
+NINE 94.35 96.25 45.79 62.06
+NINE 99.12 95.37 95.94 95.65
+SEVEN 97.18 95.94 75.78 84.67
+SEVEN 98.57 88.31 99.22 93.45
+CTFE EIGHT 96.10 83.56 74.64 78.85
+CTFE EIGHT 98.67 88.90 98.67 93.53
+NINE 96.18 91.97 68.09 78.25
+NINE 99.28 95.18 97.82 96.48
+SEVEN 97.82 98.21 80.25 88.33
+SEVEN 99.72 99.50 97.76 98.63
+LTFE EIGHT 97.70 95.59 80.08 87.15
+LTFE EIGHT 99.80 99.48 98.46 98.97
+NINE 97.69 97.91 78.79 87.31
+NINE 99.64 99.80 96.63 98.19
+9
+TABLE4:Performanceofparty1’smodelsusingSFE,CTFE,
+uncertainty less than the models against LTFE but greater
+LTFE, and Non-Cooperative (NC) case on synthetic data
+than the models against CTFE. Additionally, the Receiver
+with30%ofsharing.A,P,R,andF1correspondtoaccuracy,
+OperatingCharacteristic(ROC)curvesoftheattackmodels
+precision, recall, and F1 score, respectively. The results are
+are plotted in Fig. 5. A larger Area Under the ROC curve
+shownforlabels7,8,and9forbrevityandconsistency.
+(AUC) means that the model leaks more information. We
+canseethattheattackmodelsagainstLTFEhavethesmall-
+Method Label A P R F1
+SEVEN 94.05 73.84 63.60 68.33 est AUC, meaning that the attack models have the highest
+NC EIGHT 93.75 69.80 64.90 67.26 uncertaintyandLTFEleakstheleastinformation.Theattack
+NINE 94.06 71.58 65.06 68.17 models against CTFE have the largest AUC, meaning that
+SEVEN 94.10 77.62 58.40 66.65
+the attack models have the lowest uncertainty and CTFE
+SFE EIGHT 93.65 75.04 53.67 62.58
+NINE 93.98 77.15 54.58 63.93 leaks the most information. The amount of information
+SEVEN 93.96 74.88 60.53 66.94 leaked by SFE is between those of LTFE and CTFE. Figs.
+CTFE EIGHT 94.45 76.34 63.48 69.32 5and6areconsistentwitheachother.
+NINE 94.39 73.97 65.83 69.66
+SEVEN 95.94 83.39 74.59 78.75
+LTFE EIGHT 96.05 81.59 77.54 79.51 7.3 Timing
+NINE 95.70 80.50 73.91 77.07
+The training time for the proposed methods is reported in
+Table 6 for MNIST FCN, MNIST LeNet-5, and synthetic
+TABLE5:Performanceofparty1’smodelsusingSFE,CTFE, dataset cases. In this table, all the numbers are in minutes.
+LTFE, and Non-Cooperative (NC) case on fraud detection Securetrainingtime,non-securetrainingtime,andtheratio
+data with 30% of sharing. A, P, R, and F1 correspond to of the secure training time to the non-secure training time
+accuracy, precision, recall, and F1 score, respectively. The are reported in Table 6. It could be seen that for fully
+resultsareshownforfraudulentlabels. connected network architectures, LTFE is the slowest, and
+SFE is the fastest. However, for LeNet-5 which has a CNN
+Method Label A P R F1
+architecture for the feature extractor, the CTFE is the slow-
+NC FRAUDULENT 97.73 94.12 80.00 86.49
+SFE FRAUDULENT 97.73 89.47 85.00 87.18 est. This observation is consistent with our expectation of
+CTFE FRAUDULENT 98.00 87.5 91.00 89.22 the computational cost of the CNN layers with respect to
+LTFE FRAUDULENT 98.18 91.67 88.00 89.8 fullyconnectedlayerssinceCNNlayersrequiremoremath-
+ematical operations. We also empirically observed that the
+models trained using SFE, CTFE, and LTFE in non-secure
+membership probability implies that the model leaks no mode have comparable accuracy to the models trained in
+information since the attacker does not obtain any idea of the secure mode. Additionally, since training in non-secure
+whetherasamplewasinthetrainingdataornot(i.e.,effec- mode sacrifices input data privacy, the training speed in
+tivelyacointoss).Ifamodelleaksalotofinformation,the non-securemodeisfasterthanthespeedinthesecuremode.
+attackmodelwilloutputahighmembershipprobabilityfor
+most training samples and a low membership probability 7.4 Performance,Privacy,andSpeedTrade-Offs
+for most non-training samples (i.e., (b), (e), and (h) in Fig.
+Based on our experimental results (i.e., from Tables 2, 3,
+6).ItcouldbeseenthattheattackmodelsagainstLTFEare
+4, 5 and 6; Figs. 5 and 6), the comparison of CTFE, SFE,
+highly uncertain about the samples’ membership, whereas
+andLTFEwithrespecttoperformance,privacy,andtraining
+the attack models against CTFE assign a high probability
+speed is consistent with what we summarized in Fig. 2.
+to training samples and a low probability to non-training
+Table7showsthecomparisonaccordingtoourexperimental
+samples. The attack models against SFE show a level of
+results. For accuracy, LTFE and CTFE have comparable
+results in most cases. However, we empirically observed
+that CTFE and SFE are more sensitive to training noise
+TABLE6:Trainingtime(inminutes)ofSFE,LTFE,andCTFE
+than LTFE. For example, the model weights may be stuck
+onMNIST,syntheticdata,andfrauddetectiondataset.The
+to a local optimum and cannot be further changed during
+numberscorrespondtoonepartyand10epochsoftraining.
+the training process. Therefore, we conclude that LTFE has
+Trainingtimeinsecureandnon-securemodesandtheratio
+theoverallbestperformanceamongthethreemethods.SFE
+betweenthesetwomodesarereported.
+hastheleastaccuracy.TheperformanceofCTFEisbetween
+Model Time Time Time LTFE’sandSFE’s.Asforprivacy,Fig.5andFig.6showthat
+Dataset Method
+Type Secure Non-Sec. Ratio LTFE leaks the least information, whereas CTFE leaks the
+SFE 54 2.2 24.5
+most information. SFE has a medium level of privacy. As
+LTFE 337 2.8 120.3
+MNIST FCN CTFE 207 0.8 258.7 forthetrainingspeed,SFEisthefastestalgorithm,whereas
+SFE 814 2.4 339.1 LTFE is typically the slowest according to experiments.
+MNIST LeNet-5 LTFE 2163 5.3 408.1 CTFE is slower than SFE, however, it could be faster than
+CTFE 3344 3.1 1078.7
+LTFEbasedonthenetworkarchitecture.Inreal-worldcases,
+SFE 45 1.7 26.4
+LTFE 206 2.2 93.6 since each party will have its own machine, the training
+Synthetic FCN
+CTFE 171 0.5 342 processcanbeparallelandthereforemaytakelesstime.To
+SFE 20 0.33 60 applyouralgorithmsforn-party(withn>2)scenarios,one
+LTFE 80.9 0.06 1348.34
+Fraud FCN possible solution is that each party collaborates with one
+CTFE 70.7 0.08 883.75
+other party at a time (i.e., pairwise collaborative learning)
+10
+(a) (b) (c) (d)
+Fig. 5: From left: The attack’s ROC curve for the 3 methods on the MNIST dataset on FCN, MNIST dataset on LeNet-5,
+syntheticdataset,andfrauddetectiondataset.
+TABLE 7: Comparisons among SFE, CTFE, and LTFE (rel-
+Prospectiveworkscanbefocusedonfurtherimprovingthe
+ative speed of CTFE and LTFE depends on the network
+performance,acceleratingthetrainingspeed,increasingthe
+architecture).
+privacyofthesethreemethods,andexpandingtoscenarios
+withmorethan2parties.
+Algorithm Accuracy Privacy Speed
+SFE Lowest Medium Fastest
+CTFE Medium Worst SlowerthanSFE
+LTFE Highest Safest SlowerthanSFE REFERENCES
+[1] B.McMahan,E.Moore,D.Ramage,S.Hampson,andB.A.yAr-
+cas, “Communication-efficient learning of deep networks from
+to train its model. Thus, the n-party case is converted to a decentralized data,” in Proceedings of the International Conference
+general2-partyscenario. on Artificial Intelligence and Statistics, Lauderdale, FL, Apr. 2017,
+pp.1273–1282.
+[2] J. Konecˇny`, H. B. McMahan, F. X. Yu, P. Richta´rik, A. T. Suresh,
+7.5 ComparativeStudy andD.Bacon,“Federatedlearning:Strategiesforimprovingcom-
+municationefficiency,”arXivpreprintarXiv:1610.05492,2016.
+In this section, we highlight the differences between our
+[3] M.Nasr,R.Shokri,andA.Houmansadr,“Comprehensiveprivacy
+method and commonly used methods in the literature. In analysisofdeeplearning:Passiveandactivewhite-boxinference
+FL [1], there is a model, and each local party updates the attacksagainstcentralizedandfederatedlearning,”inProceedings
+oftheIEEESymposiumonSecurityandPrivacy,Francisco,CA,May
+weightsofthemodelusingitsowndata,andthenodessend
+2019,pp.739–753.
+the weights and their gradients to the server. However, in
+[4] M.Song,Z.Wang,Z.Zhang,Y.Song,Q.Wang,J.Ren,andH.Qi,
+our work, collaborative learning is based on the SMPC ap- “Analyzinguser-levelprivacyattackagainstfederatedlearning,”
+proachinwhichtheprivacyoftheinputsisprotected.Also, IEEE Journal on Selected Areas in Communications, vol. 38, no. 10,
+pp.2430–2444,2020.
+eachpartyhasitsownmodel.In[64],theproposedmethod
+[5] Z.Wang,M.Song,Z.Zhang,Y.Song,Q.Wang,andH.Qi,“Be-
+sendstheextractedfeaturestothecloudinsteadoftheraw yond inferring class representatives: User-level privacy leakage
+data.Theseextractedfeaturesarenotencrypted.Moreover, fromfederatedlearning,”inProceedingsoftheIEEEConferenceon
+the focus of their work is model inference. However, our ComputerCommunications,Paris,France,Apr.2019,pp.2512–2520.
+[6] I. Damga˚rd, V. Pastro, N. Smart, and S. Zakarias, “Multiparty
+methodaddressestheprivacyofthedataduringtraining.In
+computation from somewhat homomorphic encryption,” in Pro-
+[65],theauthorsproposedprivacy-preservingCNNfeature ceedings of the Annual Cryptology Conference, Santa Barbara, CA,
+extraction on medical images. In their method, the data Aug.2012,pp.643–662.
+ownerencryptsitsdataandsendsittotheservers.Themain [7] S. D. Gordon, F.-H. Liu, and E. Shi, “Constant-round mpc with
+fairness and guarantee of output delivery,” in Proceedings of the
+difference between our method and their method is that
+Annual Cryptology Conference, Santa Barbara, CA, Aug. 2015, pp.
+they have assumed that they have the trained parameters 63–82.
+of the CNN, while we are training the feature extractor in [8] T.RabinandM.Ben-Or,“Verifiablesecretsharingandmultiparty
+protocolswithhonestmajority,”inProceedingsoftheAnnualACM
+the secure domain. Also, in their method, they only have
+SymposiumonTheoryofComputing,SantaBarbara,CA,Aug.1989,
+onedataownerwhileweareaddressingthecasewherewe
+pp.73–85.
+havetwoorganizationscooperatinginthetrainingphase. [9] R. Pass, E. Shi, and F. Tramer, “Formal abstractions for attested
+execution secure processors,” in Proceedings of the Annual Inter-
+national Conference on the Theory and Applications of Cryptographic
+8 CONCLUSION Techniques,Paris,France,Apr.2017,pp.260–289.
+[10] I. Chillotti, N. Gama, M. Georgieva, and M. Izabache`ne, “Faster
+Two variants (SFE and LTFE) of feature-based privacy- packed homomorphic operations and efficient circuit bootstrap-
+preserving collaborative learning are proposed and com- ping for tfhe,” in Proceedings of the International Conference on the
+paredwithabaseline(CTFE).Thealgorithmsareevaluated TheoryandApplicationofCryptologyandInformationSecurity,Hong
+Kong,China,Dec.2017,pp.377–408.
+on three datasets in terms of performance, privacy, and
+[11] P.MukherjeeandD.Wichs,“Tworoundmultipartycomputation
+computational cost. The trade-offs between these methods viamulti-keyfhe,”inProceedingsoftheAnnualInternationalCon-
+have been discussed. LTFE is the most secure and accurate ference on the Theory and Applications of Cryptographic Techniques,
+Vienna,Austria,May2016,pp.735–763.
+algorithm but is more computationally expensive. SFE is
+[12] P. Li, J. Li, Z. Huang, T. Li, C.-Z. Gao, S.-M. Yiu, and K. Chen,
+the least computationally expensive. CTFE is the baseline
+“Multi-key privacy-preserving deep learning in cloud comput-
+algorithm that has the least privacy-preserving capability. ing,”FutureGenerationComputerSystems,vol.74,pp.76–85,2017.
+11
+(a) (b) (c)
+(d) (e) (f)
+(g) (h) (i)
+(j) (k) (l)
+Fig.6:PrivacyriskofeachmethodonMNISTdatasetonFCN(toprow),MNISTdatasetonLeNet-5(secondrow),synthetic
+dataset(thirdrow),andfrauddetectiondataset(lastrow).Fromleft:SFE,CTFE,andLTFE,respectively.
+12
+[13] Y. Wu, X. Wang, W. Susilo, G. Yang, Z. L. Jiang, Q. Chen, and [34] L. Zhao, Q. Wang, Q. Zou, Y. Zhang, and Y. Chen, “Privacy-
+P. Xu, “Efficient server-aided secure two-party computation in preserving collaborative deep learning with unreliable partici-
+heterogeneous mobile cloud computing,” IEEE Transactions on pants,” IEEE Transactions on Information Forensics and Security,
+Dependable and Secure Computing, vol. 18, no. 6, pp. 2820–2834, vol.15,pp.1486–1500,2019.
+2021. [35] M.E.Gursoy,A.Tamersoy,S.Truex,W.Wei,andL.Liu,“Secure
+[14] T. Li, J. Li, X. Chen, Z. Liu, W. Lou, and T. Hou, “Npmml: andutility-awaredatacollectionwithcondensedlocaldifferential
+A framework for non-interactive privacy-preserving multi-party privacy,” IEEE Transactions on Dependable and Secure Computing,
+machine learning,” IEEE Transactions on Dependable and Secure vol.18,no.5,pp.2365–2378,2021.
+Computing,vol.18,no.4,pp.2969–2982,2020. [36] C.Gentry,“Fullyhomomorphicencryptionusingideallattices,”in
+[15] J.-M.Bohli,N.Gruschka,M.Jensen,L.L.Iacono,andN.Marnau, ProceedingsoftheAnnualACMSymposiumonTheoryofComputing,
+“Securityandprivacy-enhancingmulticloudarchitectures,”IEEE Bethesda,MD,June2009,pp.169–178.
+TransactionsonDependableandSecureComputing,vol.10,no.4,pp. [37] A.C.Yao,“Protocolsforsecurecomputations,”inProceedingsofthe
+212–224,2013. AnnualSymposiumonFoundationsofComputerScience,Washington,
+[16] G.D.Schiff,L.A.Volk,M.Volodarskaya,D.H.Williams,L.Walsh, DC,Nov.1982,pp.160–164.
+S. G. Myers, D. W. Bates, and R. Rozenblum, “Screening for [38] T.Graepel,K.Lauter,andM.Naehrig,“Mlconfidential:Machine
+medicationerrorsusinganoutlierdetectionsystem,”Journalofthe learning on encrypted data,” in Proceedings of the International
+AmericanMedicalInformaticsAssociation,vol.24,no.2,pp.281–287, Conference on Information Security and Cryptology, Seoul, Korea,
+2017. Nov.2012,pp.1–21.
+[17] O. Gupta and R. Raskar, “Distributed learning of deep neural [39] E.Hesamifard,H.Takabi,andM.Ghasemi,“Cryptodl:Deepneu-
+network over multiple agents,” Journal of Network and Computer ralnetworksoverencrypteddata,”arXivpreprintarXiv:1711.05189,
+Applications,vol.116,pp.1–8,2018. 2017.
+[18] P. Vepakomma, O. Gupta, T. Swedish, and R. Raskar, “Split [40] J.Yu,P.Lu,Y.Zhu,G.Xue,andM.Li,“Towardsecuremultikey-
+learningforhealth:Distributeddeeplearningwithoutsharingraw wordtop-kretrievaloverencryptedclouddata,”IEEETransactions
+patientdata,”arXivpreprintarXiv:1812.00564,2018. on Dependable and Secure Computing, vol. 10, no. 4, pp. 239–250,
+[19] Y.Zhao,M.Li,L.Lai,N.Suda,D.Civin,andV.Chandra,“Feder- 2013.
+atedlearningwithnon-iiddata,”arXivpreprintarXiv:1806.00582, [41] S.Wagh,D.Gupta,andN.Chandran,“SecureNN:3-partysecure
+2018. computation for neural network training,” Proceedings of the Pri-
+[20] K. Bonawitz, H. Eichner, W. Grieskamp, D. Huba, A. Ingerman, vacyEnhancingTechnologies,vol.2019,no.3,pp.26–49,2019.
+V.Ivanov,C.Kiddon,J.Konecˇny`,S.Mazzocchi,H.B.McMahan [42] P. Mohassel and Y. Zhang, “Secureml: A system for scalable
+etal.,“Towardsfederatedlearningatscale:Systemdesign,”arXiv privacy-preserving machine learning,” in Proceedings of the IEEE
+preprintarXiv:1902.01046,2019. Symposium on Security and Privacy, San Jose, CA, May 2017, pp.
+[21] M.Mohri,G.Sivek,andA.T.Suresh,“Agnosticfederatedlearn- 19–38.
+ing,”inProceedingsoftheInternationalConferenceonMachineLearn- [43] C.Juvekar,V.Vaikuntanathan,andA.Chandrakasan,“GAZELLE:
+ing,LongBeach,CA,June2019,pp.4615–4625. Alowlatencyframeworkforsecureneuralnetworkinference,”in
+[22] E.Bagdasaryan,A.Veit,Y.Hua,D.Estrin,andV.Shmatikov,“How Proceedings of the USENIX Security Symposium, Santa Clara, CA,
+tobackdoorfederatedlearning,”inProceedingsoftheInternational Aug.2018,pp.1651–1669.
+Conference on Artificial Intelligence and Statistics, Sicily, Italy, Aug. [44] J.Liu,M.Juuti,Y.Lu,andN.Asokan,“Obliviousneuralnetwork
+2020,pp.2938–2948. predictions via minionn transformations,” in Proceedings of the
+[23] B.C.Fung,K.Wang,R.Chen,andP.S.Yu,“Privacy-preserving ACMSIGSACConferenceonComputerandCommunicationsSecurity,
+datapublishing:Asurveyofrecentdevelopments,”ACMComput- Dallas,TX,Nov.2017,pp.619–631.
+ingSurveys,vol.42,no.4,pp.1–53,2010. [45] A. Resende, D. Railsback, R. Dowsley, A. C. Nascimento, and
+[24] P.SamaratiandL.Sweeney,“Protectingprivacywhendisclosing D.F.Aranha,“Fastprivacy-preservingtextclassificationbasedon
+information: k-anonymity and its enforcement through gener- securemultipartycomputation,”IEEETransactionsonInformation
+alization and suppression,” Computer Science Laboratory, SRI ForensicsandSecurity,vol.17,pp.428–442,2022.
+International,Tech.Rep.,1998. [46] Z.Xia,X.Ma,Z.Shen,X.Sun,N.N.Xiong,andB.Jeon,“Secure
+[25] A.Machanavajjhala,D.Kifer,J.Gehrke,andM.Venkitasubrama- imagelbpfeatureextractionincloud-basedsmartcampus,”IEEE
+niam, “l-diversity: Privacy beyond k-anonymity,” ACM Transac- Access,vol.6,pp.30392–30401,2018.
+tions on Knowledge Discovery from Data, vol. 1, no. 1, pp. 24–24, [47] M.Ball,T.Malkin,andM.Rosulek,“Garblinggadgetsforboolean
+2007. and arithmetic circuits,” in Proceedings of the ACM SIGSAC Con-
+[26] N. Li, T. Li, and S. Venkatasubramanian, “t-closeness: Privacy ferenceonComputerandCommunicationsSecurity,Vienna,Austria,
+beyondk-anonymityandl-diversity,”inProceedingsoftheInterna- October2016,pp.565–577.
+tionalConferenceonDataEngineering,Istanbul,Turkey,Apr.2007, [48] E. Boyle, Y. Ishai, and A. Polychroniadou, “Limits of practical
+pp.106–115. sublinearsecurecomputation,”inProceedingsoftheAnnualInterna-
+[27] C. C. Aggarwal and S. Y. Philip, “A general survey of privacy- tionalCryptologyConference,SantaBarbara,CA,August2018,pp.
+preserving data mining models and algorithms,” in Privacy- 302–332.
+PreservingDataMining,2008,pp.11–52. [49] P.MohasselandP.Rindal,“Aby3:Amixedprotocolframeworkfor
+[28] Y. A. A. S. Aldeen, M. Salleh, and M. A. Razzaque, “A compre- machine learning,” in Proceedings of the ACM SIGSAC Conference
+hensivereviewonprivacypreservingdatamining,”SpringerPlus, onComputerandCommunicationsSecurity,NewYork,NY,October
+vol.4,no.1,pp.1–36,2015. 2018,pp.35–52.
+[29] C.Dwork,“Differentialprivacy,”inProceedingsoftheInternational [50] M. Imani, Y. Kim, S. Riazi, J. Messerly, P. Liu, F. Koushanfar,
+ColloquiumonAutomata,Languages,andProgramming,Venice,Italy, andT.Rosing,“Aframeworkforcollaborativelearninginsecure
+July2006,pp.1–12. high-dimensional space,” in Proceedings of the IEEE International
+[30] M. Abadi, A. Chu, I. Goodfellow, H. B. McMahan, I. Mironov, ConferenceonCloudComputing,Milan,Italy,July2019,pp.435–446.
+K.Talwar,andL.Zhang,“Deeplearningwithdifferentialprivacy,” [51] T.Ryffel,A.Trask,M.Dahl,B.Wagner,J.Mancuso,D.Rueckert,
+in Proceedings of the ACM SIGSAC Conference on Computer and andJ.Passerat-Palmbach,“Agenericframeworkforprivacypre-
+CommunicationsSecurity,Vienna,Austria,Oct.2016,pp.308–318. servingdeeplearning,”arXivpreprintarXiv:1811.04017,2018.
+[31] A. Triastcyn and B. Faltings, “Bayesian differential privacy for [52] S.Kamara,P.Mohassel,M.Raykova,andS.Sadeghian,“Scaling
+machinelearning,”inProceedingsoftheInternationalConferenceon privatesetintersectiontobillion-elementsets,”inProceedingsofthe
+MachineLearning,Shenzhen,China,July2020,pp.9583–9592. InternationalConferenceonFinancialCryptographyandDataSecurity.
+[32] H. Zheng, H. Hu, and Z. Han, “Preserving user privacy for ChristChurch,Barbados:Springer,March2014,pp.195–215.
+machinelearning:localdifferentialprivacyorfederatedmachine [53] H.Carter,B.Mood,P.Traynor,andK.Butler,“Secureoutsourced
+learning?”IEEEIntelligentSystems,vol.35,no.4,pp.5–14,2020. garbledcircuitevaluationformobiledevices,”JournalofComputer
+[33] J.Dong,D.Durfee,andR.Rogers,“Optimaldifferentialprivacy Security,vol.24,no.2,pp.137–180,2016.
+composition for exponential mechanisms,” in Proceedings of the [54] A.C.-C.Yao,“Howtogenerateandexchangesecrets,”inProceed-
+InternationalConferenceonMachineLearning,Shenzhen,China,July ings of the Annual Symposium on Foundations of Computer Science,
+2020,pp.2597–2606. Washington,DC,Oct.1986,pp.162–167.
+13
+[55] A.Shamir,“Howtoshareasecret,”CommunicationsoftheACM, Prashanth Krishnamurthy received the
+vol.22,no.11,pp.612–613,1979. B.Tech.degreeinelectricalengineeringfromthe
+[56] S. Kamara, P. Mohassel, and M. Raykova, “Outsourcing multi- IndianInstituteofTechnologyMadras,Chennai,
+partycomputation.”IACRCryptol.EprintArch.,vol.2011,p.272, in 1999, and the M.S. and Ph.D. degrees
+2011. in electrical engineering from Polytechnic
+[57] V. Nikolaenko, U. Weinsberg, S. Ioannidis, M. Joye, D. Boneh, University (now NYU), Brooklyn, NY, USA, in
+and N. Taft, “Privacy-preserving ridge regression on hundreds 2002 and 2006, respectively. He is currently
+of millions of records,” in Proceedings of the IEEE Symposium on a Research Scientist with the Department of
+SecurityandPrivacy,SanFrancisco,CA,May2013,pp.334–348. Electrical and Computer Engineering, NYU
+[58] D.Evans,V.Kolesnikov,andM.Rosulek,“Apragmaticintroduc- Tandon School of Engineering, New York, and
+tiontosecuremulti-partycomputation,”FoundationsandTrends® a Senior Researcher with FarCo Technologies.
+inPrivacyandSecurity,vol.2,no.2-3,2017. Hehasco-authoredover130journalarticlesandconferencepapersin
+[59] Q.Yang,Y.Liu,Y.Cheng,Y.Kang,T.Chen,andH.Yu,“Federated thebroadareasofautonomoussystems,robotics,andcontrolsystems.
+learning,” Synthesis Lectures on Artificial Intelligence and Machine He has also co-authored the book Modeling and Adaptive Nonlinear
+Learning,vol.13,no.3,pp.1–207,2019. Control of Electric Motors (Springer-Verlag, 2003). His research
+[60] S.A.Osia,A.Taheri,A.S.Shamsabadi,K.Katevas,H.Haddadi, interestsincludeautonomousvehiclesandroboticsystems,multi-agent
+andH.R.Rabiee,“Deepprivate-featureextraction,”IEEETransac- systems, sensor data fusion, robust and adaptive nonlinear control,
+tionsonKnowledgeandDataEngineering,vol.32,no.1,pp.54–66, resilientcontrol,machinelearning,real-timeembeddedsystems,cyber-
+2018. physical systems and cyber-security, decentralized and large-scale
+[61] I. Goodfellow, Y. Bengio, and A. Courville, Deep learning. MIT systems,andreal-timesoftwareimplementations.
+press,2016.
+[62] Y. LeCun, L. Bottou, Y. Bengio, and P. Haffner, “Gradient-based
+learningappliedtodocumentrecognition,”ProceedingsoftheIEEE,
+vol.86,no.11,pp.2278–2324,1998.
+[63] R.Shokri,M.Stronati,C.Song,andV.Shmatikov,“Membership
+SiddharthGargreceivedtheB.Tech.degreein
+inferenceattacksagainstmachinelearningmodels,”inProceedings
+electrical engineering from the Indian Institute
+of the IEEE Symposium on Security and Privacy, Santa Clara, CA,
+of Technology Madras, Chennai, India, and the
+Aug.2017,pp.3–18.
+Ph.D. degree in electrical and computer engi-
+[64] X.Ding,H.Fang,Z.Zhang,K.-K.R.Choo,andH.Jin,“Privacy-
+neering from Carnegie Mellon University, Pitts-
+preservingfeatureextractionviaadversarialtraining,”IEEETrans-
+burgh,PA,in2009.HeiscurrentlyanAssociate
+actionsonKnowledgeandDataEngineering,vol.34,no.4,pp.1967–
+Professor at New York University, New York,
+1979,2022.
+where he joined as an Assistant Professor in
+[65] G.Cai,X.Wei,andY.Li,“Privacy-preservingcnnfeatureextrac-
+2014. Prior to this, he was an Assistant Pro-
+tion and retrieval over medical images,” International Journal of
+fessorwiththeUniversityofWaterloo,Waterloo,
+IntelligentSystems,2022.
+ON, Canada, from 2010 to 2014. His current
+researchinterestsincludecomputerengineering,andmoreparticularly
+insecure,reliable,andenergyefficientcomputing.Hewasarecipient
+oftheNSFCareerAwardin2015,andthepaperawardsattheIEEE
+SymposiumonSecurityandPrivacy2016,theUSENIXSecuritySym-
+posiumin2013,theSemiconductorResearchConsortiumTECHCONin
+Alireza Sarmadi received his B.Sc. degree in 2010,andtheInternationalSymposiumonQualityinElectronicDesign
+electrical engineering from the University of in2009.Hewaslistedinpopularsciencemagazine’sannuallistof“Bril-
+Tehran, Tehran, Iran in 2016. He is a Ph.D. liant 10” researchers. He serves on the technical program committee
+candidate at New York University (NYU) and a of several top conferences in the area of computer engineering and
+ResearchAssistantattheControl/RoboticsRe- computerhardwareandhasservedasareviewerforseveralIEEEand
+search Laboratory, at NYU. His research inter- ACMjournalsconferences.
+estsincluderobotics,controlsystems,machine
+learning,andbiomechanics.
+FarshadKhorramireceivedthebachelor’sde-
+greesinmathematicsandinelectricalengineer-
+ingfromTheOhioStateUniversityin1982and
+1984, respectively, and the master’s degree in
+mathematicsandthePh.D.degreeinelectrical
+Hao Fu was born on November 5, 1994, in
+engineering from The Ohio State University, in
+Anyang, China. He is a Ph.D. candidate in the
+1984 and 1988, respectively. He is currently a
+Department of Electrical and Computer Engi-
+ProfessorwiththeElectricalandComputerEn-
+neering at New York University, Tandon School
+gineeringDepartment,NYU,wherehejoinedas
+ofEngineering,Brooklyn,NY,USA.In2019,he
+an Assistant Professor in September 1988. He
+receivedhisMasterofSciencedegreeinElec-
+hasdevelopedanddirectedtheControl/Robotics
+trical Engineering in the same department as
+ResearchLaboratory,PolytechnicUniversity(NowNYU).Hisresearch
+well.HereceivedhisBachelorofSciencedegree
+has been supported by the DARPA, ARO, NSF, ONR, AFRL, Sandia
+in Physics from the University of Science and
+National Laboratory, ARL, NASA, and Corps. He has published more
+TechnologyofChina,Hefei,China,in2017.His
+than300refereedjournalarticlesandconferencepapersintheseareas.
+major field of study contains machine learning,
+HisbookonModelingandAdaptiveNonlinearControlofElectricMotors
+finance, and control theory. From 2017 to 2018, he was a research
+(Springer-Verlag,2003).Healsoholds14U.S.patentsonnovelsmart
+assistant in the NYU Wireless lab. In 2018 Fall, he joined in Con-
+micropositioners and actuators, control systems, cyber security, and
+trol/RoboticsResearchLaboratory(CRRL).Previously,hewasstudying
+wirelesssensorsandactuators.Hisresearchinterestsincludeadaptive
+the possibility of using machine learning tools to develop economical
+and nonlinear controls, robotics and automation, unmanned vehicles
+navigationalgorithms.Additionally,hewasalsostudyingthepossibility
+(fixed-wingandrotarywingaircraftsaswellasunderwatervehiclesand
+ofusingneuralnetworkstoassistdecision-makinginfinance.Currently,
+surface ships), resilient control and cyber security for cyber-physical
+heisstudyingbackdooringattacksagainstneuralnetworksandsecurity
+systems,large-scalesystems,decentralizedcontrol,andreal-timeem-
+problemsincyber-physicalsystems.HepublishedonearticleatIEEE
+beddedinstrumentationandcontrol.Hehasservedasthegeneralchair
+ConferenceonControlTechnologyandApplicationsin2020.
+andaconferenceorganizingcommitteememberforseveralinternational
+conferences.

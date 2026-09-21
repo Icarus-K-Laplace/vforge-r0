@@ -1,0 +1,25 @@
+{
+  "contract_id": "CONTRACT_E06-04",
+  "source_paper": "E06-04",
+  "family": "E06",
+  "paper_text_hash": "e82d7e7447cf21ff0688b84a786e1dd8e714b6338fcbae245d38d1024fea70e2",
+  "source_span": "We allocate the same number of training samples to every method.",
+  "predicates": [
+    {
+      "predicate_id": "P3_BUDGET",
+      "principle": "P3_SYMMETRY",
+      "natural_language": "Compared methods must be matched on the declared training/compute budget.",
+      "trace_fields": [
+        "comparator_budgets"
+      ],
+      "condition": "max(budget_value across comparator_budgets) - min(budget_value across comparator_budgets) == 0",
+      "source_span": "We allocate the same number of training samples to every method.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P3_SYMMETRY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "a70abed06a21d1a88b1403d8356525c900c829b9b6f0ff338720fc75e70776ee"
+}

@@ -1,0 +1,254 @@
+{
+  "n_pairs": 30,
+  "n_executions": 60,
+  "families": {
+    "E01": 5,
+    "E02": 5,
+    "E03": 5,
+    "E04": 5,
+    "E05": 5,
+    "E06": 5
+  },
+  "pairs": [
+    {
+      "study_id": "E01-01",
+      "family": "E01",
+      "paper_text_hash": "7a86d262c411c7ebbf69b34324e4989ca3137fb1d9f7fc0a6c9af17dfac62d0b",
+      "clean_trace": "traces/E01-01_clean.json",
+      "invalid_trace": "traces/E01-01_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E01-02",
+      "family": "E01",
+      "paper_text_hash": "73ddd4f91708821b86cf194d59a0dcb142de2dbd71d9a0c508c471ada48a5279",
+      "clean_trace": "traces/E01-02_clean.json",
+      "invalid_trace": "traces/E01-02_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E01-03",
+      "family": "E01",
+      "paper_text_hash": "fad611d9b531df9213bf0f86b40586a58557784e33c433f482b156f9402cdb4f",
+      "clean_trace": "traces/E01-03_clean.json",
+      "invalid_trace": "traces/E01-03_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E01-04",
+      "family": "E01",
+      "paper_text_hash": "fe8ed55e49d67d846f9916ca685b5f0c432b59e33d4c499763c1112b4cad9017",
+      "clean_trace": "traces/E01-04_clean.json",
+      "invalid_trace": "traces/E01-04_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E01-05",
+      "family": "E01",
+      "paper_text_hash": "c34b042ec807926cbe5937d2e9b64706f403a59e15f049d3775262a2ff248052",
+      "clean_trace": "traces/E01-05_clean.json",
+      "invalid_trace": "traces/E01-05_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E02-01",
+      "family": "E02",
+      "paper_text_hash": "177a867a6b76b064a0feb7d2defcbac487d17b615b01a1bfaa0ffe3e9372b50d",
+      "clean_trace": "traces/E02-01_clean.json",
+      "invalid_trace": "traces/E02-01_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E02-02",
+      "family": "E02",
+      "paper_text_hash": "f54ee65f2d20fc056e1832c519246112e00e262f76c3b5bdbe2ae95cd48a36e2",
+      "clean_trace": "traces/E02-02_clean.json",
+      "invalid_trace": "traces/E02-02_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E02-03",
+      "family": "E02",
+      "paper_text_hash": "c0fa892b221393a4817348ba0d0ca89cfc745114b15a173da74d09922dd02c15",
+      "clean_trace": "traces/E02-03_clean.json",
+      "invalid_trace": "traces/E02-03_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E02-04",
+      "family": "E02",
+      "paper_text_hash": "bfc08c6cf9cc0e989063eb4d4518da541f2b10cf86e71a3c36eb60320fd71730",
+      "clean_trace": "traces/E02-04_clean.json",
+      "invalid_trace": "traces/E02-04_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E02-05",
+      "family": "E02",
+      "paper_text_hash": "70b0db546c9e6d70ef6dd670970bfea1b29d7500fc6eac28bb2a728225b9b8d5",
+      "clean_trace": "traces/E02-05_clean.json",
+      "invalid_trace": "traces/E02-05_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E03-01",
+      "family": "E03",
+      "paper_text_hash": "b36c11ead254e9b47b5ee01c2c6ff4a157bf5d806460b19bef2c426ac3138fad",
+      "clean_trace": "traces/E03-01_clean.json",
+      "invalid_trace": "traces/E03-01_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E03-02",
+      "family": "E03",
+      "paper_text_hash": "db36a90db22ad8a21ff906f2288415bb19b5d0a34027d26e8e38f6b0f7cabdb8",
+      "clean_trace": "traces/E03-02_clean.json",
+      "invalid_trace": "traces/E03-02_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E03-03",
+      "family": "E03",
+      "paper_text_hash": "cfd9b96b29ab8e99a158d0d0be68bf09190ba6ed99893cd0fdc6ce6619ccb13c",
+      "clean_trace": "traces/E03-03_clean.json",
+      "invalid_trace": "traces/E03-03_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E03-04",
+      "family": "E03",
+      "paper_text_hash": "db449067fc81ddb5546ee76d6f7447852594c2d7b30faa8662bf375cf04fbe4a",
+      "clean_trace": "traces/E03-04_clean.json",
+      "invalid_trace": "traces/E03-04_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E03-05",
+      "family": "E03",
+      "paper_text_hash": "e71f1efa3e2764c3faf599e9ee8d7aa26fb3ffd0290ca2f337b979bbf05f0a63",
+      "clean_trace": "traces/E03-05_clean.json",
+      "invalid_trace": "traces/E03-05_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E04-01",
+      "family": "E04",
+      "paper_text_hash": "8f797e73db670128b6d9d2bd25e3b2e82367387026459704615513c179044e6f",
+      "clean_trace": "traces/E04-01_clean.json",
+      "invalid_trace": "traces/E04-01_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E04-02",
+      "family": "E04",
+      "paper_text_hash": "21069945e2554c805f375738457beb01e4e89f8b6a6cc80e9f34c1010a576f30",
+      "clean_trace": "traces/E04-02_clean.json",
+      "invalid_trace": "traces/E04-02_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E04-03",
+      "family": "E04",
+      "paper_text_hash": "15f6a5477644d883e12513e621c57e16f4e738fbd0d2792140396315ec083101",
+      "clean_trace": "traces/E04-03_clean.json",
+      "invalid_trace": "traces/E04-03_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E04-04",
+      "family": "E04",
+      "paper_text_hash": "401f33b54f48c95d45b508c6f6480b16b7f608271f9a55e0635326fcaa3b5b34",
+      "clean_trace": "traces/E04-04_clean.json",
+      "invalid_trace": "traces/E04-04_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E04-05",
+      "family": "E04",
+      "paper_text_hash": "a9d38761cdefb93627059493e37e2ca3cd65572bdd2b6ae95039836e01ecf6da",
+      "clean_trace": "traces/E04-05_clean.json",
+      "invalid_trace": "traces/E04-05_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E05-01",
+      "family": "E05",
+      "paper_text_hash": "dcc6a558261ada1b42ce0154d34af4b9eed5aae0916a3c89197bd9777edadc7f",
+      "clean_trace": "traces/E05-01_clean.json",
+      "invalid_trace": "traces/E05-01_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E05-02",
+      "family": "E05",
+      "paper_text_hash": "5d5a0936f7e021ec074990328afb56b73eb3cf21de7acc3a4db49130768fe577",
+      "clean_trace": "traces/E05-02_clean.json",
+      "invalid_trace": "traces/E05-02_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E05-03",
+      "family": "E05",
+      "paper_text_hash": "482ba73bfaeea4b1a0ed8f21195b08fd89059383d6e1a328f9acff87eed03f1c",
+      "clean_trace": "traces/E05-03_clean.json",
+      "invalid_trace": "traces/E05-03_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E05-04",
+      "family": "E05",
+      "paper_text_hash": "bc429f6f97f0510f73195b35af60a6eb7b47fbf9e88513f34d9349a3a6dfb5f3",
+      "clean_trace": "traces/E05-04_clean.json",
+      "invalid_trace": "traces/E05-04_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E05-05",
+      "family": "E05",
+      "paper_text_hash": "859697d8914a720bfec8be8285a756d53589c54ec358cbf3a9015abb5f7a78f9",
+      "clean_trace": "traces/E05-05_clean.json",
+      "invalid_trace": "traces/E05-05_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E06-01",
+      "family": "E06",
+      "paper_text_hash": "c1eb59f7594aab23921704968e1395c315d709af789dbee1f3e54a0121acd391",
+      "clean_trace": "traces/E06-01_clean.json",
+      "invalid_trace": "traces/E06-01_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E06-02",
+      "family": "E06",
+      "paper_text_hash": "257f4659317e695fe6bf3867f1f608c794b5df6d5cb0576a42140fae7cc2ddf0",
+      "clean_trace": "traces/E06-02_clean.json",
+      "invalid_trace": "traces/E06-02_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E06-03",
+      "family": "E06",
+      "paper_text_hash": "0ef70b071fb3e930762cddb1b072a8cd08efe9aee621b801b3c0109f318ebb3b",
+      "clean_trace": "traces/E06-03_clean.json",
+      "invalid_trace": "traces/E06-03_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E06-04",
+      "family": "E06",
+      "paper_text_hash": "e82d7e7447cf21ff0688b84a786e1dd8e714b6338fcbae245d38d1024fea70e2",
+      "clean_trace": "traces/E06-04_clean.json",
+      "invalid_trace": "traces/E06-04_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "study_id": "E06-05",
+      "family": "E06",
+      "paper_text_hash": "a11f7ec0bbf9b75581603300f04809a3324cfe1f4d94e874c0864e4583dbc79f",
+      "clean_trace": "traces/E06-05_clean.json",
+      "invalid_trace": "traces/E06-05_invalid.json",
+      "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ]
+}

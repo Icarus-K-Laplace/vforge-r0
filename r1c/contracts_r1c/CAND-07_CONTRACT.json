@@ -1,0 +1,22 @@
+{
+  "contract_id": "CAND-07_CONTRACT",
+  "candidate_id": "CAND-07",
+  "source_paper": "RoBERTa: A Robustly Optimized BERT Pretraining Approach",
+  "deviation_category": "C6_aggregation_statistical_procedure_error",
+  "claim_text": "In paper 'RoBERTa: A Robustly Optimized BERT Pretraining Approach', statistical metrics and aggregations (such as macro-averages or tokenized BLEU) must follow exact mathematical definitions without denominator or tokenization skew.",
+  "predicates": [
+    {
+      "predicate_id": "STATISTICAL_PROCEDURE_FIDELITY",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Metric aggregation rules must be correctly implemented according to standard statistical formulations.",
+      "trace_fields": [
+        "protocol.metric_formula",
+        "protocol.implementation_correct"
+      ],
+      "condition": "protocol.implementation_correct == True",
+      "confidence": 0.93
+    }
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "59ddfb29292fad5a5c5039c82cbc132a361175a748c2c4d34698ac3351c3497f"
+}

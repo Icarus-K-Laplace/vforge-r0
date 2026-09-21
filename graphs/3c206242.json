@@ -1,0 +1,102 @@
+{
+  "study_id": "3c206242",
+  "nodes": [
+    {
+      "node_id": "N001",
+      "node_type": "DATASET",
+      "label": "dataset_3c206242",
+      "attributes": {
+        "files": [
+          "E:\\VForge-R0\\repositories\\3c206242\\models\\cifar10.py",
+          "E:\\VForge-R0\\repositories\\3c206242\\models\\gaussian_model.py",
+          "E:\\VForge-R0\\repositories\\3c206242\\models\\mnist.py",
+          "E:\\VForge-R0\\repositories\\3c206242\\models\\__init__.py"
+        ]
+      }
+    },
+    {
+      "node_id": "N002",
+      "node_type": "SPLIT",
+      "label": "split_3c206242",
+      "attributes": {}
+    },
+    {
+      "node_id": "N003",
+      "node_type": "TRAIN",
+      "label": "train_3c206242",
+      "attributes": {
+        "scripts": [
+          "setup.py",
+          "cifar10.py",
+          "gaussian_model.py",
+          "mnist.py",
+          "discrete_measures.py"
+        ]
+      }
+    },
+    {
+      "node_id": "N004",
+      "node_type": "MODEL",
+      "label": "model_3c206242",
+      "attributes": {
+        "n_python_files": 11
+      }
+    },
+    {
+      "node_id": "N005",
+      "node_type": "EVALUATE",
+      "label": "eval_3c206242",
+      "attributes": {}
+    },
+    {
+      "node_id": "N006",
+      "node_type": "METRIC",
+      "label": "metric_3c206242",
+      "attributes": {}
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "E001",
+      "source_id": "N001",
+      "target_id": "N002",
+      "edge_type": "DATA_FLOW",
+      "attributes": {}
+    },
+    {
+      "edge_id": "E002",
+      "source_id": "N002",
+      "target_id": "N003",
+      "edge_type": "DATA_FLOW",
+      "attributes": {}
+    },
+    {
+      "edge_id": "E003",
+      "source_id": "N003",
+      "target_id": "N004",
+      "edge_type": "EVIDENCE_FLOW",
+      "attributes": {}
+    },
+    {
+      "edge_id": "E004",
+      "source_id": "N004",
+      "target_id": "N005",
+      "edge_type": "EVIDENCE_FLOW",
+      "attributes": {}
+    },
+    {
+      "edge_id": "E005",
+      "source_id": "N005",
+      "target_id": "N006",
+      "edge_type": "EVIDENCE_FLOW",
+      "attributes": {}
+    }
+  ],
+  "metadata": {
+    "n_nodes": 6,
+    "n_edges": 5,
+    "n_python_files": 11,
+    "n_config_files": 0,
+    "graph_confidence": 0.8
+  }
+}

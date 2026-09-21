@@ -1,0 +1,18 @@
+{
+  "study_id": "paper_001",
+  "nodes": [
+    {
+      "node_id": "N001",
+      "node_type": "SPLIT",
+      "label": "split_paper_001",
+      "attributes": {}
+    }
+  ],
+  "edges": [],
+  "metadata": {
+    "n_nodes": 1,
+    "n_edges": 0,
+    "scripts_found": 0,
+    "configs_found": 0
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "paper_id": "2c296ba3",
+  "paper_url": "https://aclanthology.org/D18-1032.pdf",
+  "acquisition_status": "SUCCESS",
+  "parser_used": "pdfplumber",
+  "character_count": 33208,
+  "section_count": 58,
+  "extraction_confidence": 0.9,
+  "hash": "468569ea8fa9a3702a0c6e2cc85a28db981afa3f439e7327ffe91d31bc1ba6eb"
+}

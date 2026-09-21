@@ -1,0 +1,63 @@
+{
+  "run_id": "E03-02",
+  "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "environment_hash": "enve3af3f40c7b3ef58",
+  "seed": 0,
+  "lineage": {
+    "train_hash": "train_h1",
+    "validation_hash": "val_h1",
+    "test_hash": "test_h1",
+    "disjoint_split_ids": true
+  },
+  "loss_identity": "CrossEntropyLoss",
+  "optimizer": "AdamW",
+  "hyperparameters": {
+    "wd": 0.05,
+    "iterations": 200
+  },
+  "config_hash": "cfg3b_bad",
+  "training_budget": {},
+  "timestamps": {
+    "start": "2026-01-01T00:00:00Z",
+    "end": "2026-01-01T06:00:00Z"
+  },
+  "protocol": {
+    "declared_seeds": [
+      0,
+      1,
+      2
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "E03-02-s0",
+      "E03-02-s1",
+      "E03-02-s2"
+    ],
+    "selection_split": "validation",
+    "final_test_split": "test",
+    "declared_preprocess": {},
+    "executed_preprocess": {},
+    "declared_subgroups": [],
+    "reported_subgroups": [],
+    "declared_hyperparameters": {
+      "wd": 0.05,
+      "iterations": 200
+    },
+    "executed_hyperparameters": {
+      "wd": 0.0,
+      "iterations": 100
+    }
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.7,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "E03-02-s0",
+        "E03-02-s1",
+        "E03-02-s2"
+      ]
+    }
+  },
+  "self_hash": "d9d8cb7eef4851b65837c6159d0ba0b4382c681ddc018afdebab6a9caffaa2ee"
+}

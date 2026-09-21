@@ -1,0 +1,26 @@
+{
+  "experiment_id": "VForge-R0-A-001",
+  "protocol_version": "R0-A",
+  "date_created": "2026-09-20",
+  "n_studies": 5,
+  "data_split": {
+    "train": [
+      "study_01",
+      "study_02",
+      "study_03"
+    ],
+    "dev": [
+      "study_04"
+    ],
+    "test": [
+      "study_05"
+    ]
+  },
+  "claims_sha256": {
+    "study_01": "28247feb31d63111ce3725e6e4ab6a1efe46b65afcef268c68e744b60012c251",
+    "study_02": "4c50a10d31df8e675a5b2909b16ef099ff43e3b696e59c6dff6ae6ab7818a057",
+    "study_03": "a711671aa6b69a452f95889bec1c8304ec3e665b05e3dcfb2357a46c5886ece1",
+    "study_04": "e30a300787d18fc19d4785d65885b6dbc807da2f0e09917c59158702785063df",
+    "study_05": "0178d054e16b9dafa76714ea33dfe17f35c718b95b2cefcb8ebeda25762f0a87"
+  }
+}

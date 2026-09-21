@@ -1,0 +1,36 @@
+{
+  "trace_id": "DS_E04_dual_inpainting_Tminus",
+  "paper": "diffusing_synth_2411.10164",
+  "repository": "tlpss/diffusing-synthetic-data",
+  "family": "E04",
+  "experiment": "dual-inpainting",
+  "protocol": {
+    "declared_categories": [
+      "mug",
+      "shoe",
+      "tshirt"
+    ],
+    "reported_categories": [
+      "mug",
+      "shoe"
+    ],
+    "aggregation_rule": "mean",
+    "metric": "AKD"
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 37.1512,
+      "aggregation_rule": "mean",
+      "upstream_categories": [
+        "mug",
+        "shoe"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "contract_id": "DS_E04_CATEGORY_SUBGROUP",
+  "self_hash": "52db7baa5c5074b3d910b1fdf4c036144e381814060b88019d18c7f5ae4c1611",
+  "vps": 0.6726,
+  "value_preserving": false,
+  "abs_diff": 19.3557
+}

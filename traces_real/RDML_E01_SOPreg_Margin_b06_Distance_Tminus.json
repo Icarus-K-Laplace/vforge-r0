@@ -1,0 +1,42 @@
+{
+  "trace_id": "RDML_E01_SOPreg_Margin_b06_Distance_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "SOPreg_Margin_b06_Distance_s1",
+    "SOPreg_Margin_b06_Distance_s4"
+  ],
+  "protocol": {
+    "dataset": "SOPreg",
+    "method": "Margin_b06_Distance",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_SOPreg_Margin_b06_Distance_s1",
+      "RDML_E01_SOPreg_Margin_b06_Distance_s4"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.7753,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_SOPreg_Margin_b06_Distance_s1",
+        "RDML_E01_SOPreg_Margin_b06_Distance_s4"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "262ffea476e033b810f598bf64ad5212a67c5d4601ccb89e81daaca97e134e5a",
+  "vps": 0.2025,
+  "value_preserving": true,
+  "abs_diff": 0.002
+}

@@ -1,0 +1,11 @@
+{
+  "candidate_id": "CAND-03",
+  "paper_title": "Deep Reinforcement Learning that Matters",
+  "deviation_category": "C2_selective_aggregation_reporting",
+  "gold_source_type": "E_reproducibility_paper",
+  "gold_url": "https://github.com/k-r-allen/deep-rl-that-matters",
+  "gold_authority": "Henderson, Islam, Bachman, Pineau, Precup, Meger (AAAI 2018)",
+  "gold_text": "Published policy gradient and Q-learning papers selectively reported average returns over top-performing random seeds (e.g. top 2-3 of 5 seeds, dropping failed runs), and compared methods trained with different environment step counts.",
+  "pre_fix_ref": "OpenAI Baselines / rllab early benchmark releases",
+  "post_fix_ref": "Complete seed evaluation reporting protocol (all seeds)"
+}

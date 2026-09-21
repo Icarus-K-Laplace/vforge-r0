@@ -1,0 +1,72 @@
+{
+  "run_id": "E04-02",
+  "code_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "environment_hash": "env061eca1ebdd83239",
+  "seed": 0,
+  "lineage": {
+    "train_hash": "train_h1",
+    "validation_hash": "val_h1",
+    "test_hash": "test_h1",
+    "disjoint_split_ids": true
+  },
+  "loss_identity": "CrossEntropyLoss",
+  "optimizer": "AdamW",
+  "hyperparameters": {},
+  "config_hash": "cfg_default",
+  "training_budget": {},
+  "timestamps": {
+    "start": "2026-01-01T00:00:00Z",
+    "end": "2026-01-01T06:00:00Z"
+  },
+  "protocol": {
+    "declared_seeds": [
+      0,
+      1,
+      2
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "E04-02-s0",
+      "E04-02-s1",
+      "E04-02-s2"
+    ],
+    "selection_split": "validation",
+    "final_test_split": "test",
+    "declared_subgroups": [
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5"
+    ],
+    "reported_subgroups": [
+      "c1",
+      "c2",
+      "c3",
+      "c4",
+      "c5"
+    ]
+  },
+  "evaluation": {
+    "dataset": "test",
+    "metrics": {
+      "c1": 0.88,
+      "c2": 0.84,
+      "c3": 0.51,
+      "c4": 0.49,
+      "c5": 0.42
+    }
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.63,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "E04-02-s0",
+        "E04-02-s1",
+        "E04-02-s2"
+      ]
+    }
+  },
+  "self_hash": "f4648e58cb28bc04dc6cfb00d0ddacb0f32d19ce075839732f519944b2c2743a"
+}

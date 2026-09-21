@@ -1,0 +1,102 @@
+{
+  "study_id": "743a1998",
+  "nodes": [
+    {
+      "node_id": "N001",
+      "node_type": "DATASET",
+      "label": "dataset_743a1998",
+      "attributes": {
+        "files": [
+          "E:\\VForge-R0\\repositories\\743a1998\\models\\generator.py",
+          "E:\\VForge-R0\\repositories\\743a1998\\models\\lenet.py",
+          "E:\\VForge-R0\\repositories\\743a1998\\models\\selector.py",
+          "E:\\VForge-R0\\repositories\\743a1998\\models\\wresnet.py"
+        ]
+      }
+    },
+    {
+      "node_id": "N002",
+      "node_type": "SPLIT",
+      "label": "split_743a1998",
+      "attributes": {}
+    },
+    {
+      "node_id": "N003",
+      "node_type": "TRAIN",
+      "label": "train_743a1998",
+      "attributes": {
+        "scripts": [
+          "main.py",
+          "solver.py",
+          "generator.py",
+          "lenet.py",
+          "selector.py"
+        ]
+      }
+    },
+    {
+      "node_id": "N004",
+      "node_type": "MODEL",
+      "label": "model_743a1998",
+      "attributes": {
+        "n_python_files": 11
+      }
+    },
+    {
+      "node_id": "N005",
+      "node_type": "EVALUATE",
+      "label": "eval_743a1998",
+      "attributes": {}
+    },
+    {
+      "node_id": "N006",
+      "node_type": "METRIC",
+      "label": "metric_743a1998",
+      "attributes": {}
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "E001",
+      "source_id": "N001",
+      "target_id": "N002",
+      "edge_type": "DATA_FLOW",
+      "attributes": {}
+    },
+    {
+      "edge_id": "E002",
+      "source_id": "N002",
+      "target_id": "N003",
+      "edge_type": "DATA_FLOW",
+      "attributes": {}
+    },
+    {
+      "edge_id": "E003",
+      "source_id": "N003",
+      "target_id": "N004",
+      "edge_type": "EVIDENCE_FLOW",
+      "attributes": {}
+    },
+    {
+      "edge_id": "E004",
+      "source_id": "N004",
+      "target_id": "N005",
+      "edge_type": "EVIDENCE_FLOW",
+      "attributes": {}
+    },
+    {
+      "edge_id": "E005",
+      "source_id": "N005",
+      "target_id": "N006",
+      "edge_type": "EVIDENCE_FLOW",
+      "attributes": {}
+    }
+  ],
+  "metadata": {
+    "n_nodes": 6,
+    "n_edges": 5,
+    "n_python_files": 11,
+    "n_config_files": 0,
+    "graph_confidence": 0.8
+  }
+}

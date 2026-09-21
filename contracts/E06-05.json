@@ -1,0 +1,40 @@
+{
+  "contract_id": "CONTRACT_E06-05",
+  "source_paper": "E06-05",
+  "family": "E06",
+  "paper_text_hash": "a11f7ec0bbf9b75581603300f04809a3324cfe1f4d94e874c0864e4583dbc79f",
+  "source_span": "All approaches are trained for 100 epochs to ensure a fair comparison.",
+  "predicates": [
+    {
+      "predicate_id": "P7_HYPERPARAMS",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "Executed hyperparameters must match the paper-declared values.",
+      "trace_fields": [
+        "protocol",
+        "declared_hyperparameters",
+        "protocol",
+        "executed_hyperparameters"
+      ],
+      "condition": "protocol.executed_hyperparameters == protocol.declared_hyperparameters",
+      "source_span": "All approaches are trained for 100 epochs to ensure a fair comparison.",
+      "confidence": 0.8
+    },
+    {
+      "predicate_id": "P3_BUDGET",
+      "principle": "P3_SYMMETRY",
+      "natural_language": "Compared methods must be matched on the declared training/compute budget.",
+      "trace_fields": [
+        "comparator_budgets"
+      ],
+      "condition": "max(budget_value across comparator_budgets) - min(budget_value across comparator_budgets) == 0",
+      "source_span": "All approaches are trained for 100 epochs to ensure a fair comparison.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P3_SYMMETRY",
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "1f4219eb0eacc2c40358b1b555751fdf62ef06d846a532a93de1809845d9a0ce"
+}

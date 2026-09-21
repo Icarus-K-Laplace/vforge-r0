@@ -1,0 +1,45 @@
+{
+  "trace_id": "RDML_E01_CARS_NPair_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CARS_NPair_s0",
+    "CARS_NPair_s3",
+    "CARS_NPair_s1"
+  ],
+  "protocol": {
+    "dataset": "CARS",
+    "method": "NPair",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CARS_NPair_s0",
+      "RDML_E01_CARS_NPair_s3",
+      "RDML_E01_CARS_NPair_s1"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.7703,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CARS_NPair_s0",
+        "RDML_E01_CARS_NPair_s3",
+        "RDML_E01_CARS_NPair_s1"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "80f8f66e15d9b4dad4601d0bb2595854adbb6884ced4e89ef57e78c417685581",
+  "vps": 0.2165,
+  "value_preserving": true,
+  "abs_diff": 0.0022
+}

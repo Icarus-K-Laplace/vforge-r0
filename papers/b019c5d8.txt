@@ -1,0 +1,767 @@
+Background-Aware Pooling and Noise-Aware Loss for Weakly-Supervised
+Semantic Segmentation
+YoungminOh BeomjunKim BumsubHam∗
+SchoolofElectricalandElectronicEngineering,YonseiUniversity
+Abstract
+We address the problem of weakly-supervised seman-
+tic segmentation (WSSS) using bounding box annotations.
+Although object bounding boxes are good indicators to Inputimage. Groundtruth. Ours. Ours∗.
+segment corresponding objects, they do not specify ob-
+jectboundaries,makingithardtotrainconvolutionalneu-
+ral networks (CNNs) for semantic segmentation. We find
+thatbackgroundregionsareperceptuallyconsistentinpart
+GrabCut[48]. MCG1[44]. WSSL[42]. SDI[27].
+withinanimage,andthiscanbeleveragedtodiscriminate
+foregroundandbackgroundregionsinsideobjectbounding Figure1: Visualcomparisonofpseudoground-truthlabels. Our
+boxes. To implement this idea, we propose a novel pool- approach generates better segmentation labels than other WSSS
+methodsusingobjectboundingboxes(WSSL[42]andSDI[27]).
+ingmethod,dubbedbackground-awarepooling(BAP),that
+Hand-craftedmethods(GrabCut[48]andMCG[44])failtoseg-
+focusesmoreonaggregatingforegroundfeaturesinsidethe
+mentobjectboundaries.Ours∗:Ourswithanindicationofunreli-
+bounding boxes using attention maps. This allows to ex-
+ableregions.Bestviewedincolor.
+tracthigh-qualitypseudosegmentationlabelstotrainCNNs
+forsemanticsegmentation,butthelabelsstillcontainnoise Weakly-supervisedsemanticsegmentation(WSSS)hasre-
+especially at object boundaries. To address this problem, cently been introduced to exploit a weak form of super-
+wealsointroduceanoise-awareloss(NAL)thatmakesthe visory signals such as image-level labels [11, 14, 22, 28,
+networks less susceptible to incorrect labels. Experimen- 32, 56, 60], points [3], scribbles [35, 53, 54], and ob-
+tal results demonstrate that learning with our pseudo la- ject bounding boxes [8, 27, 42, 52]. WSSS methods us-
+belsalreadyoutperformsstate-of-the-artweakly-andsemi- ing image-level labels typically leverage class activation
+supervisedmethodsonthePASCALVOC2012dataset,and maps (CAMs) [63], obtained from CNNs for image clas-
+theNALfurtherbooststheperformance. sification using global average pooling (GAP), to localize
+objects. SinceCAMstendtohighlightdiscriminativeparts,
+these methods more or less resort to off-the-shelf saliency
+1.Introduction
+detectors [13, 21, 24, 33, 57]. This, however, requires ad-
+ditionalpixel-levelground-truthannotationsforsalientob-
+Semantic segmentation is one of the fundamental tasks
+jects. Otherapproachesattempttoexploitobjectbounding
+incomputervision,andhasreceivedalotofattentionover
+boxes. They are easy to annotate compared to pixel-level
+the last decades. It aims at assigning a semantic label to
+labels and provide rich semantics to localize objects. The
+each pixel, which can be leveraged to various applications
+objectboundingboxes,however,containamixtureoffore-
+includingsceneunderstanding,autonomousdriving,image
+groundandbackground,anddonotspecifyexquisiteobject
+editing,androbotics. Supervisedmethodsbasedonconvo-
+boundaries.Toovercomethis,recentapproaches[8,27,31]
+lutionalneuralnetworks(CNNs)[5,40,47]haveachieved
+useoff-the-shelfsegmentationmethods[44,48].
+remarkable success in semantic segmentation, but they re-
+quirelotsoftrainingsampleswithpixel-levellabels,which We introduce a simple yet effective WSSS method us-
+areextremelylabor-intensivetoannotate,totrainnetworks. ing bounding box annotations. In particular, we investi-
+gate two aspects of this problem – How can we gener-
+∗Correspondingauthor.
+atehigh-qualitybutpossiblynoisypixel-levellabels(i.e.,a
+1For MCG, we compute intersection-over-union (IoU) scores using
+pseudogroundtruth)fromobjectboundingboxes(Fig.1)?
+pairsofsegmentproposalsandboundingboxes,andchoosethebestone
+foreachbox. How can we train CNNs for semantic segmentation (e.g.,
+6913
+DeepLab[5,6])withnoisysegmentationlabels? Motivated ofobjectsofaparticularclassonly,anddonotprovideany
+bythemethodsusingimage-levellabels[1,22,32,55,56], informationforthelocationofobjects,makingtheproblem
+forthefirstaspect,weleverageaCNNforimageclassifica- extremelychallenging. Theseminalworkof[63]proposes
+tion,insteadofexploitingoff-the-shelfsegmentationmeth- CAMs to estimate coarse localization maps for objects or
+ods(e.g.,[44,48]). Tothisend,weproposeabackground- actions by using a CNN trained with the image-level la-
+aware pooling (BAP) method using an attention map, en- bels. Since then, several WSSS methods exploit CAMs
+abling discriminating foreground and background inside to generate a pseudo ground truth, which is used to train
+the bounding boxes. This allows to aggregate features CNNs for semantic segmentation in a supervised manner,
+within a foreground for image classification, while dis- bypropagatingthemwithDenseCRF[23,28,49,60],using
+carding those for a background, resulting in more accu- astochasticinference[32], incorporatingaself-supervised
+rate CAMs, rather than mainly highlighting the most dis- task [4], or alternatively mining and erasing object-related
+criminative parts (e.g., faces in the person class) as in regions [22, 34, 55, 56]. These approaches enlarge initial
+GAP[36,63]. Specifically,weretrievebackgroundregions CAMs,typicallyactivatedonthemostdiscriminativeparts,
+insidetheboundingboxes,basedonourfindingthatback- progressivelytocoverentireobjects,butthismayhighlight
+groundregionsareperceptuallyconsistentinpartwithinan the regions irrelevant to objects (e.g., a background). To
+image. This provides attention maps for the background address this problem, off-the-shelf saliency detectors [13,
+regions adaptively for individual images. We exploit the 21,24,33,57]and/orsegmentproposals[7,44]havebeen
+attention maps and CAMs, together with prototypical fea- used,buttheyrequirecalibratingsaliency/objectnessscores
+tures, to generate pseudo ground-truth labels. For the sec- carefully. SSNet[59]proposestolearnWSSSandsaliency
+ond one, we introduce a noise-aware loss (NAL) to train detection jointly with a unified network architecture, but
+CNNs for semantic segmentation that makes the networks it requires ground-truth saliency annotations. Unlike these
+lesssusceptibletoincorrectlabels. Specifically,weexploit methods using image-level labels, we require no external
+a confidence map, using the distances between CNN fea- models nor ground-truth saliency annotations. Recently,
+turesforpredictionandclassifierweightsforsemanticseg- SeeNet[22]proposestousebackgroundregionsforWSSS.
+mentation,tocomputeacross-entropylossadaptively. Ex- It defines a background explicitly using CAMs whose val-
+perimental results demonstrate that our approach to using ues are below a threshold, and prevents spreading CAMs
+BAP already outperforms the state of the art on the PAS- intothebackground. OurworkissimilartoSeeNetinthat
+CAL VOC 2012 dataset [10], and the NAL further boosts bothexploitthebackgroundregions. Differently,wedefine
+theperformance. Wealsodemonstratetheeffectivenessof thebackgroundregionsimplicitlyusinganonparametricre-
+our approach by extending it to the task of instance seg- trieval technique, with an assumption that the background
+mentation on the MS-COCO dataset [38]. We summarize isperceptuallyconsistentinpartwithinanimage. Wethen
+thecontributionsofourworkasfollows: leveragethemtodesignanewpoolingmethodandtogen-
+eratepseudoground-truthlabels.
+• WeintroduceanovelpoolingmethodforWSSS,dubbed
+BAP, that uses bounding box annotations, allowing to WSSS using bounding box labels. An alternative ap-
+generatehigh-qualitypseudoground-truthlabels. proach for WSSS is to exploit object bounding boxes as a
+supervisorysignal. Theyareeasytoannotatecomparedto
+• We propose a NAL exploiting the distances between pixel-level labels (e.g., annotating boxes is about 15 times
+CNNfeaturesforpredictionandclassifierweightsforse- cheaper than labeling pixel-wise segments [38]), and pro-
+manticsegmentation,lesseningtheinfluenceofincorrect vide a definite background with the extent of each ob-
+labels. ject. In this context, recent methods [8, 27, 31, 42, 52]
+closetheperformancegapbetweenweakly-supervisedand
+• WesetanewstateoftheartonthePASCALVOC2012
+fully-supervised methods. For example, BoxSup [8] em-
+dataset for weakly- and semi-supervised semantic seg-
+ploys MCG [44] to generate candidate segments and uses
+mentation. We also provide an extensive experimental
+object bounding boxes to update the segments iteratively
+analysiswithablationstudies.
+alongwithnetworkparameters. WSSL[42]adoptsDense-
+CRF [29] to generate pseudo segmentation labels using
+Our code and models are available online: https://
+boundingboxes,andproposesanexpectation-maximization
+cvlab.yonsei.ac.kr/projects/BANA.
+algorithm to refine the labels. SDI [27] argues that gen-
+erating correct pseudo labels is a crucial step for the per-
+2.Relatedwork
+formanceofWSSS,andproposestouseGrabCut[48]and
+WSSS using image-level labels. Image-level labels have MCG to estimate the labels. We also advocate the impor-
+been used for WSSS as an alternative to dense pixel-level tanceofhigh-qualitypseudolabelsforWSSS,butexploita
+annotations.However,theyindicatethepresenceorabsence classificationnetwork,similartothemethodsusingimage-
+6914
+!
+:Element-wiseMultiplication
+feature CS:CosineSimilarity
+extractor
+#
+! #
+W Av e e ig r h a t g e e d ! …! … Average 1−# RoIAlign W Av e e ig r h a t g e e d " …"
+CS
+$ …
+"×"
+Figure2: OverviewofimageclassificationusingBAP.Wefirstextractqueriesq usingafeaturemapf andabinarymaskM indicating
+j
+adefinitebackground. Thequeriesq arethenusedtocomputeanattentionmapAdescribingthelikelihoodthateachpixelbelongstoa
+j
+background. Theattentionmapenableslocalizingentireforegroundregions,leadingtobetterforegroundfeaturesr . Finally,weapplya
+i
+softmaxclassifierwtotheforegroundfeaturesr foreachboundingboxtogetherwiththequeriesq .Theentirenetworkistrainedwitha
+i j
+cross-entropyloss.Seetextfordetails(Sec.3.1).Bestviewedincolor.
+levellabels,insteadofexploitingtheoff-the-shelfsegmen- theclassificationnetworktogetherwiththebackgroundat-
+tationmethods[44,48]oradditionaldatasets[2]. tention maps and prototypical features (Fig. 3). Finally,
+Learning from noisy labels. Several methods have been wetrainCNNsforsemanticsegmentationwiththepseudo
+proposed for correcting or filtering out noisy labels, e.g., ground truth but possibly having noisy labels. We use a
+[25, 41, 46, 50, 61] to name a few. We refer to [15] for NALtolessentheinfluenceofthenoisylabels. Inthefol-
+a comprehensive review. In the context of WSSS, pseudo lowing,wedescribeadetaileddescriptionofeachstage.
+ground-truth labels generated by a weak form of supervi-
+sory signals are not accurate compared to manual anno- 3.1.ImageclassificationusingBAP
+tations, making the task much more difficult. To allevi-
+ate the influence of noisy segmentation labels, SDI [27] Our classification network consists of a feature extrac-
+discards regions whose labels obtained by MCG [44] and tor and a (L+1)-way softmax classifier (L object classes
+GrabCut [48] are different, to train a network. Similarly, and the background class). Given an input image, the fea-
+theworkof[12]exploitsmultiplepseudolabelsthatmight tureextractoroutputsafeaturemapf. WedenotebyB =
+complement each other. This work, however, requires 12 {B ,B ,...,B } a set of object bounding boxes in the
+1 2 K
+differentpseudolabelsobtainedfromtwoclassificationnet- inputimage,whereK isthenumberofboundingboxes,re-
+works. By contrast, we generate two pseudo labels with a sized w.r.t. the size of the feature map f correspondingly
+negligibleoverhead. Recently,BCM[52]introducesafill- using nearest-neighbor interpolation. We denote by M a
+ing rate constraint. It filters out incorrectly labeled pixels, maskindicatingadefinitebackground(i.e.,theregionsout-
+based on the mean percentage of foreground pixels within sidetheboundingboxes),whereM(p)=1ifthepositionp
+bounding boxes of each object class. Box2Seg [31] also doesnotbelongtoanyboundingboxes,andM(p)=0oth-
+usesthefillingrateconstrainttoregularizeaclass-specific erwise.
+attention map. The attention map is then used to modu- Background attention map. Separating foreground and
+late a cross-entropy loss to handle incorrect labels. These background regions inside object bounding boxes allows
+approaches[31,52]outperformothermethods,butrequire theclassifiertofocusmoreonlearningforegroundobjects.
+a pre-training stage to stabilize the training and use addi- As will be seen in our experiments, this results in bet-
+tionalparameterstocomputelosses,whichisincontrastto ter CAMs localizing entire objects. However, the object
+ourNAL. boundingboxescontainamixtureofforegroundandback-
+ground, and do not provide any information about object
+3.Approach boundaries. To discriminate foreground and background
+regions for each bounding box, we pose this problem as
+Our approach mainly consists of three stages: First, we a retrieval task. Specifically, we divide the feature map f
+train a CNN for image classification using object bound- into N ×N regular grids. We denote by G(j) each grid
+ing boxes (Fig. 2). We use BAP leveraging a background cell,where1 ≤ j ≤ N2. Notethatweignoreinvalidcells
+prior, that is, background regions are perceptually consis- thatdonotoverlapwiththedefinitebackgroundregionsat
+tentinpartwithinanimage,allowingtoextractmoreaccu- all,(i.e.,thecellsinsideobjectboundingboxes),suggesting
+rateCAMs. Tothisend,wecomputeanattentionmapfora thateachinputimagecouldhavedifferentnumbersofvalid
+backgroundadaptivelyforeachimage. Second, wegener- grid cells, at most N2. We then aggregate features for in-
+atepseudosegmentationlabelsusingCAMsobtainedfrom dividualgridcells, andusethemasqueriesforretrievalas
+6915
+follows:
+M(p)f(p) Background !0
+Attention Map
+q =
+p∈! G(j)
+. (1)
+DenseCRF
+j
+M(p) CAMs !!
+p∈! G(j)
+That is, we obtain individual queries q
+j
+by computing $ #!
+a weighted average of features f on corresponding grid
+"!
+Argmax
+cellG(j)usingthebinarymaskM. Giventhequeries,we
+CS
+retrievethebackgroundregionsinsidetheboundingboxes,
+andobtainanattentionmapAasfollows:
+1
+Figure3:Generatingpseudolabels.Wecomputeu0andu
+c
+using
+A(p)= A (p), (2) a background attention map and CAMs, respectively, which are
+j
+J usedasaunarytermforDenseCRF[29]toobtainpseudosegmen-
+j
+! tationlabelsYcrf.Weextractprototypicalfeaturesq
+c
+foreachclass
+whereJ isthenumberofvalidgridcellsand usingthelabelsYcrf,andusethemasqueriestoretrievehigh-level
+featuresfromthefeaturemapf,fromwhichweobtainadditional
+ReLU f(p) · qj ,p∈B pseudolabelsYret. Seetextfordetail(Sec.3.2). Bestviewedin
+A j (p)= "f(p)" "qj" . (3) color.
+" # 1 $ ,p∈/ B
+the classification network using BAP. We exploit Dense-
+Wedenoteby$·$L2normalization. Thiscomputescosine CRF[29]withaunarytermforeachobjectclasscdefined
+similaritybetweenfeaturesinsidetheboundingboxesBand as:
+q b u y er th ie e s R q j e , L a U nd [ t 3 r 0 u ] nc f a u t n e c s t t i h o e n. res A ul c t c s o i r n d t i o ng th ly e , ra th n e ge a o tt f en [0 ti , o 1 n ] u c (p)= max C p A ( M CA c M (p c ) (p)) ,p∈B c , (5)
+" 0 ,p∈/ B c
+map A quantifies the likelihood that each pixel inside the
+boundingboxesbelongstoabackground. Itismorelikely
+wherewedenotebyB
+c
+asetofboundingboxescontaining
+tobeabackground,asthevalueoftheattentionmapAap-
+objectsoftheclasscand
+proachestoone. CAM (p)=ReLU(f(p)·w ). (6)
+c c
+BAP.WeusetheattentionmapAtoaggregateforeground
+featuresforeachboundingboxB 2asfollows: w c is the classifier weight for the object class c. For the
+i
+backgroundclass, weusethebackgroundattentionmapA
+asfollows:
+(1−A(p))f(p)
+u (p)=A(p). (7)
+r =
+p
+!
+∈Bi
+, (4)
+0
+i Note that we could also use the CAM for the background
+(1−A(p))
+class directly, similar to other object classes, but it high-
+p
+!
+∈Bi
+lights the most frequently observed regions in the dataset
+whichcorrespondstoweightedaveragepooling,wherethe duringtraining,lesseningthediscriminativeabilityofCRF
+weight is the probability of the point at p ∈ B being toseparateforegroundandbackgroundinsidethebounding
+i
+a foreground. Note that it becomes GAP, when all re- boxes.Forapairwiseterm,wefollowotherWSSSmethods
+gions inside the bounding box are considered as a fore- that use contrast-sensitive bilateral potentials using color
+ground(i.e.,A=0). values and positions as in [29]. We concatenate the unary
+Loss. We apply the (L + 1)-way softmax classifier w to termsforeachobjectclassinEq.(5)andthebackgroundin
+individual features for the foreground and background re- Eq. (7), and input them to DenseCRF together with an in-
+gions(i.e.,r
+i
+andq
+j
+,respectively)totraintheclassification putimagetoobtainsegmentationlabelsYcrf. Second,while
+network with a standard cross-entropy loss. This enables thefirstapproachusingDenseCRFdelineatesobjectbound-
+betterdistinguishingforegroundobjectsfromabackground. aries,low-levelfeatures(e.g.,colorandtexture)inthepair-
+wisetermmightresultinincorrectsegmentationlabels. We
+3.2.Pseudolabelgeneration
+thus leverage high-level features f obtained from the clas-
+sificationnetworktocomplementthis.Specifically,wepro-
+We introduce two approaches, complementary to each
+posetousearetrievaltechniquesimilartoBAP.Weextract
+other, to generate pseudo ground-truth labels. First, we
+aprototypicalfeatureforeachclassasfollows:
+leverageCAMsforeachobjectboundingboxobtainedfrom
+1
+2We use the RoIAlign method [19] to extract features inside object q c = f(p), (8)
+|Q |
+boundingboxes. c p ! ∈Q c
+6916
+where Q is a set of locations labeled as the class c provides the likelihood of each label being correct. The
+c
+inYcrf(includingthebackgroundclass)and|·|indicatesthe rationale for this is that the correlation values of D c∗(p)
+numberofpixels.Weuseprototypicalfeaturesasqueriesto andmax (D (p))willbesimilar,whenthelabelc∗iscon-
+c c
+retrievesimilaronesfromthefeaturemapf, andcompute fident, and vice versa. Note that we can adjust the con-
+acorrelationmapforeachclassasfollows: fidence values with the damping parameter γ. When γ
+approaches to infinity, the values become binary, consid-
+f(p) q
+C (p)= · c . (9) ering the most confident labels only and acting as a hard
+c $f(p)$ $q $
+c constraint. That is, σ(p) = 1 only when D c∗(p) =
+WethenobtainpseudosegmentationlabelsYretbyapplying max c (D c (p)), and σ(p) ≈ 0 otherwise. We exploit the
+theargmaxfunctionoverthecorrelationmapsC 3. confidencemapasaweightingfactortocomputethecross-
+c
+entropylossasfollows:
+3.3.Semanticsegmentationwithnoisylabels
+1
+WetrainDeepLab[5,6]forsemanticsegmentationwith Lwce =−
+σ(p)
+σ(p) logH
+c
+(p),
+thepseudopixel-levellabels,YcrfandYret. Weextractafea- c p∈∼S c ! c p∈ ! ∼S c
+turemapφfromthepenultimatelayer,andpassitthrough % % (13)
+asoftmaxclassifierW 4,resultingina(L+1)-dimensional where we denote by ∼S c a set of location labeled as the
+probability map H. To alleviate the influence of incorrect classcin∼S.Accordingly,theoverallNALisdefinedwith
+labels, we exploit the regions S, where both Ycrf and Yret abalanceparameterλasfollows:
+givethesamelabel,tocomputethelossasfollows:
+L=Lce+λLwce. (14)
+1
+Lce =−
+|S |
+logH
+c
+(p), (10)
+4.Experiments
+c c ! c p ! ∈S c
+whereH isaproba%bilityfortheclassc,andS isasetof Inthissection, wedescribeimplementationdetails, and
+c c
+locationslabeledastheclasscinS. Wealsoexploitother present a detailed analysis of our method with ablation
+regions∼S,whereYcrf andYret givedifferentlabels,rather studies. We then compare our model with state-of-the-
+thandiscardingthemcompletelyasin[27]. Theseregions art WSSS methods. We obtain experimental results us-
+arelessreliablethanS,butmightcontaincorrectlabels. It
+ingPyTorch[43]withaNVIDIATitanRTXGPU.More
+is, however, hard to determine whether the label is correct results including qualitative comparisons can be found in
+ornot. Motivatedbytheworkof[39,45], weassumethat thesupplementarymaterial.
+a classifier weight represents a center of each class in the
+4.1.Implementationdetails
+featurespace,suggestingthattheweightcanbethoughtof
+asarepresentativefeatureforthecorrespondingclass. We Datasetandevaluation. WeusethePASCALVOC2012
+thus distinguish the label noise by using the distances be- dataset [10] consisting of 1,464/1,449/1,456 samples of
+tween CNN features and classifier weights. To implement 21classes(includingthebackgroundclass)fortrain,val,
+thisidea,wefirstcomputeacorrelationmapforeachclass and test, respectively. Following the common practice
+asfollows: in[8,28,32,52],weuseaugmented10,582trainingsam-
+ples provided by [18] to train our models. We use the
+φ(p) W
+D (p)=1+ · c , (11) meanintersection-over-union(mIoU)metrictomeasurethe
+c $φ(p)$ $W $
+& c ' precision of pseudo segmentation labels and segmentation
+wherewedenotebyW theclassifierweightforthecorre- results. We obtain results for the test set on the official
+c
+spondingclassc. Weusecosinesimilarityasametricwith PASCAL VOC evaluation server. For instance segmenta-
+addingonetoforcethecorrelationscoretobepositive. We tion, we use MS-COCO [38] for 115K/5K/20K samples
+thencomputeaconfidencemapasfollows: oftrain,val, andtest, respectively, containing81classes
+includingthebackgroundclass. Weusetheaveragepreci-
+σ(p)=
+D c∗(p) γ
+, (12) sion(AP)metricstoevaluatepseudolabelsandsegmenta-
+& max c (D c (p)) ' tionresults.
+Classification network. We adopt the classification net-
+where c∗ is a label obtained by Ycrf (i.e., c∗ = Ycrf(p)),
+work in AffinityNet [1], a slight modification of VGG-
+andγ (≥ 1)isadampingparameter. Theconfidencemap
+16 [51] pre-trained for ImageNet classification [9], to ex-
+3Weupsampleu c,u 0,andC cbybilinearinterpolationsuchthatthey tractthefeaturemapf. Initially,classifierweightsaresam-
+havethesameresolutionastheinputimage.
+pledrandomlyfromaGaussiandistributionwithzeromean
+4Following [16, 45], we use a cosine similarity based classifier that
+and standard deviation of 1e-2. We train the classification
+encouragestheclassifierweightstobemorerepresentativeforthecorre-
+spondingclasses.Moredetailsaregiveninthesupplementarymaterial. network for 15 epochs with a batch size of 20 using the
+6917
+Table 1: Comparison of pseudo labels on the PASCAL VOC Table 2: Comparison of pseudo labels on the MS-COCO [38]
+2012[10]trainandvalsetsintermsofmIoU.Numbersinbold train set. Note that the results for ‘VOC-to-COCO’ do not use
+indicate the best performance. We report the supervision types anysamplesintheMS-COCOtrainsetduringtraining.
+with the number of annotations. For MCG [44], we manually Method AP AP50 AP75 APS APM APL
+choosethesegmentproposalthatgivesthehighestIoUscorewith
+VOC-to-COCO
+eachboundingbox.∗:pseudolabelscontainunreliableregions.
+BAP:Y crf 11.7 28.7 8.0 3.0 15.0 27.1
+Method train val BAP:Yret 9.0 30.1 2.8 4.4 10.2 16.2
+COCO-to-COCO
+Supervision:Image-levellabels(10K)
+A Su f p fi e n r i v ty is N io e n tC : V B P o R x ’1 e 8 s [ ( 1 1 ] 0K) 59.7 - B B A A P P : : Y Y c re rf t 1 1 7 7 . . 2 2 4 4 0 9 . . 5 7 1 7 2 .6 .5 1 5 2 .9 .0 2 1 0 7 . . 4 1 3 2 2 2 . . 2 5
+Box 65.4 62.2
+line, we consider the bounding box itself as a foreground
+GrabCutTOG’04[48] 65.7 66.1
+MCGPAMI’16[44] 66.2 66.9 object (‘Box’), which outperforms AffinityNet [1] using
+WSSLICCV’15[42] 69.7 71.1 image-level labels. This suggests that the bounding box
+SDICVPR’17[27] 79.7∗ 60.5∗
+is a strong indicator for segmenting objects. WSSL [42]
+Ours
+GAP 75.5 76.1 using DenseCRF [29] outperforms the baseline and hand-
+BAP:Y crfw/ou 0 77.0 77.8 crafted methods [44, 48] by a considerable margin. To
+BAP:Y
+crf
+78.7 79.2
+validate our approach to using a classification network
+BAP:Yret 70.8 69.9
+BAP:Y crf&Yret 85.3∗ 68.2∗ with bounding boxes, we train a CNN with GAP for im-
+ageclassification,andgeneratepseudolabelsusingCAMs
+and DenseCRF (‘GAP’). We can clearly see that this ap-
+SGDoptimizerwithmomentumof0.9andweightdecayof
+proach already outperforms WSSL significantly, demon-
+5e-4. Learningratesareinitiallysetto1e-4and1e-3forthe
+strating the effectiveness of our approach. GAP, however,
+pre-trained layers and the classifier, respectively, and they
+does not discriminate foreground and background regions
+aredividedby10after10epochs. Weaugmentthetraining
+inside bounding boxes. BAP overcomes this problem, and
+setwithhorizontalflipping,randomcropping(321×321),
+provides better CAMs, resulting in more accurate pseudo
+randomscaling,andcolorjittering.
+Segmentation network. For fair comparison, we ex-
+labels(‘BAP:Ycrf’). NotethatBAPdoesnotintroduceany
+additionalparameters,similartoGAP.Forcomparison,we
+ploit two models for semantic segmentation: DeepLab-
+generate pseudo labels by replacing the background atten-
+V1 (LargeFOV) [5, 6] with VGG-16 [51] and DeepLab-
+tion map u in Eq. (7) with the CAM for the background
+V2 (ASPP) [6] with ResNet-101 [20]. We train DeepLab- 0
+V1(V2)for45(20)epochswithabatchsizeof20(10),and
+class (‘BAP: Ycrf w/o u
+0
+’), the performance of which is
+adjustthelearningrateusingthepolyschedule[6].
+lower than ‘BAP: Ycrf’. A plausible explanation is that
+theCAMforthebackgroundclasshighlightsthemostfre-
+Hyperparameter settings. Following the experimental
+quentlyobservedregionsonly. Incontrasttothis,theatten-
+protocolin[8,42],parametersforDenseCRF[29]arecho-
+tion map u , a by-product of our BAP, marks background
+senbycross-validationontheheld-outsetof100validation 0
+regionsadaptivelyforindividualimages.Wealsoreportthe
+images fully-annotated. We set the grid size N to 4 for
+mIoU scores for the pseudo labels obtained by a retrieval
+trainingaclassificationnetworkusingBAPinordertosee
+technique (‘BAP: Yret’). Although this provides worse re-
+diversebackgroundqueries. Weempiricallyfindthatusing
+sultsthan‘BAP:Ycrf’, duetotheuseofthelow-resolution
+confidentbackgroundregionsinEq.(7),thatis,threshold-
+featuremapf,aswillbeshownlater,theyarecomplemen-
+ing A with 0.99, and setting N to 1 provide better results
+tarytoeachother. NotethatbothpseudolabelsofSDI[27]
+whengeneratingpseudolabels. Weuseagridsearchtoset
+and ours (‘BAP: Ycrf & Yret’) contain unreliable regions as
+the threshold value for A and the grid size N on the same
+showninFig.1,makingithardtocomparethemwithother
+held-out set for DenseCRF. For DeepLab, we use default
+methods. ‘BAP: Ycrf & Yret’ show better results than SDI,
+settings in [5, 6]. Other parameters are fixed to all exper-
+but this should not be considered as fair comparison since
+iments (γ = 7, λ = 0.1). In the supplementary material,
+performance would be different depending on the quantity
+weprovidequantitativecomparisonsandmoreanalysison
+ofunreliableregions.
+theseparameters.
+Ourpseudolabelgeneratorisgenericinthattheadaptive
+attentionmapu allowstosegmentforegroundobjectsfor
+4.2.Analysis 0
+unseenclassesduringtraining. Forexample,evenifwedo
+Accuracyofpseudolabels. WecompareinTable1mIoU not have a classifier weight for a novel class (see Eq. (6)),
+scoresofpseudosegmentationlabelsonthePASCALVOC we can exploit 1 − u as a class-agnostic foreground at-
+0
+2012 [10] train and val sets. Note that our pseudo label tention map. To validate this, we perform a cross-dataset
+generator can segment foreground objects given bounding evaluationinTable2, wherewegeneratepseudolabelson
+boxes,evenforunseenimagesduringtraining. Tothebase- theMS-COCO[38]trainsetbyusingthegeneratortrained
+6918
+Table 3: Comparison of mIoU scores using different losses for
+theregions,∼S, whereYcrf andYret givedifferentlabels, onthe
+PASCALVOC2012[10]valset. WeprovidebothmIoUscores
+before/afterapplyingDenseCRF[29].
+Method val
+Baseline 61.8/67.5
+w/EntropyRegularization[17] 61.4/67.3
+w/Bootstrapping[46] 61.9/67.6
+w/Lwce(Eq.(13)) 62.4/68.1
+Input. GAP. BAP.
+(a)CAMs. (b)Violinplotsoffillingrate.
+Figure4: (a)VisualcomparisonofCAMsusingGAPandBAP.
+OurmodelusingBAPprovidesbetterCAMs,highlightingtheen-
+tireobjectswhilesuppressingirrelevantregions. (b)Comparison Inputimage. Ours. Ours∗. Groundtruth.
+offillingratedistributionsonthePASCALVOC2012[10]train
+set.Bestviewedincolor.
+onPASCALVOC2012[10](‘VOC-to-COCO’).Forcom-
+parison, we train and evaluate our generator on the same Confidencemapsσ.
+dataset (‘COCO-to-COCO’). From this table, we observe
+Figure5: VisualcomparisonofourpseudolabelsYcrf,thesame
+three things: (1) VOC-to-COCO gives reasonable pseudo
+onesbutwithanindicationofunreliableregionsusingYret,andthe
+labels even though it does not use any training samples of
+groundtruthfortheinputimage(top).Visualizationofconfidence
+COCO during training. This is because our model com- mapsat(fromlefttoright)0,11,22,33and45epochs(bottom).
+putes the attention map adaptively, allowing to handle un- Bestviewedincolor.
+seenobjectclasses;(2)Twopseudolabels,YcrfandYret,are
+complementary to each other. For example, Yret gives bet- NAL.WeshowinTable3mIoUscoresofDeepLab-V1[5]
+ter results for small objects, while Ycrf performs better for using different losses for regions ∼S, where Ycrf and Yret
+large objects; (3) COCO-to-COCO provides better results, give different labels. To the baseline, we ignore ∼S com-
+demonstratingtheflexibilityofourapproach. pletely as in [27]. We can see that a bootstrapping tech-
+Comparison of CAMs. To verify that our BAP improves nique[46]booststhemIoUperformanceslightly,whilean
+thequalityofCAMs,weprovidevisualexamplesofCAMs entropyregularizationmethod[17]doesnot. OurNALpe-
+inFig.4(a). WecanclearlyseethatourBAPlocalizesthe nalizesincorrectlabelsadaptively,achievingthebestresult.
+entireextentofobjects(e.g.,man’slegsinthefirstexample) This suggests that some pseudo labels in the regions ∼S
+anddoesnothighlighttheirrelevantregions(e.g.,airstripin arecorrectandexploitingthemcanboosttheperformance.
+the third example). Quantitative comparisons of BAP and We compare in Fig. 5 our pseudo labels with the ground
+GAP in terms of the precision of CAMs and classification truth, and visualize an evolution of the confidence map in
+performancecanbefoundinthesupplementarymaterial. Eq. (12) during training. As the input image contains two
+Comparisonoffillingrates.Recentmethods[31,52]show different objects having similar color, i.e., dark stripes and
+that a filling rate, the percentage of foreground pixels in- a dog, our pseudo labels Ycrf are incorrect for the stripes,
+sidetheboundingbox,canbeagoodindicatortoselectthe whichcouldbe,however,markedwithYret.Wecanalsosee
+most confidence regions for back propagation. They use that our NAL assigns low confidence scores to the stripes,
+GrabCut [48] to generate pseudo labels, and adopt the la- whilemaintaininghighscoresforthedog’slegs.
+bels from WSSL [42], respectively. The per-class filling
+4.3.Segmentationresults
+rates computed with these methods, however, vary signif-
+icantly, and they are far from the ground truth. We show
+PASCAL VOC. We compare in Table 4 the mIoU perfor-
+inFig.4(b)examplesofviolinplotdistributionsforfilling
+mance of our approach and state-of-the-art methods using
+rates. We compare the filling rates estimated by SDI [27],
+DeepLab-V1 [5, 6]. We can see that our model trained
+WSSL,ours,andthegroundtruth. Wecanseethatthefill-
+with Ycrf already outperforms the state of the art by a sig-
+ing rates generated by our pseudo labels are more closer
+nificantmarginwithoutalteringthetrainingscheme[5,6].
+to the ground truth than other methods. We expect that
+Thisdemonstratesthatourapproachtousingaclassification
+our pseudo labels could improve the performance of other
+networkwithboundingboxescouldbeapromisingwayto
+WSSSmethodsusingthefillingrate5.
+generate a pseudo ground truth. We can also see that ex-
+5Sincethesemethods[31,52]donotprovidethesourcecodeatthe ploiting both labels, Ycrf and Yret, together with our NAL
+timeofsubmission,wecouldnotperformthisexperiment. further boosts the performance. We also report results for
+6919
+semi-supervisedsemanticsegmentation. Followingtheex- Table 4: Quantitative comparison with state-of-the-art meth-
+perimentalprotocolin[8,27,42,52],weuseground-truth ods using DeepLab-V1 (VGG-16) [5, 6] on the PASCAL VOC
+segmentation labels of 1,464 images in the original train 2012[10]datasetintermsofmIoU.Numbersinboldindicatethe
+bestperformanceandunderscoredonesarethesecondbest.
+set(13.8%ofthetotalimages). Ourmethodagainachieves
+thebestperformanceonthevalandtestsets. Method val test
+Supervision:Image-levellabels(10K)withSaliency(3K)
+We report in Table 5 segmentation results using
+SeeNetNIPS’18[22] 61.1 60.7
+DeepLab-V2[6].ItshowsthatwecanachievehighermIoU
+FickleNetCVPR’19[32] 61.2 61.9
+scores with a deeper CNN. The behavior of mIoU scores OAAICCV’19[26] 63.1 62.8
+is almost the same as the one for DeepLab-V1 in Table 4. ICDCVPR’20[11] 64.0 63.9
+Supervision:Boxes(10K)
+OurmodeltrainedwithYret evenoutperformsBCM[52]in
+BoxSupICCV’15[8] 62.0 64.6
+this case. This suggests that our pseudo labels are more
+WSSLICCV’15[42] 60.6 62.2
+likely to be exploited by deeper CNNs, further demon- SDICVPR’17[27] 65.7 67.5
+strating the importance of high-quality pseudo labels for BCMCVPR’19[52] 66.8 -
+Ours
+WSSS.AlthoughBox2Seg[31]givesthebestperformance,
+w/Y crf 67.8 -
+it adopts UPerNet [58] which requires a feature pyramid w/Yret 66.1 -
+network[37](FPN),apyramidpoolingmodule[62](PPM), w/NAL 68.1 69.4
+and additional decoders. Note that UPerNet yields perfor- Supervision:Boxes(9K)withMasks(1K)
+mance similar to PSPNet [62] that outperforms DeepLab-
+BoxSupICCV’15[8] 63.5 66.2
+WSSLICCV’15[42] 65.1 66.6
+V2significantly. SDICVPR’17[27] 65.8 66.9
+MS-COCO.WeshowinTable6aquantitativecomparison BCMCVPR’19[52] 67.5 -
+Oursw/NAL 70.5 71.5
+ofourmodelsandothermethodsforinstancesegmentation.
+Tothisend,wetrainMask-RCNN[19]withourpseudola-
+bels. Since Mask-RCNN uses a binary cross-entropy loss Table 5: Quantitative comparison with state-of-the-art meth-
+for each object class, we could not obtain the correlation ods using DeepLab-V2 (ResNet-101) [6] on the PASCAL VOC
+mapinEq.(11).WethuscomputethelossfortheregionsS 2012[10]datasetintermsofmIoU.Numbersinboldindicatethe
+only. For comparison, we report results of Mask-RCNN bestperformanceandunderscoredonesarethesecondbest. Con-
+trained with ground-truth segmentation labels. From this trarytoothers,Box2Seg[31]adoptsUPerNet[58]thatconsistsof
+theFPN[37],thePPM[62],andthreedecoders. †: modelsusing
+table, we can see that Mask-RCNN trained with VOC-to-
+pre-trainedweightsonMS-COCO[38]. ∗: modelsusing10%of
+COCOoutperformsAISI[14],demonstratingthatthegen-
+thetotalimageswithground-truthsegmentationlabels.
+eralization ability of our method. Note that AISI gener-
+Method val test
+atesapseudogroundtruthusingimage-levellabels,butre-
+Supervision:Image-levellabels(10K)withSaliency(3K)
+quirestheinstance-levelsaliencydetector[13]trainedwith
+SeeNetNIPS’18[22] 63.1 62.8
+ground-truth saliency annotations. Our model trained on
+FickleNetCVPR’19[32] 64.9 65.3
+COCO-to-COCOoutperformstheotheroneusingVOC-to- OAAICCV’19[26] 65.2 66.4
+COCO,demonstratingagaintheimportanceofhigh-quality ICDCVPR’20[11] 67.8 68.0
+Supervision:Boxes(10K)
+pseudolabels(seetheresultsinTable2).
+SDI† [27] 74.2 -
+CVPR’17
+BCM† [52] 70.2 -
+CVPR’19
+5.Conclusion Box2SegECCV’20[31] 76.4 -
+Ours†
+We have presented a novel pooling method for WSSS, w/Y crf 74.0 -
+w/Yret 72.4 -
+dubbed BAP, using a background prior, that discriminates w/NAL 74.6 76.1
+foregroundandbackgroundregionsinsideobjectbounding Supervision:Boxes(9K)withMasks(1K)
+boxes. WehaveshownthatourBAPallowstoproducebet- BCM† [52] 71.6 -
+CVPR’19
+terpseudoground-truthlabelscomparedtotheconventional Box2Seg∗ ECCV’20 [31] 83.1 -
+Ours†w/NAL 78.7 79.4
+GAP.WehaveproposedaNALfortrainingasegmentation
+network, making it less susceptible to incorrect pseudo la-
+bels. Finally, we have shown that our approach achieves
+Table 6: Quantitative comparison for instance segmentation on
+state-of-the-art performance on PASCAL VOC and MS-
+theMS-COCO[38]testset.
+COCO.
+Method AP AP50 AP75 APS APM APL
+Acknowledgments. This work was supported by
+Mask-RCNN[19] 35.7 58.0 37.8 15.5 38.1 52.4
+the National Research Foundation of Korea (NRF) AISI[14] 13.7 25.5 13.5 0.7 15.7 26.1
+grant funded by the Korea government (MSIP) (NRF- Ours(‘VOC-to-COCO’) 16.9 38.2 13.0 7.3 17.1 26.5
+2019R1A2C2084816). Ours(‘COCO-to-COCO’) 22.2 47.1 18.7 11.2 22.1 31.4
+6920
+References [18] Bharath Hariharan, Pablo Arbela´ez, Lubomir Bourdev,
+SubhransuMaji,andJitendraMalik.Semanticcontoursfrom
+[1] JiwoonAhnandSuhaKwak. Learningpixel-levelsemantic
+inversedetectors. InICCV,2011. 5
+affinitywithimage-levelsupervisionforweaklysupervised
+[19] KaimingHe,GeorgiaGkioxari,PiotrDolla´r,andRossGir-
+semanticsegmentation. InCVPR,2018. 2,5,6
+shick. Maskr-cnn. InICCV,2017. 4,8
+[2] Pablo Arbelaez, Michael Maire, Charless Fowlkes, and Ji-
+[20] KaimingHe,XiangyuZhang,ShaoqingRen,andJianSun.
+tendraMalik. Contourdetectionandhierarchicalimageseg-
+Deep residual learning for image recognition. In CVPR,
+mentation. IEEETrans.PAMI,33(5):898–916,2010. 3
+2016. 6
+[3] Amy Bearman, Olga Russakovsky, Vittorio Ferrari, and Li
+[21] Q Hou, MM Cheng, X Hu, A Borji, Z Tu, and PHS Torr.
+Fei-Fei. Whatsthepoint:Semanticsegmentationwithpoint
+Deeply supervised salient object detection with short con-
+supervision. InECCV,2016. 1
+nections. IEEETrans.PAMI,41(4),2019. 1,2
+[4] Yu-TingChang,QiaosongWang,Wei-ChihHung,Robinson
+[22] Qibin Hou, PengTao Jiang, Yunchao Wei, and Ming-Ming
+Piramuthu,Yi-HsuanTsai,andMing-HsuanYang. Weakly-
+Cheng.Self-Erasingnetworkforintegralobjectattention.In
+supervised semantic segmentation via sub-category explo-
+NeurIPS,2018. 1,2,8
+ration. InCVPR,2020. 2
+[23] ZilongHuang,XinggangWang,JiasiWang,WenyuLiu,and
+[5] Liang-Chieh Chen, George Papandreou, Iasonas Kokkinos,
+JingdongWang. Weakly-supervisedsemanticsegmentation
+Kevin Murphy, and Alan L Yuille. Semantic image seg-
+networkwithdeepseededregiongrowing. InCVPR,2018.
+mentationwithdeepconvolutionalnetsandfullyconnected
+2
+CRFs. InICLR,2015. 1,2,5,6,7,8
+[24] HuaizuJiang,JingdongWang,ZejianYuan,YangWu,Nan-
+[6] Liang-Chieh Chen, George Papandreou, Iasonas Kokkinos, ningZheng,andShipengLi.Salientobjectdetection:Adis-
+KevinMurphy,andAlanLYuille. DeepLab: Semanticim- criminativeregionalfeatureintegrationapproach. InCVPR,
+agesegmentationwithdeepconvolutionalnets,atrouscon- 2013. 1,2
+volution, and fully connected CRFs. IEEE Trans. PAMI,
+[25] Lu Jiang, Zhengyuan Zhou, Thomas Leung, Li-Jia Li, and
+40(4):834–848,2018. 2,5,6,7,8
+LiFei-Fei. MentorNet:Learningdata-drivencurriculumfor
+[7] Ming-MingCheng,ZimingZhang,Wen-YanLin,andPhilip very deep neural networks on corrupted labels. In ICML,
+Torr. BING:Binarizednormedgradientsforobjectnessesti- 2018. 3
+mationat300fps. InCVPR,2014. 2 [26] Peng-TaoJiang,QibinHou,YangCao,Ming-MingCheng,
+[8] Jifeng Dai, Kaiming He, and Jian Sun. BoxSup: Exploit- YunchaoWei,andHong-KaiXiong. Integralobjectmining
+ingboundingboxestosuperviseconvolutionalnetworksfor viaonlineattentionaccumulation. InICCV,2019. 8
+semanticsegmentation. InICCV,2015. 1,2,5,6,7,8 [27] Anna Khoreva, Rodrigo Benenson, Jan Hosang, Matthias
+[9] Jia Deng, Wei Dong, Richard Socher, Li-Jia Li, Kai Li, Hein,andBerntSchiele.SimpleDoesIt:Weaklysupervised
+andLiFei-Fei. ImageNet: Alarge-scalehierarchicalimage instanceandsemanticsegmentation. InCVPR,2017. 1,2,
+database. InCVPR,2009. 5 3,5,6,7,8
+[10] MarkEveringham,LucVanGool,ChristopherKIWilliams, [28] AlexanderKolesnikovandChristophHLampert. Seed,Ex-
+JohnWinn,andAndrewZisserman.Thepascalvisualobject pandandConstrain:Threeprinciplesforweakly-supervised
+classes(VOC)challenge. IJCV,88(2):303–338,2010. 2,5, imagesegmentation. InECCV,2016. 1,2,5
+6,7,8 [29] PhilippKra¨henbu¨hlandVladlenKoltun. Efficientinference
+[11] JunsongFan,ZhaoxiangZhang,ChunfengSong,andTieniu in fully connected CRFs with gaussian edge potentials. In
+Tan. Learning integral objects with intra-class discrimina- NeurIPS,2011. 2,4,6,7
+torforweakly-supervisedsemanticsegmentation. InCVPR, [30] Alex Krizhevsky, Ilya Sutskever, and Geoffrey E Hinton.
+2020. 1,8 ImageNetclassificationwithdeepconvolutionalneuralnet-
+[12] JunsongFan,ZhaoxiangZhang,andTieniuTan. Employing works. InNeurIPS,2012. 4
+multi-estimationsforweakly-supervisedsemanticsegmenta- [31] VivekaKulharia,SiddharthaChandra,AmitAgrawal,Philip
+tion. InECCV,2020. 3 Torr,andAmbrishTyagi. Box2Seg:Attentionweightedloss
+[13] RuochenFan,Ming-MingCheng,QibinHou,Tai-JiangMu, and discriminative feature learning for weakly supervised
+Jingdong Wang, and Shi-Min Hu. S4Net: Single stage segmentation. InECCV,2020. 1,2,3,7,8
+salient-instancesegmentation. InCVPR,2019. 1,2,8 [32] JungbeomLee, EunjiKim, SungminLee, JanghoLee, and
+[14] Ruochen Fan, Qibin Hou, Ming-Ming Cheng, Gang Yu, SungrohYoon. FickleNet: Weaklyandsemi-supervisedse-
+RalphRMartin, andShi-MinHu. Associatinginter-image mantic image segmentation using stochastic inference. In
+salientinstancesforweaklysupervisedsemanticsegmenta- CVPR,2019. 1,2,5,8
+tion. InECCV,2018. 1,8 [33] GuanbinLi,YuanXie,LiangLin,andYizhouYu. Instance-
+[15] Benoˆıt Fre´nay and Michel Verleysen. Classification in the levelsalientobjectsegmentation. InCVPR,2017. 1,2
+presence of label noise: a survey. IEEE Trans. NNLS, [34] Kunpeng Li, Ziyan Wu, Kuan-Chuan Peng, Jan Ernst, and
+25(5):845–869,2013. 3 YunFu. Tellmewheretolook: Guidedattentioninference
+[16] Spyros Gidaris and Nikos Komodakis. Dynamic few-shot network. InCVPR,2018. 2
+visuallearningwithoutforgetting. InCVPR,2018. 5 [35] Di Lin, Jifeng Dai, Jiaya Jia, Kaiming He, and Jian Sun.
+[17] Yves Grandvalet and Yoshua Bengio. Semi-supervised ScribbleSup: Scribble-supervised convolutional networks
+learningbyentropyminimization. InNeurIPS,2005. 7 forsemanticsegmentation. InCVPR,2016. 1
+6921
+[36] MinLin,QiangChen,andShuichengYan. Networkinnet- [53] Meng Tang, Federico Perazzi, Abdelaziz Djelouah, Ismail
+work. InICLR,2014. 2 BenAyed,ChristopherSchroers,andYuriBoykov. Onreg-
+[37] Tsung-Yi Lin, Piotr Dolla´r, Ross Girshick, Kaiming He, ularizedlossesforweakly-supervisedcnnsegmentation. In
+Bharath Hariharan, and Serge Belongie. Feature pyramid ECCV,2018. 1
+networksforobjectdetection. InCVPR,2017. 8 [54] PaulVernazaandManmohanChandraker.Learningrandom-
+[38] Tsung-YiLin,MichaelMaire,SergeBelongie,JamesHays, walklabelpropagationforweakly-supervisedsemanticseg-
+PietroPerona,DevaRamanan,PiotrDolla´r,andCLawrence mentation. InCVPR,2017. 1
+Zitnick. Microsoft coco: Common objects in context. In [55] Yunchao Wei, Jiashi Feng, Xiaodan Liang, Ming-Ming
+ECCV,2014. 2,5,6,8 Cheng,YaoZhao,andShuichengYan.Objectregionmining
+[39] WeiyangLiu,YandongWen,ZhidingYu,MingLi,Bhiksha withadversarialerasing:Asimpleclassificationtosemantic
+Raj,andLeSong.Sphereface:Deephypersphereembedding segmentationapproach. InCVPR,2017. 2
+forfacerecognition. InCVPR,2017. 5 [56] YunchaoWei,HuaxinXiao,HonghuiShi,ZequnJie,Jiashi
+[40] JonathanLong,EvanShelhamer,andTrevorDarrell. Fully Feng,andThomasSHuang. Revisitingdilatedconvolution:
+convolutional networks for semantic segmentation. In Asimpleapproachforweakly-andsemi-supervisedsemantic
+CVPR,2015. 1 segmentation. InCVPR,2018. 1,2
+[41] NagarajanNatarajan,InderjitSDhillon,PradeepKRaviku- [57] Huaxin Xiao, Jiashi Feng, Yunchao Wei, and Maojun
+mar, and Ambuj Tewari. Learning with noisy labels. In Zhang.Self-explanatorydeepsalientobjectdetection.arXiv
+NeurIPS,2013. 3 preprintarXiv:1708.05595,2017. 1,2
+[42] George Papandreou, Liang-Chieh Chen, Kevin P Murphy,
+[58] Tete Xiao, Yingcheng Liu, Bolei Zhou, Yuning Jiang, and
+andAlanLYuille. Weakly-andsemi-supervisedlearningof
+JianSun. Unifiedperceptualparsingforsceneunderstand-
+adeepconvolutionalnetworkforsemanticimagesegmenta-
+ing. InECCV,2018. 8
+tion. InICCV,2015. 1,2,6,7,8
+[59] YuZeng,YunzhiZhuge,HuchuanLu,andLiheZhang.Joint
+[43] Adam Paszke, Sam Gross, Soumith Chintala, Gregory
+learningofsaliencydetectionandweaklysupervisedseman-
+Chanan, Edward Yang, Zachary DeVito, Zeming Lin, Al-
+ticsegmentation. InICCV,2019. 2
+banDesmaison, LucaAntiga, andAdamLerer. Automatic
+[60] Bingfeng Zhang, Jimin Xiao, Yunchao Wei, Mingjie Sun,
+differentiationinPyTorch. NeurIPSWorkshop,2017. 5
+and Kaizhu Huang. Reliability Does Matter: An end-to-
+[44] Jordi Pont-Tuset, Pablo Arbelaez, Jonathan T Barron, Fer-
+endweaklysupervisedsemanticsegmentationapproach. In
+ranMarques,andJitendraMalik. Multiscalecombinatorial
+AAAI,2020. 1,2
+grouping for image segmentation and object proposal gen-
+[61] ZhiluZhangandMertSabuncu. Generalizedcrossentropy
+eration. IEEETrans.PAMI,39(1):128–140, 2016. 1, 2, 3,
+lossfortrainingdeepneuralnetworkswithnoisylabels. In
+6
+NeurIPS,2018. 3
+[45] SiyuanQiao,ChenxiLiu,WeiShen,andAlanLYuille.Few-
+[62] Hengshuang Zhao, Jianping Shi, Xiaojuan Qi, Xiaogang
+shotimagerecognitionbypredictingparametersfromactiva-
+Wang, and Jiaya Jia. Pyramid scene parsing network. In
+tions. InCVPR,2018. 5
+CVPR,2017. 8
+[46] Scott Reed, Honglak Lee, Dragomir Anguelov, Christian
+[63] Bolei Zhou, Aditya Khosla, Agata Lapedriza, Aude Oliva,
+Szegedy, Dumitru Erhan, and Andrew Rabinovich. Train-
+andAntonioTorralba. Learningdeepfeaturesfordiscrimi-
+ingdeepneuralnetworksonnoisylabelswithbootstrapping.
+nativelocalization. InCVPR,2016. 1,2
+InICLR,2015. 3,7
+[47] OlafRonneberger,PhilippFischer,andThomasBrox.U-net:
+Convolutionalnetworksforbiomedicalimagesegmentation.
+InMICCAI,2015. 1
+[48] Carsten Rother, Vladimir Kolmogorov, and Andrew Blake.
+“GrabCut” interactive foreground extraction using iterated
+graphcuts. InSIGGRAPH,2004. 1,2,3,6,7
+[49] FatemehsadatSaleh,MohammadSadeghAliakbarian,Math-
+ieu Salzmann, Lars Petersson, Stephen Gould, and Jose M
+Alvarez. Built-inforeground/backgroundpriorforweakly-
+supervisedsemanticsegmentation. InECCV,2016. 2
+[50] PaulHongsuckSeo,GeehoKim,andBohyungHan. Com-
+binatorial inference against label noise. In NeurIPS, 2019.
+3
+[51] KarenSimonyanandAndrewZisserman. Verydeepconvo-
+lutionalnetworksforlarge-scaleimagerecognition.InICLR,
+2015. 5,6
+[52] Chunfeng Song, Yan Huang, Wanli Ouyang, and Liang
+Wang.Box-drivenclass-wiseregionmaskingandfillingrate
+guidedlossforweaklysupervisedsemanticsegmentation.In
+CVPR,2019. 1,2,3,5,7,8
+6922

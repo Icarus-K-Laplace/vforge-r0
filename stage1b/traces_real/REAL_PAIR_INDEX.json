@@ -1,0 +1,168 @@
+{
+  "stage": "R1-B1-Stage1b",
+  "n_pairs": 27,
+  "pairs": [
+    {
+      "pair_id": "DS_E01_dual_inpainting",
+      "family": "E01",
+      "experiment": "dual-inpainting",
+      "value_preserving": true
+    },
+    {
+      "pair_id": "DS_E01_img2img",
+      "family": "E01",
+      "experiment": "img2img",
+      "value_preserving": true
+    },
+    {
+      "pair_id": "DS_E01_one_stage_no_table",
+      "family": "E01",
+      "experiment": "one-stage-no-table",
+      "value_preserving": true
+    },
+    {
+      "pair_id": "DS_E01_prompts_blip",
+      "family": "E01",
+      "experiment": "prompts-blip",
+      "value_preserving": true
+    },
+    {
+      "pair_id": "DS_E01_prompts_classname",
+      "family": "E01",
+      "experiment": "prompts-classname",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E01_prompts_gemini",
+      "family": "E01",
+      "experiment": "prompts-gemini",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E01_random",
+      "family": "E01",
+      "experiment": "random",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E01_random_no_table",
+      "family": "E01",
+      "experiment": "random-no-table",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E01_real",
+      "family": "E01",
+      "experiment": "real",
+      "value_preserving": true
+    },
+    {
+      "pair_id": "DS_E01_scale",
+      "family": "E01",
+      "experiment": "scale",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E01_three_stage",
+      "family": "E01",
+      "experiment": "three-stage",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E01_two_stage",
+      "family": "E01",
+      "experiment": "two-stage",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E01_unknown",
+      "family": "E01",
+      "experiment": "unknown",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_dual_inpainting",
+      "family": "E04",
+      "experiment": "dual-inpainting",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_img2img",
+      "family": "E04",
+      "experiment": "img2img",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_one_stage_no_table",
+      "family": "E04",
+      "experiment": "one-stage-no-table",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_prompts_blip",
+      "family": "E04",
+      "experiment": "prompts-blip",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_prompts_classname",
+      "family": "E04",
+      "experiment": "prompts-classname",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_prompts_gemini",
+      "family": "E04",
+      "experiment": "prompts-gemini",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_random",
+      "family": "E04",
+      "experiment": "random",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_random_no_table",
+      "family": "E04",
+      "experiment": "random-no-table",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_real",
+      "family": "E04",
+      "experiment": "real",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_scale",
+      "family": "E04",
+      "experiment": "scale",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_three_stage",
+      "family": "E04",
+      "experiment": "three-stage",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_two_stage",
+      "family": "E04",
+      "experiment": "two-stage",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E04_unknown",
+      "family": "E04",
+      "experiment": "unknown",
+      "value_preserving": false
+    },
+    {
+      "pair_id": "DS_E06_DATASET_ASYM",
+      "family": "E06",
+      "experiment": "dataset-size-asymmetry",
+      "value_preserving": true
+    }
+  ]
+}

@@ -1,0 +1,678 @@
+Learning To Count Everything
+VireshRanjan1 UdbhavSharma1 ThuNguyen2 MinhHoai1,2
+1StonyBrookUniversity,USA
+2VinAIResearch,Hanoi,Vietnam
+Abstract
+Existingworksonvisualcountingprimarilyfocusonone
+specific category at a time, such as people, animals, and
+cells. In this paper, we are interested in counting every-
+thing,thatistocountobjectsfromanycategorygivenonlya
+fewannotatedinstancesfromthatcategory. Tothisend,we
+posecountingasafew-shotregressiontask. Totacklethis
+Figure1: Few-shotcounting—theobjectiveofourwork.
+task, we present a novel method that takes a query image
+Givenanimagefromanovelclassandafewexemplarob-
+togetherwithafewexemplarobjectsfromthequeryimage
+jects from the same image delineated by bounding boxes,
+andpredictsadensitymapforthepresenceofallobjectsof
+the objective is to count the total number of objects of the
+interestinthequeryimage.Wealsopresentanoveladapta-
+novelclassintheimage.
+tionstrategytoadaptournetworktoanynovelvisualcate-
+goryattesttime,usingonlyafewexemplarobjectsfromthe annotationsformillionsofobjectsonseveralthousandsof
+novel category. We also introduce a dataset of 147 object training images, and obtaining this type of annotation is a
+categories containing over 6000 images that are suitable costly and laborious process. As a result, it is difficult to
+for the few-shot counting task. The images are annotated scale these contemporary counting approaches to handle a
+withtwotypesofannotation,dotsandboundingboxes,and largenumberofvisualcategories.Second,therearenotany
+theycanbeusedfordevelopingfew-shotcountingmodels. large enough unconstrained counting datasets with many
+Experimentsonthisdatasetshowsthatourmethodoutper- visual categories for the development of a general count-
+formsseveralstate-of-the-artobjectdetectorsandfew-shot ing method. Most of the popular counting datasets [14–
+counting approaches. Our code and dataset can be found 16,43,49,55]consistofasingleobjectcategory.
+at https://github.com/cvlab-stonybrook/
+Inthiswork,weaddressbothoftheabovechallenges.To
+LearningToCountEverything.
+handlethefirstchallenge,wetakeadetourfromtheexisting
+countingapproacheswhichtreatcountingasatypicalfully
+supervisedregressiontask,andposecountingasafewshot
+1.Introduction
+regressiontask,asshowninFig.1. Inthisfew-shotsetting,
+Humanscancountobjectsfrommostofthevisualobject theinputsforthecountingtaskareanimageandfewexam-
+categories with ease, while current state-of-the-art compu- plesfromthesameimagefortheobjectofinterest,andthe
+tationalmethods[29,48,55]forcountingcanonlyhandle output is the count of object instances. The examples are
+a limited number of visual categories. In fact, most of the providedintheformofboundingboxesaroundtheobjects
+counting neural networks [4, 48] can handle a single cate- ofinterest. Inotherwords,ourfewshotcountingtaskdeals
+goryatatime,suchaspeople,cars,andcells. with counting instances within an image which are simi-
+There are two major challenges preventing the Com- lar to the exemplars from the same image. Following the
+puterVisioncommunityfromdesigningsystemscapableof conventionfromthefew-shotclassificationtask[9,20,46],
+counting a large number of visual categories. First, most the classes at test time are completely different from the
+of the contemporary counting approaches [4, 48, 55] treat ones seen during training. This makes few-shot counting
+counting as a supervised regression task, requiring thou- very different from the typical counting task, where the
+sands of labeled images to learn a fully convolutional re- training and test classes are the same. Unlike the typical
+gressorthatmapsaninputimagetoitscorrespondingden- countingtask,wherehundreds[55]orthousands[16]ofla-
+sity map, from which the estimated count is obtained by beledexamplesareavailablefortraining,afew-shotcount-
+summingallthedensityvalues. Thesenetworksrequiredot ingmethodneedstogeneralizetocompletelynovelclasses
+3394
+usingonlytheinputimageandafewexemplars. lar the decade-old self-similarity work of Shechtman and
+We propose a novel architecture called Few Shot Irani [41]. Also related to this idea is the recent work of
+Adaptation and Matching Network (FamNet) for tackling Lu and Zisserman[28], who proposed a Generic Matching
+the few-shot counting task. FamNet has two key compo- Network (GMN) for class-agnostic counting. GMN was
+nents: 1)afeatureextractionmodule,and2)adensitypre- pre-trained with tracking video data, and it had an explicit
+diction module. The feature extraction module consists of adaptationmoduletoadaptthenetworktoanimagedomain
+ageneralfeatureextractorcapableofhandlingalargenum- of interest. GMN has been shown to work well if several
+ber of visual categories. The density prediction module dozens to hundreds of examples are available for adapta-
+is designed to be agnostic to the visual category. As will tion. Withoutadaptation,GMNdoesnotperformverywell
+be seen in our experiments, both the feature extractor and onnovelclasses,aswillbeseeninourexperiments.
+density prediction modules can already generalize to the Related to few-shot counting is the few-shot detection
+novel categories at test time. We further improve the per- task(e.g.,[8,17]),wheretheobjectiveistolearnadetector
+formanceofFamNetbydevelopinganovelfew-shotadap- for a novel category using a few labeled examples. Few-
+tationschemeattesttime. Thisadaptationschemeusesthe shot counting differs from few-shot detection in two pri-
+providedexemplarsthemselvesandadaptsthecountingnet- mary aspects. First, few-shot counting requires dot anno-
+worktothemwithafewgradientdescentupdates,wherethe tationswhiledetectionrequiresboundingboxannotations.
+gradientsarecomputedbasedontwolossfunctionswhich Second,few-shotdetectionmethodscanbeaffectedbyse-
+aredesignedtoutilizethelocationsoftheexemplarstothe vere occlusion whereas few-shot counting is tackled with
+fullestextent.Empirically,thisadaptationschemeimproves a density estimation approach [22, 55], which is more ro-
+theperformanceofFamNet. busttowardsocclusionthanthedetection-then-countingap-
+Finally, to address the lack of a dataset for develop- proachbecausethedensityestimationmethodsdonothave
+ing and evaluating the performance of few-shot counting tocommittobinarizeddecisionsatanearlystage. Theben-
+methods, we introduce a medium-scale dataset consisting efits of the density estimation approach has been empiri-
+ofmorethan6000imagesfrom147visualcategories. The callydemonstratedinseveraldomains,especiallyforcrowd
+datasetcomeswithdotandboundingboxannotations,and andcellcounting.
+is suitable for the few-shot counting task. We name this Also related to our work is the task of few-shot image
+datasetFew-ShotCounting-147(FSC-147). classification[9,19,21,35,40,46]. Thefew-shotclassifi-
+In short, the main contributions of our work are as fol- cation task deals with classifying images from novel cate-
+lows. First,weposecountingasafew-shotregressiontask. goriesattesttime,givenafewtrainingexamplesfromthese
+Second,weproposeanovelarchitecturecalledFamNetfor novel test categories. The Model Agnostic Meta Learning
+handlingthefew-shotcountingtask,withanovelfew-shot (MAML) [9] based few-shot approach is relevant for our
+adaptation scheme at test time. Third, we present a novel few-shotcountingtask,anditfocusesonlearningparame-
+few-shot counting dataset called FSC-147, comprising of terswhichcanadapttonovelclassesattesttimebymeans
+over6000imageswith147visualcategories. of few gradient descent steps. However, MAML involves
+computing second order derivatives during training which
+2.RelatedWorks makesitexpensive,evenmoresoforthepixellevelpredic-
+tiontaskofdensitymappredictionbeingconsideredinour
+Inthiswork,weareinterestedincountingobjectsofin-
+paper. Drawinginspirationfromtheseworks,weproposea
+terest in a given image with a few labeled examples from
+noveladaptationschemewhichutilizestheexemplarsavail-
+the same image. Most of the previous counting methods
+able at test time and performs a few steps of gradient de-
+areforspecifictypesofobjectssuchaspeople[2,5,6,23,
+scentinordertoadaptFamNettoanynovelcategory. Un-
+26, 27, 29, 32–34, 39, 42, 47, 50, 54, 55], cars [30], an-
+like MAML, our training scheme does not require higher
+imals [4], cells [3, 18, 53], and fruits [31]. These meth-
+ordergradientsattrainingtime. Wecompareourapproach
+odsoftenrequiretrainingimageswithtensofthousandsor
+with MAML, and empirically show that it leads to better
+evenmillionsofannotatedobjectinstances. Someofthese
+performanceandisalsomuchfastertotrain.
+works[34]tackletheissueofcostlyannotationcosttosome
+extent by adapting a counting network trained on a source 3.Few-ShotAdaptation&MatchingNetwork
+domain to any target domain using labels for only few in-
+formative samples from the target domain. However, even In this section, we describe the proposed FamNet for
+these approaches require a large amount of labeled data in tacklingthefew-shotcountingtask.
+thesourcedomain.
+3.1.Networkarchitecture
+The proposed FamNet works by exploiting the strong
+similarity between a query image and the provided ex- Fig. 2 depicts the pipeline of FamNet. The input to the
+emplar objects in the image. To some extent, it is simi- network is an image X ∈ ℜH×W×3 and a few exemplar
+3395
+Figure 2: Few-shot adaptation & matching Network takes as input the query image along with few bounding boxes
+depictingtheobjectofinterest,andpredictsthedensitymap. Thecountisobtainedbysummingallthepixelvaluesinthe
+densitymap. Theadaptationlossiscomputedbasedontheboundingboxinformation,andthegradientsfromthislossare
+usedtoupdatetheparametersofthedensitypredictionmodule. Theadaptationlossisonlyusedduringtesttime.
+boundingboxesdepictingtheobjecttobecountedfromthe sitymap. Thesizeofthepredicteddensitymapisthesame
+same image. The output of the network is the predicted asthesizeoftheinputimage.
+density map Z ∈ ℜH×W, and the count for the object of
+interestisobtainedbysummingoveralldensityvalues.
+3.2.Training
+FamNet consists of two key modules: 1) a multi-scale
+featureextractionmodule,and2)adensitypredictionmod-
+We train the FamNet using the training images of our
+ule. Wedesignbothofthesemodulessothattheycanhan-
+dataset. Each training image contains multiple objects of
+dle novel categories at test time. We use an ImageNet-
+interest, but only the exemplar objects are annotated with
+pretrained network [12] for the feature extraction, since
+bounding boxes and the majority of the objects only have
+suchnetworkscanhandleabroadrangeofvisualcategories.
+dotannotations.Itis,however,difficulttotrainadensityes-
+The density prediction module is designed to be agnostic
+timationnetworkwiththetraininglossthatisdefinedbased
+to the visual categories. The multi-scale feature extraction
+onthedotannotationsdirectly. Mostexistingworksforvi-
+module consists of the first four blocks from a pre-trained
+sualcounting,especiallyforcrowdcounting[55],convolve
+ResNet-50 backbone [12] (the parameters of these blocks
+thedotannotationmapwithaGaussianwindowofafixed
+are frozen during training). We represent an image by the
+size,typically15×15,togenerateasmoothedtargetdensity
+convolutional feature maps at the third and fourth blocks.
+mapfortrainingthedensityestimationnetwork.
+Wealsoobtainthemulti-scalefeaturesforanexemplarby
+performingROIpoolingontheconvolutionalfeaturemaps Our dataset consists of 147 different categories, where
+fromthethirdandfourthResnet-50blocks. there is huge variation in the sizes of the objects. There-
+fore, to generate the target density map, we use Gaussian
+To make the density prediction module agnostic to the
+smoothingwithadaptivewindowsize. First,weusedotan-
+visualcategories,wedonotusethefeaturesobtainedfrom
+notationstoestimatethesizeoftheobjects. Giventhedot
+the feature extraction module directly for density predic-
+annotationmap,whereeachdotisatanapproximatecenter
+tion. Instead,weonlyusethecorrelationmapbetweenthe
+ofanobject,wecomputethedistancebetweeneachdotand
+exemplarfeaturesandimagefeaturesastheinputtotheden-
+itsnearestneighbor,andaveragethesedistancesforallthe
+sitypredictionmodule.Toaccountfortheobjectsofinterest
+dotsintheimage. Thisaveragedistanceisusedasthesize
+atdifferentscales,wescaletheexemplarfeaturestodiffer-
+oftheGaussianwindowtogeneratethetargetdensitymap.
+ent scales, and correlate the scaled exemplar features with
+ThestandarddeviationoftheGaussianissettobeaquarter
+theimagefeaturestoobtainmultiplecorrelationmaps,one
+ofthewindowsize.
+foreachscale. Forallofourexperiments,weusethescales
+of 0.9 and 1.1, along with the original scale. The correla- To train FamNet, we minimize the mean squared error
+tionmapsareconcatenatedandfedintothedensitypredic- between the predicted density map and the ground truth
+tionmodule. Thedensitypredictionmoduleconsistsoffive density map. We use Adam optimizer with a learning rate
+convolution blocks and three upsampling layers placed af- of 10−5, and batch size of 1. We resize each image to a
+ter the first, second, and third convolution layers. The last fixed height of 384, and the width is adjusted accordingly
+layerisa1×1convolutionlayer,whichpredictsthe2Dden- topreservetheaspectratiooftheoriginalimage.
+3396
+3.3.Test timeadaptation perturbationlossasfollows:
+SincethetwomodulesoftheFamNetarenotdependent L Per = X ||Z b −G h×w || 2 2 . (2)
+onanyobjectcategories,thetrainedFamNetcanalreadybe
+b∈B
+usedforcountingobjectsfromnovelcategoriesgivenafew
+exemplars. Inthissection,wedescribeanovelapproachto The combined adaptation Loss. The loss used for test-
+adaptthisnetworktotheexemplars, furtherimprovingthe time adaptation is the weighted combination of the Min-
+accuracyoftheestimatedcount. Thekeyideaistoharness Count loss and the Perturbation loss. The final test time
+the information provided by the locations of the exemplar adaptationlossisgivenas
+bounding boxes. So far, we have only used the bounding
+boxesoftheexemplarstoextractappearancefeaturesofthe
+L
+Adapt
+=λ1L
+MinCount
++λ2L
+Per
+, (3)
+exemplars, and we have not utilized their locations to the
+whereλ1 andλ2 arescalarhyperparameters. Attesttime,
+fullextent.
+weperform100gradientdescentstepsforeachtestimage,
+Let B denote the set of provided exemplar bounding andoptimizethejointlosspresentedinEq.(3). Weusethe
+boxes. Foraboundingboxb ∈ B,letZ b bethecropfrom learningrate10−7. Thevaluesforλ1 andλ2 are10−9 and
+thedensitymapZ atlocationb. Toharnesstheextrainfor- 10−4 respectively. The learning rate, thenumberofgradi-
+mationprovidedbythelocationsoftheboundingboxesB, entsteps,λ1,andλ2,aretunedbasedontheperformanceon
+weproposetoconsiderthefollowingtwolosses. thevalidationset. Thevaluesofλ1,andλ2seemsmall,but
+thisisnecessarytomaketheadaptationlosstohavesimilar
+Min-Count Loss. For each exemplar bounding box b, the
+magnitudetothetrainingloss.Eventhoughthetrainingloss
+sumofthedensityvalueswithinZ shouldbeatleastone.
+b
+is not used for test time adaptation, it is important for the
+This is because the predicted count is taken as the sum of
+lossesandtheirgradientstohavesimilarmagnitudes. Oth-
+predicted density values, and there is at least one object at
+erwise, the gradient update steps of the adaptation process
+thelocationspecifiedbytheboundingboxb. However,we
+willeitherdonothingormoveawayfarfromtheparameters
+cannotassertthatthesumofthedensityvalueswithinZ to
+b
+learnedduringtraining.
+be exactly one, due to possible overlapping between b and
+Note that the adaptation loss is only used at test time.
+other nearby objects of interest. This observation leads to
+During training of FamNet, this loss is redundant because
+aninequalityconstraint: ||Z
+b
+||1 ≥1,where||Z
+b
+||1 denotes
+the proposed training loss, based on mean squared errors
+thesumofallthevaluesinZ . Giventhepredicteddensity
+b
+computedoverallpixellocations,alreadyprovidesstronger
+mapandthesetofprovidedboundingboxesfortheexem-
+supervisionsignalthantheadaptationloss.
+plars, we define the following Min-Count loss to quantify
+theamountofconstraintviolation:
+4.TheFSC-147Dataset
+To train the FamNet, we need a dataset suitable for
+L
+MinCount
+=
+X
+max(0,1−||Z
+b
+||1). (1)
+thefew-shotcountingtask,consistingofmanyvisualcate-
+b∈B
+gories. Unfortunately,existingcountingdatasetsaremostly
+dedicatedforspecificobjectcategoriessuchaspeople,cars,
+Perturbation Loss. Our second loss to harness the po- and cells. Meanwhile, existing multi-class datasets do not
+sitional information provided by the exemplar bounding contain many images that are suitable for visual count-
+boxes is inspired by the success of tracking algorithms ing. For example, although some images from the COCO
+based on correlation filter [13, 44, 51]. Given the bound- dataset[25]containsmultipleinstancesfromthesameob-
+ingboxofanobjecttotrack,thesealgorithmslearnafilter ject category, most of the images do not satisfy the condi-
+thathashighestresponseattheexactlocationofthebound- tionsofourintendedapplicationsduetothesmallnumber
+ing box and lower responses at perturbed locations. The ofobjectinstancesorthehugevariationinposeandappear-
+correlationfiltercanbelearnedbyoptimizingaregression anceoftheobjectinstancesineachimage.
+function to map from a perturbed location to a target re- Since there was no dataset that was large and diverse
+sponsevalue,wherethetargetresponsevaluedecreasesex- enoughforourpurpose,wecollectedandannotatedimages
+ponentially as the perturbation distance increases, usually ourselves. Ourdatasetconsistsof6135imagesacrossadi-
+specifiedbyaGaussiandistribution. versesetof147objectcategories,fromkitchenutensilsand
+In our case, the predicted density map Z is essentially officestationerytovehiclesandanimals. Theobjectcount
+thecorrelationresponsemapbetweentheexemplarsandthe in our dataset varies widely, from 7 to 3731 objects, with
+image.Tothisend,thedensityvaluesaroundthelocationof an average count of 56 objects per image. In each image,
+anexemplarshouldideallylooklikeaGaussian. LetG h×w each object instance is annotated with a dot at its approxi-
+be the 2D Gaussian window of size h×w. We define the matecenter. Inaddition,threeobjectinstancesareselected
+3397
+M W C B i i n n u r C i d i p P c h B o c B e k a l a ws P n o i i k n r , e o s s s e 5 d n , , k , … c 8 4 s s 9 S 7 i , , P h 8 1 l P 2 s o e 7 7 o , a e S l 6 1 k u r s 5 a l , n 8 s 4 D g , 4 l 4 L o B a i t u 5 s p s s i , s l e t d& C 5 U s i ( i c , H a 3 n 3 k n 6 t ga , d 3 7 ( e r 6 S 3 e ( l d 6 e 9 t 8 A l n 3 we s a 8 7 , ) p m s a ) t 1 4 p r i i e 6 e C l o ) n a 1 o n t B r o s T e t s e t o le ( m l 3 r y , Ca y 4 & p & e s 9 , A 1 ) t C l 2 c H o i 2 o h B c o e l l o a l B s o d e t s t m c l ( , e s 4 1 t , C 2 7 a i n 0 b 3 e s 0 , 4 l 8 e 4 (341 B 8 ) ottle ) , Box (2 6 & 0) S k B ateb a oa C r g d a , r 1 s, 0 48 Vehicle Vehicle(115) Apples, 221 (1081 A C ) row n S s t , r i 6 a m 8 w S b e P e a a r g r e u l ie l o l s F s , , 1 p 7 B 6 8 9 l i o e r C d h s & ic , F k 8 o l e a 7 F n m W i d n ( r i T P n g g o o 2 i s u g s , m , 1 e & 1 5 0 o a 0 7 i C 2 n t t o r s 4 e a , G s 1 n 8 , r 0 e a 1 9 B G ) p s 5 r , 6 e e e s 1 a e O , 4 d s 1 r 5 B e R 5 a P G , 5 o i n K s o l r M 2 l g c i e s t d e 1 u , a e E a 1 s n 6 t i n g N c , 3 t P o e C a g s 9 1 u i y P o e l , r s 0 t l e s B f o s , s 7 3 f , a e , n , e 6 5 a s 7 5 5 s e 3 , n 3 , 5 1 6 … s 5 , 8 8 54 1 1 1 1 2 2 5 7 0 2 5 7 0 5 0 5 0 5 0 5 0 0 0 0 0 0 0 0 0 0 1-10 Nu 1 m 0- b 20 er o 2 f 0 o -5 b 0 jec 5 t 0 s - 1 in 00 an 10 I 0 m -3 a 00 ge >300
+(a) Image categories and number of im-
+agesforeachcategoryinourdataset.
+segamI fo rebmuN Annotationtype Dataset Images Categories Dot BoundingBox UCFCC50[15] 50 1 ✓ ✗ Shanghaitech[55] 1198 1 ✓ ✗ UCFQNRF[16] 1535 1 ✓ ✗ NWPU[49] 5109 1 ✓ ✗ JHUCrowd[43] 4372 1 ✓ ✓ CARPK[14] 1448 1 ✓ ✓ Proposed 6135 147 ✓ ✓ (c)Comparisonwithpopularcountingdatasets.
+(b)Numberofimagesinseveralrangesof
+objectcount.
+Figure3: Categories&no. ofimagespercategory,objectcounts,andcomparisonwithothercountingdatasets
+randomly as exemplar instances; these exemplars are also 4. Nosevereocclusion: inmostcases, weremovedcan-
+annotatedwithaxis-alignedboundingboxes. Inthefollow- didateimageswheresevereocclusionpreventshumans
+ingsubsections,wewilldescribehowthedatawascollected fromaccuratelycountingtheobjects.
+andannotated.Wewillalsoreportthedetailedstatisticsand
+4.2.ImageAnnotation
+howthedatawassplitintodisjointtraining,validation,and
+testingsets.
+Images in the dataset were annotated by a group of an-
+notators using the OpenCV Image and Video Annotation
+4.1.ImageCollection
+Tool [1]. Two types of annotation were collected for each
+To obtain the set of 6135 images for our dataset, we image, dots and bounding boxes, as illustrated in Fig. 4.
+startedwithasetofcandidateimagesobtainedbykeyword Forimagescontainingmultiplecategories, wepickedonly
+searches. Subsequently, we performed manual inspection one of the categories. Each object instance in an image
+tofilteroutimagesthatdonotsatisfyourpredefinedcondi- was marked with a dot at its approximate center. In case
+tionsasdescribedbelow. of occlusion, the occluded instance was only counted and
+annotated if the amount of occlusion was less than 90%.
+Image retrieval. We started with a list of object cate-
+Foreachimage,wearbitrarilychosethreeobjectsasexem-
+gories, and collected 300–3000 candidate images for each
+plarinstancesandwedrewaxis-alignedboundingboxesfor
+category by scraping the web. We used Flickr, Google,
+thoseinstances.
+andBingsearchengineswiththeopensourceimagescrap-
+pers [7, 45]. We added adjectives such as many, multiple, 4.3.Datasetsplit
+lotsof,andstackof infrontofthecategorynamestocreate
+thesearchquerykeywords. Wedividedthedatasetintotrain,validation,andtestsets
+such that they do not share any object category. We ran-
+Manualverificationandfiltering. Wemanuallyinspected
+domlyselected89objectcategoriesforthetrainset,and29
+thecandidateimagesandonlykeptthesuitableonessatis-
+categories each for the validation and test sets. The train,
+fyingthefollowingcriteria:
+validation,andtestsetsconsistof3659,1286and1190im-
+agesrespectively.
+1. High image quality: The resolution should be high
+enoughtoeasilydifferentiatebetweenobjects. 4.4.DataStatistics
+2. Largeenoughobjectcount: Thenumberofobjectsof
+The dataset contains a total of 6135 images. The aver-
+interestshouldbeatleast7. Wearemoreinterestedin
+age height and width of the images are 774 and 938 pix-
+counting a large number of objects, since humans do
+els, respectively. The average number of objects per im-
+notneedhelpcountingasmallnumberofobjects.
+age is 56, and the total number of objects is 343,818. The
+3. Appearancesimilarity: weselectedimageswhereob- minimum and maximum number of objects for one image
+ject instances have somewhat similar poses, texture, are7and3701,respectively. Thethreecategorieswiththe
+andappearance. highest number of objects per image are: Lego (303 ob-
+3398
+Val-COCOSet Test-COCOSet
+ValSet TestSet
+Method MAE RMSE MAE RMSE
+Method MAE RMSE MAE RMSE
+FasterR-CNN 52.79 172.46 36.20 79.59
+Mean 53.38 124.53 47.55 147.67
+RetinaNet 63.57 174.36 52.67 85.86
+Median 48.68 129.70 47.73 152.46
+MaskR-CNN 52.51 172.21 35.56 80.00
+FRfew-shotdetector[17] 45.45 112.53 41.64 141.04
+FamNet(Proposed) 39.82 108.13 22.76 45.92
+FSODfew-shotdetector[8] 36.36 115.00 32.53 140.65
+Pre-trainedGMN[28] 60.56 137.78 62.69 159.67 Table2: ComparingFamNetwithpre-trainedobjectde-
+GMN[28] 29.66 89.81 26.52 124.57 tectors,oncountingobjectsfromcategorieswherethereare
+MAML[9] 25.54 79.44 24.90 112.68 pre-trainedobjectdetectors.
+FamNet(Proposed) 23.75 69.07 22.08 99.54
+metaparametersthatfacilitatefastergeneralizationtonovel
+Table 1: Comparing FamNet to two simple baselines tasks.Attesttime,onlytheinneroptimizationisperformed.
+(Mean, Median) and four stronger baseline (Feature WeusetheL lossdefinedinEq.(3)fortheinnerop-
+Adapt
+Reweighting (FR) few-shot detector, FSOD few-shot de- timizationloop,andtheMSElossovertheentiredotanno-
+tector,GMNandMAML),thesearefew-shotmethodsthat tationmapfortheouteroptimizationloop.
+havebeenadaptedandtrainedforcounting.FamNethasthe As can be seen in Table 1, FamNet outperforms all the
+lowestMAEandRMSEonbothvalandtestsets. othermethods. Surprisingly,thepre-trainedGMNdoesnot
+work very well, even though it is a class agnostic count-
+jects/image),Brick(271),andMarker(247). Thethreecat-
+ing method. The GMN model trained on our training data
+egories with lowest number of objects per image are: Su-
+performsbetterthanitspre-trainedversion;andthisdemon-
+permarket shelf (8 objects/image), Meat Skewer (8), and
+stratesthebenefitsofourdataset. Thestate-of-the-artfew-
+Oyster (11). Fig. 3b is a histogram plot for the number of
+shot detectors [8, 17] perform relatively poor, even when
+imagesinseveralrangesofobjectcount.
+they are trained on our dataset. With these results, we are
+the first to show the empirical evidence for the inferiority
+5.Experiments
+of the detection-then-counting approach compared to the
+5.1.PerformanceEvaluationMetrics density estimation approach (GMN, MAML, FamNet) for
+generic object counting. However, this is not new for the
+We use Mean Absolute Error (MAE) and Root Mean
+crowdcountingresearchcommunity,wherethedensityesti-
+SquaredError(RMSE)tomeasuretheaccuracyofacount-
+mationapproachdominatestherecentliterature[55],thanks
+ing method. MAE and RMSE are commonly used met-
+toitsrobustnesstoocclusionandthefreedomofnothaving
+rics for counting task [29, 32, 55], and they are de-
+tocommittobinarizeddecisionsatanearlystage. Among
+fined as follows. MAE = 1 n |c − cˆ|;RMSE =
+nPi=1 i i thecompetingapproaches,MAMListhebestmethodofall.
+1 n (c −cˆ)2,wherenisthenumberoftestimages, ThisisperhapsbecauseMAMLisametalearningmethod
+qnPi=1 i i
+andc andcˆ arethegroundtruthandpredictedcounts. that leverages the advantages of having the FamNet archi-
+i i
+tectureasitscorecomponent. TheMAMLwayoftraining
+5.2.ComparisonwithFew ShotApproaches this network leads to a better model than GMN, but it is
+stillinferiortotheproposedFamNettogetherwiththepro-
+We compare the performance of FamNet with two triv-
+posedtrainingandadaptationalgorithms. Intermsoftrain-
+ial baselines and four competing few-shot methods. The
+ingtimeperepoch,FamNetisaroundthreetimesfasterthan
+twotrivialbaselinemethodsare: (1)alwaysoutputtheav-
+MAML,becauseitdoesnotrequireanyhigherordergradi-
+erage object count for training images; (2) always output
+entcomputationlikeMAML.
+the median count for the training images. We also imple-
+mentstrongermethodsforcomparison,byadaptingseveral
+5.3.ComparisonwithObjectDetectors
+few-shot methods for the counting task and training them
+on our training data. Specifically, we adapt the following One approach for counting is to use a detector to de-
+approaches for counting: the state-of-the-art few-shot de- tect objects and then count. This approach only works for
+tectors[8,17],theGenericMatchingNetwork(GMN)[28], certain categories of objects, where there are detectors for
+andModelAgnosticMetaLearning(MAML)[9]. Weim- those categories. In general, it requires thousands of ex-
+plement MAML using the higher library [10], which is a amples to train an object detector, so this is not a practi-
+metalearninglibrarysupportinghigherorderoptimization. cal method for general visual counting. Nevertheless, we
+The training procedure of MAML involves an inner op- evaluate the performance of FamNet on a subset of cate-
+timization loop, which adapts the network to the specific goriesfromthevalidationandtestsetsthathavepre-trained
+test classes, and an outer optimization loop which learns object detectors on the COCO dataset. We refer to these
+3399
+Figure4: Fewannotatedimagesfromthedataset. Dotandboxannotationsareshowninredandbluerespectively. The
+numberofobjectsineachimagevarieswidely,someimagescontainadozenofobjectswhilesomecontainsthousands.
+NumberofExemplars MAE RMSE as the number of exemplars increases, and (2) the benefits
+ofdifferentcomponentsofFamNet.
+1 26.55 77.01
+InTable3,weanalyzetheperformanceofFamNetasthe
+2 24.09 72.37
+number of exemplars is varied between one to three dur-
+3 23.75 69.07
+ing the testing of FamNet. We see that FamNet can work
+Table 3: Performance of FamNet on the validation data as even with one exemplar, and it outperforms all the com-
+thenumberofexemplarsincreases. FamNetcanprovidea petingmethodspresentedinTable1withjust2exemplars.
+reasonablecountestimateevenwithasingleexemplar,and Not surprisingly, the performance of FamNet improves as
+theestimatebecomesmoreaccuratewithmoreexemplars. the number of exemplars is increased. This suggests that
+an user of our system can obtain a reasonable count even
+subsets as Val-COCO and Test-COCO, which comprise of
+withasingleexemplar,andtheycanobtainamoreaccurate
+277 and 282 images respectively. Specifically, we com-
+countbyprovidingmoreexemplars.
+pareFamNetwithFasterRCNN[37],MaskRCNN[11],and
+InTable4,weanalyzetheimportanceofthekeycompo-
+RetinaNet[24]. Allofthesepretraineddetectorsareavail-
+nentsofFamNet: multi-scaleimagefeaturemap,themulti-
+ableintheDetectron2library[52]. Table2showsthecom-
+scaleexemplarfeatures,andtesttimeadaptation. Wetrain
+parison results. As can be seen, FamNet outperforms the
+models without few/all of these components on the train-
+pre-trained detectors, even on object categories where the
+ingsetofFSC-147,andreportthevalidationperformance.
+detectorshavebeentrainedwiththousandsofannotatedex-
+WenoticethatallofthecomponentsofFamNetareimpor-
+amplesfromtheCOCOdataset.
+tant, and adding each of the component leads to improved
+results.
+Components Combinations
+Multi-scaleimagefeature ✗ X X X 5.5.Countingcategory specificobjects
+Multi-scaleexemplarfeature ✗ ✗ X X
+FamNetisspecificallydesignedtobegeneral,beingable
+Testtimeadaptation ✗ ✗ ✗ X
+to count generic objects with only a few exemplars. As
+MAE 32.70 27.80 24.32 23.75 such, it might not be fair to demand it to work extremely
+RMSE 104.31 93.53 70.94 69.07 wellforaspecificcategory,suchascountingcars. Carsare
+popular objects that appear in many datasets and this cat-
+Table4: AnalyzingthecomponentsofFamNet. Eachof
+egory is the explicit or implicit target for tuning for many
+thecomponentsofFamNetaddstotheperformance.
+networks,soitwouldnotbesurprisingifourmethoddoes
+notperformaswellasothercustomizedsolutions. Having
+saidthat,westillinvestigatethesuitabilityofusingFamNet
+5.4.AblationStudies
+tocountcarsfromtheCARPKdataset[14],whichconsists
+WeperformablationstudiesonthevalidationsetofFSC- ofoverheadimagesofparkinglotstakenbydownwardfac-
+147toanalyze: (1)howthecountingperformancechanges ingdronecameras. Thetrainingandtestsetconsistsof989
+3400
+Image Prediction
+Method MAE RMSE
+YOLO[14,36] 48.89 57.55
+FasterRCNN[14,38] 47.45 57.39
+One-lookRegression[14,30] 59.46 66.84
+FasterRCNN[14,38](RPN-small) 24.32 37.62
+SpatiallyRegularizedRPN[14] 23.80 36.79 GTCount: 263 PredCount: 280
+GMN[28] 7.48 9.90
+FamNet–(pre-trained) 28.84 44.47
+FamNet+(trainedwithCARPKdata) 18.19 33.66
+Table 5: Counting car performance on the CARPK
+dataset. FamNet–isaFamNetmodel,thatistrainedwith-
+out any CARPK images nor images from the car category
+GTCount: 77 PredCount: 77
+of FSC-147. Other methods use the entire CARPK train
+set. Pre-trainedFamNet–outperformsthreeofoftheprevi-
+ousapproaches. FamNet+,yieldsevenbetterperformance.
+and 459 images respectively. There are around 90,000 in-
+stancesofcarsinthedataset.
+We experiment with two variants of FamNet: a pre- GTCount: 47 PredCount: 46
+trained model and a model trained on CARPK dataset.
+Thepre-trainedFamNetmodeliscalledFamNet–,whichis
+trainedonFSC-147,withoutusingthedatafromCARPKor
+thecarcategoryfromFSC-147. TheFamNetmodeltrained
+withtrainingdatafromCARPKiscalledFamNet+,anditis
+trainedasfollows. Werandomlysampleasetof12exem-
+plars from the training set, and use these as the exemplars GTCount: 77 PredCount: 192
+for all of the training and test images. We train FamNet+
+Figure5: PredicteddensitymapsandcountsofFamNet.
+ontheCARPKtrainingset. Table5displaystheresultsof
+severalmethodsonthisCARPKdataset. FamNet+outper- Image PreAdapt. PostAdapt.
+formsallmethodsexceptGMN[28]. GMN,unlikeallthe
+otherapproaches,usesextratrainingdatafromtheILSVRC
+video dataset which consists of video sequences of cars.
+PerhapsthismaybewhyGMNworksparticularlywellon
+CARPK.
+GTCount: 240 Count: 356 Count: 286
+5.6.QualitativeResults
+Figure6: Testtimeadaptation. Shownaretheinitialden-
+Fig. 5 shows few images and FamNet predictions. The sitymap(PreAdapt)andfinaldensitymapafteradaptation
+firstthreearesuccesscases,andthelastisafailurecase.For (PostAdapt).Incaseofovercounting,adaptationdecreases
+the fourth image, FamNet confuses portions of the back- thedensityvaluesatdenselocations.
+groundasbeingtheforeground,becauseofsimilarityinap-
+pearancebetweenthebackgroundandtheobjectofinterest. instances. We also presented a novel approach for density
+Fig.6showsatestcasewheretesttimeadaptationimproves predictionsuitableforthefew-shotvisualcountingtask.We
+on the initial countby decreasing the density values in the compared our approach with several state-of-art detectors
+denseregions. andfewshotcountingapproaches,andshowedthatourap-
+proachoutperformsalloftheseapproaches.
+6.Conclusions
+In this paper, we posed counting as a few-shot regres- Acknowledgements: Thisprojectispartiallysupportedby
+siontask. Giventhenon-existenceofasuitabledatasetfor MedPod, theSUNY2020InfrastructureTransportationSe-
+the few-shot counting task, we collected a visual counting curity Center, and the NSF I/UCRC Center for Visual and
+datasetwithrelativelylargenumberofobjectcategoriesand DecisionInformaticsatStonyBrook.
+3401
+References EuropeanConferenceonComputerVision,2018.
+[17] BingyiKang,ZhuangLiu,XinWang,FisherYu,JiashiFeng,
+[1] Computervisionannotationtool. and Trevor Darrell. Few-shot object detection via feature
+[2] Shahira Abousamra, Minh Hoai, Dimitris Samaras, and
+reweighting.InProceedingsoftheInternationalConference
+ChaoChen. Localizationinthecrowdwithtopologicalcon-
+onComputerVision,2019.
+straints. In Proceedings of AAAI Conference on Artificial [18] AishaKhan,StephenGould,andMathieuSalzmann. Deep
+Intelligence,2021.
+convolutional neural networks for human embryonic cell
+[3] Carlos Arteta, Victor Lempitsky, J Alison Noble, and An-
+counting. In Proceedings of the European Conference on
+drew Zisserman. Detecting overlapping instances in mi-
+ComputerVision.Springer,2016.
+croscopyimagesusingextremalregiontrees.Medicalimage
+[19] Gregory Koch, Richard Zemel, and Ruslan Salakhutdinov.
+analysis,27:3–16,2016.
+Siameseneuralnetworksforone-shotimagerecognition. In
+[4] Carlos Arteta, Victor Lempitsky, and Andrew Zisserman.
+ICMLdeeplearningworkshop,2015.
+Countinginthewild. InProceedingsoftheEuropeanCon- [20] Brenden M. Lake, Ruslan Salakhutdinov, and Joshua B.
+ferenceonComputerVision,2016.
+Tenenbaum. Human-levelconceptlearningthroughproba-
+[5] DeepakBabuSam,NeerajNSajjan,RVenkateshBabu,and
+bilisticprograminduction. Science,350(6266):1332–1338,
+Mukundhan Srinivasan. Divide and grow: Capturing huge
+December2015.
+diversityincrowdimageswithincrementallygrowingcnn. [21] Brenden M Lake, Ruslan Salakhutdinov, and Joshua B
+InProceedingsoftheIEEEConferenceonComputerVision
+Tenenbaum. Human-levelconceptlearningthroughproba-
+andPatternRecognition,2018. bilisticprograminduction. Science,350(6266):1332–1338,
+[6] XinkunCao,ZhipengWang,YanyunZhao,andFeiSu.Scale
+2015.
+aggregationnetworkforaccurateandefficientcrowdcount- [22] VictorLempitskyandAndrewZisserman.Learningtocount
+ing. In Proceedings of the European Conference on Com- objectsinimages. InAdvancesinNeuralInformationPro-
+puterVision,2018. cessingSystems,2010.
+[7] DelRiccardoChiaro. python-flickr-image-downloader. [23] YuhongLi,XiaofanZhang,andDemingChen. Csrnet: Di-
+[8] QiFan,WeiZhuo,Chi-KeungTang,andYu-WingTai.Few-
+lated convolutional neural networks for understanding the
+shot object detection with attention-rpn and multi-relation
+highlycongestedscenes. InProceedingsoftheIEEECon-
+detector. InProceedingsoftheIEEEConferenceonCom-
+ferenceonComputerVisionandPatternRecognition,2018.
+puterVisionandPatternRecognition,2020.
+[24] Tsung-YiLin,PriyaGoyal,RossGirshick,KaimingHe,and
+[9] Chelsea Finn, Pieter Abbeel, and Sergey Levine. Model-
+PiotrDolla´r. Focallossfordenseobjectdetection. InPro-
+agnosticmeta-learningforfastadaptationofdeepnetworks.
+ceedings of the International Conference on Computer Vi-
+InProceedingsoftheInternationalConferenceonMachine
+sion,2017.
+Learning,2017.
+[25] Tsung-Yi Lin, Michael Maire, Serge Belongie, Lubomir
+[10] Edward Grefenstette, Brandon Amos, Denis Yarats,
+Bourdev, Ross Girshick, James Hays, Pietro Perona, Deva
+PhuMonHtut,ArtemMolchanov,FranziskaMeier,Douwe
+Ramanan,C.LawrenceZitnick,andPiotrDolla´r. Microsoft
+Kiela,KyunghyunCho,andSoumithChintala. Generalized
+COCO:Commonobjectsincontext. InProceedingsofthe
+innerloopmeta-learning. arXivpreprintarXiv:1910.01727,
+EuropeanConferenceonComputerVision,2014.
+2019. [26] Weizhe Liu, Mathieu Salzmann, and Pascal Fua. Context-
+[11] KaimingHe,GeorgiaGkioxari,PiotrDolla´r,andRossGir-
+awarecrowdcounting. InProceedingsoftheIEEEConfer-
+shick. Mask R-CNN. In Proceedings of the International
+enceonComputerVisionandPatternRecognition,2019.
+ConferenceonComputerVision,2017.
+[27] XialeiLiu,JoostVanDeWeijer,andAndrewDBagdanov.
+[12] KaimingHe,XiangyuZhang,ShaoqingRen,andJianSun.
+Leveragingunlabeleddataforcrowdcountingbylearningto
+Deep residual learning for image recognition. In Proceed-
+rank. InProceedingsoftheIEEEConferenceonComputer
+ingsoftheIEEEConferenceonComputerVisionandPattern
+VisionandPatternRecognition,2018.
+Recognition,2016.
+[28] ErikaLu,WeidiXie,andAndrewZisserman.Class-agnostic
+[13] J.F.Henriques,R.Caseiro,P.Martins,andJ.Batista. High-
+counting. InProceedingsoftheAsianConferenceonCom-
+speed tracking with kernelized correlation filters. IEEE
+puterVision,2018.
+TransactionsonPatternAnalysisandMachineIntelligence,
+[29] ZhihengMa,XingWei,XiaopengHong,andYihongGong.
+37(3):583–596,2015. Bayesianlossforcrowdcountestimationwithpointsuper-
+[14] Meng-RuHsieh,Yen-LiangLin,andWinstonHHsu.Drone-
+vision. In Proceedings of the International Conference on
+basedobjectcountingbyspatiallyregularizedregionalpro-
+ComputerVision,2019.
+posalnetwork. InProceedingsoftheInternationalConfer- [30] TNathanMundhenk,GoranKonjevod,WesamASakla,and
+enceonComputerVision,2017.
+Kofi Boakye. A large contextual dataset for classification,
+[15] HaroonIdrees,ImranSaleemi,CodySeibert,andMubarak
+detectionandcountingofcarswithdeeplearning. InPro-
+Shah. Multi-sourcemulti-scalecountinginextremelydense
+ceedings of the European Conference on Computer Vision,
+crowd images. In Proceedings of the IEEE Conference on
+2016.
+ComputerVisionandPatternRecognition,2013.
+[31] Maryam Rahnemoonfar and Clay Sheppard. Deep count:
+[16] Haroon Idrees, Muhmmad Tayyab, Kishan Athrey, Dong
+fruit counting based on deep simulated learning. Sensors,
+Zhang, Somaya Al-Maadeed, Nasir Rajpoot, and Mubarak
+17(4):905,2017.
+Shah. Composition loss for counting, density map estima- [32] Viresh Ranjan, Hieu Le, and Minh Hoai. Iterative crowd
+tionandlocalizationindensecrowds. InProceedingsofthe
+3402
+counting. In Proceedings of the European Conference on crowd: Alarge-scalebenchmarkforcrowdcounting. arXiv
+ComputerVision,2018. preprintarXiv:2001.03360,2020.
+[33] Viresh Ranjan, Mubarak Shah, and Minh Hoai [50] Qi Wang, Junyu Gao, Wei Lin, and Yuan Yuan. Learning
+Nguyen. Crowd transformer network. arXiv preprint fromsyntheticdataforcrowdcountinginthewild. InPro-
+arXiv:1904.02774,2019. ceedings of the IEEE Conference on Computer Vision and
+[34] Viresh Ranjan, Boyu Wang, Mubarak Shah, and Minh PatternRecognition,2019.
+Hoai.Uncertaintyestimationandsampleselectionforcrowd [51] QiangWang, LiZhang, LucaBertinetto, WeimingHu, and
+counting. InProceedingsoftheAsianConferenceonCom- PhilipHSTorr.Fastonlineobjecttrackingandsegmentation:
+puterVision,2020. Aunifyingapproach.InProceedingsoftheIEEEConference
+[35] SachinRaviandHugoLarochelle. Optimizationasamodel onComputerVisionandPatternRecognition,2019.
+forfew-shotlearning. 2016. [52] Yuxin Wu, Alexander Kirillov, Francisco Massa, Wan-Yen
+[36] Joseph Redmon, Santosh Divvala, Ross Girshick, and Ali Lo,andRossGirshick. Detectron2,2019.
+Farhadi. Youonlylookonce: Unified,real-timeobjectde- [53] Weidi Xie, J Alison Noble, and Andrew Zisserman. Mi-
+tection.InProceedingsoftheIEEEConferenceonComputer croscopy cell counting and detection with fully convolu-
+VisionandPatternRecognition,2016. tional regression networks. Computer methods in biome-
+[37] Shaoqing Ren, Kaiming He, Ross Girshick, and Jian Sun. chanicsandbiomedicalengineering: Imaging&Visualiza-
+FasterR-CNN:Towardsreal-timeobjectdetectionwithre- tion,6(3):283–292,2018.
+gionproposalnetworks. InAdvancesinNeuralInformation [54] AnranZhang,LeiYue,JiayiShen,FanZhu,XiantongZhen,
+ProcessingSystems.2015. Xianbin Cao, and Ling Shao. Attentional neural fields for
+[38] Shaoqing Ren, Kaiming He, Ross Girshick, and Jian Sun. crowdcounting.InProceedingsoftheInternationalConfer-
+Fasterr-cnn: Towardsreal-timeobjectdetectionwithregion enceonComputerVision,2019.
+proposalnetworks. InAdvancesinNeuralInformationPro- [55] YingyingZhang, Desen Zhou, Siqin Chen, ShenghuaGao,
+cessingSystems,2015. andYiMa. Single-imagecrowdcountingviamulti-column
+[39] Deepak Babu Sam, Shiv Surya, and R Venkatesh Babu. convolutional neural network. In Proceedings of the IEEE
+Switchingconvolutionalneuralnetworkforcrowdcounting. Conference on Computer Vision and Pattern Recognition,
+InProceedingsoftheIEEEConferenceonComputerVision 2016.
+andPatternRecognition,2017.
+[40] AdamSantoro,SergeyBartunov,MatthewBotvinick,Daan
+Wierstra, and Timothy Lillicrap. One-shot learning with
+memory-augmentedneuralnetworks. 2016.
+[41] Eli Shechtman and Michal Irani. Matching local self-
+similaritiesacrossimagesandvideos. InProceedingsofthe
+IEEEConferenceonComputerVisionandPatternRecogni-
+tion,2007.
+[42] MiaojingShi,ZhaohuiYang,ChaoXu,andQijunChen.Re-
+visitingperspectiveinformationforefficientcrowdcounting.
+InProceedingsoftheIEEEConferenceonComputerVision
+andPatternRecognition,2019.
+[43] Vishwanath A Sindagi, Rajeev Yasarla, and Vishal M Pa-
+tel. Jhu-crowd++: Large-scalecrowdcountingdatasetand
+a benchmark method. arXiv preprint arXiv:2004.03597,
+2020.
+[44] Jack Valmadre, Luca Bertinetto, Joao Henriques, Andrea
+Vedaldi, and Philip HS Torr. End-to-end representation
+learning for correlation filter based tracking. In Proceed-
+ingsoftheIEEEConferenceonComputerVisionandPattern
+Recognition,2017.
+[45] HardikVasa. Googleimagesdownload.
+[46] Oriol Vinyals, Charles Blundell, Timothy Lillicrap, Daan
+Wierstra,etal. Matchingnetworksforoneshotlearning. In
+AdvancesinNeuralInformationProcessingSystems,2016.
+[47] Jia Wan and Antoni Chan. Adaptive density map genera-
+tionforcrowdcounting. InProceedingsoftheIEEEInter-
+nationalConferenceonComputerVision,pages1130–1139,
+2019.
+[48] Boyu Wang, Huidong Liu, Dimitris Samaras, and Minh
+Hoai. Distribution matching for crowd counting. In Ad-
+vancesinNeuralInformationProcessingSystems.2020.
+[49] Qi Wang, Junyu Gao, Wei Lin, and Xuelong Li. Nwpu-
+3403

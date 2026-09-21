@@ -1,0 +1,50 @@
+{
+  "frozen_time": "2026-09-21T11:30:00",
+  "files": [
+    {
+      "path": "r1c/results/R1C_CANDIDATE_CASES.csv",
+      "sha256": "bb223da4c49bfbb6167d7782959cda292ca856c6db294afacd60c44dae69f71b",
+      "size": 17396
+    },
+    {
+      "path": "r1c/results/R1C_INCLUDED_CASES.csv",
+      "sha256": "913a1edd5e4814c78e237f1912d590158c792ed867318879bfdc197b4ef19110",
+      "size": 5369
+    },
+    {
+      "path": "r1c/results/R1C_CASE_FREEZE.json",
+      "sha256": "e4b6721cc33b471a40e08d977653f697be5269cf3abe44dc0a465ea151ad6a3c",
+      "size": 2994
+    },
+    {
+      "path": "r1c/results/R1C_PRE_PREDICTIONS_FROZEN.jsonl",
+      "sha256": "b3b25a1760ae6fbf9ce1973e713fa9b9052b442c91d7a779c049899f04b6ce84",
+      "size": 3366
+    },
+    {
+      "path": "r1c/results/R1C_GOLD_MATCH.jsonl",
+      "sha256": "8710dfe7ffd0ca22cbb1cea2ed6d3d3984a1d5d83fa20ccfb7f4907c699cf71d",
+      "size": 1433
+    },
+    {
+      "path": "r1c/results/R1C_NATURALISTIC_METRICS.json",
+      "sha256": "64c86fc142e4256b1a69b3e694afe97b7f55687dc0a5090014f6df1bf9fe4c55",
+      "size": 450
+    },
+    {
+      "path": "r1c/results/R1C_PAIRED_CORRECTIONS.csv",
+      "sha256": "e72ab4be399d0d453402467aabc8f80a50cf31205a7094660c8efabd44c9bac5",
+      "size": 955
+    },
+    {
+      "path": "r1c/results/R1C_BASELINES.csv",
+      "sha256": "ed3d592b5e41398546db1eaa3ddd17fa80712e54dcfbff7c7cb482b7317c97e1",
+      "size": 470
+    },
+    {
+      "path": "r1c/results/R1C_WITNESS_AUDIT.csv",
+      "sha256": "157b1e20e68dc262b7eed9a0196fd49a28ede862f24db91c5ad9e6902898524d",
+      "size": 256
+    }
+  ]
+}

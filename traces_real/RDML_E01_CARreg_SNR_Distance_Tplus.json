@@ -1,0 +1,48 @@
+{
+  "trace_id": "RDML_E01_CARreg_SNR_Distance_Tplus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "CARreg_SNR_Distance_s0",
+    "CARreg_SNR_Distance_s1",
+    "CARreg_SNR_Distance_s2",
+    "CARreg_SNR_Distance_s3",
+    "CARreg_SNR_Distance_s4"
+  ],
+  "protocol": {
+    "dataset": "CARreg",
+    "method": "SNR_Distance",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_CARreg_SNR_Distance_s0",
+      "RDML_E01_CARreg_SNR_Distance_s1",
+      "RDML_E01_CARreg_SNR_Distance_s2",
+      "RDML_E01_CARreg_SNR_Distance_s3",
+      "RDML_E01_CARreg_SNR_Distance_s4"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.7906,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_CARreg_SNR_Distance_s0",
+        "RDML_E01_CARreg_SNR_Distance_s1",
+        "RDML_E01_CARreg_SNR_Distance_s2",
+        "RDML_E01_CARreg_SNR_Distance_s3",
+        "RDML_E01_CARreg_SNR_Distance_s4"
+      ]
+    }
+  },
+  "is_counterfactual": false,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "16adbfe3bda771fccdd896ba83a8cf462d34ad089149e14d25d171c87bc097c3"
+}

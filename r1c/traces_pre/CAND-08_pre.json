@@ -1,0 +1,19 @@
+{
+  "trace_id": "CAND-08_pre",
+  "protocol": {
+    "declared_options": {
+      "flip_test": false
+    },
+    "runtime_options": {
+      "flip_test": true
+    }
+  },
+  "outputs": {
+    "coco_ap": 37.4,
+    "metric": "mAP"
+  },
+  "candidate_id": "CAND-08",
+  "paper": "Objects as Points (CenterNet)",
+  "family": "C5_runtime_protocol_mismatch",
+  "self_hash": "135df0a4e805e55cec496e389fe0a9f978458f974403161c8f227a77bd7aa451"
+}

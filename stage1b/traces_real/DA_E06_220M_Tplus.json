@@ -1,0 +1,50 @@
+{
+  "trace_id": "DA_E06_220M_Tplus",
+  "paper": "delta_attention_2605.18855",
+  "repository": "wdlctc/delta-attention-residuals-code",
+  "family": "E06",
+  "scale": "220M",
+  "protocol": {
+    "declared_methods": [
+      "Config",
+      "Baseline",
+      "Delta",
+      "Delta",
+      "Delta",
+      "Delta",
+      "Delta",
+      "Delta"
+    ],
+    "comparator_methods": [
+      "Config",
+      "Baseline",
+      "Delta",
+      "Delta",
+      "Delta",
+      "Delta",
+      "Delta",
+      "Delta"
+    ],
+    "comparator_budgets": {
+      "Config": {
+        "steps": 10000
+      },
+      "Baseline": {
+        "steps": 10000
+      },
+      "Delta": {
+        "steps": 10000
+      }
+    },
+    "budgets_symmetric": true
+  },
+  "outputs": {
+    "reported_value": {
+      "value": "n/a",
+      "metric": "val_ppl"
+    }
+  },
+  "is_counterfactual": false,
+  "contract_id": "DA_E06_BUDGET_SYMMETRY",
+  "self_hash": "36447587cd2fb853e88f8b0ed8f049f0c15b68b1958e380a87a4eab93e380f76"
+}

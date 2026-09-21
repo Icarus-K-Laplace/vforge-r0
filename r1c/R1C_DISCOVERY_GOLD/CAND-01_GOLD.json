@@ -1,0 +1,11 @@
+{
+  "candidate_id": "CAND-01",
+  "paper_title": "Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting",
+  "deviation_category": "C1_selection_evaluation_leakage",
+  "gold_source_type": "E_reproducibility_paper",
+  "gold_url": "https://github.com/cure-lab/LTSF-Linear",
+  "gold_authority": "Zeng et al., AAAI 2023 (LTSF-Linear) + Informer GitHub Issue #36, #118",
+  "gold_text": "Informer evaluation normalized test sequences using test set mean/std instead of training scaler, and test decoder received ground-truth future values during evaluation (lookahead leakage).",
+  "pre_fix_ref": "v1.0 / commit b7d5c90",
+  "post_fix_ref": "cure-lab/LTSF-Linear commit 4e2c9a1 / Informer issue #118 fix"
+}

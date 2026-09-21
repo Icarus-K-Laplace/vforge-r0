@@ -1,0 +1,17 @@
+{
+  "trace_id": "CAND-01_pre",
+  "protocol": {
+    "split_disjointness": false,
+    "selection_target": "test",
+    "scaler_fit": "test_sequences",
+    "lookahead_in_decoder": true
+  },
+  "outputs": {
+    "reported_mse": 0.584,
+    "metric": "multivariate_MSE"
+  },
+  "candidate_id": "CAND-01",
+  "paper": "Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting",
+  "family": "C1_selection_evaluation_leakage",
+  "self_hash": "16e29c49e167738eb1a595809950b629c3623146136a03172330a962c1afbcfd"
+}

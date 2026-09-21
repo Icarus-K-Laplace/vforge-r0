@@ -1,0 +1,42 @@
+{
+  "trace_id": "RDML_E01_SOP_MS_Tminus",
+  "paper": "revisitdml_2002.08473",
+  "repository": "Confusezius/Revisiting_Deep_Metric_Learning_PyTorch",
+  "source_runs": [
+    "SOP_MS_s1",
+    "SOP_MS_s2"
+  ],
+  "protocol": {
+    "dataset": "SOP",
+    "method": "MS",
+    "declared_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "aggregation_rule": "mean",
+    "aggregation_inputs": [
+      "RDML_E01_SOP_MS_s1",
+      "RDML_E01_SOP_MS_s2"
+    ]
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 0.7773,
+      "aggregation_rule": "mean",
+      "upstream_runs": [
+        "RDML_E01_SOP_MS_s1",
+        "RDML_E01_SOP_MS_s2"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "family": "E01",
+  "contract_id": "RDML_C1_SEED_GROUP_AGGREGATION",
+  "self_hash": "5f82074a5effe6902925ff35fb469194058cf6092e29841fe8d31dbf3a1a117b",
+  "vps": 0.0917,
+  "value_preserving": true,
+  "abs_diff": 0.0009
+}

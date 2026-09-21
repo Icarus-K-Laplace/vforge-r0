@@ -1,0 +1,63 @@
+{
+  "stage": "R1-B1-Stage1b",
+  "frozen_time": "2026-09-20T23:51:13.788410",
+  "contracts": [
+    {
+      "contract_id": "DS_E01_CROSS_CAT_AGG",
+      "source_paper": "diffusing_synth_2411.10164",
+      "family": "E01",
+      "self_hash": "1a62fe0b3bb9f2c75627bac28274d5765768c04a4d21c261765eb70f26d24b13",
+      "n_predicates": 1
+    },
+    {
+      "contract_id": "DS_E04_CATEGORY_SUBGROUP",
+      "source_paper": "diffusing_synth_2411.10164",
+      "family": "E04",
+      "self_hash": "e9949d37aed02661164a76369908f4e44630d0ee5bc8a8ae743ffed693d379d8",
+      "n_predicates": 1
+    },
+    {
+      "contract_id": "DS_E06_RESOURCE_ASYM",
+      "source_paper": "diffusing_synth_2411.10164",
+      "family": "E06",
+      "self_hash": "24914f77d32636f76a0cc23106173c1768bfc7917dc0cf9fdf80845287f21f8f",
+      "n_predicates": 1
+    },
+    {
+      "contract_id": "CB_E04_CATEGORY_INTERACTION",
+      "source_paper": "clinicalbench_2605.11143",
+      "family": "E04",
+      "self_hash": "1819eb76bea95bc89d6f369656616521e1a0706770d6ff0ac7548976fd22baf9",
+      "n_predicates": 1
+    },
+    {
+      "contract_id": "CB_E06_CROSS_MODEL_ASYM",
+      "source_paper": "clinicalbench_2605.11143",
+      "family": "E06",
+      "self_hash": "49890af7c49e006f44f13bf8802315729775dd1c027accd7e4d33474e2fa7770",
+      "n_predicates": 1
+    },
+    {
+      "contract_id": "CB_E01_BOOTSTRAP_AGG",
+      "source_paper": "clinicalbench_2605.11143",
+      "family": "E01",
+      "self_hash": "386ab9586585238d04cc98b3e86b7dd5ab2e41087fb8b6090c23b4b5ea742219",
+      "n_predicates": 1
+    },
+    {
+      "contract_id": "DA_E06_BUDGET_SYMMETRY",
+      "source_paper": "delta_attention_2605.18855",
+      "family": "E06",
+      "self_hash": "8e34b09a749ebc5546237be8912831b8e3efc63a3e800f95c9162b69808d9fdb",
+      "n_predicates": 1
+    },
+    {
+      "contract_id": "DA_E01_CROSS_METHOD_AGG",
+      "source_paper": "delta_attention_2605.18855",
+      "family": "E01",
+      "self_hash": "51a11528cc50165ee8fc6dd8bea65e3577779b8eccbff7ab01f5bb6e5409c0b0",
+      "n_predicates": 1
+    }
+  ],
+  "freeze_sha256": "3087e74622a89b4222ef15db0008dfc8bebef8e0546a2feb06a84083e045ca31"
+}

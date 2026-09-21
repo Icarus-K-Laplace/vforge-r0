@@ -1,0 +1,1024 @@
+Delta Attention Residuals
+ChengLuo∗ ZefanCai∗
+IndependentResearcher UniversityofWisconsin–Madison
+wdlctc@gmail.com zefncai@gmail.com
+JunjieHu
+UniversityofWisconsin–Madison
+junjie.hu@wisc.edu
+Abstract
+AttentionResidualsreplacestandardadditiveresidualconnectionswithlearned
+softmaxattentionoverpreviouslayeroutputs,enablingselectivecross-layerrout-
+ing. However,standardAttentionResidualsstillattendovercumulativehidden
+statesinpreviouslayers, whicharehighlyredundant. Weshowthatthisredun-
+dancyleadstoroutingcollapseindeeperlayers: attentionweightsbecomelow-
+contrast and closer to uniform (max weight ≈0.2), limiting the model’s ability
+to select informative states in previous layers. This raises a key but underex-
+plored design question: what layer-wise representations should be routed
+in Attention Residuals? To answer this question, we propose Delta Atten-
+tion Residuals, which attend over deltas—the change introduced by each sub-
+layer (v = h − h )—instead of cumulative states. Delta representations
+i i+1 i
+are structurally diverse and yield higher-contrast attention distributions (max
+weight≈0.6),enablingmoreselectiveandeffectiveroutingacrosslayers. This
+principle applies at both per-sublayer and block granularity. Across all tested
+scales (220M–7.6B), Delta Attention Residuals consistently outperform both
+standard residuals and Attention Residuals, with 1.7–8.2% validation perplex-
+itygains. DeltaAttentionResidualsalsoenablesconvertingpretrainedcheckpoints
+into Delta Attention Residuals via standard fine-tuning. Code is available at
+https://github.com/wdlctc/delta-attention-residuals-code.
+1 Introduction
+Residualconnections[Heetal.,2016]arefundamentaltotrainingdeeptransformers[Vaswanietal.,
+2017]. Thestandardupdate,h =h +f (h ),accumulatesallprecedingsublayeroutputswith
+l l−1 l l−1
+fixedadditivecoefficients. Whilethisupdateprovidesgradienthighways[Veitetal.,2016],ithasno
+mechanismtoselectivelyaggregatetheprecedinglayersacrossdepth. AttentionResiduals[Kimi,
+2025]addressthisissuebyreplacingfixedaggregationwithlearnedsoftmaxattentionoverpriorlayer
+outputs(h ,h ,...,h ),allowingselectiveresidualsroutedfrompriorlayerstothecurrentlayer.
+0 1 1−1
+However,aseachstateh inAttentionResidualsisstillarunningsumofallpreviouslayeroutputs
+l
+h ,adjacentstatesh ,h becomehighlyredundant. Asdepthincreases,thepairwisesimilarity
+0:l−1 l l−1
+betweenadjacentstatesgrows,reducingthecontrastamongroutingcandidates. Undersuchlow-
+contrastsources,softmaxattentionbecomeslessdiscriminative,leadingtoroutingcollapse,where
+attentionweightsapproachanear-uniformdistribution. Empirically,weobservethatthemaximum
+routingweightdropstoabout0.2indeeplayers(Figure1a),indicatingthatthemechanismlosesits
+abilitytomeaningfullyselectamongsourcesandinsteadaveragesoverthem.
+∗Equalcontribution.Correspondingauthors:wdlctc@gmail.com,zefncai@gmail.com,junjie.hu@wisc.edu.
+40thConferenceonNeuralInformationProcessingSystems(NeurIPS2026).
+6202
+yaM
+31
+]GL.sc[
+1v55881.5062:viXra
+Figure1: Sourceredundancyincross-layerrouting(Qwen3-0.6B,L=28). (a)Per-layerrouting
+sharpness: AttnResroutingdegradestomaxweight∼0.2indeeplayers,whileDeltaBlockmaintains
+sharprouting(∼0.6). (b)Routingquality: DeltaBlockachieves1.8×higheraveragemaxweight
+(0.62vs.0.35). (c)Trainingloss: DeltaBlock(green)consistentlyoutperformsAttnRes(red).
+Thisraisesacriticalyetunderexploreddesignquestion: whatlayer-wisesourcesshouldberouted
+tothecurrentlayer? Weobservethatthechangeeachlayerintroducesisfarmoreinformativethan
+thecumulativestates. Thedeltav =h −h captureswhataspecificsublayercontributed,not
+i i+1 i
+wherethemodelhasbeen. Adjacentdeltasarenaturallydiversebecausedeltaoutputsservedifferent
+functionsandoperateindifferentsubspaces[Elhageetal.,2021],whilecumulativestatesconverge
+tonear-linearrelationshipsacrosslayers[Razzhigaevetal.,2024].
+WeproposeDeltaAttentionResiduals,whichrouteoverthesedeltasinsteadofcumulativestates.
+Thesameprincipleappliesattwogranularities: per-sublayerdeltas(eachattentionorMLPoutput
+individually)andblock-leveldeltas(theaccumulatedchangeoveragroupoflayers). Deltarouting
+usesanadditiveformulation(h=h˜+ (cid:80) α v ). Thisenablessharp,selectivecross-layershortcuts
+i i
+withmaxsoftmaxweightincreasedto∼0.6(Figure1a)andtheadditiveformulationpreservesthe
+residualstreamandenablesfinetuningofpretrainedmodelswithzeroinitializationdisruption.
+Ourcontributionsare:
+1. WeidentifytheroutingcollapseprobleminAttentionResiduals: sourceredundancycauses
+routing sharpness to degrade to max weight ∼0.2 in deep layers, rendering the mechanism
+near-uniform(§2.2).
+2. WeproposeDeltaAttentionResiduals,whichrouteoverdeltas(v =h −h )insteadof
+i i+1 i
+cumulativestates,maintainingsharprouting(maxweight∼0.6)andconsistentlyimproving
+overbothbaselineandAttnResfrom220Mto7.6BparametersQwen-basedmodel,(§3).
+3. We show that delta routing’s additive formulation enables the easy conversion of existing
+pretrainedtransformersintoDeltaAttentionResidualsviafine-tuning. Fine-tunedDeltaBlock
+outperformstheirpretrainedtransformercheckpointson8downstreambenchmarks(§3.5).
+2 Method: DeltaAttentionResiduals
+2.1 Preliminaries: AttentionResiduals
+A Pre-Norm transformer [Vaswani et al., 2017, Xiong et al., 2020] updates the hidden state as
+h =h +v ,wherev :=f (h )isdefinedastheoutputofsublayeri—hereasublayercanbe
+i+1 i i i i i
+eitheranattentionorMLPlayer. Equivalently,v =h −h alsomeasuresthechangeintroduced
+i i+1 i
+atdepthi. Standardresidualsaccumulateallsublayeroutputswithfixedunitcoefficients. Attention
+Residuals[Kimi,2025]replacethiswithalearnedweightedsum:
+hˆ = (cid:88) l−1 α ·s , α = exp(w l ⊤RMSNorm(s i )) (1)
+l i→l i i→l (cid:80) exp(w⊤RMSNorm(s ))
+i=0 j l j
+wheres arethesourcerepresentationsfromprecedinglayersi∈[0,l),w ∈Rdisalearnedquery
+i l
+(zero-initialized),andhˆ feedsintothenextsublayer. Acriticalquestionarises: whatshoulds be?
+l i
+2.2 TheSourceRedundancyProblem
+Weconsidertwosourcerepresentationsfors inEq.1:
+i
+2
+Output Output Output
+ww
+ww αα αα
+MMLLPP MMLLPP MMLLPP
+www
+resi. ww αα resi. ααα
+Delta
+AAtttteennttiioonn AAtttteennttiioonn AAtttteennttiioonn
+www
+resi. ww αα resi. ααα
+MMLLPP MMLLPP MMLLPP Delta
+www
+resi. ww αα resi. ααα
+AAtttteennttiioonn AAtttteennttiioonn AAtttteennttiioonn Delta
+www
+resi. ww αα resi. ααα
+EEmmbbeeddddiinngg EEmmbbeeddddiinngg EEmmbbeeddddiinngg
+(a) Standard Residuals (b) Full Attention Residuals (c) Proposed Delta Attention Residuals
+Figure2: Architecturecomparison. (a)StandardResiduals: uniformadditiveaccumulationwith
+fixedunitcoefficients. (b)AttentionResiduals[Kimi,2025]: learnedsoftmaxattention(weightsw,
+aggregationa)overcumulativehiddenstates,butsourceredundancydegradesroutingtomaxweight
+∼0.2indeeplayers. (c)DeltaAttentionResiduals(ours): attendsoverper-sublayerdeltaoutputs,
+maintainingsharprouting(maxweight∼0.6)viaadditiverouting. CompatiblewithMLPlayers.
+Cumulativesources. s =h =h +
+(cid:80)i
+v —thefullhiddenstateaftersublayeri. Sinceeach
+i i 0 j=1 j
+h isarunningsum,adjacentstatesshareanincreasinglylargecommonprefixasdepthgrows,sothe
+i
+softmaxlogitsw⊤RMSNorm(h )≈w⊤RMSNorm(h )andtheroutingdistributionapproaches
+i i+1
+uniform. Empirically,atQwen3-0.6Bscale(L=28),themaxsoftmaxweightdropsto∼0.2indeep
+layers(Figure1a),renderingthemechanismnear-uniform.
+Delta sources. s = v —the per-sublayer output defined in §2. At the finest granularity, each
+i i
+attentionoutputandeachMLPoutputisaseparatesource(DeltaAttnRes,2LsourcesforLlayers).
+AdjacentdeltasarestructurallydiversebecauseattentionandMLPoutputsoccupydifferentsubspaces,
+and outputs from different depths capture different abstraction levels. This naturally coarsens to
+block-levelgrouping: ablockdelta∆ =h −h aggregatesmultiplesublayeroutputsintoone
+b b+1 b
+source(DeltaBlock,B+1sourcesforBblocks),tradinggranularityforefficiency. SeeAppendixC
+foradetailedschematicoftheblockvariant.
+2.3 DeltaAttentionResiduals
+Delta Attention Residuals use additive routing: rather than replacing the residual stream with a
+weightedcombinationofcumulativestates,weaddselecteddeltainformation:
+hˆ =h˜ + (cid:88) α ·v (2)
+l l i→l i
+i
+where v are per-sublayer outputs, h˜ is the current residual stream, and α =
+i l i→l
+softmax(w⊤RMSNorm(v )). Thisformulationhasthreeadvantages:
+l i
+1. Residualpreservation.Theresidualstreamh˜ ispreservedbydefault;routingaddsinformation
+l
+ratherthanreplacingit.
+2. Noinformationlossatblockboundaries. Incumulative-stateAttnRes,onlythestatesatblock
+boundariesareretainedasroutingsources—intermediatesublayercontributionswithineach
+blockarecollapsedintoasinglesumandbecomeindividuallyinaccessible. Deltaroutingretains
+3
+1 def depth_route(sources: list[Tensor], residual: Tensor,
+2 proj: Linear, norm: RMSNorm) -> Tensor:
+3 """Softmax attention over depth sources, added to residual."""
+4 V = torch.stack(sources) # [N, B, T, D]
+5 K = norm(V)
+6 logits = einsum(’d, n b t d -> n b t’, proj.weight.squeeze(), K)
+7 return residual + einsum(’n b t, n b t d -> b t d’, logits.softmax(0), V)
+8
+9 def forward(self, deltas, hidden_states):
+10 # --- Attention sublayer ---
+11 h = depth_route(deltas, hidden_states, self.attn_proj, self.attn_norm)
+12 attn_out = self.attn(norm(h))
+13 hidden_states = hidden_states + attn_out
+14
+15 if self.mode == "Delta Block":
+16 if not deltas: # first layer: store embed
+17 deltas.append(hidden_states - attn_out)
+18 deltas.append(hidden_states - deltas[-1]) # store block delta
+19 elif self.mode == "Delta AttnRes":
+20 deltas.append(attn_out) # store attention delta
+21
+22 # --- MLP sublayer ---
+23 h = depth_route(deltas, hidden_states, self.mlp_proj, self.mlp_norm)
+24 mlp_out = self.mlp(norm(h))
+25 hidden_states = hidden_states + mlp_out
+26
+27 if self.mode == "Delta AttnRes":
+28 deltas.append(mlp_out) # store MLP delta
+29
+30 return deltas, hidden_states
+Figure3: DeltaAttentionResidualspseudocode. depth_routecomputesadditivesoftmaxrouting
+overdeltasources. DeltaBlockstorestheembeddingonfirstcallandappendsblockdeltas(change
+sincelastsource);DeltaAttnResappendsallsublayeroutputsdirectly.
+everysublayer’scontributionasadistinctsource,ensuringthatnointermediatecomputationis
+losttoaggregation.
+3. Safe initialization. At initialization (w = 0), all input logits are zero and softmax pro-
+l
+(cid:80)
+ducesuniformweights,sotheroutingoutput α v isaboundedperturbation. Thismakes
+i i
+depth_route reduce to the identity map on h˜ , enabling disruption-free fine-tuning of pre-
+l
+trainedmodels(§3.5).
+Figure3showsthecompleteimplementation;ComparisionbetweenwiththeoriginalAttnRescanbe
+goundAppendixB.
+3 Experiments
+3.1 ExperimentalSetup
+WetrainQwen3-architecture[Qwen,2025]modelsfromscratchonFineWeb-Edu[Penedoetal.,
+2024]:
+• Scales:220M(d=768,L=12),533M(d=1024,L=24),1044M(d=1280,L=36),plusstandard
+Qwen3-0.6B(d=1024,L=28)andQwen3-8B(d=4096,L=36)configurations
+• Training:AdamW[LoshchilovandHutter,2019](β =0.9,β =0.95,wd=0.1),cosineLRwith
+1 2
+500-stepwarmup,lr6×10−4(220M–1044M)or3×10−4(8B)
+• Budget: 10Ksteps,effectivebatchsize32(220M–1044M)or64(0.6B,8B),sequencelength
+1024(220M–1044M)or2048(0.6B,8B)
+• Hardware: 8×NVIDIAH10080GB,BF16mixedprecision,torch.compile
+4
+Table1: Resultsacrossthreemodelscales(10Ksteps,FineWeb-Edu). Allmethodsshareidentical
+architecture,data,andhyperparametersperscale;onlythedepth-mixingmechanismdiffers. Bestper
+scaleinbold. Tok/smeasuredon8×H100(BF16,torch.compile);Memispeakper-deviceGPU
+memoryduringtraining(batchsize4perGPU,seqlen1024).
+Scale Method TrainLoss↓ ValLoss↓ ValPPL↓ Tok/s↑ Mem(GB)
+Baseline 3.613 3.656 38.71 289k 5.6
+220M AttnRes 3.586 3.622 37.39 294k 6.2
+d=768 FullAttnRes 3.577 3.619 37.30 285k 6.8
+L=12 DeltaBlock 3.577 3.613 37.08 306k 5.9
+DeltaAttnRes 3.563 3.606 36.83 246k 7.5
+Baseline 3.428 3.466 32.00 243k 13.9
+533M AttnRes 3.423 3.458 31.75 174k 17.5
+d=1024 FullAttnRes 3.422 3.456 31.68 103k 24.8
+L=24 DeltaBlock 3.405 3.439 31.16 198k 16.1
+DeltaAttnRes 3.401 3.436 31.05 80k 33.6
+Baseline 3.360 3.391 29.70 108k 22.5
+1044M AttnRes 3.428 3.458 31.76 71k 31.6
+d=1280 FullAttnRes 3.474 3.508 33.36 49k 52.0
+L=36 DeltaBlock 3.338 3.374 29.19 86k 28.4
+DeltaAttnRes 3.339 3.372 29.13 34k 77.7
+Allmodelsarecompiledwithtorch.compile(defaultmode)beforeDDPwrapping,andtrained
+with use_cache=False to avoid unnecessary KV cache allocation during training. Throughput
+(Tok/s) is measured as total tokens across all GPUs per wall-clock second at steady state. Peak
+memory (Mem) is the per-device torch.cuda.max_memory_allocated during training (batch
+size4perGPU,seqlen1024).
+We evaluate five configurations: Baseline (standard residual), AttnRes (cumulative block-level
+sourceswithreplacementrouting,followingKimi[2025]),FullAttnRes(AttnReswithN=L,i.e.
+each layer as its own block), Delta AttnRes (per-sublayer delta sources with additive routing),
+andDeltaBlock(deltasourceswithblock-levelgroupingandadditiverouting). Sincetheoriginal
+Attention Residuals implementation is not publicly available, AttnRes and Full AttnRes are our
+faithfulreimplementationbasedonthedescriptioninKimi[2025](seeAppendixBfordetails). All
+AttnResvariantsusezero-initializedqueriesandidenticalhyperparametersperscale.
+3.2 From-ScratchTrainingResults
+Deltamethodsconsistentlylead. DeltaAttnResachievesthebestvalidationPPLatallthreescales:
+36.83 at 220M, 31.05 at 533M, and 29.13 at 1044M. Delta Block closely follows (37.08, 31.16,
+29.19),trailingbylessthan0.7%ateveryscale. Bothdeltamethodsbeatbaselineatallscales,with
+thegapwideningasdepthincreases: −4.9%at220M,−3.0%at533M,and−1.9%at1044M.
+Replacementroutingdegradesatscale. AttnResandFullAttnResbothusecumulativesources
+withreplacementrouting(andperiodicresetoftheresidualstream). Atsmallscale(220M),this
+works: AttnRes(37.39)andFullAttnRes(37.30)improveoverbaseline(38.71). However,at1044M
+(L=36),AttnResdegradesto31.76(+6.9%worsethanbaseline’s29.70),andFullAttnResdegrades
+evenfurtherto33.36(+12.3%). Thedegradationworsenswithmorefrequentreset—FullAttnRes
+resetseverylayerwhileAttnResresetsevery4layers—confirmingthatperiodicresetcompounds
+informationlossatdeeperscales(§4).
+Whydeltaroutingavoidsdegradation. DeltaBlockandDeltaAttnResdifferfromBlock/Full
+AttnResintwoways: (1)sourcesaredeltas(v = h −h )ratherthancumulativestates, and
+i i+1 i
+(2)routingisadditive(h=h˜+ (cid:80) α v )ratherthanreplacement(h= (cid:80) α s ),whicheliminates
+i i i i
+theneedforreset. Thisrealizesallthreeadvantagesof§2: theresidualstreamisalwayspreserved,
+everysublayer’scontributionremainsindividuallyaccessible,andinitializationissafe. At1044M,
+thisconvertsamethodthatdegrades(+6.9%)intoonethatimproves(−1.7%).
+5
+DeltaBlockaspracticaldefault. Per-sublayerDeltaAttnResachievesthebestPPLbutstores
+2Lsources,incurring69%throughputreductionand3.5×memoryoverheadat1044M(34ktok/s,
+77.7GBvs.baseline’s108k, 22.5GB).DeltaBlockamortizesthiscostviablock-levelgrouping:
+at 1044M it runs at 86k tok/s with 28.4GB (20% throughput overhead, 26% memory overhead),
+whilematchingDeltaAttnResquality(29.19vs.29.13,<0.2%gap). ThismakesDeltaBlockthe
+recommendedconfigurationfortrainingatscale.
+3.3 ScalingFrom-ScratchTraining
+TheresultsinTable1usecustommodelconfigurations. Wefirstverifythatthesametrendsholdon
+anexistingarchitecture,thenscaleupto8Bparameters.
+Existingarchitecture: Qwen3-0.6B. WetrainfromscratchusingthestandardQwen3-0.6Barchi-
+tecture(d=1024,L=28,508Mparams)withper-layerrouting(N=L=28). DeltaBlockimproves
+overbaselineby2.4%(31.45vs.32.22PPL),whileAttnResslightlydegrades(32.38),consistent
+withthepatternatallscales. Figure4showsDeltaBlockmaintainssharprouting(maxweight∼0.6)
+throughoutdepthwhileAttnRescollapsesto∼0.2indeeplayers.
+Table2: From-scratchtrainingatQwen3-0.6Bscale(L=28,N=28,10Ksteps,lr6×10−4).
+Method ValPPL↓ Tok/s↑ Mem(GB)
+Baseline 32.22 173k 13.8
+AttnRes(N=28) 32.38 111k 28.4
+DeltaBlock(N=28) 31.45 117k 25.2
+Figure4: RoutinganalysisatQwen3-0.6Bscale(L=28,N=28). (a)DeltaBlockmaintainssharp
+routing (max weight ∼0.6–1.0) while AttnRes degrades to ∼0.2 in deep layers. (b) Delta Block
+achieves1.8×higheraveragemaxweight(0.62vs.0.35). (c)Trainingloss: DeltaBlock(green)
+consistentlyoutperformsAttnRes(red).
+Scalingup: 8Bparameters. WenextscaletoaQwen3-8B-sizedmodel(d=4096,L=36,7.57B
+params)trainedfromscratchonFineWeb-Edufor10KstepswithFSDPandgradientcheckpointing
+on8×H100(lr3×10−4,seqlen2048,effectivebatch64).
+Table3: Scalingto8B(10Ksteps,FineWeb-Edu,seqlen2048,batch64,8×H100FSDP).Delta
+BlockachievesthebestPPLwhileAttnResdegradesbelowbaseline, consistentwiththe1044M
+trend. Tok/sandMemmeasuredon8×H100(BF16,torch.compile,gradientcheckpointing). Best
+inbold.
+Scale Method TrainLoss↓ ValLoss↓ ValPPL↓ Tok/s↑ Mem(GB)
+7.57B Baseline 2.918 2.858 17.43 21.4k 41.6
+d=4096 AttnRes 2.984 2.922 18.58 12.5k 44.0
+L=36 DeltaBlock 2.828 2.773 16.00 14.0k 42.7
+6
+Delta Block leads, AttnRes degrades. Delta Block achieves the best validation PPL (16.00),
+improving−8.2%overbaseline(17.43). AttnResdegradesto18.58(+6.6%worsethanbaseline),
+confirmingthatreplacementroutingwithcumulativesourcesfailsatscale—thesamepatternobserved
+at1044M(+6.9%,Table1).
+Practicaloverhead. DeltaBlockaddsonly589.8Kroutingparameters(0.008%of7.57B)and
+incurs modest overhead: 14.0k tok/s vs. baseline’s 21.4k (35% throughput cost) and 42.7GB vs.
+41.6GB(+3%memory). Notably,DeltaBlockisfasterthanAttnRes(14.0kvs.12.5ktok/s)anduses
+lessmemory(42.7vs.44.0GB),becauseadditiveroutingavoidsthecostlyhidden-statereplacement
+andresetoperations.
+3.4 Ablation: EffectofBlockSize
+WeablatethenumberofblocksforDeltaBlockat220M(L=12)and533M(L=24). B=4isthe
+defaultusedinTable1.
+Table4: DeltaBlockblocksizeablation(10Ksteps). Tok/son8×H100.
+Method B Sources ValPPL↓ Tok/s↑ Mem(GB)
+220M(L=12)
+Baseline — — 38.71 289k 5.6
+DeltaBlock 1 2 37.44 396k 8.7
+DeltaBlock 2 3 37.08 318k 8.8
+DeltaBlock 4 5 36.98 343k 9.1
+DeltaBlock 6 7 36.92 315k 9.3
+DeltaBlock 12 13 37.34 318k 10.2
+DeltaAttnRes — 25 36.75 212k 12.4
+533M(L=24)
+Baseline — — 32.00 243k 13.9
+DeltaBlock 2 3 31.23 217k 14.7
+DeltaBlock 4 5 31.27 160k 15.4
+DeltaBlock 6 7 31.19 194k 16.1
+DeltaBlock 12 13 31.22 171k 18.3
+DeltaBlock 24 25 31.18 137k 23.5
+DeltaAttnRes — 49 31.05 80k 33.6
+220M: sweet spot at B=4–6. Delta Block improves from B=1 (37.44) to B=6 (36.92), then
+degradesatB=12(37.34). Fullper-sublayerDeltaAttnRes(36.75)achievesthebestPPLatthis
+scale.
+533M:robusttoblocksize. At533M,DeltaBlockPPLisremarkablystable(31.18–31.27)across
+all block sizes from B=2 to B=24, suggesting that even a few delta sources capture sufficient
+cross-layerinformationatlargerscale.
+DeltaBlockaspracticaldefault. DeltaAttnResachievesthebestPPLatbothscalesbutincurs
+significantthroughputandmemoryoverhead(2Lsources). DeltaBlockatB=4trailsbyonly0.6%
+at220Mwhilerunningat1.6×thethroughput,makingittherecommendedconfiguration.
+3.5 Fine-TuningPretrainedModelsintoDeltaAttentionResiduals
+BuildingonexistingcheckpointsiscommonpracticeinmodernLLMdevelopment,aspretraining
+costsgrowprohibitivelywithscale. Priorwork[Pagliardinietal.,2024]foundthataddingcross-layer
+routingduringfine-tuningfailsbecause“themodelcommitsearlytoalosslandscapevalleythatdoes
+notusecross-layerweights.” Weevaluatewhetherdeltarouting’ssafeinitialization(§2,advantage3)
+overcomesthis.
+7
+Figure 5: Routing analysis (Qwen3-0.6B fine-tuned on FineWeb-Edu). (a) Per-layer routing
+sharpness: Delta Block maintains high max attention weight (∼0.87) throughout depth, while
+AttnResdegradesfrom0.7to0.3. (b)Averageroutingquality: DeltaBlockachieves1.8×higher
+maxweight(0.87vs.0.49). (c)Validationloss: AttnRes(blue)startshigherduetoinitialization
+disruptionandconvergesslower;DeltaBlock(green)outperformsbaseline.
+Setup. Wefine-tuneQwen3-0.6B[Qwen,2025]onFineWeb-Edu[Penedoetal.,2024]for20K
+steps(warmup500,cosinedecay,batchsize32,4×H100). FollowingLoRA[Huetal.,2022],we
+useaduallearningrateforDeltaBlock: 5×10−5 forthepretrainedtransformerand5×10−3 for
+theAttnResparameters,allowingthelightweightroutingmoduletotrainfasterwhilepreserving
+pretrainedknowledge. BaselineandAttnResuseauniformlrof5×10−5. Wecompare: (1)Baseline
+(standard fine-tuning), (2) AttnRes [Kimi, 2025], and (3) Delta Block + Null Source (ours). We
+evaluateon8standardbenchmarksusinglm-evaluation-harness[Gaoetal.,2024](0-shot): Hel-
+laSwag[Zellersetal.,2019],ARC-Easy/Challenge[Clarketal.,2018],PIQA[Bisketal.,2020],
+WinoGrande[Sakaguchietal.,2020],BoolQ[Clarketal.,2019],MMLU[Hendrycksetal.,2021],
+andLAMBADA[Papernoetal.,2016].
+Table5: Fine-tuningQwen3-0.6BonFineWeb-Edu. Downstreamaccuracy(0-shot)on8bench-
+marks. DeltaBlockoutperformsbaseline(55.6%vs.55.0%),whileAttnReslagsbehind(54.1%).
+Method Hella ARC-E ARC-C PIQA Wino BoolQ MMLU LAMB Avg
+Pretrained 47.3 56.2 33.9 67.4 55.9 63.8 40.3 40.0 50.6
+BaselineFT 50.1 61.5 36.7 69.2 57.0 70.3 45.2 50.0 55.0
+AttnRes 49.4 60.2 35.3 68.8 57.9 70.3 42.5 48.4 54.1
+DeltaBlock 50.0 66.5 37.3 69.4 56.7 70.3 44.8 49.8 55.6
+Results. Delta Block achieves 55.6% average accuracy, outperforming baseline (55.0%) and
+AttnRes(54.1%),withthehighestARC-Easy(66.5)andARC-Challenge(37.3)scores.
+Initializationmatters. Figure5revealsastarkdifferenceintrainingdynamics. AttnRessuffers
+(cid:80)
+alargelossspikeatinitialization(from2.8to3.96)becauseitsreplacementrouting(h= α h )
+i i
+returnstheuniformaverageofallcumulativestatesatinit—asignalfundamentallydifferentfrom
+the pretrained residual. The model requires ∼2000 steps to recover, and the downstream gap
+persists. Incontrast,DeltaBlockstartssmoothlyfromthepretrainedloss. Itsadditiveformulation
+(h=h˜+ (cid:80) α v )preservestheresidualstreambyconstruction,andthezero-initializednullsource
+i i
+providesanexplicitidentitypath(h = h˜ +0),eliminatingdisruptionentirely. Thisconfirmsthat
+thesafeinitializationproperty(§2,advantage3)isessentialforpracticaldeploymentatopexisting
+checkpoints.
+4 Analysis
+4.1 RoutingCollapse: WhyCumulativeStatesFail
+Therootcauseisstructural: eachcumulativestateh =h +
+(cid:80)i
+v isarunningsumthatshares
+i 0 j=1 j
+mostofitscomponentswithitsneighbors. AtQwen3-0.6Bscale(L=28)after10Ksteps,AttnRes
+8
+Figure6: Learnedroutingweights(Qwen3-0.6B,fromscratch). Left: AttnRes[Kimi,2025]with
+cumulativestatesandreplacementrouting—attentionbecomesdiffuseindeeplayersduetosource
+redundancy. Right: DeltaBlock(ours)withdeltasourcesandadditiverouting—sharpcross-layer
+shortcuts,withdeeplayersselectivelyconcentratingonspecificearlyoutputs.
+routing sharpness (max softmax weight) drops from ∼1.0 in early layers to ∼0.2 in deep layers
+(Figure1a),meaningthemodeldistributesattentionnearlyuniformlyacrossallsourcesandcannot
+selectivelyaccessearlierrepresentations. Incontrast,DeltaBlockmaintainssharprouting(∼0.6)
+throughoutdepth,withaveragemaxweight1.8×higherthanAttnRes(0.62vs.0.35; Figure1b).
+DeltasourcesavoidredundancybecauseattentionandMLPoutputsoccupydifferentsubspacesand
+capturedifferentabstractionlevels.
+4.2 WhyAdditiveRoutingPreservesInformation
+Thissectionempiricallyvalidatesthethreeadvantagesidentifiedin§2. AttnResreplacesthehidden
+(cid:80)
+state(h= α s )andresetsatblockboundaries,violatingadvantages1and2: theresidualstream
+i i
+isdiscarded,andintermediatesublayercontributionswithineachblockarecollapsedintoasingle
+sum. Theinformationlosscompoundswithdepth: at1044M,AttnResdegradesto31.76PPLversus
+the29.70baseline(+6.9%),andFullAttnRes(N=L,reseteverylayer)degradesevenfurtherto
+33.36 (+12.3%). In contrast, Delta Block (29.19) and Delta AttnRes (29.13) both improve over
+baseline,confirmingthatadditiveroutingwithdeltasourcesavoidsallthreefailuremodes.
+4.3 LearnedRoutingPatterns
+Figure 6 visualizes the learned routing weights for both methods at Qwen3-0.6B scale (L=28).
+AttnReswithcumulativestatesandreplacementrouting(left)showsattentionbecomingincreasingly
+diffuseindeeperlayers,confirmingtheroutingcollapsepredictedbythesourceredundancyanalysis
+(§4.1). DeltaBlockwithdeltasourcesandadditiverouting(right)producesqualitativelydifferent
+patterns:
+• Sharprouting:deeplayersconcentrate>50%weightonspecificearlyoutputs,comparedtothe
+near-uniformdistributionofcumulative-staterouting. Thisconfirmsthatdeltasourcesmaintain
+discriminabilitythroughoutdepth.
+• Embeddingprominence: thetokenembeddingreceivesdisproportionateattentionfromdeep
+layers, consistent with progressive dilution of embedding signal under standard residuals.
+Additive routing allows the model to selectively re-inject this signal without disrupting the
+residualstream.
+9
+5 Conclusion
+We have presented Delta Attention Residuals, which replace cumulative hidden states with per-
+sublayerdeltasasroutingsourcesforcross-layerconnectivity. Thecoreinsightissimple: routing
+overwhatchanged(v =h −h )ratherthanwhataccumulatedyields3×sharperrouting(max
+i i+1 i
+weight∼0.6vs.∼0.2indeeplayers). Combinedwithadditiveroutingthatpreservestheresidual
+stream,Deltamethodsachievethebestperplexityfrom220Mcustomconfigurationsthroughstandard
+Qwen3-0.6BandQwen3-8Barchitectureswiththeblock-levelvariantDeltaBlockmatchingper-
+sublayerqualityatloweroverhead. At7.6Bparameters,DeltaBlockimproves−8.2%overbaseline
+whileaddingonly0.008%parametersandrunningfasterthanAttnRes. Theapproachisorthogonal
+tootherarchitecturalimprovementsandenablesdisruption-freefine-tuningofexistingcheckpoints.
+References
+ThomasBachlechner,BodhisattwaPrasadMajumder,HuanruHenryMao,GarrisonWCottrell,and
+JulianMcAuley. Rezeroisallyouneed: Fastconvergenceatlargedepth. UAI,2021.
+YonatanBisk, RowanZellers, JianfengGao, YejinChoi, etal. PIQA:Reasoningaboutphysical
+intuitioninnaturallanguage. InAAAI,2020.
+Yung-SungChuang,YujiaXie,HongyinLuo,YoonKim,JamesGlass,andPengchengHe. DoLa:
+Decodingbycontrastinglayersimprovesfactualityinlargelanguagemodels. InICLR,2024.
+ChristopherClark,KentonLee,Ming-WeiChang,TomKwiatkowski,MichaelCollins,andKristina
+Toutanova. BoolQ:Exploringthesurprisingdifficultyofnaturalyes/noquestions. InNAACL,
+2019.
+PeterClark,IsaacCowhey,OrenEtzioni,TusharKhot,AshishSabharwal,CarissaSchoenick,and
+OyvindTafjord.Thinkyouhavesolvedquestionanswering?tryARC,theAI2reasoningchallenge.
+arXivpreprintarXiv:1803.05457,2018.
+DeepSeek. Manifold-constrainedhyper-connections. arXivpreprintarXiv:2512.24880,2025.
+NelsonElhage,NeelNanda,CatherineOlsson,etal. Amathematicalframeworkfortransformer
+circuits. TransformerCircuitsThread,2021.
+WilliamFedus,BarretZoph,andNoamShazeer. Switchtransformers: Scalingtotrillionparameter
+modelswithsimpleandefficientsparsity. JMLR,2022.
+LeoGao,JonathanTow,BaberAbbasi,StellaBiderman,SidBlack,AnthonyDiPofi,CharlesFoster,
+LaurenceGolding,JeffreyHsu,AlainLeNoac’h,HaonanLi,KyleMcDonell,NiklasMuennighoff,
+ChrisOciepa,JasonPhang,LariaReynolds,HaileySchoelkopf,AviyaSkowron,LintangSutawika,
+Eric Tang, Anish Thite, Ben Wang, Kevin Wang, and Andy Zou. A framework for few-shot
+languagemodelevaluation,2024. URLhttps://zenodo.org/records/10256836.
+Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. Deep residual learning for image
+recognition. InCVPR,2016.
+RuiningHe, AnirudhRavula, KarolKanber, andJoshuaAinslie. Realformer: Transformerlikes
+residualattention. ACLFindings,2021.
+DanHendrycks,CollinBurns,StevenBasart,AndyZou,MantasMazeika,DawnSong,andJacob
+Steinhardt. Measuringmassivemultitasklanguageunderstanding. ICLR,2021.
+EdwardJHu,YelongShen,PhillipWallis,ZeyuanAllen-Zhu,YuanzhiLi,SheanWang,LuWang,
+andWeizhuChen. LoRA:Low-rankadaptationoflargelanguagemodels. ICLR,2022.
+GaoHuang,ZhuangLiu,LaurensVanDerMaaten,andKilianQWeinberger. Denselyconnected
+convolutionalnetworks. InCVPR,2017.
+Kimi. Attentionresiduals. arXivpreprintarXiv:2603.15031,2025.
+10
+XiangLisaLi,AriHoltzman,DanielFried,PercyLiang,JasonEisner,TatsunoriHashimoto,Luke
+Zettlemoyer,andMikeLewis. Contrastivedecoding: Open-endedtextgenerationasoptimization.
+InACL,2023.
+AlisaLiu,XiaochuangHan,YizhongWang,YuliaTsvetkov,YejinChoi,andNoahASmith. Tuning
+languagemodelsbyproxy. InCOLM,2024.
+IlyaLoshchilovandFrankHutter. Decoupledweightdecayregularization. ICLR,2019.
+MatteoPagliardini,PierreAblin,andMartinJaggi. Denseformer: Enhancinginformationflowin
+transformersviadepthweightedaverage. arXivpreprintarXiv:2402.02622,2024.
+DenisPaperno,GermánKruszewski,AngelikiDutta,RaffaellaBernardi,GemmaBoleda,Raquel
+Fernández, and Marco Baroni. The LAMBADA dataset: Word prediction requiring a broad
+discoursecontext. InACL,2016.
+GuilhermePenedo,HynekKydlícˇek,etal. Thefinewebdatasets: Decantingthewebforthefinest
+textdataatscale. arXivpreprintarXiv:2406.17557,2024.
+Qwen. Qwen3technicalreport. arXivpreprintarXiv:2505.09388,2025.
+DavidRaposo,SamRitter,BlakeRichards,TimothyLillicrap,PeterConwayHumphreys,andAdam
+Santoro. Mixture-of-depths: Dynamically allocating compute in transformer-based language
+models. arXivpreprintarXiv:2404.02258,2024.
+AntonRazzhigaev, MatveyMikhalchuk, ElizavetaGoncharova, IvanGerasimov, IvanOseledets,
+DenisKuznetsov,andAlexanderKorotin. Yourtransformerissecretlylinear. InACL,2024.
+Keisuke Sakaguchi, Ronan Le Bras, Chandra Bhagavatula, and Yejin Choi. WinoGrande: An
+adversarialwinogradschemachallengeatscale. InAAAI,2020.
+NoamShazeer. GLUvariantsimprovetransformer. arXivpreprintarXiv:2002.05202,2020.
+NoamShazeer,AzaliaMirhoseini,KrzysztofMaarten,QuocVLe,JeffDean,andGeoffreyEHinton.
+Outrageouslylargeneuralnetworks: Thesparsely-gatedmixture-of-expertslayer. ICLR,2017.
+RupeshKSrivastava,KlausGreff,andJürgenSchmidhuber. Trainingverydeepnetworks. NeurIPS,
+2015.
+AshishVaswani,NoamShazeer,NikiParmar,JakobUszkoreit,LlionJones,AidanNGomez,Łukasz
+Kaiser,andIlliaPolosukhin. Attentionisallyouneed. InNeurIPS,2017.
+AndreasVeit,MichaelJWilber,andSergeBelongie. Residualnetworksbehavelikeensemblesof
+relativelyshallownetworks. NeurIPS,2016.
+HongyuWang,ShumingMa,LiDong,ShaohanHuang,DongdongZhang,andFuruWei. Deepnet:
+Scalingtransformersto1,000layers. arXivpreprintarXiv:2203.00555,2022.
+Da Xiao, Qingye Meng, Shengping Li, and Xingyuan Yuan. Muddformer: Breaking residual
+bottlenecksintransformersviamultiwaydynamicdenseconnections. ICML,2025.
+Ruibin Xiong, Yunchang Yang, Di He, Kai Zheng, Shuxin Zheng, Chen Xing, Huishuai Zhang,
+YanyanLan,LiweiWang,andTie-YanLiu. Onlayernormalizationinthetransformerarchitecture.
+ICML,2020.
+RowanZellers,AriHoltzman,YonatanBisk,AliFarhadi,andYejinChoi. Hellaswag: Canamachine
+reallyfinishyoursentence? InACL,2019.
+YifanZhang,YifengLiu,MengdiWang,andQuanquanGu. Deepdeltalearning. arXivpreprint
+arXiv:2601.00417,2026a.
+Yifan Zhang, Yifeng Liu, Mengdi Wang, and Quanquan Gu. Residual stream duality in modern
+transformerarchitectures. arXivpreprintarXiv:2603.16039,2026b.
+DefaZhuetal. Hyper-connections. arXivpreprintarXiv:2409.19606,2024.
+11
+A RelatedWork
+Cross-Layer Connections. DenseNet [Huang et al., 2017] concatenates all previous outputs
+(O(L2d) memory). DenseFormer [Pagliardini et al., 2024] uses static Depth-Weighted Aver-
+age weights. Hyper-Connections [Zhu et al., 2024] widen the residual stream to n channels;
+mHC[DeepSeek,2025]constrainsmixingtothedoublystochasticmanifold. MUDDFormer[Xiao
+etal.,2025]generatesdynamic,per-streamweightsviaMLPs,showing2.8Bmatches6.9BPythia.
+Realformer[Heetal.,2021]passesresidualattentionscoresacrosslayersviaadditiveskipconnec-
+tionsontheattentionlogitmatrix. AttentionResiduals[Kimi,2025]usesoftmaxattentionoverdepth,
+scalingto16B.Weidentifysourcerepresentationasanoverlookeddesignchoiceinthisspace.
+ResidualStreamAnalysis. Veitetal.[2016]viewresidualnetworksasensembles;Elhageetal.
+[2021]formalizetheresidualstream. DeepNet[Wangetal.,2022]rescalesresidualconnections
+withadepth-dependentfactortostabilize1000-layertransformers. Residualstreamduality[Zhang
+etal.,2026b]showsdepthattentionisdualtosequence-axissliding-windowattention. Oursource
+redundancyanalysiscomplementstheseviews.
+Contrastive and Delta Methods. A growing body of work shows that differencing redundant
+componentsyieldssharpersignals. ContrastiveDecoding[Lietal.,2023]subtractsamateurlogits
+fromexpertlogitstoisolatescale-dependentknowledge. DoLa[Chuangetal.,2024]contrastsearly
+vs.latelayerswithinasinglemodel,revealingthatper-layerdeltascarrymoredistinctivefactual
+informationthancumulativerepresentations. Proxy-Tuning[Liuetal.,2024]transfersfine-tuning
+residualsacrossmodelscalesatdecodetime. Ourworkappliesthisdifferencingprinciplealongthe
+depthaxiswithinasingleforwardpass.
+GatingandRouting. HighwayNetworks[Srivastavaetal.,2015]introducedlearnedgatingof
+skipconnections. GLU[Shazeer,2020],ReZero[Bachlechneretal.,2021],andMoE[Shazeeretal.,
+2017,Fedusetal.,2022]routealongthewidthdimension;MixtureofDepths[Raposoetal.,2024]
+routestokensalongdepthviaper-tokentop-kdecisions. Weroutesourcerepresentationsalongdepth.
+DeepDeltaLearning[Zhangetal.,2026a]usesHouseholderreflectionsforgeometricdepthcontrol;
+weuseattention-basedselection.
+B ComparisonwithOriginalAttentionResiduals
+WereproducetheoriginalAttnRespseudocodefromKimi[2025]andanalyzethekeyimplementation
+differenceswithDeltaAttentionResiduals.
+Threekeydifferences. Table6summarizesthedesigndifferencesbetweentheoriginalAttnRes
+andourDeltavariants.
+Table6: ImplementationdifferencesbetweenAttnResandDeltaAttentionResiduals.
+Property AttnRes DeltaAttnRes DeltaBlock
+Sources cumulativeh sublayerv block∆
+i i b
+Routing replacement additive additive
+h= (cid:80) α s h=h˜+ (cid:80) α v h=h˜+ (cid:80) α ∆
+i i i i i b
+Reset yes(atboundaries) no no
+Residualstream lostatreset alwayspreserved alwayspreserved
+#Sources N blocks 2Lsublayers ∼L/Bblocks
+(1)Sources: cumulativevs.delta. AttnResstorescumulativeintra-blocksumsassources. Since
+h = h + v , adjacent cumulative sources are highly redundant, causing routing sharpness
+i+1 i i
+to degrade to max weight ∼0.2 in deep layers. Delta methods store the change at each step:
+v =h −h forper-sublayer,or∆ =h −h forblock-level. Thesearenaturallydiverse,
+i i+1 i b current prev
+maintainingsharprouting(maxweight∼0.6).
+12
+1 def block_attn_res(blocks, partial_block, proj, norm):
+2 """Replacement routing: weighted sum replaces hidden state."""
+3 V = torch.stack(blocks + [partial_block]) # [N+1, B, T, D]
+4 K = norm(V)
+5 logits = einsum(’d, n b t d -> n b t’, proj.weight.squeeze(), K)
+6 h = einsum(’n b t, n b t d -> b t d’, logits.softmax(0), V)
+7 return h # replaces hidden state
+8
+9 def forward(self, blocks, hidden_states):
+10 partial_block = hidden_states
+11 h = block_attn_res(blocks, partial_block, self.attn_res_proj, self.
+attn_res_norm)
+12
+13 # block boundary: store and reset
+14 if self.layer_number % (self.block_size // 2) == 0:
+15 blocks.append(partial_block)
+16 partial_block = None # RESET
+17
+18 attn_out = self.attn(self.attn_norm(h))
+19 partial_block = partial_block + attn_out if partial_block is not None else
+attn_out
+20
+21 h = block_attn_res(blocks, partial_block, self.mlp_res_proj, self.
+mlp_res_norm)
+22 mlp_out = self.mlp(self.mlp_norm(h))
+23 partial_block = partial_block + mlp_out
+24 return blocks, partial_block
+Figure7: OriginalAttnRes[Kimi,2025]: replacementroutingovercumulativeintra-blockstates,
+withperiodicresetatblockboundaries.
+(2)Routing: replacementvs.additive. AttnResreplacesthehiddenstatewithaweightedsum
+(cid:80)
+ofsources: h = α s . Thisdiscardsthecurrentresidualstreamentirely. Deltamethodsaddto
+i i
+theresidualstream: h=h˜+ (cid:80) α v . Theresidualisalwayspreserved,andatinitialization(zero
+i i
+queries,uniformweights),theperturbationisbounded.
+(3)Reset. AttnResresetspartial_blocktozeroateachblockboundary,forcingthemodelto
+reconstruct the hidden state from routing alone. This loses accumulated information and makes
+the model fragile—especially when N=L (each layer resets), where frequent resets compound
+informationloss.Deltamethodsneverreset:hidden_statesaccumulatesnaturallythroughstandard
+residualaddition,androutingsimplyaugmentsit.
+C DeltaBlock: Block-LevelVariant
+TheDeltaBlockvariantcoarsenstheper-sublayersourcesofDeltaAttnRestoblock-levelgranularity.
+RatherthantreatingeachattentionoutputandeachMLPoutputasaseparatesource(2Lsourcesfor
+Llayers),DeltaBlockaggregatesconsecutivesublayeroutputswithinacontiguousspanofB layers
+intoasingleblockdelta
+(cid:88)
+∆ =h −h = v , (3)
+b (b+1)B bB i
+i∈blockb
+yieldingB+1routingsourcesforamodelpartitionedintoB blocks(plusthecurrentpartialblock).
+Routingremainsadditive: hˆ =h˜ + (cid:80) α ·∆ ,withα =softmax(w⊤RMSNorm(∆ )).
+l l b b→l b b→l l b
+Properties. Delta Block inherits the three advantages of Delta AttnRes (residual preservation,
+noinformationlossatblockboundariesduetoadditiveroutingratherthanreplacement,andsafe
+zero-init),andaddstwoblock-levelbenefits:
+• Sourcecount∝B. Thenumberofroutingsourcesscaleswiththenumberofblocksratherthan
+sublayers,reducingtheper-layerroutingcostbyafactorof∼2B.
+13
+Output Output
+αα
+www
+ααα
+www
+MMLLPP ααα MMLLPP
+www
+resi. resi. ααα
+www
+AAtttteennttiioonn ααα AAtttteennttiioonn
+www
+resi. resi.
+ααα
+www
+MMLLPP ααα MMLLPP
+www
+resi. resi. ααα
+www
+AAtttteennttiioonn ααα AAtttteennttiioonn
+Delta
+BBlloocckk nn--11 BBlloocckk nn--11
+Delta
+BBlloocckk nn--22 BBlloocckk nn--22
+EEmmbbeeddddiinngg EEmmbbeeddddiinngg
+(a) Block Attention Residuals (b) Proposed Delta Block Attention Residuals
+Figure8: DeltaBlockschematic. SublayeroutputswithineachblockofBlayersaresummedintoa
+singleblockdelta∆ ,whichbecomesoneroutingsource. Thecurrent(in-progress)blockcontributes
+b
+apartialdelta. Comparedtoper-sublayerDeltaAttnRes,DeltaBlockreducesthenumberofsources
+from2Lto∼L/B,tradingroutinggranularityforcomputeandmemoryefficiency. Theresidual
+streamh˜ ispreservedthroughout;routingadditivelyaugmentsit.
+l
+• Coarserbutstilldiverse. Becauseeach∆ sumsstructurallyheterogeneousattentionandMLP
+b
+outputsacrossBlayers,blockdeltasremainmutuallydistinctandroutingstayssharp—unlike
+cumulativeblocksourcesintheoriginalAttnRes,whichsuffersourceredundancyatdepth.
+WhentopreferDeltaBlock. Per-sublayerDeltaAttnResoffersmaximumroutingexpressivityand
+ispreferredatsmall-to-mediumscales(§3). DeltaBlocktradesasmallamountofroutinggranularity
+forloweroverheadandispreferredwhensource-countoverheaddominates,e.g.,atverydeepmodels
+orundertightmemorybudgets. Empirically,DeltaBlockmatchesDeltaAttnResonmostevaluations
+whileusingfewerroutingsources.
+14
+NeurIPSPaperChecklist
+1. Claims
+Question: Dothemainclaimsmadeintheabstractandintroductionaccuratelyreflectthe
+paper’scontributionsandscope?
+Answer: [Yes]
+Justification: Theabstractandintroductionclaimthreecontributions(routingcollapseiden-
+tification,DeltaAttentionResiduals,fine-tuningcapability),allsupportedbyexperimentsin
+§3–3.5.
+Guidelines:
+• Theanswer[N/A]meansthattheabstractandintroductiondonotincludetheclaims
+madeinthepaper.
+• Theabstractand/orintroductionshouldclearlystatetheclaimsmade,includingthe
+contributionsmadeinthepaperandimportantassumptionsandlimitations. A[No]or
+[N/A]answertothisquestionwillnotbeperceivedwellbythereviewers.
+• Theclaimsmadeshouldmatchtheoreticalandexperimentalresults,andreflecthow
+muchtheresultscanbeexpectedtogeneralizetoothersettings.
+• Itisfinetoincludeaspirationalgoalsasmotivationaslongasitisclearthatthesegoals
+arenotattainedbythepaper.
+2. Limitations
+Question: Doesthepaperdiscussthelimitationsoftheworkperformedbytheauthors?
+Answer: [Yes]
+Justification: Controlledcomparisonsareconductedatscalesupto7.6Bparameters(§3.3),
+butthe8BexperimentevaluatesonlyBaseline,AttnRes,andDeltaBlock(notFullAttnRes
+orDeltaAttnResduetomemoryconstraints). Per-sublayerDeltaAttnResincurssignificant
+memory overhead at large scale (§3). Fine-tuning is evaluated on a single base model
+(Qwen3-0.6B).
+Guidelines:
+• Theanswer[N/A]meansthatthepaperhasnolimitationwhiletheanswer[No]means
+thatthepaperhaslimitations,butthosearenotdiscussedinthepaper.
+• Theauthorsareencouragedtocreateaseparate“Limitations”sectionintheirpaper.
+• Thepapershouldpointoutanystrongassumptionsandhowrobusttheresultsareto
+violationsoftheseassumptions(e.g.,independenceassumptions,noiselesssettings,
+modelwell-specification,asymptoticapproximationsonlyholdinglocally).Theauthors
+shouldreflectonhowtheseassumptionsmightbeviolatedinpracticeandwhatthe
+implicationswouldbe.
+• Theauthorsshouldreflectonthescopeoftheclaimsmade,e.g.,iftheapproachwas
+onlytestedonafewdatasetsorwithafewruns. Ingeneral,empiricalresultsoften
+dependonimplicitassumptions,whichshouldbearticulated.
+• Theauthorsshouldreflectonthefactorsthatinfluencetheperformanceoftheapproach.
+Forexample,afacialrecognitionalgorithmmayperformpoorlywhenimageresolution
+isloworimagesaretakeninlowlighting. Oraspeech-to-textsystemmightnotbe
+usedreliablytoprovideclosedcaptionsforonlinelecturesbecauseitfailstohandle
+technicaljargon.
+• Theauthorsshoulddiscussthecomputationalefficiencyoftheproposedalgorithms
+andhowtheyscalewithdatasetsize.
+• If applicable, the authors should discuss possible limitations of their approach to
+addressproblemsofprivacyandfairness.
+• Whiletheauthorsmightfearthatcompletehonestyaboutlimitationsmightbeusedby
+reviewersasgroundsforrejection,aworseoutcomemightbethatreviewersdiscover
+limitationsthataren’tacknowledgedinthepaper. Theauthorsshouldusetheirbest
+judgmentandrecognizethatindividualactionsinfavoroftransparencyplayanimpor-
+tantroleindevelopingnormsthatpreservetheintegrityofthecommunity. Reviewers
+willbespecificallyinstructedtonotpenalizehonestyconcerninglimitations.
+15
+3. Theoryassumptionsandproofs
+Question: Foreachtheoreticalresult,doesthepaperprovidethefullsetofassumptionsand
+acomplete(andcorrect)proof?
+Answer: [Yes]
+Justification: Proposition1(§2.2)statesitsassumptionsexplicitly(running-sumstructureof
+cumulativestates)andprovidesbothaformalargumentandempiricalvalidation.
+Guidelines:
+• Theanswer[N/A]meansthatthepaperdoesnotincludetheoreticalresults.
+• Allthetheorems, formulas, andproofsinthepapershouldbenumberedandcross-
+referenced.
+• Allassumptionsshouldbeclearlystatedorreferencedinthestatementofanytheorems.
+• Theproofscaneitherappearinthemainpaperorthesupplementalmaterial, butif
+theyappearinthesupplementalmaterial,theauthorsareencouragedtoprovideashort
+proofsketchtoprovideintuition.
+• Inversely,anyinformalproofprovidedinthecoreofthepapershouldbecomplemented
+byformalproofsprovidedinappendixorsupplementalmaterial.
+• TheoremsandLemmasthattheproofreliesuponshouldbeproperlyreferenced.
+4. Experimentalresultreproducibility
+Question: Doesthepaperfullydisclosealltheinformationneededtoreproducethemainex-
+perimentalresultsofthepapertotheextentthatitaffectsthemainclaimsand/orconclusions
+ofthepaper(regardlessofwhetherthecodeanddataareprovidedornot)?
+Answer: [Yes]
+Justification: §3specifiesallhyperparameters,optimizersettings,hardware,andtraining
+budget. Complete pseudocode is provided in Figure 3. Code is available at https://
+github.com/wdlctc/delta-attention-residuals-code.
+Guidelines:
+• Theanswer[N/A]meansthatthepaperdoesnotincludeexperiments.
+• Ifthepaperincludesexperiments,a[No]answertothisquestionwillnotbeperceived
+well by the reviewers: Making the paper reproducible is important, regardless of
+whetherthecodeanddataareprovidedornot.
+• Ifthecontributionisadatasetand/ormodel,theauthorsshoulddescribethestepstaken
+tomaketheirresultsreproducibleorverifiable.
+• Dependingonthecontribution,reproducibilitycanbeaccomplishedinvariousways.
+Forexample,ifthecontributionisanovelarchitecture,describingthearchitecturefully
+mightsuffice,orifthecontributionisaspecificmodelandempiricalevaluation,itmay
+benecessarytoeithermakeitpossibleforotherstoreplicatethemodelwiththesame
+dataset,orprovideaccesstothemodel. Ingeneral. releasingcodeanddataisoften
+onegoodwaytoaccomplishthis,butreproducibilitycanalsobeprovidedviadetailed
+instructionsforhowtoreplicatetheresults,accesstoahostedmodel(e.g.,inthecase
+ofalargelanguagemodel),releasingofamodelcheckpoint,orothermeansthatare
+appropriatetotheresearchperformed.
+• WhileNeurIPSdoesnotrequirereleasingcode,theconferencedoesrequireallsubmis-
+sionstoprovidesomereasonableavenueforreproducibility,whichmaydependonthe
+natureofthecontribution. Forexample
+(a) Ifthecontributionisprimarilyanewalgorithm,thepapershouldmakeitclearhow
+toreproducethatalgorithm.
+(b) Ifthecontributionisprimarilyanewmodelarchitecture,thepapershoulddescribe
+thearchitectureclearlyandfully.
+(c) Ifthecontributionisanewmodel(e.g.,alargelanguagemodel),thenthereshould
+eitherbeawaytoaccessthismodelforreproducingtheresultsorawaytoreproduce
+themodel(e.g.,withanopen-sourcedatasetorinstructionsforhowtoconstruct
+thedataset).
+16
+(d) We recognize that reproducibility may be tricky in some cases, in which case
+authorsarewelcometodescribetheparticularwaytheyprovideforreproducibility.
+Inthecaseofclosed-sourcemodels,itmaybethataccesstothemodelislimitedin
+someway(e.g.,toregisteredusers),butitshouldbepossibleforotherresearchers
+tohavesomepathtoreproducingorverifyingtheresults.
+5. Openaccesstodataandcode
+Question: Doesthepaperprovideopenaccesstothedataandcode,withsufficientinstruc-
+tionstofaithfullyreproducethemainexperimentalresults,asdescribedinsupplemental
+material?
+Answer: [Yes]
+Justification: We use the publicly available FineWeb-Edu dataset and
+Qwen3 model family. Code is available at https://github.com/wdlctc/
+delta-attention-residuals-code.
+Guidelines:
+• Theanswer[N/A]meansthatpaperdoesnotincludeexperimentsrequiringcode.
+• PleaseseetheNeurIPScodeanddatasubmissionguidelines(https://neurips.cc/
+public/guides/CodeSubmissionPolicy)formoredetails.
+• Whileweencouragethereleaseofcodeanddata,weunderstandthatthismightnot
+bepossible,so[No]isanacceptableanswer. Paperscannotberejectedsimplyfornot
+includingcode,unlessthisiscentraltothecontribution(e.g.,foranewopen-source
+benchmark).
+• Theinstructionsshouldcontaintheexactcommandandenvironmentneededtorunto
+reproducetheresults. SeetheNeurIPScodeanddatasubmissionguidelines(https:
+//neurips.cc/public/guides/CodeSubmissionPolicy)formoredetails.
+• Theauthorsshouldprovideinstructionsondataaccessandpreparation,includinghow
+toaccesstherawdata,preprocesseddata,intermediatedata,andgenerateddata,etc.
+• Theauthorsshouldprovidescriptstoreproduceallexperimentalresultsforthenew
+proposedmethodandbaselines. Ifonlyasubsetofexperimentsarereproducible,they
+shouldstatewhichonesareomittedfromthescriptandwhy.
+• Atsubmissiontime, topreserveanonymity, theauthorsshouldreleaseanonymized
+versions(ifapplicable).
+• Providingasmuchinformationaspossibleinsupplementalmaterial(appendedtothe
+paper)isrecommended,butincludingURLstodataandcodeispermitted.
+6. Experimentalsetting/details
+Question: Doesthepaperspecifyallthetrainingandtestdetails(e.g.,datasplits,hyperpa-
+rameters,howtheywerechosen,typeofoptimizer)necessarytounderstandtheresults?
+Answer: [Yes]
+Justification: §3providesoptimizer(AdamW),learningrateschedule(cosinewithwarmup),
+batchsize,sequencelength,hardware(8×H100),andtrainingsteps. Fine-tuningdetailsare
+in§3.5. Downstreamevaluationuseslm-evaluation-harnesswith0-shot.
+Guidelines:
+• Theanswer[N/A]meansthatthepaperdoesnotincludeexperiments.
+• Theexperimentalsettingshouldbepresentedinthecoreofthepapertoalevelofdetail
+thatisnecessarytoappreciatetheresultsandmakesenseofthem.
+• Thefulldetailscanbeprovidedeitherwiththecode,inappendix,orassupplemental
+material.
+7. Experimentstatisticalsignificance
+Question:Doesthepaperreporterrorbarssuitablyandcorrectlydefinedorotherappropriate
+informationaboutthestatisticalsignificanceoftheexperiments?
+Answer: [No]
+17
+Justification:Duetocomputationalcost(eachrunrequires8×H100GPUs),wereportsingle-
+runresultsfollowingstandardpracticeinlanguagemodelscalingstudies.Wemitigatethisby
+evaluatingacrossfivescales(220M,533M,1044M,Qwen3-0.6B,Qwen3-8B)andshowing
+consistenttrends.
+Guidelines:
+• Theanswer[N/A]meansthatthepaperdoesnotincludeexperiments.
+• Theauthorsshouldanswer[Yes]iftheresultsareaccompaniedbyerrorbars,confidence
+intervals,orstatisticalsignificancetests,atleastfortheexperimentsthatsupportthe
+mainclaimsofthepaper.
+• Thefactorsofvariabilitythattheerrorbarsarecapturingshouldbeclearlystated(for
+example,train/testsplit,initialization,randomdrawingofsomeparameter,oroverall
+runwithgivenexperimentalconditions).
+• Themethodforcalculatingtheerrorbarsshouldbeexplained(closedformformula,
+calltoalibraryfunction,bootstrap,etc.)
+• Theassumptionsmadeshouldbegiven(e.g.,Normallydistributederrors).
+• Itshouldbeclearwhethertheerrorbaristhestandarddeviationorthestandarderror
+ofthemean.
+• It is OK to report 1-sigma error bars, but one should state it. The authors should
+preferablyreporta2-sigmaerrorbarthanstatethattheyhavea96%CI,ifthehypothesis
+ofNormalityoferrorsisnotverified.
+• Forasymmetricdistributions,theauthorsshouldbecarefulnottoshowintablesor
+figuressymmetricerrorbarsthatwouldyieldresultsthatareoutofrange(e.g.,negative
+errorrates).
+• Iferrorbarsarereportedintablesorplots,theauthorsshouldexplaininthetexthow
+theywerecalculatedandreferencethecorrespondingfiguresortablesinthetext.
+8. Experimentscomputeresources
+Question: Foreachexperiment,doesthepaperprovidesufficientinformationonthecom-
+puterresources(typeofcomputeworkers,memory,timeofexecution)neededtoreproduce
+theexperiments?
+Answer: [Yes]
+Justification: §3reportshardware(8×H10080GB),precision(BF16),throughput(Tok/s),
+andpeakGPUmemoryforallconfigurationsinTable1. Fine-tuninguses4×H100.
+Guidelines:
+• Theanswer[N/A]meansthatthepaperdoesnotincludeexperiments.
+• ThepapershouldindicatethetypeofcomputeworkersCPUorGPU,internalcluster,
+orcloudprovider,includingrelevantmemoryandstorage.
+• Thepapershouldprovidetheamountofcomputerequiredforeachoftheindividual
+experimentalrunsaswellasestimatethetotalcompute.
+• Thepapershoulddisclosewhetherthefullresearchprojectrequiredmorecompute
+thantheexperimentsreportedinthepaper(e.g.,preliminaryorfailedexperimentsthat
+didn’tmakeitintothepaper).
+9. Codeofethics
+Question: Doestheresearchconductedinthepaperconform, ineveryrespect, withthe
+NeurIPSCodeofEthicshttps://neurips.cc/public/EthicsGuidelines?
+Answer: [Yes]
+Justification: Thisworkstudiesarchitecturalmodificationstotransformersanddoesnot
+raiseethicalconcernsbeyondthosecommontolanguagemodelresearch.
+Guidelines:
+• The answer [N/A] means that the authors have not reviewed the NeurIPS Code of
+Ethics.
+• Iftheauthorsanswer[No],theyshouldexplainthespecialcircumstancesthatrequirea
+deviationfromtheCodeofEthics.
+18
+• Theauthorsshouldmakesuretopreserveanonymity(e.g.,ifthereisaspecialconsid-
+erationduetolawsorregulationsintheirjurisdiction).
+10. Broaderimpacts
+Question: Does the paper discuss both potential positive societal impacts and negative
+societalimpactsoftheworkperformed?
+Answer: [N/A]
+Justification: Thisisfoundationalarchitectureresearchonresidualconnectiondesign. It
+does not introduce new capabilities or applications beyond what existing transformers
+alreadyprovide,andthereisnodirectpathtospecificnegativeapplications.
+Guidelines:
+• Theanswer[N/A]meansthatthereisnosocietalimpactoftheworkperformed.
+• Iftheauthorsanswer[N/A]or[No],theyshouldexplainwhytheirworkhasnosocietal
+impactorwhythepaperdoesnotaddresssocietalimpact.
+• Examplesofnegativesocietalimpactsincludepotentialmaliciousorunintendeduses
+(e.g.,disinformation,generatingfakeprofiles,surveillance),fairnessconsiderations
+(e.g.,deploymentoftechnologiesthatcouldmakedecisionsthatunfairlyimpactspecific
+groups),privacyconsiderations,andsecurityconsiderations.
+• Theconferenceexpectsthatmanypaperswillbefoundationalresearchandnottied
+toparticularapplications,letalonedeployments. However,ifthereisadirectpathto
+anynegativeapplications,theauthorsshouldpointitout. Forexample,itislegitimate
+topointoutthatanimprovementinthequalityofgenerativemodelscouldbeusedto
+generateDeepfakesfordisinformation. Ontheotherhand,itisnotneededtopointout
+thatagenericalgorithmforoptimizingneuralnetworkscouldenablepeopletotrain
+modelsthatgenerateDeepfakesfaster.
+• Theauthorsshouldconsiderpossibleharmsthatcouldarisewhenthetechnologyis
+being used as intended and functioning correctly, harms that could arise when the
+technologyisbeingusedasintendedbutgivesincorrectresults,andharmsfollowing
+from(intentionalorunintentional)misuseofthetechnology.
+• Iftherearenegativesocietalimpacts,theauthorscouldalsodiscusspossiblemitigation
+strategies (e.g., gated release of models, providing defenses in addition to attacks,
+mechanismsformonitoringmisuse,mechanismstomonitorhowasystemlearnsfrom
+feedbackovertime,improvingtheefficiencyandaccessibilityofML).
+11. Safeguards
+Question: Doesthepaperdescribesafeguardsthathavebeenputinplaceforresponsible
+releaseofdataormodelsthathaveahighriskformisuse(e.g.,pre-trainedlanguagemodels,
+imagegenerators,orscrapeddatasets)?
+Answer: [N/A]
+Justification: Themodelstrainedinthisworkaresmall-scale(upto1Bparameters)and
+trainedonpubliclyavailabledata. Theydonotposerisksbeyondthoseofexistingpublicly
+availablelanguagemodels.
+Guidelines:
+• Theanswer[N/A]meansthatthepaperposesnosuchrisks.
+• Releasedmodelsthathaveahighriskformisuseordual-useshouldbereleasedwith
+necessarysafeguardstoallowforcontrolleduseofthemodel,forexamplebyrequiring
+thatusersadheretousageguidelinesorrestrictionstoaccessthemodelorimplementing
+safetyfilters.
+• DatasetsthathavebeenscrapedfromtheInternetcouldposesafetyrisks. Theauthors
+shoulddescribehowtheyavoidedreleasingunsafeimages.
+• Werecognizethatprovidingeffectivesafeguardsischallenging,andmanypapersdo
+notrequirethis,butweencourageauthorstotakethisintoaccountandmakeabest
+faitheffort.
+12. Licensesforexistingassets
+19
+Question: Arethecreatorsororiginalownersofassets(e.g.,code,data,models),usedin
+thepaper,properlycreditedandarethelicenseandtermsofuseexplicitlymentionedand
+properlyrespected?
+Answer: [Yes]
+Justification: We cite FineWeb-Edu, Qwen3, lm-evaluation-harness, and all benchmark
+datasets used. FineWeb-Edu is released under Apache 2.0; Qwen3 models are publicly
+available.
+Guidelines:
+• Theanswer[N/A]meansthatthepaperdoesnotuseexistingassets.
+• Theauthorsshouldcitetheoriginalpaperthatproducedthecodepackageordataset.
+• Theauthorsshouldstatewhichversionoftheassetisusedand,ifpossible,includea
+URL.
+• Thenameofthelicense(e.g.,CC-BY4.0)shouldbeincludedforeachasset.
+• Forscrapeddatafromaparticularsource(e.g.,website),thecopyrightandtermsof
+serviceofthatsourceshouldbeprovided.
+• If assets are released, the license, copyright information, and terms of use in the
+packageshouldbeprovided. Forpopulardatasets,paperswithcode.com/datasets
+hascuratedlicensesforsomedatasets. Theirlicensingguidecanhelpdeterminethe
+licenseofadataset.
+• Forexistingdatasetsthatarere-packaged,boththeoriginallicenseandthelicenseof
+thederivedasset(ifithaschanged)shouldbeprovided.
+• Ifthisinformationisnotavailableonline,theauthorsareencouragedtoreachoutto
+theasset’screators.
+13. Newassets
+Question:Arenewassetsintroducedinthepaperwelldocumentedandisthedocumentation
+providedalongsidetheassets?
+Answer: [Yes]
+Justification: Weprovidecompletepseudocode(Figure3)andwillreleasecodeandmodel
+checkpointsunderanopen-sourcelicenseuponpublication.
+Guidelines:
+• Theanswer[N/A]meansthatthepaperdoesnotreleasenewassets.
+• Researchersshouldcommunicatethedetailsofthedataset/code/modelaspartoftheir
+submissions via structured templates. This includes details about training, license,
+limitations,etc.
+• Thepapershoulddiscusswhetherandhowconsentwasobtainedfrompeoplewhose
+assetisused.
+• Atsubmissiontime,remembertoanonymizeyourassets(ifapplicable). Youcaneither
+createananonymizedURLorincludeananonymizedzipfile.
+14. Crowdsourcingandresearchwithhumansubjects
+Question: Forcrowdsourcingexperimentsandresearchwithhumansubjects,doesthepaper
+includethefulltextofinstructionsgiventoparticipantsandscreenshots,ifapplicable,as
+wellasdetailsaboutcompensation(ifany)?
+Answer: [N/A]
+Justification: Thisworkdoesnotinvolvecrowdsourcingorhumansubjects.
+Guidelines:
+• Theanswer[N/A]meansthatthepaperdoesnotinvolvecrowdsourcingnorresearch
+withhumansubjects.
+• Includingthisinformationinthesupplementalmaterialisfine,butifthemaincontribu-
+tionofthepaperinvolveshumansubjects,thenasmuchdetailaspossibleshouldbe
+includedinthemainpaper.
+20
+• AccordingtotheNeurIPSCodeofEthics,workersinvolvedindatacollection,curation,
+orotherlaborshouldbepaidatleasttheminimumwageinthecountryofthedata
+collector.
+15. Institutional review board (IRB) approvals or equivalent for research with human
+subjects
+Question: Doesthepaperdescribepotentialrisksincurredbystudyparticipants,whether
+suchrisksweredisclosedtothesubjects,andwhetherInstitutionalReviewBoard(IRB)
+approvals(oranequivalentapproval/reviewbasedontherequirementsofyourcountryor
+institution)wereobtained?
+Answer: [N/A]
+Justification: Thisworkdoesnotinvolvehumansubjectsresearch.
+Guidelines:
+• Theanswer[N/A]meansthatthepaperdoesnotinvolvecrowdsourcingnorresearch
+withhumansubjects.
+• Dependingonthecountryinwhichresearchisconducted,IRBapproval(orequivalent)
+mayberequiredforanyhumansubjectsresearch. IfyouobtainedIRBapproval,you
+shouldclearlystatethisinthepaper.
+• Werecognizethattheproceduresforthismayvarysignificantlybetweeninstitutions
+andlocations,andweexpectauthorstoadheretotheNeurIPSCodeofEthicsandthe
+guidelinesfortheirinstitution.
+• Forinitialsubmissions,donotincludeanyinformationthatwouldbreakanonymity(if
+applicable),suchastheinstitutionconductingthereview.
+16. DeclarationofLLMusage
+Question: Does the paper describe the usage of LLMs if it is an important, original, or
+non-standardcomponentofthecoremethodsinthisresearch? NotethatiftheLLMisused
+onlyforwriting,editing,orformattingpurposesanddoesnotimpactthecoremethodology,
+scientificrigor,ororiginalityoftheresearch,declarationisnotrequired.
+Answer: [N/A]
+Justification: LLMswerenotusedasacomponentofthecoremethodology. Theresearch
+focusesonarchitecturalmodificationstotransformerresidualconnections.
+Guidelines:
+• Theanswer[N/A]meansthatthecoremethoddevelopmentinthisresearchdoesnot
+involveLLMsasanyimportant,original,ornon-standardcomponents.
+• PleaserefertoourLLMpolicyintheNeurIPShandbookforwhatshouldorshouldnot
+bedescribed.
+21

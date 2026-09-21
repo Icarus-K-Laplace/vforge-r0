@@ -1,0 +1,42 @@
+{
+  "stage": "R1-B1-Stage1b",
+  "source": "delta_attention",
+  "n_pairs": 5,
+  "pairs": [
+    {
+      "pair_id": "DA_E06_220M",
+      "paper": "delta_attention_2605.18855",
+      "family": "E06",
+      "experiment": "220M",
+      "value_preserving": true
+    },
+    {
+      "pair_id": "DA_E06_533M",
+      "paper": "delta_attention_2605.18855",
+      "family": "E06",
+      "experiment": "533M",
+      "value_preserving": true
+    },
+    {
+      "pair_id": "DA_E06_1044M",
+      "paper": "delta_attention_2605.18855",
+      "family": "E06",
+      "experiment": "1044M",
+      "value_preserving": true
+    },
+    {
+      "pair_id": "DA_E06_220M",
+      "paper": "delta_attention_2605.18855",
+      "family": "E06",
+      "experiment": "220M",
+      "value_preserving": true
+    },
+    {
+      "pair_id": "DA_E06_533M",
+      "paper": "delta_attention_2605.18855",
+      "family": "E06",
+      "experiment": "533M",
+      "value_preserving": true
+    }
+  ]
+}

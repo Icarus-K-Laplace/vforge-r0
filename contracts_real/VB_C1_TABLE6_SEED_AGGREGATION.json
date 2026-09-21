@@ -1,0 +1,48 @@
+{
+  "contract_id": "VB_C1_TABLE6_SEED_AGGREGATION",
+  "source_paper": "viewbatchmodel_2503.18371",
+  "claim_id": "C1",
+  "claim_text": "Table 6 values are computed as the mean over all three declared random seeds for each (augmentation-repeat, flag) configuration.",
+  "paper_text_hash": "a41f8730b699c8e580e22a52204d2dbd5583246c545cd3d99b56e947080b560b",
+  "source_span": "Table 6 values are computed as the mean over all three declared random seeds for each (augmentation-repeat, flag) configuration.",
+  "declared_seeds": [
+    1993,
+    1996,
+    1997
+  ],
+  "n_seeds": 3,
+  "aggregation_rule": "mean",
+  "predicates": [
+    {
+      "predicate_id": "E01_REPORTED_RUN_SET",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "The set of runs used to compute the reported table value must equal the set of all declared random-seed runs for that configuration.",
+      "trace_fields": [
+        "protocol.declared_seeds",
+        "protocol.aggregation_inputs",
+        "outputs.reported_value"
+      ],
+      "condition": "set(protocol.aggregation_inputs) == set(protocol.declared_seeds)",
+      "source_span": "Table 6 values are computed as the mean over all three declared random seeds for each (augmentation-repeat, flag) configuration.",
+      "confidence": 0.9
+    },
+    {
+      "predicate_id": "E01_AGG_RULE",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "The reported value must equal the declared mean aggregation over all declared seeds.",
+      "trace_fields": [
+        "protocol.aggregation_rule",
+        "outputs.reported_value"
+      ],
+      "condition": "protocol.aggregation_rule == 'mean'",
+      "source_span": "Table 6 values are computed as the mean over all three declared random seeds for each (augmentation-repeat, flag) configuration.",
+      "confidence": 0.85
+    }
+  ],
+  "universal_principles": [
+    "P5_DETERMINISM_OR_SEEDS",
+    "P6_AGGREGATION_FIDELITY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "d6164379964f73170ec7524970fb3c83d002e0513190634bed635532f0e8f21b"
+}

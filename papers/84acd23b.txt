@@ -1,0 +1,787 @@
+Exacerbating Algorithmic Bias through Fairness Attacks
+NinarehMehrabi1,2,MuhammadNaveed1,FredMorstatter1,2,AramGalstyan1,2
+1UniversityofSouthernCalifornia-2InformationSciencesInstitute
+{ninarehm,mnaveed}@usc.edu,{fredmors,galstyan}@isi.edu
+Abstract appearunfairinordertodepreciatetheirvalueandcredibil-
+ity.Someadversariescanevenprofitfromsuchattacksby
+Algorithmicfairnesshasattractedsignificantattentioninre-
+biasingdecisionsfortheirbenefit,e.g.,increditorloanappli-
+cent years, with many quantitative measures suggested for
+cations.Thus,oneshouldconsiderfairnesswhenassessing
+characterizingthefairnessofdifferentmachinelearningalgo-
+therobustnessofMLsystems.
+rithms.Despitethisinterest,therobustnessofthosefairness
+Ourcontributions.Inthiswork,weproposedatapoison-
+measureswithrespecttoanintentionaladversarialattackhas
+notbeenproperlyaddressed.Indeed,mostadversarialmachine ingattacksthattargetfairness.Weproposetwofamiliesof
+learninghasfocusedontheimpactofmaliciousattacksonthe poisoning attacks: anchoring and influence1. In anchoring
+accuracyofthesystem,withoutanyregardtothesystem’sfair- attacksthegoalistoplacepoisonedpointstoaffectfairness
+ness.Weproposenewtypesofdatapoisoningattackswhere withoutmodifyingtheattackerloss.Ontheotherhand,our
+an adversary intentionally targets the fairness of a system. influenceattackonfairnesscanaffectbothfairnessandac-
+Specifically,weproposetwofamiliesofattacksthattarget curacybyinjectingpoisonedpointsduringtraintimeviaa
+fairnessmeasures.Intheanchoringattack,weskewthedeci-
+specificadversariallossthatregularizesbetweenfairnessand
+sionboundarybyplacingpoisonedpointsnearspecifictarget
+accuracylosses.Someadversariesmaywanttoharmsystems
+pointstobiastheoutcome.Intheinfluenceattackonfairness,
+withregardtofairnessandaccuracyatthesametime,while
+weaimtomaximizethecovariancebetweenthesensitiveat-
+othersmightonlyconsideronethatcanbeachievedbythis
+tributesandthedecisionoutcomeandaffectthefairnessof
+themodel.Weconductextensiveexperimentsthatindicatethe regularization. In the anchoring attack, we place poisoned
+effectivenessofourproposedattacks. pointstobiasthedecisionboundary;intheinfluenceattack,
+wetargetfairnessmeasuresbyincorporatingalossfunction
+maximizing and attacking which can degrade fairness by
+Introduction
+maximizing the covariance between the decision outcome
+Withproliferationofmachinelearning(ML)applicationsin andsensitiveattributes.
+everydaylife,itisimperativethatMLalgorithmsunderlying Throughexperimentationonthreedifferentdatasetswith
+those applications do not discriminate, especially when it differentfairnessmeasuresanddefinitions,weshowtheef-
+comestopotentiallysensitiveandconsequentialdecisions, fectiveness of our attacks in achieving the desired goal of
+suchasbaildecisions(DresselandFarid2018).Thus,recent affectingfairness.Inaddition,weincorporatedifferentbase-
+research has looked into possible biases present in ML al- linemodelstoevaluatedifferentaspectsofourattacks.We
+gorithms,andproposeddifferentmeasuresanddefinitions demonstrate that original data poisoning attacks designed
+forcharacterizingfairness(Dworketal.2012;Hardt,Price, toattackaccuracyarenotsuitableforfairnessattacks,thus
+andSrebro2016;Kusneretal.2017;VermaandRubin2018; highlightingtheimportanceofattacksdesignedforfairness.
+Mehrabietal.2019). Wealsocompareourmethodsagainstconcurrentworkon
+Despitethisinterest,notmuchisknownabouttherobust- adversarialattacksonfairnessandshowtheeffectivenessof
+ness of various fairness measures with respect to random, ourmethodsincomparison.
+orperhapsmalicious,perturbations.Indeed,itisknownthat
+machinelearningmodelscanbesusceptibletovarioustypes BackgroundonPoisoningAttacks
+ofadversarialattackstargetedtodegradetheperformanceof
+Considerasupervisedlearningproblemcharacterizedbya
+machinelearningmodels.However,researchinadversarial
+loss function L(θ;D) and an adversarial loss L (θˆ;D),
+machinelearninghasmostlyfocusedontargetingaccuracy adv
+(Chakrabortyetal.2018;Lietal.2018).Wearguethat,like
+whereθˆisthesetoflearnableparametersandDisalabeled
+accuracy,fairnessmeasurescanbetargetedbymaliciousad- dataset.LetD train bethetrainingdataset.Weassumethat
+versariesaswell.Forinstance,adversariescanattackmodels theadversarycanpoisonafractionofthosedatapoints,so
+usedbyagovernmentagencywiththegoalofmakingthem that D train = D c ∪D p , where D c and D p are the set of
+clean and poisoned data points, respectively. We assume
+Copyright©2021,AssociationfortheAdvancementofArtificial
+Intelligence(www.aaai.org).Allrightsreserved. 1https://github.com/Ninarehm/attack
+0202
+ceD
+61
+]GL.sc[
+1v32780.2102:viXra
+that|D p | = (cid:15)|D c |.Furthermore,D p ⊆ F β whereF β isthe Algorithm1:InfluenceAttackonFairness
+feasibleset,whichisasetselectedbyadefensemechanism
+Input:cleandataset
+basedonanomalydetectiontechniques,containingelements
+D ={(x ,y ),(x ,y ),...,(x ,y )},poison
+thatthedefenderconsidersassanitizeddatatotrainitsmodel. c 1 1 2 2 n n
+fraction(cid:15),andstepsizeη.
+The existence of the feasible set in the objective helps the
+Output:poisoneddataset
+poisonedpointstoblendwiththenaturaldataandmakeit
+D ={(x˜ ,y˜ ),(x˜ ,y˜ ),...,(x˜ ,y˜ )}.
+moredifficultforanomalydetectortechniquestodetectthem p 1 1 2 2 (cid:15)n (cid:15)n
+FromD randomlysamplethepositivepoisoned
+(Koh,Steinhardt,andLiang2018). a
+instanceI ←(x˜ ,y˜ ).
+A data poisoning attack can be written as the following + 1 1
+FromD randomlysamplethenegativepoisoned
+optimizationproblem(overthesetofpoisoneddatapoints): d
+instanceI ←(x˜ ,y˜ ).
+− 2 2
+maxL (θˆ;D ) MakecopiesfromI andI untilhaving(cid:15)|D |
+adv test + − c
+Dp poisonedcopiesC .
+p
+s.t. |D p |=(cid:15)|D c | LoadpoisoneddatasetD p ←{C p }.
+D ⊆F LoadfeasiblesetbyapplyinganomalydetectorB
+p β
+F ←B(D ∪D ).
+where θˆ=argmin L(θ;D ∪D ). (1) β c p
+c p fort=1,2,...do
+θ θˆ←argmin L(θ;(D ∪D )).
+Inessence,theadversaryattemptstomaximizeitstestloss θ c p
+L adv bycarefullyselectingpoisoneddatapoints.Thesetypes Pre-computeg θ (cid:62) ˆ,Dtest H θˆ −1fromL adv fordetails
+ofattacksareshowntobepowerfulagainstdefendersthat referto(Koh,Steinhardt,andLiang2018).
+aretryingtominimizetheirownlossL,whiletheattackeris fori=1,2do
+tryingtoharmthedefense(Koh,Steinhardt,andLiang2018).
+Setx˜0 ←x˜ −ηg(cid:62)
+H−1∂2(cid:96)(θˆ;x˜i,y˜i).
+In (Koh, Steinhardt, and Liang 2018), authors propose to i i θˆ,Dtest θˆ ∂θˆ∂x˜i
+sampleapositive(x˜ + ,+1)andanegative(x˜ − ,−1)instance Setx˜ i ←argmin x∈Fβ ||x−x˜0 i || 2 . (To
+andmake(cid:15)|D c |copiesfromthesesampledinstancestoserve projectD p backtoF β ).
+as poisoned data points inversely proportional to the class end
+balance such that there are (|D c +|(cid:15)) copies from the nega- UpdatecopiesC p basedonupdatesonI + andI − .
+tivepoisoninstance(x˜ − ,−1)and(|D c −|(cid:15))copiesfromthe UpdatefeasiblesetF β ←B(D c ∪D p ).
+positivepoisoninstance(x˜ ,+1)inwhich|D+|and|D−| end
++ c c
+representthenumberofpositiveandnegativepointsinthe
+cleandatarespectively.
+Bycombiningtheaboveconstraintwiththeoriginalclassi-
+PoisoningAttacksagainstFairness
+ficationlossandmaximizingit,theattackercanharmboth
+Nowthatwehavediscussedpoisoningattacks,wewilldis- fairnessandaccuracyatthesametimeviaaregularization
+cusshowtheseattackscanbeextendedtofairness.Wefollow term,λ,thatcontrolsthetrade-offbetweenthesetwoterms.
+acommonfairnesssetupwheretherearetwogroups:advan- Thus,thelossinourinfluenceattackonfairnesscontainstwo
+tagedanddisadvantaged.Anexampleofadvantagedanddis- parts:(cid:96) and(cid:96) inwhich(cid:96) controlsforaccuracy
+acc fairness acc
+advantagedgroupscanbemaleandfemaleinthejobmarket and(cid:96) controlsforfairnessconstraints.
+fairness
+wheremalescouldhaveadvantageoverfemalesingetting
+hired in certain jobs. We assume that all poisoned points L (θˆ;D )=(cid:96) +λ(cid:96)
+adv test acc fairness
+belong to either the advantaged or disadvantaged group,
+N
+D ⊆(D ∪D ),inwhichD representsdatapointsfrom 1 (cid:88)
+p a d a where (cid:96) = (z −z¯)d (x ). (2)
+theadvantageddemographicgroupandD d representsdata fairness N i θˆ i
+pointsfromthedisadvantageddemographicgroup. i=1
+Inotherwords,theinfluenceattackonfairnesswouldtryto
+InfluenceAttackonFairness harmthefairnessconstraintandaffectamodelwithrespect
+For the influence attack on fairness, we use the influence todisparateimpact(Zafaretal.2017).Thislosscanaffect
+attackintroducedin(Koh,Steinhardt,andLiang2018;Koh a model in terms of both fairness and accuracy with the
+andLiang2017),withamodificationthatincludesthedemo- regularizationtermλthatcontrolsthetrade-off.Inorderto
+graphicinformation,inwhichtheattacktriestomaximizea maximizethelossin(2),weusetheinfluenceattackstrategy
+givenloss.Wethenincorporatealossfunctionmaximizing (Koh,Steinhardt,andLiang2018;KohandLiang2017)with
+whichusingtheinfluenceattackcanharmfairness.In(Zafar changesthatwouldincorporatedemographicinformationas
+etal.2015),authorsproposealossfunctionforfairclassi- shown in Algorithm 1. Similar to the convention in (Koh,
+ficationwithaconstraintinvolvingthecovariancebetween Steinhardt,andLiang2018),wesampleonepositiveandone
+thesensitivefeatures(z)andthesigneddistancefromfeature negativeinstanceuniformlyatrandomandmakecopiesofthe
+vectorstothedecisionboundary(d (x))formalizedas: sampledinstancesthatserveasourpoisonedpoints.However,
+θ
+sincewenowhavetotakedemographicsintoconsideration
+N
+Cov(z,d (x))≈ 1 (cid:88) (z −z¯)d (x ). formaximizingthebiasandharmingfairness,wesamplethe
+θ N i θ i positiveinstancefromD andthenegativeinstancefromD .
+i=1 a d
+Advantaged
+Disadvantaged
+(a)BeforeAttack (b)AnchoringAttack
+Label 1
+Label -1
+Poisonous
+Advantaged Victim
+Disadvantaged
+Label 1
+Label -1
+Advantaged
+Poisonous
+Disadvantaged
+Victim
+Label +1
+Label -1
+Poisoned
+Target
+Figure1:Anchoringattackrepresentation.Thefigureontheleftrepresentsthebeforeattack,whiletherightfigurerepresentsthe
+anchoringattackinwhichpoisonedpointsarelocatedinclosevicinity(depictedasthelargesolidcircle)oftargetpoints.
+Noticethattheoppositeisalsopossibleifanadversarywants Non-randomAnchoringAttack.Inthenon-randoman-
+toskewthedisadvantagedgroupintobeingadvantageous; choring attack, we choose popular x as our target
+target
+however, for the goals of this paper and showing how our foreachdemographicgroup.Here,popularx means
+target
+methodscanincreasethebiasandharmfairness,wefollow
+theaforementionedsamplingprocedure.
+Algorithm2:AnchoringAttack
+AnchoringAttack Input:cleandataset
+We now describe a simple generic anchoring attack that D c ={(x 1 ,y 1 ),(x 2 ,y 2 ),...,(x n ,y n )},poison
+can work with any loss function. Our results indicate that fraction(cid:15),andvicinitydistanceτ.
+the proposed attack harms the model with regard to fair- Output:poisoneddataset
+ness.Theanchoringattackworksasfollows(detailsinAl- D p ={(x˜ 1 ,y˜ 1 ),(x˜ 2 ,y˜ 2 ),...,(x˜ (cid:15)n ,y˜ (cid:15)n )}.
+gorithm2).First,theattackersamplesatargetx that fort=1,2,...do
+target
+belongstothecleandata,x target ∈ D c .Next,theattacker Samplenegativex target− fromD a andpositive
+generates poisoned data point x˜ in the vicinity of x target , x target+ fromD d withrandomornon-random
+so that this new point has the same demographic but the technique.
+oppositelabel,demographic(x target ) = demographic(x˜) G + :Generate(|D c −|(cid:15))positivepoisonedpoints
+andy target (cid:54)= y˜.Thegeneralideaoftheattackistotarget (x˜ + ,+1)withD a intheclosevicinityof
+some points (x target ) and cloud their labels through poi- x target− s.t.||x˜ + −x target− || 2 ≤τ.
+soned points that have opposite labels, which would lead G :Generate(|D+|(cid:15))negativepoisonedpoints
+− c
+toaskeweddecisionboundary,changeinpredictivelabels (x˜ ,−1)withD intheclosevicinityof
+− d
+ofcleantargetpoints,andmorebiasedoutcomes.Theright x s.t.||x˜ −x || ≤τ.
+target+ − target+ 2
+plot in Figure 1 depicts an anchoring attack in which the LoadD fromthegenerateddataabove
+p
+poisoned points colored in black are placed to lie close to D ←G ∪G .
+p + −
+thetargetpointsthathavethesamedemographicgroupbut LoadthefeasiblesetF ←B(D ∪D ).
+β c p
+oppositelabeltobiasthepredictiveoutcome(blackadvan- fori=1,2,...,(cid:15)ndo
+tagedpoisonedpointswithlabel+1aretargetingadvantaged Setx˜ i ←argmin x∈Fβ ||x−x˜ i || 2 . (To
+pointwithlabel-1,andblackdisadvantagedpoisonedpoints projectD p backtoF β ).
+with label -1 are targeting disadvantaged point with label end
++1).Thisplacementofpoisonedpointsinthespaceduring argmin L(θ;(D ∪D )).
+θ c p
+the learning procedure will lead the decision boundary to end
+changeand,asaresult,willcausemoreadvantagedpoints
+tohaveapredictiveoutcomeof+1andmoredisadvantaged
+pointstohaveapredictiveoutcomeof-1,whichisbiasing the point that is close to more similar instances x , eli-
+i
+the model’s prediction. x can be sampled in several gible to serve as targets, such that demographic(x ) =
+target i
+ways.Weintroducetwoways,randomandnon-random,for demographic(x )andy =y .Bydoingthis,we
+target i target
+samplingx . canensuretoaffectasmuchaspointssimilartox as
+target target
+RandomAnchoringAttack.Inrandomanchoringattack, possibletomaximizeourbiasinggoal.Pickxwithmax(c)
+x is sampled uniformly at random for each demo- asx whereciscalculatedforeachxasfollows:∀x
+target target i
+graphicgroup. if demographic(x ) = demographic(x) and y = y and
+i i
+||x −x||<σthenincreasecforx. Weutilizethismeasureasoneofourmetricsforfairness.It
+i
+capturesthepredictiveoutcomedifferencesbetweendifferent
+Evaluation (advantagedanddisadvantaged)demographicgroups.The
+measureisdefinedbelowandisreferredtoasstatisticalparity
+Inourexperiments,weevaluateourattackswithregardsto
+throughoutourpaper.
+differentmeasures,suchasaccuracyandfoundationalfair-
+nessmeasures:statisticalparity,andequalityofopportunity SPD =|p(Yˆ =+1|x∈D )−p(Yˆ =+1|x∈D )|
+differences.Wealsoutilizethreerealworlddatasetsinour a d
+experiments,introducedbelow.Wecompareagainstasuite Equality of Opportunity Difference Equality of opportu-
+ofbaselinesthattestourattacks’performancewithregards nityisanotherwell-knownfairnessdefinitionintroducedin
+toaccuracyandfairness.Ourresultsindicatethatourattacks, (Hardt,Price,andSrebro2016).Weutilizedtheequalityof
+the anchoring attack and influence attack on fairness, are opportunitydifferenceasanotherfairnessmetric.Itcaptures
+effectiveintermsofaffectingfairnessaspectsofthemodel. differencesinthetruepositiveratebetweendifferent(advan-
+tagedanddisadvantaged)demographicgroups.Themeasure
+Datasets isdefinedbelowandisaddressedasequalityofopportunity
+Weusethreedifferentrealworlddatasetsinourexperiments throughoutthispaper.
+withgenderasthesensitiveattribute.Thedatawassplitinto
+EOD =|p(Yˆ =+1|x∈D ,Y =+1)
+an80-20trainandtestsplit. a
+GermanCreditDataset.ThisdatasetcomesfromUCIma- −p(Yˆ =+1|x∈D ,Y =+1)|
+d
+chinelearningrepository(DuaandGraff2017).Itcontains
+thecreditprofileaboutindividualswith20attributesassoci- Methods
+atedtoeachdataperson.Inourexperiments,weutilizedall
+Toevaluateourattacks,wecomparedthemagainstanattack
+the20attributesfromthisdataset.Theclassificationgoalis
+thatdoesnotconsiderfairnessandonlyconsidersaccuracy
+topredictwhetheranindividualhasgoodorbadcredit.
+to show that such attacks are not necessarily effective for
+COMPASDataset.Propublica’sCOMPASdatasetcontains
+fairness,motivatingtheneedforfairnessattacks.Also,we
+informationaboutdefendantsfromBrowardCounty(Larson
+comparedourattacksintermsofhowtheyattackaccuracy
+etal.2016).WeutilizedthefeaturesinTable1asourpredic-
+asameasureversusattacksthatarespecificallydesignedto
+tionfeatures.Theclassificationgoalistopredictwhetheran
+targetaccuracy.Wealsocomparedourattackstoanattack
+individualwillrecommitacrimewithintwoyears.
+thatisoptimizedforfairness.
+DrugConsumptionDataset.Thisdatasetcomesfromthe
+The evaluated methods are listed below. In our experi-
+UCImachinelearningrepository(DuaandGraff2017).It
+ments,thepoisonedpointsareinverselyproportionaltoclass
+containsinformationaboutindividuals(Fehrmanetal.2017).
+balance as also suggested in (Koh, Steinhardt, and Liang
+Weutilized thefeatures listed in Table 1as ourprediction
+2018),sowemade(|D+|(cid:15))copiesfromthenegativepoison
+features.Theclassificationgoalistopredictwhetheranindi- c
+instance(I )and(|D−|(cid:15))copiesfromthepositivepoison
+vidualhasconsumedcocaineornotintheirlifetime. − c
+instance (I ) in which |D+| and |D−| denote the number
++ c c
+ofpositiveandnegativepointsinthecleandatarespectively.
+COMPAS
+Hingelosswasusedtocontrolforaccuracyforallthemeth-
+sex age_cat ods in our experiments as in (Koh, Steinhardt, and Liang
+juv_fel_count juv_misd_count 2018).
+priors_count c_charge_degree InfluenceAttackonFairness(IAF)Inthispaper,ourinflu-
+race juv_other_count enceattackonfairnessiswheretheattacktriestomaximize
+thecovariancebetweenthesigneddistanceoffeaturevectors
+Drug fromthedecisionboundarytothesensitivefeatures,which
+ID Age Gender SS wouldthencausetheattacktotargetanddegradefairness.In
+Education Country Ethnicity ourexperimentswesetλ=1.
+Nscore Escore Oscore RandomAnchoringAttack(RAA)Theanchoringattack
+Ascore Cscore Impulsive whereatargetpointispickedatrandom.Inthisnewsetof
+attacks,thegoalistoplacepoisonedpointsinthevicinity
+ofthetargetpointsinwhichthepoisonedandtargetpoints
+Table 1: Features used from the COMPAS and Drug Con-
+havethesamedemographicgroupbutdifferentlabels.Inour
+sumptiondatasets.
+experimentswesetτ =0indicatingtheclosestvicinity.
+Non-random Anchoring Attack (NRAA) This attack
+buildsupontherandomanchoringattack;however,inthis
+Measures
+attack,thetargetpointisnotchosenrandomly.Inthisattack,
+In addition to accuracy, we have utilized two well-known thepointwiththemostneighborssimilartoit(withthesame
+fairness measures to analyze the performance of different demographicgroupandlabel)ischosenasthetargetpointso
+attackswithregardtofairness,detailedbelow. thatwecaninfectasmanysimilarpointstothetargetpoint
+Statistical Parity Difference Statistical parity is a well- aspossible.Thiscanbeeffectivebecauseweareinfecting
+knownmeasure(definition)introducedin(Dworketal.2012). moretargetedpoints;however,insomecasesitmightbeless
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+Epsilon
+rorrE
+tseT
+German
+IAF RAA Solans et al
+NRAA Koh et al 1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+Epsilon
+ytiraP
+lacitsitatS
+German
+IAF RAA Solans et al
+NRAA Koh et al 1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+Epsilon
+ytinutroppO
+fo
+ytilauqE
+German
+IAF RAA Solans et al
+NRAA Koh et al
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+Epsilon
+rorrE
+tseT
+COMPAS
+IAF RAA Solans et al
+NRAA Koh et al 1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+Epsilon
+ytiraP
+lacitsitatS
+COMPAS
+IAF RAA Solans et al
+NRAA Koh et al 1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+Epsilon
+ytinutroppO
+fo
+ytilauqE
+COMPAS
+IAF RAA Solans et al
+NRAA Koh et al
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+Epsilon
+rorrE
+tseT
+Drug Consumption
+IAF RAA Solans et al
+NRAA Koh et al 1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+Epsilon
+ytiraP
+lacitsitatS
+Drug Consumption
+IAF RAA Solans et al
+NRAA Koh et al 1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+Epsilon
+ytinutroppO
+fo
+ytilauqE
+Drug Consumption
+IAF RAA Solans et al
+NRAA Koh et al
+Figure 2: Results obtained for different attacks with regards to different fairness (SPD and EOD) and accuracy (test error)
+measuresonthreedifferentdatasets(GermanCredit,COMPAS,andDrugConsumption)withdifferent(cid:15)values.
+effectivesincemorepoisonedpointsmaybeneededinorder thus,weincorporatedthislossintotheinfluenceattack(Koh,
+toachievethegoalofinfectingmanypointsandshiftingthe Steinhardt,andLiang2018;KohandLiang2017),whichwe
+decisionboundary.Inourexperimentswesetτ =0. foundtobeastrongattackstrategyinmaximizingtheloss
+InfluenceAttack(Kohetal.)Thisisatypeofattackthat andalsothesameattackstrategyusedinourinfluenceattack
+istargetedonlytowardaffectingaccuracy(Koh,Steinhardt, onfairness.Inourexperiments,weutilizedthesameλvalue
+andLiang2018;KohandLiang2017).Thereasonweinclude asproposedin(Solans,Biggio,andCastillo2020)tobalance
+thistypeofattackalongwithattackstargetedtowardfairness theclasspriors.
+isthatitcanhelpusunderstandhowattackstargetingonly p m
+accuracyaffectfairnessmeasures.Attacksofthisnaturecan L adv (θˆ;D test )= (cid:88) (cid:96)(θˆ;x k ,y k )+λ (cid:88) (cid:96)(θˆ;x j ,y j )
+alsoserveasagoodcomparisonbecausetheyshowtheeffect k=1 j=1
+of attacks on accuracy; because this attack is specifically (cid:124) (cid:123)(cid:122) (cid:125) (cid:124) (cid:123)(cid:122) (cid:125)
+disadvantaged advantaged
+designed to target accuracy, it can be a strong method to p
+compareagainst. where λ= . (3)
+m
+Poisoning Attack Against Algorithmic Fairness
+(Solans et al.) In (Solans, Biggio, and Castillo 2020), the Results
+authorsproposealossfunctionthatclaimstotargetfairness The results in Figure 2 demonstrate that the influence at-
+measures. We utilized the loss introduced in this paper as tack (Koh et al.), although performing remarkably well in
+depictedbelowinequation(3)intheinfluenceattackfrom attackingaccuracy,doesnotattackfairnesswell.Theresults
+(Koh,Steinhardt,andLiang2018;KohandLiang2017)and alsoconfirmthatourinfluenceattackonfairnessmethodout-
+compared it to our proposed attacks. The goal of (Solans, performs(Solansetal.)(Solans,Biggio,andCastillo2020)
+Biggio, and Castillo 2020) was to incorporate the loss in inaffectingfairnessmeasures,andanchoringattackoutper-
+(3) into an attack strategy that would maximize the loss; forms(Solansetal.)(Solans,Biggio,andCastillo2020)in
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.2 0.4 0.6 0.8 1.0
+Lambda
+rorrE
+tseT
+German
+=0.0 =0.1 =1.0
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.2 0.4 0.6 0.8 1.0
+Lambda
+ytiraP
+lacitsitatS
+German
+=0.0 =0.1 =1.0
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.2 0.4 0.6 0.8 1.0
+Lambda
+ytinutroppO
+fo
+ytilauqE
+German
+=0.0 =0.1 =1.0
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.2 0.4 0.6 0.8 1.0
+Lambda
+rorrE
+tseT
+COMPAS
+=0.0 =0.1 =1.0
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.2 0.4 0.6 0.8 1.0
+Lambda
+ytiraP
+lacitsitatS
+COMPAS
+=0.0 =0.1 =1.0
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.2 0.4 0.6 0.8 1.0
+Lambda
+ytinutroppO
+fo
+ytilauqE
+COMPAS
+=0.0 =0.1 =1.0
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.2 0.4 0.6 0.8 1.0
+Lambda
+rorrE
+tseT
+Drug Consumption
+=0.0 =0.1 =1.0
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.2 0.4 0.6 0.8 1.0
+Lambda
+ytiraP
+lacitsitatS
+Drug Consumption
+=0.0 =0.1 =1.0
+1.0
+0.8
+0.6
+0.4
+0.2
+0.0
+0.0 0.2 0.4 0.6 0.8 1.0
+Lambda
+ytinutroppO
+fo
+ytilauqE
+Drug Consumption
+=0.0 =0.1 =1.0
+Figure3:ResultsobtainedfordifferentlambdavaluesfortheIAFattackwithregardstodifferentfairness(SPDandEOD)and
+accuracy(testerror)measuresonthreedifferentdatasets(GermanCredit,COMPAS,andDrugConsumption)withdifferent(cid:15).
+affecting fairness measures in most of the cases. One can inalinfluenceattacktargetedtowardsaccuracy.Theresults
+observethatinfluenceattackonfairnessisthemosteffective alsoshowthathigherepsilonvalueshighlightthebehavior
+amongstalltheattacksinattackingfairnessmeasures. ofthelossmoreasexpectedsuchthatforhighepsilonvalue
+Duetothenatureofourinfluenceattackonfairnessloss of1thechangesaremoresignificantwithmodificationsto
+functionanditscontrollingparameteronaccuracyandfair- thelambdavalueinthelossfunction,whilelesssubtlefor
+ness,itcanbeutilizedinscenarioswheretheadversarywants lowerepsilonvaluessuchas0.1.
+tomaliciouslyharmthesystemintermsofaccuracy,orfair-
+RelatedWork
+ness,orboth.Ontheotherhand,anchoringattackscanbe
+utilizedinplaceswheretheadversarywantstosubtlyharm Here,wecoverrelatedworkfrombothfairmachinelearning
+accuracywithaneffectiveharmonfairness.Thesetypesof aswellasadversarialmachinelearningresearch.
+attackscanbeusedby,e.g.,adversarieswhowouldwantto
+gainprofitoffofbiasingdecisionsfortheirbenefit;thus,to AdversarialMachineLearning
+remainlessdetectabletheydonotharmaccuracy.Although Researchinadversarialmachinelearningismostlyfocused
+itispossiblethatanchoringattackcanharmaccuracytoa ondesigningdefensesandattacksagainstmachinelearning
+higherdegree,asshownempiricallyinourresults,itisless models(Steinhardt,Koh,andLiang2017;Chakrabortyetal.
+likelythatanchoringattackisabletodegradeaccuracybya 2018; Li et al. 2018). Ultimately, the goal is for machine
+largeamountinpracticeforrealworlddatasets. learningmodelstoberobusttowardmaliciousactivitiesde-
+Inaddition,inFigure3wedemonstratetheeffectofour signedbyadversaries.Thus,itisimportanttoconsiderboth
+regularizedlossintheinfluenceattackonfairness.There- sidesofthespectrumintermsofdesigningtheattacksandde-
+sultsshowthatwiththeincreaseoflambdatheattackaffects fensesthatcanovercometheattacks.Inadversarialmachine
+fairnessmeasuresmoreasexpectedfromtheloss;however, learning,differenttypesofattacks,suchasdatapoisoning
+forthelowerlambdavaluestheattackactssimilartotheorig- andevasionattacks,exist.Inevasionattacks,thegoalisto
+comeupwithadversarialexamplesthatareimperceptibleto (Solans,Biggio,andCastillo2020),theauthorsproposean
+human eye but can deceive benign machine learning mod- attackthattargetsfairness.Wecomparedthisattackwithour
+elsduringtesttime(Biggioetal.2013;Moosavi-Dezfooli, twonewlyproposedattacksusingthreerealworlddatasets.
+Fawzi,andFrossard2016;Goodfellow,Shlens,andSzegedy Ouranchoringattackdoesnotrelyonanylossfunctionmak-
+2015).Ontheotherhand,indatapoisoningattacks,thegoal ingitdifferentinnaturewiththepreviouswork.Inourin-
+istomanipulatethetrainingdata–viaadding,removing,or fluenceattackonfairnessweintroduceanewlossfunction
+changinginstances–sothatthelearnedmodelismalicious differentthanthepreviousworkwhichismoreinlinewith
+(Biggio,Nelson,andLaskov2012;Shafahietal.2018).Dif- fairnessliteratureandworkdoneinfairnessdomainmaking
+ferent algorithms and approaches have been proposed for ourattackmoreintuitive.Inaddition,ourinfluenceattackon
+poisoningattacksfocusingonaccuracyastheperformance fairnessisabletocontrolafairness-accuracytrade-offwith
+measure (Biggio, Nelson, and Laskov 2012; Shafahi et al. thehyper-parameterinvolvedinitslossfunctionwhichisalso
+2018).Inthispaper,wealsofocusedondatapoisoningat- showninFigure3asanadditionalexperimentalresult.This
+tackwhileconsideringfairnessasaperformancemeasurein line of work can bring researchers from both fields closer
+additiontoaccuracy. andinspirenewandinterestingresearchproblems.Another
+interdisciplinaryresearchfieldcombiningconceptsfromfair-
+FairMachineLearning nessandprivacyincludesthedifferentialprivacylineofwork
+Research in fair machine learning has gained attention re- (Dwork2008;Bagdasaryan,Poursaeed,andShmatikov2019;
+cently,withmanyactiveresearchareas.Forinstance,some Jagielskietal.2019;Pujoletal.2020).
+workintroducesnewdefinitionsandmeasuresforfairness
+(Dworketal.2012;Hardt,Price,andSrebro2016;Kusner ConclusionandFutureWork
+etal.2017;Mehrabi,Huang,andMorstatter2020).(Verma In this work, we introduced two families of poisoning at-
+and Rubin 2018) has a complete list of the definitions on tacksthatcantargetfairness.Weshowedtheeffectiveness
+fairness. Other work utilizes these definitions and tries to of these attacks through experimentation on different real
+designandlearnfairclassification(Zafaretal.2015;Ustun, worlddatasetswithdifferentmeasures.Ourinfluenceattack
+Liu,andParkes2019),regression(Agarwal,Dudik,andWu onfairness(IAF)usedtheattackstrategyasininfluenceat-
+2019),andrepresentations(Moyeretal.2018).Thebattle tack(Koh,Steinhardt,andLiang2018;KohandLiang2017).
+tomitigateunfairnesscanhappenindifferentphases.Some Asanextension,wemodifiedthelossfunctionsothatitcan
+targetmakingthedatamorefair(Zhang,Wu,andWu2017), harmfairnessaswellasaccuracy.Furthermore,weexplore
+whileotherstargetthealgorithms(Zafaretal.2015).These anattackstrategycalledthe“anchoringattack”thatharms
+mitigationtechniquescanalsovaryinwhenandhowtheyare fairnessbyplacingpoisonedpointsneartargetpointsinorder
+applied.Forinstance,someapproachesarepre-processing to bias the outcome. Our paper also introduced two ways
+techniques(KamiranandCalders2012)inwhichthefocusis of sampling these target points. A direct extension of this
+toremovediscriminationfromthedatabeforethelearning approachistoexploreothermethodsofsamplingpointstoin-
+phase.Otherstrytoimposefairnessduringtrainingviain- creasetheeffectivenessofthisattack.Theintroducedattacks
+corporationoffairlossfunctionsorotherapproachesduring eachhavetheirownadvantagesanddisadvantages.Thegoal
+thetrainingphase,knownasin-processing(Kamishimaetal. wastodesignattacksthatcancomplementeachother.For
+2012), while some are post-processing approaches (Pleiss instance,influenceattackonfairnesswhichisgradient-based
+et al. 2017) in which the model is treated as a black box canbeslow.Anchoringattack,however,doesnotusegradi-
+systemanddiscriminationremovalisperformedontheout- entsandisconsiderablyfaster.Further,whileinfluenceattack
+putofthemodel.Mehrabietal.(2019)performsaliterature onfairnesstargetsfairnessharshly,anchoringattackismore
+reviewoffairmachinelearningresearchindifferentsubject subtle.Andifanchoringattackcannotexplicitlycontrolfor
+domains, which can be referenced for more detail. In our accuracyfairnesstrade-off,influenceattackonfairnesscan
+work,weutilizesomeofthedefinitionsandmeasureswidely controlthistrade-off.
+usedinfairmachinelearningresearch(Dworketal.2012; Thisworkpointsoutseveralimportantanglesforfuturere-
+Hardt,Price,andSrebro2016)inmeasuringtheperformance search.Someimportantextensionsareasfollows:whatother
+ofourattackswithregardtofairness.Wewerealsoinspired wayscanmachinelearningsystemsbeharmedbydatapoi-
+bysomelossfunctionsintroducedinfairclassificationtasks soningattacks?Howcanwedesignandadaptdefensesthat
+inoneofourattacks(Zafaretal.2015). canbeeffectiveagainstmaliciousattackstargetingfairness?
+Anotherquestionworthpursuingisfromtheperspectiveof
+AdversarialFairMachineLearning
+thedefender.Cancurrentdefensesagainstaccuracyattacks
+Therapidandsignificantgrowthofresearchinalgorithmic beusefulagainstthetypesofattacksthattargetfairness.If
+fairnesshighlightstheimportanceofmachinelearningmod- not,howdoweadaptdefenderssothattheycanpreventfair-
+elsbeingfairandrobusttowardanyunfairbehavior.Tothis nessattacks?Thesequestionscanhelpusdesignmorefair,
+end,itisimportanttothinkaboutattacksthatcanmakemod- andaccuratemodelsthatarerobusttopoisoningattacks.By
+elsunfairinordertostrengthenmodelsagainstsuchattacks. extension,onecanalsothinkaboutstrongerattacksagainst
+This recent and interesting line of work combines the two fairness than ours. We anticipate that continuing to blend
+fieldsoffairandadversarialmachinelearning.Theonlywork thefieldsofadversarialandfairmachinelearningcancreate
+weareawareofthatproposespoisoningattacksagainstal- interdisciplinaryideasthatcanhelpusdevelopmorerobust
+gorithmicfairnessis(Solans,Biggio,andCastillo2020).In andfairmachinelearningmodels.
+Acknowledgments Dressel,J.;andFarid,H.2018. Theaccuracy,fairness,and
+limitsofpredictingrecidivism. ScienceAdvances4(1). doi:
+ThismaterialisbaseduponworksupportedbytheDefense
+10.1126/sciadv.aao5580. URLhttps://advances.sciencemag.
+AdvancedResearchProjectsAgency(DARPA)underAgree-
+org/content/4/1/eaao5580.
+mentNo.HR0011890019.Wethanktheanonymousreview-
+ersandMozhdehGheinifortheirconstructivefeedback. Dua,D.;andGraff,C.2017. UCIMachineLearningReposi-
+tory. URLhttp://archive.ics.uci.edu/ml.
+EthicsStatement Dwork,C.2008. Differentialprivacy:Asurveyofresults.
+In International conference on theory and applications of
+Thispaperfurthersethicsinthemachinelearningcommunity
+modelsofcomputation,1–19.Springer.
+intwomajorways:
+Dwork,C.;Hardt,M.;Pitassi,T.;Reingold,O.;andZemel,
+• Despiteextensiveresearchinadversarialmachinelearn- R.2012. Fairnessthroughawareness. InProceedingsofthe
+ing,notmuchattentionhasbeengiventoscenarioswhere 3rdinnovationsintheoreticalcomputerscienceconference,
+fairnessisapossibletargetofdeliberateattacks.Wesug- 214–226.
+gest that fairness metrics are as important as accuracy,
+Fehrman,E.;Muhammad,A.K.;Mirkes,E.M.;Egan,V.;
+becausetheycanbemanipulatedinsensitiveenvironments
+andGorban,A.N.2017. Thefivefactormodelofpersonality
+to achieve malicious goals. Our work points out poten-
+andevaluationofdrugconsumptionrisk. InDataScience,
+tial vulnerabilities of machine learning models against
+231–242.Springer.
+fairness-targetingattacks.Thislineofresearchcanraise
+awareness, and motivate researchers to introduce meth- Goodfellow, I. J.; Shlens, J.; and Szegedy, C. 2015. Ex-
+odstomitigateharmfuleffectsofadversarialattackson plaining and Harnessing Adversarial Examples. In Ben-
+fairness.Theattacksproposedinthispaperaremeantto gio,Y.;andLeCun,Y.,eds.,3rdInternationalConference
+ensuretherobustnessoffairnessinmachinelearningappli- on Learning Representations, ICLR 2015, San Diego, CA,
+cations.Nevertheless,weacknowledgethatinthewrong USA,May7-9,2015,ConferenceTrackProceedings. URL
+handsthesetypeoftoolscouldenableanattackertoharm http://arxiv.org/abs/1412.6572.
+fairnessinextantmachinelearningsystems. Hardt,M.;Price,E.;andSrebro,N.2016. Equalityofoppor-
+• Fairnessandadversarialmachinelearningarebothvery tunityinsupervisedlearning. InAdvancesinneuralinforma-
+important research areas with major safety, security,
+tionprocessingsystems,3315–3323.
+and ethics implications both within and beyond on the Jagielski, M.; Kearns, M.; Mao, J.; Oprea, A.; Roth, A.;
+AI/machine learning community. This work combines Malvajerdi,S.S.;andUllman,J.2019. DifferentiallyPrivate
+ideasfrombothadversarialandfairmachinelearning,and FairLearning. InChaudhuri,K.;andSalakhutdinov,R.,eds.,
+willhopefullyfacilitatecollaborationamongresearchers Proceedingsofthe36thInternationalConferenceonMachine
+frombothcommunities,eventuallyleadingtomorerobust Learning,volume97ofProceedingsofMachineLearning
+andfairmachinelearningmodels. Research,3000–3008.LongBeach,California,USA:PMLR.
+URLhttp://proceedings.mlr.press/v97/jagielski19a.html.
+References Kamiran,F.;andCalders,T.2012. Datapreprocessingtech-
+niquesforclassificationwithoutdiscrimination. Knowledge
+Agarwal,A.;Dudik,M.;andWu,Z.S.2019.FairRegression:
+andInformationSystems33(1):1–33. ISSN0219-3116. doi:
+QuantitativeDefinitionsandReduction-BasedAlgorithms.
+10.1007/s10115-011-0463-8. URLhttps://doi.org/10.1007/
+InInternationalConferenceonMachineLearning,120–129.
+s10115-011-0463-8.
+Bagdasaryan,E.;Poursaeed,O.;andShmatikov,V.2019.Dif-
+Kamishima,T.;Akaho,S.;Asoh,H.;andSakuma,J.2012.
+ferentialprivacyhasdisparateimpactonmodelaccuracy. In
+Fairness-awareclassifierwithprejudiceremoverregularizer.
+AdvancesinNeuralInformationProcessingSystems,15453–
+In Joint European Conference on Machine Learning and
+15462.
+KnowledgeDiscoveryinDatabases,35–50.Springer.
+Biggio,B.;Corona,I.;Maiorca,D.;Nelson,B.;Šrndic´,N.;
+Koh, P. W.; and Liang, P. 2017. Understanding black-box
+Laskov,P.;Giacinto,G.;andRoli,F.2013. Evasionattacks
+predictions via influence functions. In Proceedings of the
+against machine learning at test time. In Joint European
+34thInternationalConferenceonMachineLearning-Volume
+conferenceonmachinelearningandknowledgediscoveryin
+70,1885–1894.JMLR.org.
+databases,387–402.Springer.
+Koh,P.W.;Steinhardt,J.;andLiang,P.2018. Strongerdata
+Biggio, B.; Nelson, B.; and Laskov, P. 2012. Poisoning poisoning attacks break data sanitization defenses. arXiv
+AttacksagainstSupportVectorMachines. InProceedingsof preprintarXiv:1811.00741.
+the29thInternationalCoferenceonInternationalConference
+Kusner, M. J.; Loftus, J.; Russell, C.; and Silva, R. 2017.
+onMachineLearning,ICML’12,1467–1474.Madison,WI,
+CounterfactualFairness. InGuyon,I.;Luxburg,U.V.;Ben-
+USA:Omnipress. ISBN9781450312851.
+gio,S.;Wallach,H.;Fergus,R.;Vishwanathan,S.;andGar-
+Chakraborty,A.;Alam,M.;Dey,V.;Chattopadhyay,A.;and nett, R., eds., Advances in Neural Information Processing
+Mukhopadhyay,D.2018. Adversarialattacksanddefences: Systems30,4066–4076.CurranAssociates,Inc. URLhttp:
+Asurvey. arXivpreprintarXiv:1810.00069. //papers.nips.cc/paper/6995-counterfactual-fairness.pdf.
+Larson, J.; Mattu, S.; Kirchner, L.; and Angwin, J. 2016. NY, USA: Association for Computing Machinery. ISBN
+Compas analysis. GitHub, available at: https://github. 9781450357463. doi:10.1145/3194770.3194776. URL
+com/propublica/compas-analysis[GoogleScholar]. https://doi.org/10.1145/3194770.3194776.
+Li,G.;Zhu,P.;Li,J.;Yang,Z.;Cao,N.;andChen,Z.2018. Zafar, M. B.; Valera, I.; Gomez Rodriguez, M.; and Gum-
+Securitymatters:Asurveyonadversarialmachinelearning. madi, K. P. 2017. Fairness beyond disparate treatment &
+arXivpreprintarXiv:1810.07339. disparateimpact:Learningclassificationwithoutdisparate
+mistreatment. InProceedingsofthe26thinternationalcon-
+Mehrabi,N.;Huang,Y.;andMorstatter,F.2020. Statistical
+ferenceonworldwideweb,1171–1180.
+Equity:AFairnessClassificationObjective. arXivpreprint
+arXiv:2005.07293. Zafar, M. B.; Valera, I.; Rodriguez, M. G.; and Gummadi,
+K.P.2015. Learningfairclassifiers. stat1050:29.
+Mehrabi, N.; Morstatter, F.; Saxena, N.; Lerman, K.; and
+Galstyan,A.2019. Asurveyonbiasandfairnessinmachine Zhang, L.; Wu, Y.; and Wu, X. 2017. Achieving non-
+learning. arXivpreprintarXiv:1908.09635. discriminationin datarelease. In Proceedingsof the23rd
+ACMSIGKDDInternationalConferenceonKnowledgeDis-
+Moosavi-Dezfooli,S.-M.;Fawzi,A.;andFrossard,P.2016.
+coveryandDataMining,1335–1344.ACM.
+Deepfool: a simple and accurate method to fool deep neu-
+ral networks. In Proceedings of the IEEE conference on
+computervisionandpatternrecognition,2574–2582.
+Moyer, D.; Gao, S.; Brekelmans, R.; Galstyan, A.; and
+VerSteeg,G.2018. Invariantrepresentationswithoutadver-
+sarialtraining.InAdvancesinNeuralInformationProcessing
+Systems,9084–9093.
+Pleiss,G.;Raghavan,M.;Wu,F.;Kleinberg,J.;andWein-
+berger,K.Q.2017.OnFairnessandCalibration.InAdvances
+inNeuralInformationProcessingSystems30,5680–5689.
+Curran Associates, Inc. URL http://papers.nips.cc/paper/
+7151-on-fairness-and-calibration.pdf.
+Pujol,D.;McKenna,R.;Kuppam,S.;Hay,M.;Machanava-
+jjhala,A.;andMiklau,G.2020. Fairdecisionmakingusing
+privacy-protecteddata. InProceedingsofthe2020Confer-
+ence on Fairness, Accountability, and Transparency, 189–
+199.
+Shafahi, A.; Huang, W. R.; Najibi, M.; Suciu, O.; Studer,
+C.; Dumitras, T.; and Goldstein, T. 2018. Poison frogs!
+targetedclean-labelpoisoningattacksonneuralnetworks. In
+AdvancesinNeuralInformationProcessingSystems,6103–
+6113.
+Solans, D.; Biggio, B.; and Castillo, C. 2020. Poison-
+ing Attacks on Algorithmic Fairness. arXiv preprint
+arXiv:2004.07401.
+Steinhardt,J.;Koh,P.W.W.;andLiang,P.S.2017. Certified
+DefensesforDataPoisoningAttacks. InGuyon,I.;Luxburg,
+U. V.; Bengio, S.; Wallach, H.; Fergus, R.; Vishwanathan,
+S.; and Garnett, R., eds., Advances in Neural Information
+ProcessingSystems30,3517–3529.CurranAssociates,Inc.
+URLhttp://papers.nips.cc/paper/6943-certified-defenses-for-
+data-poisoning-attacks.pdf.
+Ustun, B.; Liu, Y.; and Parkes, D. 2019. Fairness without
+Harm: Decoupled Classifiers with Preference Guarantees.
+InChaudhuri,K.;andSalakhutdinov,R.,eds.,Proceedings
+ofthe36thInternationalConferenceonMachineLearning,
+volume97ofProceedingsofMachineLearningResearch,
+6373–6382. Long Beach, California, USA: PMLR. URL
+http://proceedings.mlr.press/v97/ustun19a.html.
+Verma, S.; and Rubin, J. 2018. Fairness Definitions
+Explained. In Proceedings of the International Work-
+shop on Software Fairness, FairWare ’18, 1–7. New York,

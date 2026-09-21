@@ -1,0 +1,704 @@
+Cross-lingual Knowledge Graph Alignment via
+Graph Convolutional Networks
+ZhichunWang,QingsongLv,XiaohanLan,YuZhang
+CollegeofInformationScienceandTechnique
+BeijingNormalUniversity,Beijing,100875,China
+zcwang@bnu.edu.cn lqs,lanxh,zybnu @mail.bnu.edu.cn
+{ }
+Abstract are connected by cross-lingual links in most mul-
+tilingual KGs. Therefore, increasingly more re-
+Multilingualknowledgegraphs(KGs)suchas
+search work studies the problem of cross-lingual
+DBpediaandYAGOcontainstructuredknowl-
+KG alignment, aiming to match entities in differ-
+edge of entities in several distinct languages,
+entlanguagesinamultilingualKGautomatically.
+andtheyareusefulresourcesforcross-lingual
+AI and NLP applications. Cross-lingual KG Traditional cross-lingual KG alignment ap-
+alignment is the task of matching entities proaches either rely on machine translation tech-
+withtheircounterpartsindifferentlanguages, nique or defining various language-independent
+whichisanimportantwaytoenrichthecross-
+features to discover cross-lingual links. Most
+lingual links in multilingual KGs. In this pa-
+recently, several embedding-based approaches
+per, we propose a novel approach for cross-
+have been proposed for cross-lingual KG align-
+lingualKGalignmentviagraphconvolutional
+ment, including MTransE (Chen et al., 2017) and
+networks (GCNs). Given a set of pre-aligned
+entities, our approach trains GCNs to embed JAPE(Sunetal.,2017). GiventwoKGsandaset
+entitiesofeachlanguageintoaunifiedvector of pre-aligned entities of them, embedding-based
+space. Entityalignmentsarediscoveredbased approaches project entities into low-dimensional
+onthedistancesbetweenentitiesintheembed- vector spaces; entities are matched based on the
+ding space. Embeddings can be learned from
+computationsontheirvectorrepresentations. Fol-
+boththestructuralandattributeinformationof
+lowing very similar ideas as above, JE (Hao
+entities,andtheresultsofstructureembedding
+et al., 2016) and ITransE (Zhu et al., 2017)
+and attribute embedding are combined to get
+accurate alignments. In the experiments on are embedding-based approaches for matching
+aligning real multilingual KGs, our approach entities between heterogeneous KGs, and they
+getsthebestperformancecomparedwithother can also work for the problem of cross-lingual
+embedding-basedKGalignmentapproaches. KG alignment. The above embedding-based
+approaches can achieve promising performance
+1 Introduction
+without machine translation or feature engineer-
+Knowledgegraphs(KGs)representhumanknowl- ing.
+edge in the machine-readable format, are becom- However, we find that the above approaches
+ing the important basis of many applications in all try to jointly model the cross-lingual knowl-
+the areas of artificial intelligence and natural lan- edge and the monolingual knowledge in one uni-
+guage processing. Multilingual KGs such as DB- fied optimization problem. The loss of two kinds
+pedia(Bizeretal.,2009),YAGO(Suchaneketal., of knowledge has to be carefully balanced dur-
+2008; Rebele et al., 2016), and BabelNet (Nav- ing the optimization. For example, JE, MTransE,
+igli and Ponzetto, 2012) are especially valuable if andITransEallusehyper-parameterstoweightthe
+cross-lingual applications are to be built. Besides loss of entity alignments in the loss functions of
+the knowledge encoded in each distinct language, theirmodels;JAPEusesthepre-alignedentitiesto
+multilingual KGs also contain rich cross-lingual combine two KGs as one, and adds weight to the
+linksthatmatchtheequivalententitiesindifferent scores of negative samples in its loss function. In
+languages. Thecross-linguallinksplayanimpor- the above approaches, entities’ embeddings have
+tant role to bridge the language gap in a multilin- to encode both the structural information in KGs
+gual KG; however, not all the equivalent entities and the equivalent relations of entities. Further-
+349
+Proceedingsofthe2018ConferenceonEmpiricalMethodsinNaturalLanguageProcessing,pages349–357
+Brussels,Belgium,October31-November4,2018.(cid:13)c2018AssociationforComputationalLinguistics
+more, the attributes of entities (e.g., the age of a 2 RelatedWork
+people,thepopulationofacountry)havenotbeen
+2.1 KGEmbedding
+fully utilized in the existing models. MTransE
+and ITransE cannot use attributional information In the past few years, much work has been done
+inKGs;althoughJAPEincludestheattributetypes ontheproblemofKGembedding. KGembedding
+inthemodel,theattributevaluesofentitiesareig- models embed entities and relations in a KG into
+nored. We believe that considering the attribute a low-dimensional vector space while preserving
+valuescanfurtherimprovetheresultsofKGalign- theoriginalknowledge. Theembeddingsareusu-
+ment. ally learned by minimizing a global loss function
+Having the above observations, we propose a ofalltheentitiesandrelationsinaKG,whichcan
+new embedding-based KG alignment approach be further used for relation prediction, informa-
+whichdirectlymodelstheequivalentrelationsbe- tion extraction, and some other tasks. TransE is
+tween entities by using graph convolutional net- arepresentativeKGembeddingapproach(Bordes
+works (GCNs). GCN is a kind of convolu- etal.,2013),whichprojectsbothentitiesandrela-
+tional network which directly operates on graph-
+tionsintothesamevectorspace;ifatriple(h,r,t)
+structured data; it generates node-level embed- holds, TransE wants that h+r t. The embed-
+≈
+dings by encoding information about the nodes’ dings are learned by minimizing a margin-based
+neighborhoods. The adjacencies of two equiva- ranking criterion over the training set. TransE
+lent entities in KGs usually contain other equiv- model is simple but powerful, and it gets promis-
+alent entities, so we choose GCNs to gener- ing results on link prediction and triple classifica-
+ate neighborhood-aware embeddings of entities, tionproblems. TofurtherimproveTransE,several
+whichareusedtodiscoverentityalignments. Our enhancedmodelsbasedonithavebeenproposed,
+approach can also provide a simple and effec- includingTransR(Linetal.,2015),TransH(Wang
+tivewaytoincludeentities’attributevaluesinthe et al., 2014) and TransD (Ji et al., 2015) etc.
+alignmentmodel. Morespecifically,ourapproach By introducing new representations of relational
+hasthefollowingadvantages: translation,laterapproachesachievebetterperfor-
+manceatthecostofincreasingmodelcomplexity.
+Ourapproachusestheentityrelationsineach TherearemanyotherKGembeddingapproaches,
+•
+KG to build the network structure of GCNs, recent surveys (Wang et al., 2017; Nickel et al.,
+and it only considers the equivalent relations 2016)givedetailedintroductionandcomparison.
+between entities in model training. Our ap-
+2.2 Embedding-basedKGAlignment
+proach has small model complexity and can
+achieveencouragingalignmentresults. Here we introduce the KG Alignment approaches
+most related to ours, and discuss the main differ-
+Ourapproachonlyneedspre-alignedentities encesbetweenourapproachandthem.
+•
+as training data, and it does not require any JE (Hao et al., 2016) jointly learns the embed-
+pre-aligned relations or attributes between dings of multiple KGs in a uniform vector space
+KGs. to align entities in KGs. JE uses a set of seed
+entity alignments to connect two KGs, and then
+Entityrelationsandentityattributesareeffec- learnstheembeddingsbyusingamodifiedTransE
+•
+tively combined in our approach to improve model, which adds a loss of entity alignments in
+thealignmentresults. itsgloballossfunction.
+MTransE (Chen et al., 2017) encodes entities
+In the experiments on aligning real multilingual and relations of each KG in a separated embed-
+KGs,ourapproachgetsthebestperformancecom- ding space by using TransE; it also provides tran-
+paredwiththebaselinemethods. sitions for each embedding vector to its cross-
+The rest of this paper is organized as fol- lingual counterparts in other spaces. The loss
+lows, Section 2 reviews some related work, Sec- function of MTransE is the weighted sum of two
+tion 3 introduces some background knowledge, component models’ loss (i.e., knowledge model
+Section 4 describes our proposed approach, Sec- and alignment model). To train the alignment
+tion 5 presents the evaluation results, Section 6 is model, MTransE needs a set of aligned triples of
+theconclusionandfuturework. twoKGs.
+350
+JAPE(Sunetal.,2017)combinesstructureem- triples describe important information about enti-
+bedding and attribute embedding to match enti- ties, wewilltakebothofthemintoaccountinthe
+ties in different KGs. Structure embedding fol- taskofcross-lingualKGalignment.
+lows the TransE model, which learns vector rep- Formally, we represent a KG as G =
+resentationsofentitiesintheoverlaygraphoftwo (E,R,A,T ,T ), where E,R,A are sets of en-
+R A
+KGs. AttributeembeddingfollowstheSkip-gram tities, relations and attributes, respectively; T
+R
+⊂
+model, which aims to capture the correlations of E R E is the set of relational triples, T
+A
+× × ⊂
+attributes. Togetdesirableresults,JAPEneedsthe E A V isthesetofattributionaltriples,where
+× ×
+relations and attributes of two KGs to be aligned V isthesetofattributevalues.
+inadvance. Let G = (E ,R ,A ,TR,TA) and G =
+1 1 1 1 1 1 2
+ITransE (Zhu et al., 2017) is a joint knowledge (E ,R ,A ,TR,TA)betwoKGsindifferentlan-
+2 2 2 2 2
+embedding approach for multiple KGs, which is guages, and S = (e ,e ) e E ,e
+{
+i1 i2
+|
+i1
+∈
+1 i2
+∈
+also suitable for the cross-lingual KG alignment E m beasetofpre-alignedentitypairsbetween
+2 }i=1
+problem. ITransEfirstlearnsbothentityandrela- G andG . Wedefinethetaskofcross-lingualKG
+1 2
+tion embeddings following TransE; then it learns alignment as finding new entity alignments based
+to map knowledge embeddings of different KGs on the existing ones. In multilingual KGs such
+into a joint space according to a set of seed en- as DBpedia and YAGO, the cross-lingual links in
+tity alignments. ITransE performs iterative entity them can be used to build the sets of pre-aligned
+alignment by using the newly discovered entity entitypairs. Thealreadyknownentityalignments
+alignmentstoupdatejointembeddingsofentities. areusedasseedsortrainingdataintheprocessof
+ITransErequiresallrelationsbeingsharedamong KGalignment.
+KGs.
+4 TheProposedApproach
+Theaboveapproachesfollowthesimilarframe-
+work to match entities in different KGs. They all
+Theframeworkofourproposedapproachisshown
+rely on TransE model to learn entity embeddings,
+inFigure1. GiventwoKGsG andG indifferent
+and then define some kinds of transformation be- 1 2
+languages,andasetofknownalignedentitypairs
+tween embeddings of aligned entities. Compared
+S = (e ,e ) m between them, our approach
+with these approaches, our approach uses an en- { i1 i2 }i=1
+automaticallyfindnewentityalignmentsbasedon
+tirelydifferentframework;itusesGCNstoembed
+GCN-based entity embeddings. The basic idea
+entities in a unified vector space, where aligned
+of our approach is to use GCNs to embed enti-
+entities are expected to be as close as possible.
+ties from different languages into a unified vector
+Ourapproachonlyfocusesonmatchingentitiesin
+space,whereequivalententitiesareexpectedtobe
+two KGs, and it does not learn embeddings of re-
+as close as possible. Entity alignments are pre-
+lations. MTransE, JAPE, and ITransE all require
+dictedbyapplyingapre-defineddistancefunction
+relations being aligned or shared in KGs; our ap-
+toentities’GCN-representations.
+proachdoesnotneedthiskindofpriorknowledge.
+4.1 GCN-basedEntityEmbedding
+3 ProblemFormulation
+GCNs (Bruna et al., 2014; Henaff et al., 2015;
+KGs represent knowledge about real-world en- Defferrard et al., 2016; Kipf and Welling, 2017)
+tities as triples. Here we consider two kinds areatypeofneuralnetworkthatdirectlyoperates
+of triples in KGs: relational triples, and attri- on graph data. GCNs allow end-to-end learning
+butional triples. Relational triples represents re- ofpredictionpipelineswhoseinputsaregraphsof
+lations between entities, and it has the form arbitrarysizeandshape. TheinputsofaGCNare
+entity ,relation,entity . Attributional triples feature vectors of nodes and the structure of the
+1 2
+(cid:104) (cid:105)
+describe attributes of entities, and it has the form graph; the goal of a GCN is to learn a function of
+entity,attribute,value . For example in the features on the input graph and produces a node-
+(cid:104) (cid:105)
+data of YAGO, graduatedFrom is a relation, and leveloutput. GCNscanencodeinformationabout
+(Albert Einstein, graduatedFrom, ETH Zurich) is the neighborhood of a node as a real-valued vec-
+arelationaltriple; diedOnDateisanattribute,and tor,whichwasusuallyusedforclassificationorre-
+(Albert Einstein, diedOnDate, 1955) is an attri- gression. WhensolvingtheproblemofKGalign-
+butional triple. Both relational and attributional ment, we assume that (1) equivalent entities tend
+351
+G
+KG1 C
+N
+f(e ,e )= e e
+i j i j 1
+k − k
+Knowledge graphs (KGs) represent human
+G
+KG2 C
+N
+Figure1: Frameworkofourapproach(dashedbluelinesconnectsequivalententitiesintwoKGs)
+to have similar attributes, and (2) equivalent enti- tionalcomputationas:
+tiesareusuallyneighboredbysomeotherequiva-
+lent entities. GCNs can combine the attribute in-
+formation and the structure information together,
+[H(l+1);H(l+1)]
+s a
+t
+t
+h
+it
+e
+ie
+re
+s
+fo
+in
+re
+to
+ou
+lo
+r
+w
+a
+-
+p
+d
+p
+im
+ro
+e
+a
+n
+c
+s
+h
+io
+u
+n
+s
+a
+e
+l
+s
+v
+G
+e
+C
+ct
+N
+or
+s t
+s
+o
+pa
+p
+c
+r
+e
+o
+,
+je
+w
+ct
+h
+e
+e
+n
+re
+- = σ (cid:16) Dˆ−1 2AˆDˆ−1 2[H
+s
+(l)W
+s
+(l);H
+a
+(l)W
+a
+(l)] (cid:17) (2)
+equivalententitiesareclosetoeachother.
+(l) (l)
+A GCN-model consists of multiple stacked where W s and W a are the weight matrices for
+GCNlayers. Theinputtothel-thlayeroftheGCN structure features and attribute features in the l-th
+model is a vertex feature matrix, H(l) Rn×d(l) , layer,respectively; [; ]denotestheconcatenation
+where n is the number of vertices and ∈ d(l) is the oftwomatrices. Theactivationfunctionσ ischo-
+senasReLU( ) = max(0, ).
+numberoffeaturesinthel-thlayer. Theoutputof
+· ·
+thel-thlayerisanewfeaturematrixH(l+1)bythe Model Configuration. More specifically, our ap-
+proach uses two 2-layer GCNs, and each GCN
+followingconvolutionalcomputation:
+processes one KG to generate embeddings of its
+entities. As defined in Section 3, we denote two
+(cid:16) (cid:17)
+H(l+1) = σ Dˆ− 2 1 AˆDˆ− 2 1 H(l)W(l) (1) KGs as G = (E ,R ,A ,TR,TA) and G =
+1 1 1 1 1 1 2
+(E ,R ,A ,TR,TA);andlettheircorresponding
+2 2 2 2 2
+GCN models be denoted as GCN and GCN .
+1 2
+whereσisanactivationfunction;Aisan ncon-
+× As for the structure feature vectors of entities, we
+nectivitymatrixthatrepresentsthestructureinfor-
+set the dimensionality of feature vectors to d in
+mationofthegraph;Aˆ= A+I,andI istheiden- s
+allthelayersofGCN andGCN ;andtwoGCN
+tity matrix;
+Dˆ
+is the diagonal node degree matrix
+1 2
+(1) (2)
+of Aˆ ; W(l) Rd(l)×d(l+1) is the weight matrix of models share the weight matrices W s and W s
+∈ for the structure features in two layers. As for
+thel-thlayerintheGCN,d(l+1) isthedimension-
+the attribute vectors of entities, we set the dimen-
+alityofnewvertexfeatures.
+sionality of output feature vectors to d . Because
+a
+StructureandAttributeEmbedding. Inourap-
+two KGs may have different number of attributes
+proach, GCNs are used to embed entities of two (i.e. A = A ), the dimensionalities of the in-
+1 2
+| | (cid:54) | |
+KGs in a unified vector space. To utilize both
+put attribute feature vectors in two GCN models
+structure and attribute information of entities, our
+are different. The first layer of each GCN model
+approachassignstwofeaturevectorstoeachentity
+transforms the input attribute feature vectors into
+in GCN layers, structure feature vector h s and at- vectors of size d ; and two GCN-models gener-
+a
+(0)
+tributefeaturevectorh a . Intheinputlayer,h s is ateattributeembeddingsofthesamedimensional-
+randomlyinitializedandupdatedduringthetrain- ity. Table 1 outlines the parameters of two GCNs
+(0)
+ingprocess;h a istheattributevectorsofentities in our approach. The final outputs of two GCNs
+and it is fixed during the model training. Let H are(d +d )-dimensionalembeddingsofentities,
+s s a
+and H be the structure and attribute feature ma- which are further used to discover entity align-
+a
+trices of all the entities, we redefine the convolu- ments.
+352
+Parameter GCN 1 GCN 2
+InitialStructureFeatureMatrices H(0) ∈R|E1|×ds H(0) ∈R|E2|×ds
+s1 s2
+WeightMatrixforStructureFeaturesinLayer1 W s (1) ∈Rds×ds
+WeightMatrixforStructureFeaturesinLayer2 W s (2) ∈Rds×ds
+OutputStructureEmbeddings H(2) ∈R|E1|×ds H(2) ∈R|E2|×ds
+s1 s2
+InitialAttributeFeatureMatrices H(0) ∈R|E1|×|A1| H(0) ∈R|E2|×|A2|
+a1 a2
+WeightMatrixforAttributeFeaturesinLayer1 W(1) ∈R|A1|×da W(1) ∈R|A2|×da
+a1 a2
+WeightMatrixforAttributeFeaturesinLayer2 W a (2) ∈Rda×da
+OutputAttributeEmbeddings H(2) ∈R|E1|×da H(2) ∈R|E2|×da
+a1 a2
+Table1: ParametersoftwoGCNs
+Computation of Connectivity Matrix. In a inG ,wecomputethefollowingdistancemeasure
+2
+GCN model, the connectivity matrix A defines betweenthem:
+the neighborhoods of entities in the convolutional
+f(h (e ),h (v )
+computation. For an undirected graph, the adja- s i s j
+D(e ,v ) =β
+i j
+cencymatrixcanbedirectlyusedasA s . ButKGs d s (6)
+are relational multi-graphs, entities are connected f(h a (e i ),h a (v j ))
++(1 β)
+by typed relations. Therefore, we design a par- − d a
+ticular method for computing A of a KG; we let
+a ij Aindicatetowhatextenttheinformationof where f(x,y) = (cid:107) x − y (cid:107) 1 , h s ( · ) and h a ( · )
+alig ∈ nments propagates from the i-th entity to the denote the structure embedding and attribute em-
+j-th entity. The probability of two entities being bedding of an entity, respectively; d s and d a are
+dimensionalities of structure embeddings and at-
+equivalentdiffersgreatlyconsideringtheyconnect
+toalignedentitiesbydifferentrelations(e.g.,has- tribute embeddings; β is a hyper-parameter that
+Parent vs. hasFriend). Therefore, we compute balances the importance of two kinds of embed-
+dings.
+two measures, which are called functionality and
+inversefunctionality,foreachrelation: Thedistanceisexpectedtobesmallforequiva-
+lententitiesandlargefornon-equivalentones. For
+#Head Entities of r a specific entity e in G , our approach computes
+fun(r) = (3) i 1
+#Triples of r thedistancesbetweene andalltheentitiesinG ,
+i 2
+and returns a list of ranked entities as candidate
+#Tail Entities of r alignments. Thealignmentcanbealsoperformed
+ifun(r) = (4)
+#Triples of r from G 2 to G 1 . In the experiments, we report the
+resultsofbothdirectionsofKGalignment.
+where #Triples of r is the number of triples
+of relation r; #Head Entities of r and
+4.3 ModelTraining
+#Tail Entities of r are the numbers of head
+entities and tail entities of r, respectively. To To enable GCNs to embed equivalent entities as
+measure the influence of the i-th entity over the close as possible in the vector space, we use a
+j-theentity,weseta Aas: set of known entity alignments S as training data
+ij
+∈ to train GCN models. The model training is per-
+(cid:88) (cid:88) formedbyminimizingthefollowingmargin-based
+a = ifun(r)+ fun(r) (5)
+ij
+rankinglossfunctions:
+(cid:104)ei,r,ej(cid:105)∈G (cid:104)ej,r,ei(cid:105)∈G
+(cid:88) (cid:88)
+4.2 Alignmentprediction L = [f(h (e),h (v))+γ
+s s s s
+(e,v)∈S(e(cid:48),v(cid:48))∈S(cid:48)
+Entity alignments are predicted based on the dis- (e,v)
+tancesbetweenentitiesfromtwoKGsintheGCN- f(h (e(cid:48)),h (v(cid:48))]
+s s +
+−
+representation space. For entities e i in G 1 and v j (7)
+353
+approaches. Hits@k measures the proportion of
+correctlyalignedentitiesrankedinthetopkcandi-
+(cid:88) (cid:88)
+L = [f(h (e),h (v))+γ
+a a a a dates. For the parameters of our approach, we set
+(e,v)∈S(e(cid:48),v(cid:48))∈S(cid:48) d = 1,000, d = 100; the margin γ = γ = 3
+(e,v) s a s a
+f(h (e(cid:48)),h (v(cid:48))] inthelossfunction,andβ inthedistancemeasure
+a a +
+−
+isempericallysetto0.9.
+(8)
+where[x] = max 0,x ,S(cid:48) denotesthesetof 5.3 Results
++ { } (e,v)
+negativeentityalignmentsconstructedbycorrupt-
+Table 3 shows the results of all the compared
+ing (e,v), i.e. replacing e or v with a randomly
+approaches on DBP15K datasets. We report
+chosen entity in G or G ; γ ,γ > 0 are margin
+1 2 s a Hits@1, Hits@10 and Hits@50 of approaches
+hyper-parametersseparatingpositiveandnegative
+oneachdataset. Becauseweusethesamedatasets
+entityalignments. L andL arelossfunctionsfor
+s a asin(Sunetal.,2017),theresultsofJE,MTransE,
+structure embedding and attribute embedding, re-
+and JAPE are obtained from (Sun et al., 2017).
+spectively;theyareindependentofeachotherand For JAPE and JAPE(cid:48), each of them has three
+henceareoptimizedseparately. Weadoptstochas-
+variants: Structure Embedding without negative
+tic gradient descent (SGD) to minimize the above
+triples (SE w/o neg.), Structure Embedding (SE),
+lossfunctions.
+Structureandattributejointembedding(SE+AE).
+We use GCN(SE) and GCN(SE+AE) to denote
+5 Experiment
+two variants of our approach: one only uses re-
+5.1 Datasets lational triples to perform structure embedding,
+andtheotherusesbothrelationalandattributional
+We use the DBP15K datasets in the experiments,
+triples to perform structure and attribute embed-
+whichwerebuiltbySunetal.(2017). Thedatasets
+ding.
+weregeneratedfromDBpedia,alarge-scalemulti-
+GCN(SE)vs. GCN(SE+AE)
+lingual KG containing rich inter-language links
+between different language versions. Subsets We first compare the results of GCN(SE) and
+of Chinese, English, Japanese and French ver- GCN(SE+AE) to see whether the attributional in-
+sions of DBpedia are selected following certain formation is helpful in the KG alignment task.
+rules. Table 2 outlines the detail information According to the results, adding attributes in our
+of the datasets. Each dataset contains data two approach do lead to slightly better results. The
+KGsindifferentlanguagesand15thousandinter- improvements range from 1% to 10%, which are
+language links connecting equivalent entities in very similar to the improvements of JAPE(SE)
+two KGs. In the experiments, the known equiv- over JAPE(SE+AE). It shows that the KG align-
+alent entity pairs are used for model training and mentmainlyrelaysonthestructuralinformationin
+testing. KGs, but the attributional information is still use-
+ful. Our approach uses the same framework for
+5.2 ExperimentSettings embeddingstructureandattributeinformation,the
+In the experiments, we compared our approach combination of two kinds of embeddings works
+withJE,MTransEandJAPE.WealsobuildJAPE(cid:48), effectively.
+a variant of JAPE which does not use pre-aligned GCN(SE+AE)vs. Baselines
+relations and attributes. Because the approach On the dataset of DBP15K ,
+ZH−EN
+ITransE performs iterative alignment and it re- JAPE(SE+AE) performs best and gets five
+quires two KGs sharing the same relations, we bestHits@kvalues;ourapproachGCN(SE+AE)
+do not include it in the comparison. The inter- gets the best Hits@1 in the alignment direction
+languagelinksineachdatasetareusedasthegold of ZH EN. The results of GCN(SE+AE) and
+→
+standards of entity alignments. For all the com- JAPE gets very close results regarding Hits@1
+pared approaches, we use 30% of inter-language andHits@10in thedirection of ZH EN. Inthe
+→
+links for training and 70% of them for testing; alignment direction of EN ZH, JAPE(SE+AE)
+→
+the split of training and testing are the same for outperforms GCN(SE+AE) by about 2-3%. But
+all approaches. We use Hits@k as the evalua- it should be noticed that JAPE uses additional
+tion measure to assess the performance of all the aligned relations and attributes as its inputs,
+354
+Datasets Entities Relations Attributes Rel.triples Attr.triples
+Chinese 66,469 2,830 8,113 153,929 379,684
+DBP15K
+ZH−EN English 98,125 2,317 7,173 237,674 567,755
+Japanese 65,744 2,043 5,882 164,373 354,619
+DBP15K
+JA−EN English 95,680 2,096 6,066 233,319 497,230
+French 66,858 1,379 4,547 192,191 528,665
+DBP15K
+FR−EN English 105,889 2,209 6,422 278,590 576,543
+Table2: Detailsofthedatasets
+ZH →EN EN →ZH
+DBP15K
+ZH−EN
+Hits@1 Hits@10 Hits@50 Hits@1 Hits@10 Hits@50
+*JE 21.27 42.77 56.74 19.52 39.36 53.25
+*MTransE 30.83 61.41 79.12 24.78 52.42 70.45
+SEw/oneg. 38.34 68.86 84.07 31.66 59.37 76.33
+*JAPE SE 39.78 72.35 87.12 32.29 62.79 80.55
+SE+AE 41.18 74.46 88.90 40.15 71.05 86.18
+SEw/oneg. 30.10 62.58 80.28 23.04 52.91 72.17
+JAPE(cid:48) SE 30.54 66.41 83.94 23.91 57.02 77.31
+SE+AE 33.32 69.28 86.40 33.02 66.92 85.15
+SE 38.42 70.34 81.24 34.43 65.68 77.03
+GCN
+SE+AE 41.25 74.38 86.23 36.49 69.94 82.45
+JA→EN EN →JA
+DBP15K
+JA−EN
+Hits@1 Hits@10 Hits@50 Hits@1 Hits@10 Hits@50
+*JE 18.92 39.97 54.24 17.80 38.44 52.48
+*MTransE 27.86 57.45 75.94 23.72 49.92 67.93
+SEw/oneg. 33.10 63.90 80.80 29.71 56.28 73.84
+*JAPE SE 34.27 66.39 83.61 31.40 60.80 78.51
+SE+AE 36.25 68.50 85.35 38.37 67.27 82.65
+SEw/oneg. 28.90 60.61 80.03 25.34 53.36 71.94
+JAPE(cid:48) SE 29.35 63.31 82.76 26.37 57.35 76.87
+SE+AE 31.06 64.11 81.57 32.45 62.21 79.08
+SE 38.21 72.49 82.69 36.90 68.50 79.51
+GCN
+SE+AE 39.91 74.46 86.10 38.42 71.81 83.72
+FR→EN EN →FR
+DBP15K
+FR−EN
+Hits@1 Hits@10 Hits@50 Hits@1 Hits@10 Hits@50
+*JE 15.38 38.84 56.50 14.61 37.25 54.01
+*MTransE 24.41 55.55 74.41 21.26 50.60 69.93
+SEw/oneg. 29.55 62.18 79.36 25.40 56.55 74.96
+*JAPE SE 29.63 64.55 81.90 26.55 60.30 78.71
+SE+AE 32.39 66.68 83.19 32.97 65.91 82.38
+SEw/oneg. 28.23 60.99 78.47 24.68 55.25 74.19
+JAPE(cid:48) SE 27.58 62.03 79.98 24.93 58.95 77.79
+SE+AE 30.21 65.81 82.57 31.42 63.86 80.95
+SE 36.51 73.42 85.93 36.08 72.37 85.44
+GCN
+SE+AE 37.29 74.49 86.73 36.77 73.06 86.39
+Table3: Resultscomparisonofcross-lingualKGalignment(*markstheresultsobtainedfrom(Sunetal.,
+2017))
+while our approach does not use these kinds GCN(SE+AE) performs better than it regrading
+of prior knowledge. If compared with JAPE(cid:48), Hits@1 and Hits@10. While compared with
+355
+60 60 50
+50 50
+40
+40 40
+30
+30 30
+20
+20 20
+10 10 10
+10% 20% 30% 40% 50% 10% 20% 30% 40% 50% 10% 20% 30% 40% 50%
+JAPE GCN JAPE GCN JAPE GCN
+(a)ZH-EN (b)JA-EN (c)FR-EN
+Figure 2: GCN and JAPE using different sizes of training data (horizontal coordinates: proportions of
+pre-alignedentitiesusedintrainingdata;verticalcoordinates: Hits@1)
+JE and MTransE, GCN(SE+AE) outperform bothapproachesperformbetterasthesizeoftrain-
+them by more than 10% in most cases. On the ing data increases. And our approach always out-
+datasetsofDBP15K andDBP15K , performs JAPE except using 40% pre-aligned en-
+JA−EN FR−EN
+GCN(SE+AE) outperforms all the compared ap- tities as training data in Figure 2(a). Especially
+proaches regarding all the Hits@k measures. in the tasks of aligning Japanese to English and
+Even compared with JAPE which uses extra FrenchtoEnglish,ourapproachhasadistinctad-
+relation and attribute alignments, GCN(SE+AE) vantageoverJAPE.
+stillgetsbetterresultsthanit.
+6 ConclusionandFutureWork
+Comparing with all the baselines, both
+GCN(SE) and GCN(SE+AE) outperform JE and This paper presents a new embedding-based KG
+MTransE significantly. Among all the baselines, alignment approach which discovers entity align-
+JAPE is the strongest one; it might due to its ments based on the entity embeddings learned by
+ability of using both relational and attributional GCNs. Our approach can make use of both the
+triples, and the extra alignments of relations and relational and the attributional triples in KGs to
+attributesthatitconsumes. Ourapproachachieves discover the entity alignments. We evaluate our
+better results than JAPE on two datasets; Al- method on the data of real multilingual KGs, and
+though JAPE performs better than our approach, the results show the advantages of our approach
+the differences between their results are small. overthecomparedbaselines.
+If there are no existing relation and attribute In the future work, we will explore more ad-
+alignments between two KGs, our approach will vancedGCNmodelsforKGalignmenttask, such
+havedistinctadvantageoverJAPE. as Relational GCNs (Schlichtkrull et al., 2017)
+GCNvs. JAPEusingdifferentsizesoftrain- and Graph Attention Networks (GATs) (Velick-
+ingdata ovicet al.,2017). Furthermore, how toiteratively
+discover new entity alignments in the framework
+Toinvestigatehowthesizeoftrainingsetaffects
+of our approach is another interesting direction
+the results of our approach, we further compare
+thatwewillstudyinthefuture.
+ourapproachwithJAPEbyusingdifferentnumber
+ofpre-aligned entitiesas trainingdata. For JAPE, Acknowledgments
+the pre-aligned entities are used as seeds to make
+their vectors overlapped. In our approach, all the TheworkissupportedbytheNationalNaturalSci-
+pre-alignedentitiesareusedtotrainGCNmodels. ence Foundation of China (No. 61772079) and
+Intuitively, the more pre-aligned entities used, the the National Key R&D Program of China (No.
+betterresultsshouldbeobtainedbybothGCNand 2017YFC0804004).
+JAPE.
+Hereweusedifferentproportionsofpre-aligned References
+entitiesastrainingdata,whichranges10%to50%
+Christian Bizer, Jens Lehmann, Georgi Kobilarov,
+with step 10%; all the rest of pre-aligned entities
+So¨ren Auer, Christian Becker, Richard Cyganiak,
+are used for testing. Figure 2 shows the Hits@1
+and Sebastian Hellmann. 2009. Dbpedia-a crystal-
+of two approaches in three datasets. It shows that lization point for the web of data. Web Semantics:
+356
+science,servicesandagentsontheworldwideweb, Maximilian Nickel, Kevin Murphy, Volker Tresp, and
+7(3):154–165. Evgeniy Gabrilovich. 2016. A review of relational
+machine learning for knowledge graphs. Proceed-
+Antoine Bordes, Nicolas Usunier, Alberto Garcia- ingsoftheIEEE,104(1):11–33.
+Duran, Jason Weston, and Oksana Yakhnenko.
+2013. Translating embeddings for modeling multi- Thomas Rebele, Fabian M. Suchanek, Johannes Hof-
+relational data. In Proceedings of Advances in fart, Joanna Asia Biega, Erdal Kuzey, and Gerhard
+neuralinformationprocessingsystems(NIPS2013), Weikum. 2016. Yago: A multilingual knowledge
+pages2787–2795. base from wikipedia, wordnet, and geonames. In
+ProceedingsoftheFifteenthInternationalSemantic
+Joan Bruna, Wojciech Zaremba, Arthur Szlam, and WebConference(ISWC2016),pages177–185.
+Yann Lecun. 2014. Spectral networks and locally
+connected networks on graphs. In Proceedings of Michael Schlichtkrull, Thomas N Kipf, Peter Bloem,
+International Conference on Learning Representa- RiannevandenBerg,IvanTitov,andMaxWelling.
+tions(ICLR2014). 2017. Modelingrelationaldatawithgraphconvolu-
+tionalnetworks. arXivpreprintarXiv:1703.06103.
+Muhao Chen, Yingtao Tian, Mohan Yang, and Carlo
+Fabian M Suchanek, Gjergji Kasneci, and Gerhard
+Zaniolo. 2017. Multilingual knowledge graph em-
+Weikum. 2008. Yago: A large ontology from
+beddingsforcross-lingualknowledgealignment. In
+wikipedia and wordnet. Web Semantics: Sci-
+ProceedingsoftheTwenty-SixthInternationalJoint
+ence, Services and Agents on the World Wide Web,
+Conference on Artificial Intelligence (AAAI2017),
+6(3):203–217.
+pages1511–1517.
+Zequn Sun, Wei Hu, and Chengkai Li. 2017.
+Michael Defferrard, Xavier Bresson, and Pierre Van-
+Cross-lingual entity alignment via joint attribute-
+dergheynst. 2016. Convolutional neural networks preserving embedding. In Proceedings of the
+on graphs with fast localized spectral filtering. In Sixteenth International Semantic Web Conference
+Proceedings Advances in Neural Information Pro-
+(ISWC2017),pages628–644.
+cessingSystems(NIPS2016),pages3844–3852.
+PetarVelickovic,GuillemCucurull,ArantxaCasanova,
+Yanchao Hao, Yuanzhe Zhang, Shizhu He, Kang Liu, Adriana Romero, Pietro Lio`, and Yoshua Ben-
+andJunZhao.2016. Ajointembeddingmethodfor gio. 2017. Graph attention networks. CoRR,
+entity alignment of knowledge bases. In Proceed- abs/1710.10903.
+ingsofChinaConferenceonKnowledgeGraphand
+SemanticComputing(CCKS2016),pages3–14. Quan Wang, Zhendong Mao, Bin Wang, and Li Guo.
+2017. Knowledge graph embedding: A survey of
+Mikael Henaff, Joan Bruna, and Yann LeCun. 2015. approaches and applications. IEEE Transactions
+Deep convolutional networks on graph-structured onKnowledgeandDataEngineering,29(12):2724–
+data. arXivpreprintarXiv:1506.05163. 2743.
+Guoliang Ji, Shizhu He, Liheng Xu, Kang Liu, and Zhen Wang, Jianwen Zhang, Jianlin Feng, and Zheng
+Jun Zhao. 2015. Knowledge graph embedding via Chen.2014. Knowledgegraphembeddingbytrans-
+dynamic mapping matrix. In Proceedings of the latingonhyperplanes. InProceedingsoftheTwenty-
+53rdAnnualMeetingoftheAssociationforCompu- eighth AAAI Conference on Artificial Intelligence
+tational Linguistics and the 7th International Joint (AAAI2014),volume14,pages1112–1119.
+Conference on Natural Language Processing, vol-
+Hao Zhu, Ruobing Xie, Zhiyuan Liu, and Maosong
+ume1,pages687–696.
+Sun. 2017. Iterative entity alignment via joint
+knowledge embeddings. In Proceedings of the
+Thomas N. Kipf and Max Welling. 2017. Semi-
+Twenty-sixth International Joint Conference on Ar-
+supervised classification with graph convolutional
+tificialIntelligence(IJCAI2017),pages4258–4264.
+networks. In Proceedings of International Confer-
+enceonLearningRepresentations(ICLR2017).
+Yankai Lin, Zhiyuan Liu, Maosong Sun, Yang Liu,
+and Xuan Zhu. 2015. Learning entity and relation
+embeddings for knowledge graph completion. In
+Proceedings of the Twenty-Ninth AAAI Conference
+on Artificial Intelligence (AAAI2015), volume 15,
+pages2181–2187.
+Roberto Navigli and Simone Paolo Ponzetto. 2012.
+Babelnet: The automatic construction, evaluation
+andapplicationofawide-coveragemultilingualse-
+mantic network. Artificial Intelligence, 193:217–
+250.
+357

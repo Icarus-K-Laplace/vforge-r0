@@ -1,0 +1,8 @@
+{
+  "study_id": "study_03",
+  "data_path": "E:\\VForge-R0\\data\\study_03_dataset.json",
+  "data_hash": "4e35e688746eb44a0f9fa71ef608a1aa167e2826ee59dd1c7bd904a7f097f10d",
+  "ece": 0.10218406178103365,
+  "mean_confidence": 0.4948405129784099,
+  "claim": "Claim(claim_id='study_03_claim_01', study_id='study_03', natural_language_claim='The logistic regression classifier is well-calibrated with ECE below 0.10 on the held-out test set.', claim_type='calibration', population='synthetic_binary_classification', method='LogisticRegression with probability calibration', comparator='ideal calibration (ECE=0)', outcome_metric='expected_calibration_error', direction='no_change', reported_value=np.float64(0.1022), uncertainty_requirement=UncertaintyRequirement(type='none', value=None, level=0.95), protocol_constraints=['probabilities_from_predict_proba', 'test_set_not_used_for_calibration', 'ece_computed_with_5_equal_width_bins'], required_artifacts=['E:\\\\VForge-R0\\\\data\\\\study_03_dataset.json', 'E:\\\\VForge-R0\\\\models\\\\study_03\\\\model.pkl'], evidence_targets=['ece_value', 'confidence_distribution'], validity_conditions=['ECE_computed_on_holdout_only', 'no_post_hoc_calibration_applied'], abstention_conditions=['if_model_probabilities_cannot_be_loaded'], oracle_definition=OracleDefinition(description='Reload model, recompute predict_proba on test set, recalculate ECE; verify ECE < 0.10.', input_artifacts=['E:\\\\VForge-R0\\\\data\\\\study_03_dataset.json', 'E:\\\\VForge-R0\\\\models\\\\study_03\\\\model.pkl'], output_format='boolean'))"
+}

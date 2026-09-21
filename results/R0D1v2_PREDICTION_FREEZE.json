@@ -1,0 +1,21 @@
+{
+  "experiment_id": "VForge-R0-D1-v2-001",
+  "protocol_version": "R0-D1-v2",
+  "date": "2026-09-20T11:05:08.586423",
+  "predictions_path": "E:\\VForge-R0\\results\\R0D1v2_PREDICTIONS_FROZEN.jsonl",
+  "predictions_sha256": "3cb78f631cffefeb06102410ce311c60b223dd303383a3565455ed6aac74379f",
+  "n_samples": 92,
+  "verdict_counts": {
+    "PAPER_UNAVAILABLE": 18,
+    "ABSTAIN": 74
+  },
+  "paper_extraction_rate": 0.8043,
+  "graph_extraction_rate": 0.8261,
+  "pass_rate": 0.0,
+  "fail_rate": 0.0,
+  "abstain_rate": 1.0,
+  "extreme_distribution": false,
+  "pass_coverage_threshold": 0.7,
+  "status": "FROZEN",
+  "label": "R0-D1-v2 QUALIFICATION (DEV) - NOT zero-shot final evidence"
+}

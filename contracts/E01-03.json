@@ -1,0 +1,31 @@
+{
+  "contract_id": "CONTRACT_E01-03",
+  "source_paper": "E01-03",
+  "family": "E01",
+  "paper_text_hash": "fad611d9b531df9213bf0f86b40586a58557784e33c433f482b156f9402cdb4f",
+  "source_span": "We evaluate on GLUE with a mean of four seed runs. We average BLEU across the reported seeds.",
+  "predicates": [
+    {
+      "predicate_id": "P6_AGGREGATION",
+      "principle": "P6_AGGREGATION_FIDELITY",
+      "natural_language": "Reported value must equal the declared mean aggregation over all N declared seeds.",
+      "trace_fields": [
+        "protocol",
+        "aggregation_rule",
+        "protocol",
+        "aggregation_inputs",
+        "protocol",
+        "declared_seeds"
+      ],
+      "condition": "protocol.aggregation_rule == 'mean' AND len(protocol.aggregation_inputs) == len(protocol.declared_seeds)",
+      "source_span": "We evaluate on GLUE with a mean of four seed runs. We average BLEU across the reported seeds.",
+      "confidence": 0.9
+    }
+  ],
+  "universal_principles": [
+    "P5_DETERMINISM_OR_SEEDS",
+    "P6_AGGREGATION_FIDELITY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "a778c7b4d8eaedd986b2a7c89a4fa5bb3cd896b194f32ea31ec33032a5b38e46"
+}

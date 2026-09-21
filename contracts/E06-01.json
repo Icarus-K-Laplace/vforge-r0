@@ -1,0 +1,25 @@
+{
+  "contract_id": "CONTRACT_E06-01",
+  "source_paper": "E06-01",
+  "family": "E06",
+  "paper_text_hash": "c1eb59f7594aab23921704968e1395c315d709af789dbee1f3e54a0121acd391",
+  "source_span": "All compared methods are trained for the same number of epochs under a matched compute budget.",
+  "predicates": [
+    {
+      "predicate_id": "P3_BUDGET",
+      "principle": "P3_SYMMETRY",
+      "natural_language": "Compared methods must be matched on the declared training/compute budget.",
+      "trace_fields": [
+        "comparator_budgets"
+      ],
+      "condition": "max(budget_value across comparator_budgets) - min(budget_value across comparator_budgets) == 0",
+      "source_span": "All compared methods are trained for the same number of epochs under a matched compute budget.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P3_SYMMETRY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "748c7a0bd697cc126e35c7b15c32119118cb497a82fb2d3382cc0c26646334f7"
+}

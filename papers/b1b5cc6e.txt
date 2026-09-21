@@ -1,0 +1,3254 @@
+User-item fairness tradeoffs in recommendations
+SophieGreenwood SudalakshmeeChiniah
+ComputerScience OperationsResearchandInformationEngineering
+CornellTech CornellTech
+NikhilGarg
+OperationsResearchandInformationEngineering
+CornellTech
+Abstract
+Inthebasicrecommendationparadigm,themost(predicted)relevantitemisrecom-
+mendedtoeachuser. Thismayresultinsomeitemsreceivinglowerexposurethan
+they“should”;tocounterthis,severalalgorithmicapproacheshavebeendeveloped
+toensureitemfairness. Theseapproachesnecessarilydegraderecommendations
+forsomeuserstoimproveoutcomesforitems,leadingtouserfairnessconcerns.
+Inturn,arecentlineofworkhasfocusedondevelopingalgorithmsformulti-sided
+fairness, tojointlyoptimizeuserfairness, itemfairness, andoverallrecommen-
+dation quality. This induces the question: what is the tradeoff between these
+objectives,andwhatarethecharacteristicsof(multi-objective)optimalsolutions?
+Theoretically,wedevelopamodelofrecommendationswithuseranditemfairness
+objectivesandcharacterizethesolutionsoffairness-constrainedoptimization. We
+identify two phenomena: (a) when user preferences are diverse, there is “free”
+itemanduserfairness;and(b)userswhosepreferencesaremisestimatedcanbe
+especiallydisadvantagedbyitemfairnessconstraints. Empirically,weprototype
+arecommendationsystemforpreprintsonarXivandimplementourframework,
+measuringthephenomenainpracticeandshowinghowthesephenomenainform
+thedesignofmarketswithrecommendationsystems-intermediatedmatching.
+1 Introduction
+Recommendationsystemsareemployedthroughoutmodernonlineplatformstosuggestitems(media,
+songs, books, products, or jobs) to users (viewers, listeners, readers, consumers, or job seekers).
+The platform learns user preferences and shows each user personalized recommendations. One
+recommendation paradigm is to simply show the user the items they most prefer. However, this
+approachmayresultindisparatelypooroutcomesforsomeitems,whichmaynotbemostpreferred
+byanyuser[44]. Forexample,inourempiricalapplicationinprototypingarecommendersystem
+for arXiv prepints, we find that on average more than 47% of papers have less than a 0.0001%
+probabilityofbeingrecommendedtoanyuser,evenwhenthenumberofusersanditemsarethesame.
+Thus,manyalgorithmictechniqueshavebeenproposedtoimproveitemfairnessinrecommendation
+[3,35,48,50]. However,bynotsolelyoptimizingforuserengagement,thesetechniquesimposea
+costbothtooverallrecommendationquality[3]andespeciallyforsomeindividualusersmorethan
+others.
+Accordingly,algorithmshaverecentlybeenintroducedtoaddresstheproblemoftwo-sidedfairness
+(ormulti-sidedfairness),inwhichtheplatformaimstobalanceuserfairness,itemfairness,andoverall
+recommendationquality[11,12,47]. Thesealgorithmsformalizethedesiredbalanceintermsofan
+optimizationproblem–forexample,maximizingthedifferencebetweenoverallrecommendation
+quality and unfairness penalties [11], or the overall recommendation quality subject to fairness
+38thConferenceonNeuralInformationProcessingSystems(NeurIPS2024).
+constraints[12]. Therelativeimportanceofuseranditemfairnessisdescribedbytherelativestrength
+oftherespectiveunfairnesspenaltiesorslackinthefairnessconstraints.
+However,anopenquestionis,whataretheimplicationsofsuchalgorithmsontherecommendations,
+i.e., what do multi-sided constraints do, and what is the price of (multi-sided) fairness? More
+specifically,aretheresettingsinwhichwecansimultaneouslymaximizeallobjectives,“forfree?,”
+asopposedtotherebeinglargetradeoffsascommonlyemphasized? Aresomeusersoritems–for
+example,thosenewtotheplatform–moreaffectedthanothers? Howdotheanswerstotheabove
+questionsdependonthecontextand,inreal-worldsettings,do“fairness”constraintssubstantially
+affectrecommendationcharacteristics? Suchreal-worldconsiderationsareessentialforplatform
+designerstounderstand. Infact,arecentsurveyandcritiqueofthefairrankingliteratureadvocated
+forsuchgroundedanalysestounderstandalgorithmicimplicationsandtradeoffs[40],asopposedto
+black-boxdeploymentoffairnessalgorithms.
+Answeringsuchquestionsischallenging.Theoretically,multi-sidedfairnessiscastasanoptimization
+problem,andconceptuallycharacterizingoptimizationsolutionsisoftenintractable. Forexample,
+given an arbitrary utility matrix and a constraint on the exposure provided to each item, it is not
+tractabletocalculaterecommendationsinclosedform:thesolutiondependsonglobalstructure,users
+maynotreceivetheirmostpreferreditems,anditemsmaynotberecommendedtotheuserswhomost
+preferthem. Then,oncephenomenaaretheoreticallyidentified,empiricallyverifyingphenomena
+requiresspecifyingarecommendationsettingandmeasuringuser-itemutilitiesasafunctionoftheir
+characteristics. Giventhesechallenges,ourcontributionsareasfollows.
+Theoreticalframeworktocharacterizesolutionsofmulti-sidedfairrecommendations. We
+formulateaconcaveoptimizationprobleminwhichuserfairnessisformalizedasanobjectiveon
+theminimumnormalizedutilityprovidedtoeachuser–anditemfairnessconstraintsdeterminethe
+problem’sfeasibleregion,throughthesolutionsofanotherconcaveoptimization. Thisformulation
+qualitativelycapturesstandardmulti-objectiveapproachesforuser-itemfairness[5,12]. Weshow
+thatwhenitemfairnessconstraintsaremaximal,thesolutionstothisoptimizationproblem(recom-
+mendationprobabilitiesforeachuser)haveasparsestructurethatcanbecharacterizedasafunction
+of the problem inputs (e.g., estimated utilities for each user-item pair, or slack given in the item
+fairnessconstraint).
+Conceptualinsightsonthepriceoffairness. Weuseourtheoreticalframeworktocharacterize
+user-itemfairnesstradeoffs. Weidentifytwophenomena: (a)“freefairness”asafunctionofuser
+preferencediversity: ifusershavesufficientlydiversepreferences,imposingitemfairnessconstraints
+can have large benefits to individual items with little cost to users, i.e., there is a small price of
+fairness. (b)“Reinforceddisparateeffects”duetopreferenceuncertainty. Ofcourse,usersforwhom
+theplatformhaspoorpreferenceestimation(e.g.,“coldstart”usersonwhomtheplatformhasno
+data)typicallyreceivemoreinaccuraterecommendations;weshowthatthiseffectmaybeworsened
+withitemfairnessconstraints,inaworstcasesense:whenauser’spreferencesareuncertain,item-fair
+recommendationalgorithmswillrecommendthemthegloballyleastpreferreditems–evenwhen
+attemptingtomaximizetheminimumuserutility.
+Empiricalmeasurement. Finally,weuserealdatatoprototypearecommendationenginefornew
+arXivpreprintsandusethissystemtomeasuretheabovephenomenainpractice.Forexample,wefind
+thatmorehomogeneousgroupsofusershavesteeperuser-itemfairnesstradeoffs–astheoretically
+predicted,diverseuserpreferencesdecreasethepriceofitemfairness. Furthermore,wefindthat
+the “price of misestimation” is high (users for whom less training data is available receive poor
+recommendations),butonaverageitemfairnessconstraintsdonotincreasethiscost.
+Puttingthingstogether,weshowthatthereal-worldeffectsofuser-itemrecommendationfairness
+constraints heavily depend on the empirical context. In some cases, “item fairness” comes for
+free,withlittlecosttousers. Inothers,deployingsuchanalgorithmmayleadtoespeciallypoor
+recommendationsforsomeusers,inwaysthatcannotbemechanicallyaddressedbyaddinguser
+fairness terms. We urge designers of fair recommendation systems in practice to develop such
+evaluations to measure such individual-level effects, and for researchers to further characterize
+the potential implications of such algorithms. Our code is available at the following repository:
+https://github.com/vschiniah/ArXiv_Recommendation_Research.
+2
+2 FormalModel
+Oursetupischaracterizedbyuseranditem(estimated)utilities,recommendationoptimizationwith
+useranditemfairnessdesiderata, andevaluationoftheeffectsofsuchdesiderata. (Asdiscussed
+below,someofthesemodelingchoicesaremadeforconcreteness,andourresultsextendbeyond
+thesespecificchoices).
+Users,items,andutilities. Thereisafinitepopulationofmusersandnitems. Letw > 0be
+ij
+theutilityofrecommendingitemj touseri;thiscouldrepresentaclick-throughrateorpurchase
+probability. Wesupposethatuser-itemutilitiesaresymmetric: eachoftheuserianditemj receives
+utilityw frombeingrecommendeditemj.
+ij
+Let ∆ denote the simplex in Rn. The platform’s task is to choose a recommendation policy
+n−1
+ρ ∈ ∆m . For each user i, the platform will recommend one item to user i selected randomly
+n−1
+accordingtothedistributionρ . Givenarecommendationpolicyρ,useri’sexpectedutilityfrom
+i
+(cid:80) (cid:80) (cid:80)
+usingtheplatformis ρ w ;itemj’sexpectedutilityis ρ w ,where ρ =1foreach
+j ij ij i ij ij j ij
+useri.
+Fairnessdesiderata. Wesupposethattheplatformusesasabenchmark,foreachuseroritem,
+the best thing that it could do for that agent if it ignored the utilities of others. Thus, given a
+recommendationpolicyρ,letU (ρ,w)beuseri’sutilityfromρ,normalizedbytheutilitymax w
+i j ij
+theywouldreceivefrombeingrecommendedtheirbestmatch. LetI (ρ,w)beitemj’sutilityfrom
+j
+(cid:80)
+ρ,normalizedbytheutilityj receivesifitisrecommendedtoeveryuser, w . Thenormalized
+i ij
+utilitiesare:
+U (ρ,w)= (cid:80) j ρ ij w ij , I (ρ,w)= (cid:80) i ρ ij w ij.
+i max w j (cid:80) w
+j ij i ij
+Thenormalizationscapturethatrecommendationsshouldnotbeaffectedbyscalingutilities,orbe
+distortedbyauserwhoisnotsatisfiedwithanyitemoranitemthatisgenerallyundesirabletousers.
+Givenarecommendationpolicyρ,userfairnessisquantifiedastheminimumnormalizeduserutility
+U (ρ,w)=min U (ρ,w),anditemfairnessanalogouslyasI (ρ,w)=min I (ρ,w).
+min i i min j j
+Multi-objectiverecommendationoptimization. Wesupposethattheplatformseekstosatisfyits
+fairnessdesiderataasfollows. Attheextremes,theplatformcouldchooseamaximallyfairsolution
+foroneside,ignoringtheother. DenotetheoptimaluserfairutilityasU∗ (w):=max U (ρ,w)
+min ρ min
+(achievedbygivingeachusertheirfavoriteitemdeterministically),andtheoptimalitemfairutility
+asI∗ (w):=max I (ρ,w).
+min ρ min
+Finally,wecastthetwo-sidedfairoptimization–fortheoptimalγ-constraineduserfairsolution–as
+U∗ (γ,w)=max U (ρ,w) (1)
+min min
+ρ
+subjectto I (ρ,w)≥γI∗ (w),
+min min
+i.e.,wemaximizetheminimumnormalizeduserutility,subjecttotheminimumnormalizeditem
+utilitybeingatleastafractionγ oftheoptimalitemfairsolution.
+Researchquestions: priceoffairnessandmisestimation. Wecannowdefinethepriceofitem
+fairnessonuserfairnessπF (“priceoffairness”)asthedecreaseinuserfairnesswithmaximalitem
+U|I
+fairnessconstraints:
+U∗ (w)−U∗ (γ =1,w)
+πF (w):= min min .
+U|I U∗ (w)
+min
+We ask how πF changes with the utility matrix w. We note that while this question (in terms
+U|I
+of solutions to Problem (1)) can be simply stated, as we detail in Section 3, finding a closed
+formexpressionforU∗ (1,w)–theoptimalminimumnormalizeduserutilitygivenitemfairness
+min
+constraints–intermsofwistheoreticallychallenging.
+Similarly,weinvestigatethepriceofmisestimation. Letwˆ denotetheplatform’sestimateofthe
+ij
+utilityofrecommendingitoj;letρˆ(γ)beapolicythatsolvestheoptimizationproblemabovewith
+3
+misestimatedutilities,thatis,ρˆ(γ)attainsU∗ (γ,wˆ).1 Thenwedefinethepriceofmisestimation
+min
+onuserutility(“priceofmisestimation”)πM as
+U
+U∗ (γ,w)−U (ρˆ(γ),w)
+πM(γ,w,wˆ):= min min ,
+U U∗ (γ,w)
+min
+thatis,thedecreaseintrueuserfairnessduetooptimizingwithestimatedutilities. Inparticular,in
+Section5wewillexaminewhetheritemfairnessexacerbatesthepriceofmisestimationbycomparing
+πM(0,w,wˆ)andπM(1,w,wˆ),particularlyinthecaseofcoldstartusers.
+U U
+Discussion. Wenoteseveralmodelingchoices. First,weassumethatutilityw isshared–both
+ij
+theitemj anduseribenefitequallyfromasuccessfulrecommendation. Thischoicecaptures,e.g.,
+purchaseorclick-throughrates. Italsohelpsusisolateeffectsduetofairnessconstraintsandeffects
+acrossitemsandusers,asopposedtomisalignedutilities. Weexpectthepriceoffairnesstoincrease
+–andpotentiallybearbitrarilyhigh–withsuchmisalignedutilities. Wefurtherjustifyandrelax
+thesharedutilityassumptioninAppendixA.Second,wequantifyfairnessthroughtheminimum
+normalizedutility. Normalizationisstandardinrelatedalgorithmicwork,suchas[47],andavoids
+solutionsinwhichanitemthatprovidesutilityϵtoeveryuserneedstoberecommendedtoeveryuser
+toequalizeutilities. Weuseindividualegalitarianfairness(minimumutilityoverindividuals)instead
+ofgroupfairnesstocapturesettingsinwhichgroupidentityisnotavailable,andsystemsinwhich
+individual-level disparities may be widespread; egalitarian fairness is widespread in algorithmic
+fairness[2,17,43,45]. InAppendixAweshowthatourempiricalfindingsextendtoothermeasures
+ofindividualfairness. Finally,intheuser-itemfairnesstradeoffproblem(Problem1)weusedanitem
+fairnessconstraintratherthanaddinganitemfairnesstermtotheobjective;thesetwoapproaches
+canbethoughtofconceptuallyasdualtooneanother,andsoweexpectsimilarpropertiestoholdin
+eitherformulation.
+3 Theoreticalframework
+To determine how the price of fairness πF depends on utility matrix w, we need to compute
+U|I
+U∗ (1,w) and U∗ (w). It turns out that U∗ (w) is easy to describe: without item fairness
+min min min
+constraints,theoptimalrecommendationpolicydeterministicallyrecommendseachusertheirmost
+preferreditem. Eachuserattainsthemaximumpossiblenormalizedutilityof1,andU∗ (w)=1.
+min
+However, with an item fairness constraint, we can no longer select each user’s recommendation
+policies independently. Thus characterizing U∗ (1,w) is much more complicated. Recall that
+min
+U∗ (1,w)istheminimumnormalizeduserutilityoftheoptimaluser-fairrecommendationsubject
+min
+tomaximalitemfairnessconstraints. PluggingintoProblem(1)andexpandingthedefinitions,we
+have
+(cid:80)
+w ρ
+U∗ (1,w)= max min j ij ij (2)
+min ρ∈∆m n−1 i max j w ij
+(cid:80)
+w ϕ
+subjectto ρ∈arg max min i ij ij.
+(cid:80)
+ϕ∈∆m n−1 j i w ij
+Thus we need to find closed-form solutions in terms of the utilities w to a non-linear concave
+program,inwhichboththeobjectiveandtheconstraintdependonw,andindeedevendetermining
+theconstraintrequiressolvinganothernon-linearconcaveprogram.
+InProposition1,wedevelopaframeworktosolvethisproblem,whichwelaterapplytoshowour
+mainresultsTheorems3and4.
+Proposition1. SupposethatforasetofrecommendationpoliciesS ⊆∆m ,
+n−1
+(i) S canbedescribedbyafinitesetoflinearconstraints
+(ii) Thereexistsanoptimalsolutionρ∗toProblem(2)suchthatρ∗ ∈S
+(iii) ρ∗istheuniquefeasiblesolutiontoProblem(2)inS
+1Multiple policies ρˆmay optimize U∗ (γ,wˆ), and different policies ρˆmay have different values of
+min
+U (ρˆ,w).Inourexperimentalresults,weusethepolicyρˆfoundbytheconvexoptimizationsolver.
+min
+4
+Then,findinganoptimalsolutionρ∗toProblem(2)canbereducedtosolvingalinearprogramL.
+With Proposition 1, the key technical challenges become: (a) given utility matrix w, finding S
+satisfyingtheaboveconditions;(b)givenS andw,findingaclosed-formexpressionforρ∗;(c)given
+aclosedformforρ∗intermsofw,reasoningaboutthepropertiesofitemfairsolutionU∗ (1,w).
+min
+To do this, for our main results, we construct S as a set of recommendations with a particular
+symmetricstructure. SupposeuserscomeinK types,whereauseroftypeksharesautilityvector.
+Then,considerS ={ρ:ρ =ρ ifw =w }⊆∆m ,thesetofpolicieswhereusersofthe
+symm i i′ i i′ n−1
+sametypearegiventhesamerecommendationprobabilities. Notethat,intheextremecase,eachuser
+istheirowntype. Furthermore,letρ denotetherecommendationpolicyfortypek,forρ∈S .
+k symm
+Proposition 2. S satisfies conditions (i) and (ii) in Proposition 1. Furthermore, solutions
+symm
+ρ∈S toProblem(2)haveasparsestructure:
+symm
+• IfρisabasicfeasiblesolutiontothelinearprogramLinProposition1,thenthereareat
+mostn+K−1type-itempairs(k,j)suchthatρ >0(outofnK possiblepairs).
+kj
+• Ifρisalsooptimal,thenthereareatmostK−1itemsthatareeverrecommendedtomore
+thanonetypeofuser,i.e.,whereρ ,ρ >0fork ̸=k′.
+kj k′j
+Forourmainresults,wewillleveragethesparsitystructureinProposition2toshow,withfurther
+restrictions on utility matrix w, that S also satisfies (iii). We will then derive closed-form
+symm
+expressionsforthatsolution,andshowhowitchangesasafunctionofw.
+The sparsity structure in Proposition 2 is also interesting in its own right. Without item fairness
+constraints,solutionswillbehighlysparse: eachuserwillberecommendedtheirmostpreferreditem
+deterministically;eachotheritemwillhavearecommendationprobabilityofzero. Onceweadditem
+fairnessconstraints,solutionsdonotnecessarilyremainsparse. However,Proposition2showsthat
+sparsesolutionsstillariseunderitemfairnessconstraintsinsettingswithsymmetricsolutions.
+4 Userpreferencediversityandfairnesstradeoffs
+Wenowusethetheoreticalframeworkdevelopedintheabovesectiontounderstandtheeffectofthe
+structureofuserutilitiesonthepriceoffairness. Inparticular,weidentify“freefairness,”i.e.,the
+priceoffairnessislow,whenpreferencesaresufficientlydiverse.
+Example1. Forintuitionastowhyuserdiversityaffectsthepriceoffairness,considerthefollowing
+example. Supposewehaven=2itemsandmusers;halftheusershaveutilityϵforthefirstitem
+and1−ϵfortheseconditem,andtheotherhalfhasutility1−ϵforthefirstitemandϵforthesecond.
+Then,therecommendercansimplygiveeachusertheirfavoriteitem(theuseroptimalsolution),and
+thissolutionsimultaneouslymaximizesuseranditemfairnessaswellastotaluseranditemutility.
+Ontheotherhand,supposeallusershavethesamepreferences: eachuserhasutility1−ϵforthefirst
+itemandutilityϵfortheseconditem,forϵ>0thatissmall. Then,anyrecommendationprobability
+given to the second item comes at a cost to users who receive that item instead of the first item;
+however,(normalized)itemfairnesswouldrequirethattheseconditemreceivesϵasmuchutilityas
+thefirstitem. Below,weshowthatthisresultsinatradeoffevenbetweenlinearnormalizeduserand
+itemutilities,whereweaccountforthefactthattheseconditemisonaveragelesspreferredbyusers.
+Sinceallusershavethesamepreferencesforitems,usingProposition2itissufficienttoconsider
+themreceivingthesamerecommendationprobabilitiesρ forthefirstitemandρ =1−ρ forthe
+1 2 1
+second. BoundingminimumitemutilityI bytheutilityoftheseconditem,wehave
+min
+(cid:80)
+ρ ϵ
+I ≤I (ρ)= i 2 =ρ ≜1−ρ .
+min 2 mϵ 2 1
+Foragivenrecommendationprobabilityρ ,theminimumnormalizeduserutilityis
+1
+U =(1−ϵ)ρ +ϵρ =ϵ+(1−2ϵ)ρ ≤ρ +ϵ.
+min 1 2 1 1
+Rearranging,wegetthat
+U −ϵ≤ρ ≤1−I =⇒ U +I ≤1+ϵ.
+min 1 min min min
+Thustheminimumnormalizeduserutilityandtheminimumnormalizeditemutilityessentiallyfollow
+anegativelinearrelationship–guaranteeingtheseconditemevenϵasmuchutilityasthefirstitem
+resultsinalinearcosttousers. □
+5
+Wenowformalizeandgeneralizethisexample,whenthelevelofheterogeneityinthepopulation
+canbecapturedbyasingleparameter. Considerthefollowingutilitymatrixstructure. Letv >
+1
+v > ... > v > 0. Supposethattherearetwousertypes: auserieitherhasutilityw = v or
+2 n ij j
+w =v ,andsaythatuseriisoftype1or2respectively. Inwords,thetwotypeshaveopposite
+ij n−j+1
+preferences,butthepreferencescanotherwisebegenericandbeforanynumberofitems. Now,the
+directsolutionbysymmetryfortheexamplenolongerdirectlyholds–theitemsinthemiddle,not
+necessarilypreferredbyeitherusertype,maybebindingintermsofitemfairnessconstraints.
+Let α be the proportion of type 1 users in the population, out of a fixed population of m users.
+Parameterαthuscontrolsthepopulationheterogeneity;ifαisnear0or1,thepopulationishighly
+homogeneous,dominatedbyusersofthesametype. Ifα= 1,thepopulationissplitevenlybetween
+2
+thetwotypesandishighlyheterogeneous. Sinceweparametrizewbyα,wemaywritethepriceof
+fairnessas,
+U∗ (α)−U∗ (γ =1,α)
+πF (α):= min min .
+U|I U∗ (α)
+min
+Giventhisstructure,Theorem3statesthatthepriceoffairnessπF (α)increasesinthehomogeneity
+U|I
+of the users – heterogeneous user populations are less affected by incorporating item fairness
+constraints.
+Theorem3. πF (α)isdecreasinginαfor0<α≤1/2,andincreasinginαfor1/2≤α<1.
+U|I
+ProofsketchforTheorem3. Weshowthatwheninapopulationwithtwoopposingtypesasdescribed
+above,thesparsityconditioninProposition2yieldsauniquesolution,forwhichwecanfindaclosed
+formandexpressintermsofα. WethenevaluateU (ρ,α)atthissolutiontofindU∗ (1,α),and
+min min
+showthatthisisindeedincreasing. ThefullproofisinAppendixD.
+5 Uncertaintyandfairnesstradeoffs
+A basic fact – often ignored in fair recommendation – is that recommendations are made with
+(mis)estimatedutilities. Platformsdonothavefullknowledgeofuserpreferences,especiallythose
+newtotheplatform. Ofcourse,recommendationsundermisestimatedutilitiesmaybepoor;here,we
+showthataddingitemfairnessconstraintsmayworsenthecostofthismisestimationevenfurther.
+Intuitively–foranewuserforwhomtheplatformhasnodata–theplatformwouldestimatethe
+user’spreferencesastheaverageofpreferencesofexistingusers(e.g.,inaBayesianfashion). Thus,
+withoutitemfairnessconsiderations,itwouldshowtheusergenerallypopularitems. However,the
+newuser’spreferencesaregenerallyestimatedas“weaker”thanthepreferencesofothersforany
+givenitem(sinceitaveragespreferencesofuserswhomayeitherlikeordislikeanygivenitem).
+Thus,withfairnessconstraints,theoptimizationisincentivizedtoshowtheuserotherwiseunpopular
+items,sincealltheuser’sestimatedpreferencesareweaker. LiuandBurke[31]forexampledevelop
+analgorithmforitemfairnesswhereuserswithweakerpreferencesareexplicitlyleveragedinthis
+way.
+Foragivenitemfairnesslevelγ,trueutilitymatrixw,andestimatedutilitymatrixwˆ,letρˆ(γ)be
+arecommendationpolicythatsolvestherecommendationproblem(Problem1)withrespecttothe
+misestimatedutilities,thatis,ρˆsolvesU∗ (γ,wˆ). Recallthatwedefinethepriceofmisestimation
+min
+U∗ (γ,w)−U (ρˆ(γ),w)
+πM(γ,w,wˆ)= min min ,
+U U∗ (γ,w)
+min
+whichrepresentstherelativedecreaseinminimumnormalizeduserutilityasaresultofmisestimation.
+ItemfairnessworsensthepriceofmisestimationifπM(γ =1,w,wˆ)>πM(γ =0,w,wˆ).
+U U
+We now formalize the above argument, building on the analysis in the previous section. As in
+Section 4, suppose that there are 2 types of users, with opposing preferences (i.e., with values
+v ,v ...,v and v ,v ,...,v , respectively) – and the platform has correctly estimated these
+1 2 n n n−1 1
+preferences. However,now,thesetwotypesonlymakeupaproportionβ ofthepopulationeach.
+Now,wesupposethatthereisafraction1−βoftheuserpopulationwhoare“new”users.Weassume
+thattheseusersaredrawnfromthesamedistributionastheremainingusers,buttheplatformdoes
+notknowtheirpreferences. Itthusconstructsapriorbyaveragingovertheknownusers’preferences
+–(mis)estimatingtheusers’utilityforeachitemj as vj+vn−j+1.
+2
+6
+Theorem4. Ifβ > 1 andwandwˆareasdescribedabove,thenfairnessconstraintscanarbitrarily
+n
+worsenthepriceofmisestimation.
+• The price of misestimation without fairness constraints is low: for all {v }, there is a
+j
+recommendationpolicyρˆthatsolvesthemisestimatedproblemU∗ (0,wˆ)sothat
+min
+1
+πM(0,w,wˆ)≤ .
+U 2
+• Thepriceofmisestimationwithfairnessconstraintscanbearbitrarilylarge: ∀ϵ,thereexists
+{v }andarecommendationpolicyρˆthatsolvestheproblemU∗ (1,wˆ)suchthat
+j min
+πM(1,w,wˆ)>1−ϵ.
+U
+Proofsketch. Themaintaskistofindthepriceofmisestimationwithfairnessconstraints,whichre-
+quirescomputingU∗ (1,w)whenusers’valuesarecorrectlyestimated,andcomputingU∗ (1,wˆ)
+min min
+whenusers’valuesareincorrectlyestimated. TofindU∗ (1,w),notethatwisapopulationwith
+min
+twoopposingtypesofusers,sowemayleveragetheinsightsofTheorem3. TofindU∗ (1,wˆ)we
+min
+againusetheframeworkinSection3,showingthatinthesettingofthistheorem,wecanfindan
+optimalpolicyρ∗forU∗ (1,wˆ)inasetS′ ⊆S ofpolicieswithanadditionalcolumn-symmetry
+min symm
+property. WeuseananalogueofthesparsityresultinProposition2toshowthatthereisaunique
+feasiblesolutionρˆ∈ S′ andobtainaclosedformexpressionforρ∗,andfindanupperboundfor
+U (ρˆ,wˆ)=U∗ (1,wˆ). Infact,weshowthataslongasβ > 1,underρˆthemis-estimatedusers
+min min n
+willneverberecommendedtheirmostpreferreditems. ThefullproofisinAppendixE.
+Theideafollowstheaboveintuition: withoutitemfairnessconstraintsandassumingcoldstartusers
+followthesamedistributionasexistingusers,theplatform’spriceofmisestimationislowbecause
+theplatformtreatscoldstartusersastheaverageoftheexistingpopulation. Fairnessconstraints,
+however,canmakethiscostarbitrarilyhigh,asinexpectationcoldstartusersrelativelyenjoyitems
+otherusersdonot. Sucheffectssuggestthatamorecarefultreatmentofuncertaintyandfairness
+togetherisnecessaryforrecommendationalgorithms.
+6 Empiricalfindings: arXivrecommendationengine
+WeprototypearecommenderforpreprintsonarXiv,toillustrateourconceptualfindings. Weconsider
+thecoldstartsettingforitems(papers),whentheyarenewlyuploadedtoarXivandsoonlyhave
+metadataandpapertextbutnoassociatedinteractionorcitationdata. Forusers(readers),weuseas
+datathepapersthattheyhavesharedonarXivtoestimatetheirpreferences.
+Empirical setup. We use data from arXiv and Semantic Scholar [1, 25]. As training for user
+preferences,weconsider139,308CSpapersby178,260distinctauthorsbefore2020;astheitemsto
+berecommended,weconsiderthe14,307papersuploadedtoarXivin2020. Weapplytwonatural
+languageprocessing-basedmodels–TF-IDF[28]andthesentencetransformermodelSPECTER
+[13]–totextualfeaturessuchasthepaper’sabstract(forbothitemsandtheuser’shistoricalpapers)to
+generateembeddingsforallpapersinthetrainingset. Weusetheseembeddingstocomputesimilarity
+scores(utilitymatrices)forusersanditems. Tocomputethesimilarityscore(utility)betweenauser
+(anauthorofatleastonepaperbefore2020)andanitem(apaperuploadedin2020),wecompute
+thecosinesimilaritybetweentheembeddingofeachoftheuser’spre-2020papersandtheitem’s
+embedding. Wethenuseeitherthemeanorthemaxsimilarityamongstthepre-2020papersandthe
+item;themaxsimilarityscoremaymoreeffectivelycaptureauser’sdiverseinterests[20,41]. We
+thengeneraterecommendationsforeachuser,atvariouslevelsofuseranditemfairnessconstraints.
+To validate our recommendation approach, we use citation data from Semantic Scholar [25] to
+determine for each user and each paper published in 2020 whether the user cites that paper in
+theirpost-2020work. Wethenexaminehowwelltheuser-itemsimilarityscoregeneratedbyour
+recommendationenginepredictsthepresenceofacitation. Therecommendationseffectivelypredict
+whetherausercitesapaperwithahighscoreafter2020. InTable1weshowtheresultsofalogistic
+regression between each similarity score and the presence of a citation, where the coefficient on
+thescoreislargeandstatisticallysignificantforeachmodel;thepredictivepowerofourmodelsis
+7
+Model Coefficient Std. Err z-value AdjustedR2
+Maxscore,TF-IDF 12.4100 0.058 212.178 0.08915
+Meanscore,TF-IDF 20.2122 0.131 154.835 0.04616
+Maxscore,Sentencetransformer 18.4557 0.250 73.695 0.1347
+Meanscore,Sentencetransformer 16.2482 0.246 66.148 0.09085
+Table1: Logisticregressionresultsforpredictingwhetherusericitespaperj fromthesimilarity
+scorew foreachmodel.
+ij
+(a)Homogeneousversusdiverseusers (b)Withandwithoutmisestimation
+Figure1: Empirical(usingourarXivrecommender)tradeoffbetweentheminimumuser(Yaxis)and
+item(Xaxis)utility. Recallγ isthefractionofthebestpossibleminimumnormalizeditemutility
+I∗ guaranteed. (a)IllustratingTheorem3empirically–homogeneouspopulationshaveahigher
+min
+priceoffairness. Empirically,however,thepriceoffairnessissmallexceptwithstrictitemfairness
+constraintsγ →1. (b)Forasetofusers,holdingotherusersfixed,thecosttotheworst-offuserof
+misestimatingpreferences,atvaryingγ. Empirically,thecostofmisestimationisalreadysohighthat
+itisnotworsenedwithitemfairnessconstraints,asintheworstcaseanalysisofTheorem4.
+reasonableforasparse,highvarianceeventsuchascitations. Wegenerallyfindthatthemaxscore
+modelsaremorepredictiveoffuturecitations. AppendixBincludesdetailsandevaluations; our
+computationalexperimentsinthemaintextusethemaxscore,TF-IDFmodel.
+6.1 Empiricalresults.
+We examine the tradeoffs between item and user fairness and the effect of misestimation on this
+tradeoffempirically. Weusethesimilarityscoresgeneratedbytherecommendationenginedescribed
+above–inparticular,themaxscore,TF-IDFmodel–astheutilityvaluesw . Weconsiderapool
+ij
+of14,307papersinthecomputersciencecategorypostedtoarXivin2020,andapoolof20,512
+authors who posted papers in the computer science category to arXiv both in 2020 and prior to
+2020 (weuse the papersprior to2020 to computethe similarity scoresas describedabove). We
+thensubsamplerecommendationsettingsfromthispool;wegivefurtherdetailsaboutthesampling
+processbelow. Foragivenvalueofγ,tocomputeU∗ (γ)weusethecvxpyimplementationofthe
+min
+convexoptimizationalgorithmSCS[38].
+User-item tradeoffs as function of user diversity. Figure 3a shows the tradeoff between user
+fairnessanditemfairnessinarandompopulationandinapopulationofhomogeneoususers. To
+generate a tradeoff curve for the heterogeneous population, we sampled 200 random papers and
+500randomauthorstoformw,andcomputedU∗ (γ,w)for50valuesofγ between0and1. To
+min
+generatetradeoffcurvesfromhomogeneoususerpopulations,weclusteredall20,512usersinto10
+clustersusingthek-meansalgorithm. Forasinglecurve,toformwwesampled200randompapers
+and 500 random authors from one random cluster. We run 10 experiments and plot the mean of
+U∗ (γ,w)ateachvalueofγ acrossthe10curvesaswellastwostd. errorbarsforthemean.
+min
+8
+Figure3ademonstratesthatinrealdata,formoderateitemfairnessguarantees(0 ≤ γ ≤ 0.9),on
+averagethereisafairlylowcosttouserfairness,butasweapproachoptimalitemfairness(γ →1),
+thetradeoffbecomessteep. Furthermore,Figure3ashowsthatitemfairnesstendstoimposeahigher
+costtouserfairnessinmorehomogeneouspopulations,asinTheorem3.
+Priceofmisestimation. Figure3bshowshowuserfairnessisaffectedbyitemfairnessguarantees
+inthepresenceofmisestimation. Forsetsof200randompapersand500randomauthors,weselecta
+set10%oftheseusersatrandomandtreatthemasifwedidnothaveanydataforthem,estimating
+theseusers’utilityforitemj astheaverageutilityforitemj fortheother90%oftheusers(wˆ in
+thenotationofTheorem4). For50valuesofγ between0and1,wecomputeU∗ (1,wˆ)forthe
+min
+misestimatedutilitymatrix. Wealsocompute,counterfactually,thisquantityiftheutilitymatrixhad
+beencorrectlyestimated,U∗ (1,w). Weplotthetrueminimumnormalizeduserutilityunderthe
+min
+recommendationpoliciesthatattainU∗ (1,w)andU∗ (1,wˆ). Werun10experimentsandplot
+min min
+themeanvalueoftheminimumnormalizeduserutilityandtwostd. errorbars.
+InFigure3b,nearγ =0,thepriceofmisestimation–thegapbetweenthetwocurves–ishigherthan
+thecostofmisestimationnearγ =1. Thisresultsbecausetheitemfairnessconstraintbarelychanges
+the(alreadylow)utilityoftheseuserswhentheirpreferencesaremisestimated,butsubstantially
+changestheirutilitywhentheirpreferencesarecorrectlyestimated. Whiletheoretically,itemfairness
+constraintscanarbitrarilyincreasethecostofmisestimation,inpractice,onaveragetheydonotaffect
+thiscost–thecostofmisestimationwithoutitemfairnessisalreadyhigh.
+7 Relatedwork
+Thereisalargeliteratureon(item)fairrecommendationandranking[3,35,48,50,51]and,more
+recently, on multi-sided user-item fair recommendation [5, 10–12, 16, 39, 47]. This literature is
+primarilyalgorithmic: foragivenformulationofuseranditemutility(andotherdesiderata),how
+do we devise an efficient algorithm for multiple objectives or constraints? In contrast, our goal
+isprimarilyconceptual,toaidalgorithmdesignersinchoosingwhentousesuchalgorithms: for
+example,byexplainingwhenwemightexpectthetradeofftobeespeciallysharp,andtounderstand
+thecosttocoldstartusersinparticular. Forexample,wetheoreticallyanalyzerecommendationsfrom
+aconstrainedoptimization-basedapproachakintothatinBasuetal.[5],intermsoftheimplications
+ofsuchanapproachonrecommendations.
+Severalpapersobserverelatedphenomenatotheoneswestudy,especiallyempirically. Wangand
+Joachims[47]developanoptimizationalgorithmtobefairtousers(intermsofgroupfairnessto
+demographicgroups)anditems(similartoournormalizedutilitymetric). Theoretically,theyshow
+that there is a tradeoff between user and item utility metrics, and further empirically show how
+fairnessinteractswiththediversityofitemsshowntoeachuser. Whiletheirfocusisalsoprimarily
+algorithmic,theydoshowthatthereisafundamentaltensionbetweenitemanduserfairness. In
+concurrentwork,KleinbergandMeister[26]alsotheoreticallydemonstrateandcharacterizethis
+tension. They focus on the cost to individual users caused by imposing maximal item fairness
+constraints–similartohowwedefinepriceoffairness–anddeterminetherelationshipbetween
+acostlevelandtheproportionofusersintheworst-caserecommendationsettingwhoexperience
+thatcost. Inconstrast,weexaminethecosttothesingleworst-offuserasafunctionofproperties
+oftherecommendationsettingsuchasuserdiversityandrecommendermis-estimation. Rahmani
+et al. [42] demonstrate a similar tension between item and user fairness in empirical data. Liu
+and Burke [31] do not examine user fairness, but observe that one can mitigate the cost of item
+fairnessinmulti-sidedrecommendationsbyrecommendingtouserswithweakerpreferencesfor
+itemsthatmayotherwisebelesspreferred. Subsequently,Farastuetal.[16]examinewhichusers
+bearthecostofitemfairness,pointingtoLiuandBurke[31]toarguethatthecosttousersofitem
+fairnessconstraintsdisproportionatelyfallsonuserswithflexiblepreferences,creatinganincentive
+foruserstomisrepresenttheirpreferencesasmorerigidthanreality. Webuildonthesearguments
+bytheoreticallyanalyzingthecostofitemfairnesson(individual)users,especiallytheusersmost
+affected,asafunctionoftheestimateduserpreferencematrix.
+Infocusingonconceptualphenomena,ourworkisrelatedtoworkanalyzingthepriceoffairness
+andefficiency-equitytradeoffsinvarioussettingsbeyondrecommendations. Bertsimasetal.[8]first
+definedthepriceoffairnessasthenormalizeddecreaseintheutilityofanalgorithmicoutcomeafter
+addingfairnessconsiderations,anddevelopgeneralboundsonthepriceoffairnessinanarrayof
+9
+optimizationscenarios.Thisconcepthasbeensubsequentlyappliedinavarietyofdomains,including
+auction theory [24], fair division and resource allocation [6, 32, 46], and computer networking
+[49]. Barreetal.[3]applyasimilarconceptinassortmentoptimization,examiningthecostofitem
+visibilityconstraintsontherevenueofaplatform. Mostsimilarly,Chenetal.[12]definethepriceof
+fairnessinthesettingofmulti-sidedfairnessasthecostonplatformrevenueofincludingbothfairness
+constraints;incontrastwedefinethepriceoffairnessasthecosttouserfairnessofimposingitem
+fairnessconstraintsinordertocapturetheinterplaybetweenuseranditemfairness. Theauthorsthen
+showthatthispriceoffairnessontherevenuedependsonobjectivemisalignment–thedifferencein
+fairnessbetweentheitem/userutilityrequiredbytheconstraints,andtheitem/userutilityinarevenue-
+optimalsolution. Westudyhowthepriceofitemfairnessonuserfairnessdependsonuserpreference
+diversity – the agreement between users’ utilities. These concepts are related: user preference
+diversity may cause objective alignment. Moreover, they also consider the problem of unknown
+preferences: theyexaminehowtoalgorithmicallyimposefairnessconstraintswhenpreferencesare
+unknown, whileweaddressthequestionofwhetherfairnessconstraintsdisproportionatelyharm
+userswithunknownpreferences. Finally,ourresultthatdiversepopulationpreferencescanmitigate
+the price of fairness resembles the result of Bastani et al. [4] that greedy contextual bandits can
+performwellwithoutexplorationifthereissufficientcontextualdiversity.
+Finally, there is a large literature on other tradeoffs in recommendations, rankings, and ratings:
+engagementversusvalue,diversity,strategicbehavior,uncertainty,andover-timedynamics[9,14,
+15,18–23,27,29,30,33,34,36,41]. Inthecontextofsetrecommendationswhenusersconsume
+theirfavoriteitemoutofthemultiplerecommended,e.g.,Pengetal.[41]showthatthereisaminimal
+utility-diversitytradeoff,andBesbesetal.[9]showthatthereisaminimalexploration-exploitation
+tradeoff.
+8 Discussion
+Weinvestigatetherelationshipbetweenuserfairnessanditemfairnessinrecommendationsettings.
+We develop (a) a theoretical framework to enable us to solve for the price of fairness for many
+population settings, and (b) a recommendation engine using real data to allow us to investigate
+user-itemfairnesstradeoffsinpractice. Ourworkinformsthedesignoffairrecommendationsystems:
+(1)itemphasizesthebenefitsofadiverseuserpopulation,andsuggeststhatitemfairnessconstraints
+shouldnotbeimposedonsub-markets(sub-groups),butinsteadontheentirepopulationtogether.
+(2)Itcautionsdesignerstobeespeciallymindfulofeffectsonindividualusers(especiallycoldstart
+users),whomayreceivedisproportionatelypoorrecommendationswithitemfairnessconstraints,
+evenwithauserfairnessobjective. Ourempiricalanalysissupportsourtheoreticalanalysis—the
+userbasediversityaffectstheseverityofuser-sideeffectsofimposingitemfairness;however,theprice
+ofmisestimatinguserutilityisalreadyhighwithoutitemfairnessconstraints,andsoimposingsuch
+constraintsdoesnothaveadditionaleffects. Suchresultsspeaktotheimportanceofinstance-specific
+analyses,cf. [40]: onecannotmakegeneralstatementsaboutthespecificeffectsofitem-fairness
+constraintsonusers(orviceversa)outsideofaspecificcontext,thoughweidentifytworelevant
+phenomena(userdiversityandmisestimation)thatmodulatetheseeffects.
+Limitations. Ourtheoreticalanalysisexploresthesefairnesstradeoffsinafairlyrestrictedsetting.
+First,weassumethatusersareonlyrecommendedasingleitem;futureworkshouldinvestigatehow
+the price of fairness changes as the number of recommended items increases. We do not expect
+ourtheoreticalframeworktoeasilyextendtootherdefinitionsoffairness;however,weextendour
+computationalarXivexperimentstootherdefinitionsoffairnessinAppendixA.Theseextended
+experimentsalsoshowthatdiverseuserpreferencesreducefairnesstradeoffs;aninterestingdirection
+forfutureworkistotheoreticallycharacterizeuser-itemfairnesstradeoffsunderotherdefinitionsof
+fairness. Furthermore,inpracticeplatformsareunwillingtomaximizetheworst-offuser’sitemor
+userfairnessattheexpenseoftheentireplatform’sutility;theproblemisreallyoneofbalancing
+user and item fairness with overall platform performance. Algorithms to optimize these multi-
+sidedproblemsareexploredinotherwork[12],butitwouldbeinterestingtodevelopqualitative
+observationsaboutuser-itemfairnesstradeoffsinthepresenceofatotalutilityconstraint. Finally,we
+showourTheorems3and4inalimitedcontextwithonlytwoorthreetypesofusers. However,the
+theoreticalframeworkdevelopedinSection3issignificantlymoregeneral. Itiswouldbeinteresting
+to apply this framework to other population structures such as when users do not have perfectly
+oppositepreferencesandwheretherearemorethanthreegroupsofusers.
+10
+AcknowledgmentsandDisclosureofFunding
+SGissupportedbyafellowshipfromtheCornellUniversityDepartmentofComputerScienceand
+an NSERC PGS-D fellowship [587665]. NG is supported by NSF CAREER IIS-2339427, and
+CornellTechUrbanTechHub,Meta,andAmazonresearchawards. Theauthorswouldliketothank
+SidhikaBalachandar,EricaChiang,EvanDong,OmarElHousni,MeenaJagadeesan,JonKleinberg,
+KevinLeyton-Brown,MichelaMeister,ChidozieOnyeze,KennyPeng,EmmaPierson,andManish
+Raghavanforvaluableconversationsandinsights,aswellastheNeurIPS2024reviewersforhelpful
+feedback.
+References
+[1] arXiv.orgsubmitters. arXivdataset,2024. URLhttps://www.kaggle.com/dsv/7548853.
+[2] ArashAsadpourandAminSaberi. Anapproximationalgorithmformax-minfairallocationof
+indivisiblegoods. InProceedingsoftheThirty-NinthAnnualACMSymposiumonTheoryof
+Computing,STOC’07,page114–121,NewYork,NY,USA,2007.AssociationforComputing
+Machinery. ISBN9781595936318. doi:10.1145/1250790.1250808. URLhttps://doi.org/
+10.1145/1250790.1250808.
+[3] TheoBarre,OmarElHousni,MarouaneIbnBrahim,AndreaLodi,andDannySegev. Assort-
+mentoptimizationwithvisibilityconstraints,2024. URLhttps://arxiv.org/abs/2307.
+13656.
+[4] HamsaBastani,MohsenBayati,andKhashayarKhosravi. Mostlyexploration-freealgorithms
+forcontextualbandits. ManagementScience,67,072020. doi: 10.1287/mnsc.2020.3605.
+[5] KinjalBasu, CyrusDiCiccio, HeloiseLogan, andNoureddineElKaroui. Aframeworkfor
+fairnessintwo-sidedmarketplaces,2020. URLhttps://arxiv.org/abs/2006.12756.
+[6] XiaohuiBei,XinhangLu,PasinManurangsi,andWarutSuksompong. Thepriceoffairness
+for indivisible goods. Theory of Computing Systems, 65:1069 – 1093, 2019. URL https:
+//api.semanticscholar.org/CorpusID:152282391.
+[7] DimitrisBertsimasandJohnTsitsiklis. IntroductiontoLinearOptimization. 1998.
+[8] DimitrisBertsimas,VivekF.Farias,andNikolaosTrichakis. Thepriceoffairness. Operational
+Research,59:17–31,2011.
+[9] OmarBesbes,YashKanoria,andAkshitKumar. Thefaultinourrecommendations: Onthe
+perilsofoptimizingthemeasurable,2024. URLhttps://arxiv.org/abs/2405.03948.
+[10] RobinBurke. Multisidedfairnessforrecommendation, 2017. URLhttps://arxiv.org/
+abs/1707.00093.
+[11] Robin Burke, Nasim Sonboli, and Aldo Ordonez-Gauger. Balanced neighborhoods for
+multi-sidedfairnessinrecommendation. InSorelleA.FriedlerandChristoWilson,editors,
+Proceedingsofthe1stConferenceonFairness, AccountabilityandTransparency, volume81
+ofProceedingsofMachineLearningResearch,pages202–214.PMLR,23–24Feb2018. URL
+https://proceedings.mlr.press/v81/burke18a.html.
+[12] QinyiChen,JasonLiang,NeginGolrezaei,andDjallelBouneffouf. Interpolatingitemanduser
+fairnessinmulti-sidedrecommendations. InTheThirty-EighthAnnualConferenceonNeural
+InformationProcessingSystems,NeurIPS’24,2024. URLhttps://arxiv.org/abs/2306.
+10050.
+[13] ArmanCohan,SergeyFeldman,IzBeltagy,DougDowney,andDanielS.Weld. SPECTER:
+Document-levelrepresentationlearningusingcitation-informedtransformers. InACL,2020.
+[14] JessicaDai,BaileyFlanigan,MeenaJagadeesan,NikaHaghtalab,andCharaPodimata. Can
+probabilisticfeedbackdriveuserimpactsinonlineplatforms? InInternationalConferenceon
+ArtificialIntelligenceandStatistics,pages2512–2520.PMLR,2024.
+11
+[15] SarahDean,EvanDong,MeenaJagadeesan,andLiuLeqi. AccountingforAIandusersshaping
+oneanother: Theroleofmathematicalmodels,2024. URLhttps://arxiv.org/abs/2404.
+12366.
+[16] PareshaFarastu,NicholasMattei,andRobinBurke. Whopays? Personalization,bossinessand
+thecostoffairness,2022. URLhttps://arxiv.org/abs/2209.04043.
+[17] NaveenGarg,TelikepalliKavitha,AmitKumar,KurtMehlhorn,andJuliánMestre. Assigning
+paperstoreferees. Algorithmica,58(1):119–136,September2010. ISSN0178-4617.
+[18] Nikhil Garg and Ramesh Johari. Designing optimal binary rating systems. In The 22nd
+International Conference on Artificial Intelligence and Statistics, pages 1930–1939. PMLR,
+2019.
+[19] Nikhil Garg and Ramesh Johari. Designing informative rating systems: Evidence from an
+onlinelabormarket. Manufacturing&ServiceOperationsManagement,23(3):589–605,2021.
+[20] WenshuoGuo,KarlKrauth,MichaelJordan,andNikhilGarg. Thestereotypingproblemin
+collaborativelyfilteredrecommendersystems. InProceedingsofthe1stACMConferenceon
+EquityandAccessinAlgorithms,Mechanisms,andOptimization,pages1–10,2021.
+[21] AndreasHaupt,DylanHadfield-Menell,andCharaPodimata. Recommendingtostrategicusers,
+2023. URLhttps://arxiv.org/abs/2302.06559.
+[22] DanielHuttenlocher,HannahLi,LiangLyu,AsumanOzdaglar,andJamesSiderius. Matching
+ofusersandcreatorsintwo-sidedmarketswithdepartures,2023. URLhttps://arxiv.org/
+abs/2401.00313.
+[23] MeenaJagadeesan,NikhilGarg,andJacobSteinhardt. Supply-sideequilibriainrecommender
+systems. AdvancesinNeuralInformationProcessingSystems,36,2024.
+[24] Mariusz Kaleta. Price of fairness on networked auctions. J. Appl. Math., 2014:860747:1–
+860747:7,2014. URLhttps://api.semanticscholar.org/CorpusID:38538799.
+[25] Rodney Michael Kinney, Chloe Anastasiades, Russell Authur, Iz Beltagy, Jonathan Bragg,
+Alexandra Buraczynski, Isabel Cachola, Stefan Candra, Yoganand Chandrasekhar, Arman
+Cohan,MilesCrawford,DougDowney,JasonDunkelberger,OrenEtzioni,RobEvans,Sergey
+Feldman, Joseph Gorney, David W. Graham, F.Q. Hu, Regan Huff, Daniel King, Sebastian
+Kohlmeier,BaileyKuehl,MichaelLangan,DanielLin,HaokunLiu,KyleLo,JaronLochner,
+KelseyMacMillan,TylerMurray,ChristopherNewell,SmitaRRao,ShauryaRohatgi,Paul
+Sayre,ZejiangShen,AmanpreetSingh,LucaSoldaini,ShivashankarSubramanian,A.Tanaka,
+AlexDWade,LindaM.Wagner,LucyLuWang,ChristopherWilhelm,CarolineWu,Jiangjiang
+Yang,AngeleZamarron,MadeleinevanZuylen,andDanielS.Weld. TheSemanticScholar
+OpenDataplatform. ArXiv,abs/2301.10140,2023. URLhttps://api.semanticscholar.
+org/CorpusID:256194545.
+[26] Jon Kleinberg and Michela Meister. Modeling amplification in a network of speakers and
+listeners. Privatecorrespondence,2024.
+[27] JonKleinberg,SendhilMullainathan,andManishRaghavan. Thechallengeofunderstanding
+whatuserswant: Inconsistentpreferencesandengagementoptimization. ManagementScience,
+2023.
+[28] Jure Leskovec, Anand Rajaraman, and Jeffrey David Ullman. Mining of Massive Datasets.
+CambridgeUniversityPress,2011.
+[29] DavidLiu,JackieBaek,andTinaEliassi-Rad. Whencollaborativefilteringisnotcollabora-
+tive: UnfairnessofPCAforrecommendations,2023. URLhttps://arxiv.org/abs/2310.
+09687.
+[30] LydiaTLiu,NikhilGarg,andChristianBorgs. Strategicranking. InInternationalConference
+onArtificialIntelligenceandStatistics,pages2489–2518.PMLR,2022.
+12
+[31] WeiwenLiuandRobinBurke. Personalizingfairness-awarere-ranking. InFATRecWorkshop
+onResponsibleRecommendation,pagetoappear,2018.
+[32] ZhiLiuandNikhilGarg. Redesigningservicelevelagreements: Equityandefficiencyincity
+governmentoperations. InACMConferenceonEconomicsandComputation,2024.
+[33] ThomasMa,MichaelSBernstein,RameshJohari,andNikhilGarg.Balancingproducerfairness
+andefficiencyviaBayesianratingsystemdesign. InInternationalAAAIConferenceonWeb
+andSocialMedia,ICWSM‘25,2025.
+[34] VahidehManshadi,ScottRodilitz,DanielaSaban,andAkshayaSuresh. RedesigningVolunteer-
+Match’srankingalgorithm: Towardmoreequitableaccesstovolunteers. AvailableatSSRN
+4497747,2023.
+[35] RishabhMehrotra,JamesMcInerney,HuguesBouchard,MouniaLalmas,andFernandoDiaz.
+Towardsafairmarketplace: Counterfactualevaluationofthetrade-offbetweenrelevance,fair-
+ness&satisfactioninrecommendationsystems. InProceedingsofthe27thACMInternational
+ConferenceonInformationandKnowledgeManagement,CIKM’18,page2243–2251,New
+York, NY,USA,2018.AssociationforComputingMachinery. ISBN9781450360142. doi:
+10.1145/3269206.3272027. URLhttps://doi.org/10.1145/3269206.3272027.
+[36] SmithaMilli,EmmaPierson,andNikhilGarg. Choosingtherightweights: Balancingvalue,
+strategy,andnoiseinrecommendersystems,2023. URLhttps://arxiv.org/abs/2305.
+17428.
+[37] HervéMoulin. FairDivisionandCollectiveWelfare. MITPress,2003.
+[38] Brendan O’Donoghue, Eric Chu, Neal Parikh, and Stephen Boyd. Conic optimization via
+operatorsplittingandhomogeneousself-dualembedding. JournalofOptimizationTheoryand
+Applications,169(3):1042–1068,June2016. URLhttp://stanford.edu/~boyd/papers/
+scs.html.
+[39] GourabKPatro,ArpitaBiswas,NiloyGanguly,KrishnaP.Gummadi,andAbhijnanChakraborty.
+FairRec: Two-sided fairness for personalized recommendations in two-sided platforms. In
+ProceedingsofTheWebConference2020,WWW’20,page1194–1204,NewYork,NY,USA,
+2020.AssociationforComputingMachinery. ISBN9781450370233. doi: 10.1145/3366423.
+3380196. URLhttps://doi.org/10.1145/3366423.3380196.
+[40] GourabKPatro,LorenzoPorcaro,LauraMitchell,QiuyueZhang,MeikeZehlike,andNikhil
+Garg. Fairranking: Acriticalreview,challenges,andfuturedirections. InProceedingsofthe
+2022ACMconferenceonFairness,Accountability,andTransparency,pages1929–1942,2022.
+doi: 10.1145/3531146.353323. URLhttps://doi.org/10.1145/3531146.353323.
+[41] KennyPeng,ManishRaghavan,EmmaPierson,JonKleinberg,andNikhilGarg. Reconciling
+the accuracy-diversity trade-off in recommendations. In Proceedings of the ACM on Web
+Conference 2024, WWW ’24, page 1318–1329, New York, NY, USA, 2024. Association
+for Computing Machinery. ISBN 9798400701719. doi: 10.1145/3589334.3645625. URL
+https://doi.org/10.1145/3589334.3645625.
+[42] Hossein A. Rahmani, Yashar Deldjoo, Ali Tourani, and Mohammadmehdi Naghiaei. The
+unfairness of active users and popularity bias in point-of-interest recommendation. In
+InternationalWorkshoponAlgorithmicBiasinSearchandRecommendation,2022. doi: 10.
+1007/978-3-031-09316-6_6. URLhttps://doi.org/10.1007/978-3-031-09316-6_6.
+[43] JohnRawls. ATheoryofJustice: OriginalEdition. HarvardUniversityPress, 1971. ISBN
+9780674880108. URLhttp://www.jstor.org/stable/j.ctvjf9z6v.
+[44] AshudeepSinghandThorstenJoachims. Fairnessofexposureinrankings. InProceedingsof
+the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining,
+KDD’18,page2219–2228,NewYork,NY,USA,2018.AssociationforComputingMachinery.
+ISBN9781450355520. doi: 10.1145/3219819.3220088. URLhttps://doi.org/10.1145/
+3219819.3220088.
+13
+[45] IvanStelmakh,NiharB.Shah,andAartiSingh. Peerreview4all: Fairandaccuratereviewer
+assignment in peer review. In Aurélien Garivier and Satyen Kale, editors, Proceedings of
+the30thInternationalConferenceonAlgorithmicLearningTheory,volume98ofProceedings
+of Machine Learning Research, pages 828–856. PMLR, 22–24 Mar 2019. URL https://
+proceedings.mlr.press/v98/stelmakh19a.html.
+[46] ZhongzhengTang,ChenhaoWang,andMengqiZhang. Priceoffairnessinbudgetdivision
+for egalitarian social welfare. In International Conference on Combinatorial Optimization
+and Applications, volume 12577 of Lecture Notes in Computer Science, pages 594–607.
+Springer,2020. doi: 10.1007/978-3-030-64843-5_40. URLhttps://doi.org/10.1007/
+978-3-030-64843-5_40.
+[47] LequnWangandThorstenJoachims. Userfairness,itemfairness,anddiversityforrankings
+in two-sided markets. In Proceedings of the 2021 ACM SIGIR International Conference on
+TheoryofInformationRetrieval,ICTIR’21,page23–41,NewYork,NY,USA,2021.Associa-
+tionforComputingMachinery. ISBN9781450386111. doi: 10.1145/3471158.3472260. URL
+https://doi.org/10.1145/3471158.3472260.
+[48] LequnWang,YiweiBai,WenSun,andThorstenJoachims. Fairnessofexposureinstochastic
+bandits. In Marina Meila and Tong Zhang, editors, Proceedings of the 38th International
+ConferenceonMachineLearning,volume139ofProceedingsofMachineLearningResearch,
+pages 10686–10696. PMLR, 18–24 Jul 2021. URL https://proceedings.mlr.press/
+v139/wang21b.html.
+[49] YongXiao,JianweiHuang,ChauYuen,andLuizA.Dasilva. Fairnessandefficiencytradeoffs
+for user cooperation in distributed wireless networks. 2013 Proceedings IEEE INFOCOM,
+pages285–289,2013. doi: 10.1109/INFCOM.2013.6566780. URLhttps://ieeexplore.
+ieee.org/document/6566780.
+[50] Chen Xu, Sirui Chen, Jun Xu, Weiran Shen, Xiao Zhang, Gang Wang, and Zhenhua Dong.
+P-MMF: Provider max-min fairness re-ranking in recommender system. In Proceedings of
+the ACM Web Conference 2023, WWW ’23, page 3701–3711, New York, NY, USA, 2023.
+AssociationforComputingMachinery. ISBN9781450394161. doi: 10.1145/3543507.3583296.
+URLhttps://doi.org/10.1145/3543507.3583296.
+[51] Meike Zehlike, Francesco Bonchi, Carlos Castillo, Sara Hajian, Mohamed Megahed, and
+RicardoBaeza-Yates. FA*IR:Afairtop-krankingalgorithm. InProceedingsofthe2017ACM
+ConferenceonInformationandKnowledgeManagement,CIKM’17,page1569–1578,New
+York, NY,USA,2017.AssociationforComputingMachinery. ISBN9781450349185. doi:
+10.1145/3132847.3132938. URLhttps://doi.org/10.1145/3132847.3132938.
+14
+A Extensions
+Intheexperimentsbelow,wesubsamplerecommendationsettingsinthesamewayasdescribedin
+Section6butwith50papersand100authors.
+A.1 Alternativedefinitionsoffairness
+NashWelfare ThefirstalternativedefinitionoffairnessweconsiderisNashwelfare[37],
+(cid:88) (cid:88)
+U (ρ)= logU (ρ), I (ρ)= logI (ρ).
+NW i NW j
+i j
+Thismeasureoffairnessismoreholisticthanegalitarianfairnessasitaccountsfortheutilitiesofall
+users(items). InFigure2,weshowtheresultsofrepeatingtheexperimentinFigure1withNash
+Welfarefairness. Weseethatthetrade-offbetweenuseranditemfairnessissteeperforhomogeneous
+populationsofusersthanforuniformlyrandompopulations. Whilethecurvesappearmoreconcave
+thanbefore,itisimportanttonoticethatwereplacedγ with1/γ intheitemfairnessconstraintofthe
+optimizationproblemduetotheNashwelfarebeingnegative(asdetailedinFigure2),sothatγ –
+whilestillcapturingconstraintstrength–hasaslightlydifferentinterpretationthanpreviously.
+(a)Homogeneousversusdiverseusers (b)Withandwithoutmisestimation
+Figure2: WerepeattheexperimentofFigure1fromtheoriginalpaperbutreplacemax-minfairness
+withNashwelfarefairness. Thatis,intheobjectivewereplaceU withtheuserNashwelfareU .
+min NW
+Wemustbemorecarefulwiththeitemfairnessconstraint: weknowthatthenormalizedutilities
+satisfy0 ≤ U ,I ≤ 1,soU ,I < 0. ThismeansthatinProblem1wemustreplacetheitem
+i j NW NW
+fairnessconstraintI (ρ) ≥ γI∗ withtheconstraintI (ρ) ≥ (1/γ)I∗ . Whenγ = 0, this
+min min NW NW
+correspondstoI (ρ) ≥ −∞;whenγ = 1,thiscorrespondstoI (ρ) ≥ I∗ . Thusasbefore,
+NW min min
+whenγ =0thereiseffectivelynoitemfairnessconstraint,andγ =1constrainsitemfairnesstobe
+maximal.
+Sum of k-min The second alternative definition of fairness we consider is the sum of the k-
+minimumuseroritemutilities,whichisageneralizationofegalitarianfairness(k =1)thatmeasures
+theutilityofasize-ksetofworst-offentities,
+k k
+(cid:88) (cid:88)
+U (ρ)= min U (ρ), I (ρ)= min I (ρ).
+k−min
+i1̸=...̸=ikℓ=1
+iℓ k−min
+j1̸=...̸=jkℓ=1
+jℓ
+InFigure3,weshowtheresultsofrepeatingtheexperimentinFigure1withmax-sum-k-minfairness.
+We again observe that the trade-off between user and item fairness is steeper for homogeneous
+populationsofusersthanforuniformlyrandompopulations. Wealsodonotseeanincreaseinthe
+priceofmis-estimationwhenitemconstraintsareadded–again,thepriceofmis-estimationisvery
+high.
+A.2 Alternativeitemutilitymodels
+Inourtheoreticalandempiricalresults,weuseasymmetricutilitymodel,whereanitem’sutility
+forbeingrecommendedtoauseristhesameastheuser’sutilityfortherecommendation. Formally,
+ingeneralitemj hasutilitywI forbeingrecommendedtouseri,whileuserimayhaveadifferent
+ij
+15
+(a)Homogeneousversusdiverseusers (b)Withandwithoutmisestimation
+Figure3: WerepeattheexperimentofFigure1fromtheoriginalpaperbutreplacemax-minfairness
+withmax-sum-k-minfairnessfork = 3. IntheoptimizationinProblem1,wereplaceU and
+min
+I withU andI respectively.
+min k−min k−min
+utilitywU forthatrecommendation. Inourtheoreticalandempiricalresultsabove,wetookw =
+ij ij
+wI = wU. Below,wediscusstherationaleforthismodel,andshowthatthisassumptionmaybe
+ij ij
+relaxedinourtheoreticalandempiricalresults.
+Thesymmetricutilitymodelweuse–whichcorrespondstothe“marketshare”itemutilitymodel
+inChenetal.[12]–ismotivatedbyplatformsinwhichbothusersanditemsderiveutilityfroma
+successfulrecommendation. Thisisreasonableinsettingsinwhichnotonlydoesauserwantto
+berecommendedrelevantitems, butanitem’sproducerwantsittoberecommendedtousersfor
+whichtheitemisespeciallyrelevant. Concretely,inthecaseofreadersreceivingrecommendations
+for academic pre-prints, the readers prefer papers that they will engage with, and authors prefer
+readersthatwillengagewiththeirwork. inanonlinemarketplaceproducerswantcustomerswhowill
+purchasetheirproducttobeshowntheitem;inasocialmediasetting,contentcreatorsprefertheir
+contenttoappeartouserswhowillappreciateitandthusengagewithfuturecontent. Oursymmetric
+utilitymodelcapturesthisbasicstructurebehindproducerpreferencesinmanycases.
+Notethatsinceuserscanonlyreceivealimitednumberofrecommendations,ourassumptiondoes
+noteliminatethetensionbetweenuseranditemutility: anindividualuserwantsrecommendations
+thatmaximizehertotalutilityacrossallitems,whileanindividualitemwantstheplatformtoproduce
+recommendationsthatmaximizeitstotalutilityacrossallusers. Aconcreteexampleofthisisthat
+underthismodelalow-qualityitemwillwanttoberecommendedtotheusermostlikelytoclick
+on it, but that user won’t want to be recommended the low-quality item. This assumption does,
+however,implythattheplatform-wideitemutilityandplatform-wideuserutilityareequivalent–for
+recommendationsρ ,theseareboth (cid:80) (cid:80) w ρ .2
+ij j i ij ij
+One generalization of the symmetric utility model is where each user and item receives utility
+proportionaltosomesharedrecommendationqualityw . Formally,eachuserireceivesautility
+ij
+ofa w andeachitemj receivesautilityofb w fromrecommendingj toi,fora ,b > 0. For
+i ij j ij i j
+example,differentvaluesofa couldcapturedifferentlevelsofbaselineinterestinitemsamongusers.
+i
+Ourtheoreticalresultsstillholdinthismoregeneralsetting,sincethesecoefficientswillcancelout
+whenwenormalizetheutilities.
+Anothercommonitemutilitymodelisexposure[11,39],whereitemsreceiveutilityonlyfrombeing
+recommended,andareambivalenttowhichuseritisshownto. Formally,thiscorrespondstotaking
+wI =1foralli,j.3 Intuitively,withexposure-baseditemutility,theitemfairnessconstraintwill
+ij
+causetheusers’recommendationpoliciesmovefrombeingconcentratedonthemostpopularitems,
+toamoreuniformdistributionoveritems. Iftheusersinthepopulationhavediversepreferences,
+eachitemwillalreadyhaveanapproximatelyuniformprobabilityofbeingrecommended,sothat
+imposingitemfairnessconstraintshasalowcost.
+InFigures4and5weexaminetherobustnessofourempiricalresultsin3aand3brespectivelyas
+weinterpolatetheitemutilitymodelbetweensymmetryandexposure. InFigure5weseethatuser
+2Ofcourse,thisneednotbetheplatform’sutility:ingeneraltheplatformmightreceiveutilityr ifuseri
+ij
+selectsrecommendeditemj.
+3AgainwecouldtakewI =b forsomeb >0,butthiswouldhaveequivalentnormalizeditemutilities.
+ij j j
+16
+preferencediversityindeedstillimprovestheuser-itemfairnesstradeoffwhenwechangetheitem
+utilitymodel. Wealsoagainseethatthepriceofmis-estimationdoesnotappeartoincreasewith
+itemfairness.
+(a)∆=0(symmetric) (b)∆=0.33 (c)∆=0.67 (d)∆=1(pureexposure)
+Figure4: Robustnessofempiricalfindingswithoutsymmetryassumption: user-itemfairnesstrade-
+offsanddiversityasitemutilitiesbecomelesscorrelatedwithuserutilities. Here,wetaketheuser
+utilitieswU tobederivedfromthearXivrecommendationenginesimilarityscoresasinFigure3a.
+Foreachplottheitemutilitiesarealinearinterpolationbetweentheusers’utilitiesandexposure.
+Formally,wI = ∆·1+(1−∆)·wU. When∆ = 0,itemanduserutilitiesagree;when∆ = 1
+ij ij
+itemsderiveutilitysolelyfromexposure.
+(a)∆=0(symmetric) (b)∆=0.33 (c)∆=0.67 (d)∆=1(pureexposure)
+Figure5: Robustnessofempiricalfindingswithoutsymmetryassumption: itemfairnessconstraints
+still do not increase the price of mis-estimation empirically. Here, we take the user utilities wU
+tobederivedfromthearXivrecommendationenginesimilarityscoresasinFigure3b. Foreach
+plottheitemutilitiesarealinearinterpolationbetweentheusers’utilitiesandexposure. Formally,
+wI =∆·1+(1−∆)·wU. When∆=0,itemanduserutilitiesagree;when∆=1itemsderive
+ij ij
+utilitysolelyfromexposure.
+B arXivrecommenderempiricaldetails
+WeprototypearecommenderforpreprintsonarXiv,toillustrateourconceptualfindings. Weconsider
+thecoldstartsettingforitems(papers),whentheyarenewlyuploadedtoarXivandsoonlyhave
+metadatabutnoassociatedinteractionorcitationdata. Forusers(readers),weuseasdatathepapers
+thattheyhavepublishedonarXivinthepast;weassumeauthorswithidenticalnamesarethesame
+author. Weimplementvariousnaturallanguageprocessing-basedmethodsontheabstracttext(for
+bothitemsandtheuser’shistoricalpapers)togeneratesimilarityscores(utilitymatrices)forusers
+anditems. Weusethesimilarityscorestogeneraterecommendationsforeachuser,atvariouslevels
+ofuseranditemfairnessconstraints. Wevalidateourapproachbyanalyzinghowcitationscorrelate
+withthesimilarityscore.
+B.1 Datasetandcomputationdetails
+TheoriginaldatasetwassourcedfromthepublicArXivDatasetavailableonKaggle,4 containing
+1,796,911articles. Thisdatasetcoversawiderangeofscientificcategories. Eachentryinthedataset
+ischaracterizedbyfeatureswhichinclude:
+• ID:Auniqueidentifierforeachentry.
+• Authors: Namesandaffiliationsoftheauthors.
+4UsedunderlicenseCC0PublicDomain
+17
+• Title: Thetitleofthepaper.
+• Categories: Thescientificcategoriesforthepaper.
+• Abstract: Abriefsummaryofthepaper.
+• UpdateDate: Thedateofthelatestupdate.
+WefurtherjointhisdatawithcitationdatafromtheSemanticScholarAPI[25].5 Foreachpaper,we
+haveboththepapersthatitcitesandthepapersthatciteit.
+Wefocusexclusivelyonentriesclassifiedunderthe‘ComputerScience(CS)’category. Weextract
+entrieswheretheprimarycategorydesignationwas‘CS’,andremovenullandduplicatepaperID
+values. Thisfilteringresultsin177,323entries.
+Thisentireempiricalworkflowwasrunonamachinewith64CPUs,1TBRAM,and14TB(non-
+SSD)disk. Theestimatedtimewasabout20hoursperweekfor3months,andthelongestindividual
+runwasapproximately12hours.
+Trainandtestdata Astraining(toconstructembeddingsforusers),weconsiderpapersthatthose
+users published up to the end of 2019. Papers in 2020 are in the test set (the set available to be
+recommended). Papersafter2020areusedtoevaluaterecommendations(didtheuserciteapaper
+publishedin2020).
+Thetrainingdatasethas139,308papers,andthetestdatasethas14,307papers,withtheremaining
+beingpost-2020papers. Thetrainingdatasethas178,260distinctuserswithanaverageofapproxi-
+mately2papersperuser. Figures6aand6bshowthedistributionofresearchpapersubcategories
+betweenthetrainandtestdatasets. Figure7belowshowsthedistributionofthenumberofpapers
+peruserinthetrainingsetonalogarithmicscaleforthey-axis. Thex-axisrepresentsthenumberof
+papersperuser,rangingfrom0toover250.
+Splittingthetrainingandtestdatatemporallybothreflectspracticeandallowsustoevaluatethe
+recommendationmodel’seffectivenessinpredictingfuturecitations. Asdetailedbelow,themodel’s
+success was measured by whether papers our model would have recommended to users in 2020
+wereinfactcitedintheirsubsequentworks. Forfurtherdetails,seebelowSectionB.3onthemodel
+evaluation.
+B.2 Recommendationmodels
+Eachrecommendationapproachhastwodesigndimensions: (a)howwegenerateembeddingsfor
+eachpaper(paperstoberecommended,andpapersuploadedbyusersthatwillbeusedtoconstruct
+userembeddings),and(b)howsimilarityscoresareconstructedoncewehaveanembeddingforeach
+paper. Below,weevaluateeachapproachbytheireffectivenessinrecommendingpapersthatusers
+arelikelytociteintheirfutureworks.
+(a)Generatingembeddingsforeachpaper Weusetext-basedanalysesontheabstractsofeach
+paper to generate paper embeddings. The first approach is TF-IDF, while the second employs
+SentenceTransformers.
+TF-IDF. The first preprocessing step involved removing stopwords—common words with little
+informationalvalue,suchas“and”and“the”—toreducenoiseandemphasizemeaningful
+content. Next, a TF-IDF (Term Frequency-Inverse Document Frequency) vectorizer is
+appliedtocounttermfrequenciesandscalethemaccordingtotheirrarityacrossthedataset,
+highlightinguniqueandinformativewords. Theresultingfrequencyvectorforeachabstract
+isusedasitsembedding.
+SentenceTransformers. Theauthor-basedrecommendationmodelusingSentenceTransformers
+leveragescontextualembeddingsfromsentence-levelrepresentations. Thepreprocessing
+involvestokenizingthetext(title,abstract,andcategories)andgeneratingembeddingsusing
+apre-trainedSentenceTransformermodel,specificallytheAllenAISPECTERmodel[13],6
+availableonHuggingFace.
+5UsedundertheSemanticScholarAPILicenseAgreement
+6LicensedundertheApacheLicense,Version2.0
+18
+(a)Distributionofresearchpaperpublicationsinthetraindatasetovertime
+(b)Distributionofresearchpaperpublicationsinthetestdatasetovertime
+Figure6: Distributionofresearchpaperpublicationsovertime
+(b) Constructing similarity scores for each user-paper pair. After constructing embeddings,
+we have an embedding for each paper in the potential recommendation set, and for each paper
+authoredbyauserinthetrainingset. Weconstructuser-papersimilarityscoresasfollows. First,we
+computethecosinesimilaritybetweeneachrecommendationsetembeddingandeachuser’spapers’
+embeddings. Then,thesimilarityscorebetweeneachuserandtherecommendationssetpaperis
+constructedusingoneofthefollowingapproaches:
+Meanscore. Wetakethemeanofthecosinesimilaritiesbetweentherecommendationsetpaperand
+eachofthepapersbytheuserinthetrainingset. Thisapproachisequivalenttoconstructing
+auserembeddingasthemeanembeddingoftheiruploadedpapers.
+Maxscore. Themeansimilarityscorehasbeenrecognizedasnotcapturingdiverseintereststhat
+a user may have [20, 41] – for example, for a user who has published papers in two
+19
+105
+104
+103
+102
+101
+100
+0 50 100 150 200 250
+Number of Papers
+srohtuA
+fo
+tnuoC
+goL
+Figure7: Distributionofthenumberofpapersperuserinthetrainingsetonalogarithmicscale
+differentsubjectareas,apapershouldberecommendedtothemifitmatcheseitheroftheir
+interests,asopposedtotheaverageofthoseinterests. Thus,wealsoconstructuser-paper
+similarityscoresviathemaxsimilaritybetweenanyoftheuser’strainingsetpapers,andthe
+recommendedsetpaper.
+Note that we also experimented with using dot products instead of cosine similarity; results are
+similarandomitted.
+B.3 Modelevaluationmethod
+Weevaluateeachofthefourapproaches(TF-IDFandsentencetransformers,eachwiththemaxor
+themeanscores)usingcitationdatafor1,128users(authors)and14,307papers. Foreachuser-paper
+pair,weusethefollowingasoutcomedata:
+Usercitespaperinthefuture: Isthepapercitedbytheuserinthefuture?
+Papercitesuser: Doesthepapercitetheuseralready? Wenotethatthisdataistechnicallyavailable
+atthetimeofahypotheticalrecommendationforanewpaper,andsointheorycouldbe
+usedbyarecommender. Thus,althoughmetricdoesnotdirectlymeasurethefuturebehavior
+oftheuser,ithelpsinunderstandingthecontextualalignment(determinedjustbynatural
+languageprocessingoftheabstracts)oftherecommendedpaperswiththeuser’sprevious
+researchorinterests. Importantly,thesereferencesarenotpartofthedatausedtogenerate
+thesimilarityscore.
+Inbothcases,weconsiderthepresenceofcitationsassignifyingagoodrecommendation.
+Foreachrecommendationapproach,wecalculatetherelationshipbetweenthiscitationdataandthe
+followingsimilarityscoremeasures.
+• Similarityscore: Therawcosinesimilarityscore.
+• Scorepercentile: Thepercentilerankofthesimilarityscore,wherepercentileiscalculated
+foreachuser.
+• Normalizedscore: Thesimilarityscoreisnormalizedbysubtractingthemeananddividing
+bythestandarddeviationofscoresforeachuser.
+Asuccessfulrecommendationapproachwouldhaveastrongrelationshipbetweentext-basedsimilarity
+scoresandfuturecitationoutcomes.
+B.4 Evaluationresults
+We evaluate each of the 4 approaches. As summarized below, we find that the best performing
+approachisusingtheTF-IDFvectorizertoconstructabstractembeddings,andthenusingthemax
+similarityscoresbetweenanyoftheirpapersinthetrainingsetandeachpaperintherecommended
+20
+set. Wefindthatthisapproachiseffectiveatpredictingfuturecitationsbytheuser,especiallyfora
+coldstartrecommenderthatusesonlyabstracttextualinformation,andforsuchasparseoutcomeas
+citations.
+CitationType No/Yes SimilarityScore ScorePercentile NormalizedScore
+No 0.041454 0.499737 -0.001701
+Usercitespaper
+Yes 0.123650 0.765008 1.514331
+No 0.041147 0.498860 -0.006536
+Papercitesuser
+Yes 0.138199 0.784410 1.582545
+Table2: AveragesimilaritymeasuresintheMaxscore, TF-IDFmodel, conditionedoncitation
+presencefordifferenttypesofcitations.
+(a) Density plot of similarity scores grouped by (b) Density plot of similarity score percentiles
+citationpresence. groupedbycitationpresence.
+Figure8: Pr(score|Usercitespaper),thedistributionofthescoreforauser-paperpair,conditional
+onwhethertheusercitesthepaperinthefuture,fortheMaxscore,TF-IDFmodel.
+Variable Coefficient Std. Err z-value P-value AdjustedR2
+Similarityscore 12.4100 0.058 212.178 0.000 0.08915
+Scorepercentile 3.9218 0.035 111.194 0.000 0.05973
+NormalizedScore 0.3905 0.002 158.421 0.000 0.05159
+Table3: Logisticregressionresultsforpredictingwhetherusericitespaperj fromthesimilarity
+scorew ,fortheMaxscore,TF-IDFmodel
+ij
+Maxscore,TF-IDF Table2showsthesimilaritymeasuresdescribedaboveaveragedoverallusers
+andtestpapers,conditionedonwhetherornotacitationoccurredbetweentheuserandpaper(whether
+theusercitesthepaper,orviceversa). Figure8illustratesthedistributionofsimilarityscoresfor
+papersthatwerecited(orange)versusthosethatwerenotcited(blue)bytheuserinthefuture. The
+densityforcitedpapersishigherathigherlevelsofsimilarityscorescomparedtonon-citedpapers.
+Table3performinglogisticregressionbetweentheuser-paperscoreandwhethertheusercitesthe
+paperwithabiasterm(‘Usercitespaper∼1+score’),foreachscoremeasure.Allmeasuressuggest
+thatourtext-basedrecommendationscoresareeffectiveforpredictingwhethertheuserwillcitethe
+givenpaper. Forexample,Figure8bshowsthatPr(Highestscorebin|Authorcitespaper)ismore
+thanfivetimesPr(Highestscorebin|Authordoesnotcitepaper).
+Meanscore,TF-IDF Table4showsthesimilaritymeasuresdescribedaboveaveragedoverall
+usersandtestpapers,conditionedonwhetherornotacitationoccurredbetweentheuserandpaper
+(whethertheauthorcitesthepaper,orviceversa). Figure9illustratesthedistributionofsimilarity
+scores for papers that were cited (orange) versus those that were not cited (blue) by the user in
+thefuture. Thedensityforcitedpapersishigherathigherlevelsofsimilarityscorescomparedto
+non-citedpapers. Table5performinglogisticregressionbetweentheuser-paperscoreandwhether
+theusercitesthepaperwithabiasterm(‘Usercitespaper∼1+score’),foreachscoremeasure.
+Maxscore,Sentencetransformer
+21
+CitationType No/Yes SimilarityScore ScorePercentile NormalizedScore
+No 0.019405 0.499717 -0.001799
+Authorcitespaper
+Yes 0.044938 0.783110 1.600929
+No 0.019323 0.498790 -0.006737
+Papercitesauthor
+Yes 0.046283 0.801534 1.631049
+Table4: AveragesimilaritymeasuresintheMeanscore,TF-IDFmodel,conditionedoncitation
+presencefordifferenttypesofcitations.
+20.0
+17.5
+15.0
+12.5
+10.0
+7.5
+5.0
+2.5
+0.0
+0.0 0.2 0.4 0.6 0.8
+Similarity Score
+ytisneD
+Author cites paper 6 0
+1
+5
+4
+3
+2
+1
+0
+0.0 0.2 0.4 0.6 0.8 1.0
+Similarity Score Percentile
+(a) Density plot of similarity scores grouped by
+citationpresence.
+ytisneD
+Author cites paper 0
+1
+(b) Density plot of similarity score percentiles
+groupedbycitationpresence.
+Figure9: Pr(score|Authorcitespaper),thedistributionofthescoreforauser-paperpair,conditional
+onwhethertheusercitesthepaperinthefuture,fortheMeanscore,TF-IDFmodel.
+Variable Coefficient Std. Err z-value P-value AdjustedR2
+Similarityscore 20.2122 0.131 154.835 0.000 0.04616
+Scorepercentile 4.3535 0.037 116.516 0.000 0.06934
+NormalizedScore 0.4184 0.003 164.894 0.000 0.05815
+Table5: Logisticregressionresultsforpredictingwhetherusericitespaperj fromthesimilarity
+scorew „fortheMeanscore,TF-IDFmodel
+ij
+CitationType No/Yes SimilarityScore ScorePercentile NormalizedScore
+No 0.666801 0.499821 -0.00183
+Authorcitespaper
+Yes 0.784402 0.807105 1.30730
+No 0.666379 0.498851 -0.005735
+Papercitesauthor
+Yes 0.794945 0.805592 1.251814
+Table6: AveragesimilaritymeasuresintheMaxscore,Sentencetransformermodel,conditioned
+oncitationpresencefordifferenttypesofcitations.
+Variable Coefficient Std. Err z-value P-value AdjustedR2
+Similarityscore 18.4557 0.250 73.695 0.000 0.1347
+Scorepercentile 5.0122 0.098 51.161 0.000 0.08604
+NormalizedScore 1.2332 0.017 71.426 0.000 0.1076
+Table7: Logisticregressionresultsforpredictingwhetherusericitespaperj fromthesimilarity
+scorew „fortheMaxscore,Sentencetransformermodel
+ij
+Table 6 shows the similarity measures described above averaged over all users and test papers,
+conditionedonwhetherornotacitationoccurredbetweentheuserandpaper(whethertheusercites
+thepaper,orviceversa). Figure10illustratesthedistributionofsimilarityscoresforpapersthatwere
+cited(orange)versusthosethatwerenotcited(blue)bytheuserinthefuture. Thedensityforcited
+papersishigherathigherlevelsofsimilarityscorescomparedtonon-citedpapers. Table7showsthe
+resultsofperforminglogisticregressionbetweentheuser-paperscoreandwhethertheusercitesthe
+paperwithabiasterm(‘Usercitespaper∼1+score’),foreachscoremeasure.
+22
+5
+4
+3
+2
+1
+0
+0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+Similarity Score
+ytisneD
+Author cites paper
+0 7
+1
+6
+5
+4
+3
+2
+1
+0
+0.0 0.2 0.4 0.6 0.8 1.0
+Similarity Score Percentile
+(a) Density plot of similarity scores grouped by
+citationpresence.
+ytisneD
+Author cites paper
+0
+1
+(b) Density plot of similarity score percentiles
+groupedbycitationpresence.
+Figure10:Pr(score|Authorcitespaper),thedistributionofthescoreforauser-paperpair,conditional
+onwhethertheusercitesthepaperinthefuture,fortheMaxscore,Sentencetransformermodel.
+Meanscore,Sentencetransformer
+23
+CitationType No/Yes SimilarityScore ScorePercentile NormalizedScore
+No 0.612678 0.499825 -0.001767
+Usercitespaper
+Yes 0.696291 0.803641 1.262704
+No 0.612397 0.498891 -0.005418
+Papercitesuser
+Yes 0.699609 0.796941 1.182465
+Table8: AveragesimilaritymeasuresintheMeanscore,Sentencetransformermodel,conditioned
+oncitationpresencefordifferenttypesofcitations.
+5
+4
+3
+2
+1
+0
+0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+Similarity Score
+ytisneD
+Author cites paper
+0 7
+1
+6
+5
+4
+3
+2
+1
+0
+0.0 0.2 0.4 0.6 0.8 1.0
+Similarity Score Percentile
+(a) Density plot of similarity scores grouped by
+citationpresence.
+ytisneD
+Author cites paper
+0
+1
+(b) Density plot of similarity score percentiles
+groupedbycitationpresence.
+Figure11: Pr(score|Usercitespaper),thedistributionofthescoreforauser-paperpair,conditional
+onwhethertheusercitesthepaperinthefuture,fortheMeanscore,Sentencetransformermodel.
+Variable Coefficient Std. Err z-value P-value AdjustedR2
+Similarityscore 16.2482 0.246 66.148 0.000 0.09085
+Scorepercentile 4.9088 0.097 50.820 0.000 0.08377
+NormalizedScore 1.2297 0.018 69.188 0.000 0.1026
+Table9: Logisticregressionresultsforpredictingwhetherusericitespaperj fromthesimilarity
+scorew „fortheMeanscore,Sentencetransformermodel
+ij
+Table 8 shows the similarity measures described above averaged over all users and test papers,
+conditionedonwhetherornotacitationoccurredbetweentheuserandpaper(whethertheusercites
+thepaper,orviceversa). Figure11illustratesthedistributionofsimilarityscoresforpapersthatwere
+cited(orange)versusthosethatwerenotcited(blue)bytheuserinthefuture. Thedensityforcited
+papersishigherathigherlevelsofsimilarityscorescomparedtonon-citedpapers. Table9showsthe
+resultsofperforminglogisticregressionbetweentheuser-paperscoreandwhethertheusercitesthe
+paperwithabiasterm(‘Usercitespaper∼1+score’),foreachscoremeasure.
+Altogether,eachmodelperformsfairlywell;themodelusingsentencetransformerembeddingsand
+themaxsimilarityscoreamongeachauthor’spapersappearstoperformthebestoverall.
+C ProofofSection3results
+Inthissection,weprovidecompleteproofsforProposition1andProposition2. Inthisandallother
+proofsintheappendix,weignorethedependenceontheutilitymatrixwintheuseranditemutility
+andfairnessfunctionswhenclear.
+Thefollowingresultwillbebroadlyusefulthroughouttherestoftheproofs.
+Lemma1. Sincew >0forallj,I∗ >0.
+ij min
+Proof. Letρ = 1. ThenI (ρ)>0forallj soI (ρ)>0andI∗ =max I (ρ)>0.
+ij n j min min ρ min
+First,recallthestatementofProposition1.
+24
+Proposition1. SupposethatforasetofrecommendationpoliciesS ⊆∆m ,
+n−1
+(i) S canbedescribedbyafinitesetoflinearconstraints
+(ii) Thereexistsanoptimalsolutionρ∗toProblem(2)suchthatρ∗ ∈S
+(iii) ρ∗istheuniquefeasiblesolutiontoProblem(2)inS
+Then,findinganoptimalsolutionρ∗toProblem(2)canbereducedtosolvingalinearprogramL.
+Proof. Wefirstneedthefollowingresult,whichstatesthatthefeasiblesetof1canbeexpressedasa
+linearprogram. Wewillprovethisresultbelow.
+Lemma2. LetF denotethefeasiblesetofProblem1,
+F ≜arg max I (ρ)≜arg max minI (ρ). (3)
+min j
+ρ∈∆m ρ∈∆m j
+n−1 n−1
+ThenF isthesolutionsetofthelinearprogram
+F =arg max λ
+ρ∈∆m n−1 ,λ (4)
+subjectto I (ρ)=λ ∀j.
+j
+Now,condition(iii)onS impliesthatthereisauniqueρ∗inS∩F. Thus
+ρ∗ =F ∩S =arg max λ
+ρ∈∆m n−1 ∩S,λ . (5)
+subjectto I (ρ)=λ ∀j,
+j
+WecanaddS asaconstraintinProblem4becauseweknowthatthereisatleastonesolutionto
+Problem4inS –namely,ρ∗ –sothisadditionalconstraintwillnotchangetheoptimalobjective
+value,butwillconstrainthesetofoptimalsolutionstobeinS,asdesired.
+Bycondition(ii),ρ∗isanoptimalsolutionforProblem1;bycondition(i),S canbedescribedbya
+finitesetoflinearconstraints,andthusProblem5isalinearprogram;callthisL.
+WenowshowLemma2.
+Lemma2. LetF denotethefeasiblesetofProblem1,
+F ≜arg max I (ρ)≜arg max minI (ρ). (3)
+min j
+ρ∈∆m ρ∈∆m j
+n−1 n−1
+ThenF isthesolutionsetofthelinearprogram
+F =arg max λ
+ρ∈∆m n−1 ,λ (4)
+subjectto I (ρ)=λ ∀j.
+j
+Proof. Toshowthis,weprovebycontradictionthateveryoptimalpolicygiveseachitemj thesame
+normalizedutility; thatis, weshowthatifthepolicyρisanoptimalsolutionofProblem3, then
+thereissomeλsuchthatforallj,I (ρ)=λ,andinthiscaseλ=min I (ρ). Thisimpliesthatany
+j j j
+solutionρtoProblem3isafeasiblesolutionof4. Sincethesetwoproblemshavethesameobjective,
+andtheadditionalconstraintinProblem4doesnoteliminateanysolutions,thetwoproblemshave
+thesamesolutionset.
+Toshowthatallitemshavethesamenormalizedutilityattheoptimum,wesupposethecontraryand
+produceacontradiction. Supposethatthepolicyρmaximizesmin I (ρ),butthereissomej such
+j j
+thatI (ρ)>I∗ . Wewillshowthatthismeanswecanconstructρ′suchthatI (ρ′)>I∗ .
+j min min min
+First, notethatitisimpossiblethatρ = 0foralli, otherwiseI∗ = I (ρ) = 0. However, by
+ij min j
+Lemma1,I∗ >0. Thusforsomei,ρ >0.
+min ij
+DefineJ = {j′ : I (ρ) = I∗ },andletj′ ∈ J. Sinceρ > 0and (cid:80) ρ = 1,ρ < 1. Pick
+j′ min ij k ik ij′
+ϵ>0suchthatρ′ :=ρ −ϵ>0,ρ′ :=ρ +ϵ<1,andI (ρ′)>I∗ . SinceI islinearinthe
+ij ij ij′ ij′ j min j
+recommendationpolicy,thisisalwayspossible.
+Now, repeat this process for all j′ ∈ J, to obtain a final recommendation policy ρ′ in which
+I (ρ′)>I∗ forallℓandthusI (ρ′)>I∗ . ThiscontradictstheoptimalityofI∗ .
+ℓ min min min min
+25
+Now,weproveProposition2.
+Proposition 2. S satisfies conditions (i) and (ii) in Proposition 1. Furthermore, solutions
+symm
+ρ∈S toProblem(2)haveasparsestructure:
+symm
+• IfρisabasicfeasiblesolutiontothelinearprogramLinProposition1,thenthereareat
+mostn+K−1type-itempairs(k,j)suchthatρ >0(outofnK possiblepairs).
+kj
+• Ifρisalsooptimal,thenthereareatmostK−1itemsthatareeverrecommendedtomore
+thanonetypeofuser,i.e.,whereρ ,ρ >0fork ̸=k′.
+kj k′j
+Proof. WewillfirstprovethatS satisfiesconditions(i)and(ii),andthenshowsparsity.
+symm
+Part1. Recallthatforfixedw,
+(cid:92)
+S ={ρ:ρ =ρ ifw =w }= {ρ:ρ =ρ }
+symm i i′ i i′ i i′
+i,i′:wi=w i′
+whichisafinitesetoflinearconstraints,socondition(i)holds.
+Now,weshowcondition(ii),thatalwaysthereissomeϕ∗ ∈ S thatisanoptimalsolutionto
+symm
+Problem1. LetρbeanarbitraryoptimalsolutiontoProblem1. Thenρisalsofeasible: I (ρ)=
+min
+I∗ .
+min
+Wefirstdefineapieceofconvenientnotation: iftwousersi,i′sharethesameutilityvectorw =w ,
+i i′
+wesaythattheyhavethesametypeτ(i)=τ(i′). Ifτ(i)=τ(i′):=τ,wewritew =w :=w
+ij i′j τj
+Let
+1 (cid:88)
+ϕ = ρ
+ij |{i′ :τ(i′)=τ(i)}| i′j
+i′:τ(i′)=τ(i)
+foralli,j. Wemustshowthat:
+• ϕ =ϕ foralli,i′whereτ(i)=τ(i′),
+ij i′j
+• ϕisavalidsetofrecommendationprobabilities,
+• ϕisfeasible: I (ϕ)=I∗ ,and
+min min
+• ϕisoptimal: U (ϕ)≥U (ρ)=U∗ .
+min min min
+Clearlyϕ =ϕ foralli,i′whereτ(i)=τ(i′),sinceϕ dependsonlyonithroughτ(i).
+ij i′j ij
+Foreachi,
+(cid:88) 1 (cid:88) (cid:88) 1 (cid:88)
+ϕ = ρ = 1=1.
+ij |{i′ :τ(i′)=τ(i)}| i′j |{i′ :τ(i′)=τ(i)}|
+j i′:τ(i′)=τ(i) j i′:τ(i′)=τ(i)
+Moreover,foralli,j,0≤min ρ ≤ϕ ≤max ρ ≤1.Thusϕ∈∆m .
+r,s rs ij r,s rs n−1
+ToshowthatI (ϕ) = I∗ ,noticethatintuitively,whenwemovefromρtoϕ,weredistribute
+min min
+theprobabilitymassassignedtoanitemj amongusersofthesametype. Sincealloftheseusers
+generatethesamevalueforitemj,thereshouldbenochangeinitemj’sexpectedutility. Formally,
+(cid:80) (cid:80)
+w ϕ
+τ τj i:τ(i)=τ ij
+I (ϕ)=min
+min j (cid:80) τ w τj (cid:80) i:τ(i)=τ 1
+(cid:80) (cid:80)
+w ρ
+τ τj i:τ(i)=τ ij
+=min
+(cid:80) (cid:80)
+j τ w τj i:τ(i)=τ 1
+=I (ρ)
+min
+=I∗ . (ρisoptimal)
+min
+Finally,toshowthatU (ϕ)≥U (ρ),weobservethatifuserswiththesamevaluesaregiven
+min min
+differentrecommendationprobabilities,someuserwillbeworstoffandhaveexpectedvaluelower
+thantheaverageexpectedvalueoverallusersinthattype. Byaveraging,webringallusers’expected
+26
+valuestotheaverageexpectedvalueacrossthetype,increasingtheexpectedvalueforthepreviously
+worstoffuser. Formally,foreachtypeτ,leti(τ)∈argmin U (ρ). Then
+i:τ(i)=τ i
+U (ρ)≤U (ρ)foralli′ :τ(i′)=τ
+i(τ) i′
+(cid:80)n
+w ρ
+(cid:80)n
+w ρ
+=⇒ j=1 τj i(τ)j ≤ j=1 τj i′j foralli′ :τ(i′)=τ
+max v max v
+j j j j
+=⇒ |{i′ :τ(i′)=τ}|
+(cid:80)n
+j=1 w τj ρ i(τ)j ≤ (cid:88)
+(cid:80)n
+j=1 w τj ρ i′j
+max v max v
+j j j j
+i′:τ(i′)=τ
+(cid:80)n
+w ρ
+(cid:80)n
+w ϕ
+=⇒ j=1 τj i(τ)j ≤ j=1 τj i′j foralli′ :τ(i′)=τ (definitionofϕ)
+max v max v
+j j j j
+=⇒ min U (ρ)≤ min U (ϕ)
+i i
+i:τ(i)=τ i:τ(i)=τ
+Then
+U (ρ)=min min U (ρ)≤min min U (ϕ)=U (ϕ)
+min i i min
+τ i:τ(i)=τ τ i:τ(i)=τ
+andwehaveshownthatU (ϕ)≥U (ρ).
+min min
+Part 2. Now we show the sparsity of solutions to the linear program L in Proposition 1, that is,
+Problem5definedaboveintheproofofProposition1. Giventhatρ ∈ S ,wecanrewritethe
+symm
+linearprogramas
+ϕ=arg max λ
+ρ∈∆K ,λ
+n−1
+subjectto I (ρ)=λ ∀j,
+j
+whichisthesameas
+ϕ=argmax λ
+ρ,λ
+subjectto I (ρ)=λ ∀j,
+j
+(cid:88)
+ρ =1 ∀k,
+kj
+j
+ρ ≥0 ∀k,j,
+kj
+whereI (ρ)isshorthandforI (ρ′)whereρ′ ∈∆m isρ∈∆K expressedintermsofusersrather
+j j n−1 n−1
+thantypes. ThisisalinearprogramwithnK+1variables,andn+K equalityconstraints. Then
+foranybasicfeasiblesolutionρofProblem5,theremustbenK +1linearlyindependentactive
+constraints(seeDefinition2.9inBertsimasandTsitsiklis[7]). ThismeansthatofthenK constraints
+{ρ ≥ 0} , at least nK +1−(n+K) must be binding. Equivalently, there can be at most
+kj k,j
+nK−(nK+1−(n+K))=n+K−1valuesofk,j suchthatρ >0.
+kj
+Ifρisalsoanoptimalsolution,thenbyLemma1theremustbesomeksuchthatρ >0foreachj,
+kj
+whichtakesupnnon-zerovalues. OnlyK−1non-zerovaluesremaintobeassigned,soatmost
+K−1itemsj haveρ ,ρ >0fortwotypesk,k′.
+kj k′j
+D ProofofTheorem3
+RecallTheorem3anditssetting. Weletv > v > ... > v andsupposethattherearetwouser
+1 2 n
+types. Auserieitherhasvaluew =v forallj orw =v forallj,correspondingtotypes
+ij j ij n−j+1
+1and2respectively. Thatis,thetwotypeshaveoppositepreferences. Weletαbetheproportionof
+type1usersinthepopulation,outofafixedpopulationofmusers.
+Theorem3. πF (α)isdecreasinginαfor0<α≤1/2,andincreasinginαfor1/2≤α<1.
+U|I
+D.1 Mainproof
+Proof. Theproofwillproceedintwoparts. First,wewillreducetheproblemtofindingasolutionfor
+alinearprogramusingtheframeworkfromProposition1. Then,wewillfindasolutiontothelinear
+program. Inthisproof,wewilluseaseriesofintermediateresults,whichweproveinthefollowing
+section. ThefirstsuchresultisLemma3.
+27
+Lemma3. Forall0<α<1,U∗ (α)=1.
+min
+By Lemma 3, U m ∗ in (α) := U m ∗ in is constant in α, so π U F |I (α) = (U m ∗ in −U m ∗ in (1,α))/U m ∗ in and it is
+enoughtoshowU∗ (1,α)increasesinα.
+min
+RecallthedefinitionofS :
+symm
+{ρ:ρ =ρ ifw =w }.
+i i′ i i′
+ByProposition2, weknowthatS isasatisfiesconditions(i)and(ii)onS forProposition1.
+symm
+ThusbyProposition1,itissufficienttofindϕsuchthat
+ϕ∈arg max λ
+ρ∈S∩∆m ,λ
+n−1
+subjectto I (ρ)=λ ∀j,
+j
+andshowthatthisϕisunique,wherethelinearprogramisderivedfromtheproofofProposition1.
+Since each user in our population only has one of two possible value vectors, w = (v ,...,v )
+i 1 n
+or w = (v ,....,v ), we can identify S with ∆2 , and identify ρ ∈ S with a pair x,y.
+i n 1 symm n−1 symm
+ExpandingtheexpressionforI (ρ)andmakingexplicitthedependenceonα,weseethat
+j
+(cid:80)
+ρ w (α)
+I (ρ,α)= i ij ij
+j (cid:80) w (α)
+i ij
+(cid:80) (cid:80)
+ρ v + ρ v
+i:τ(i)=1 ij j i:τ(i)=2 ij n−j+1
+=
+(cid:80) (cid:80)
+v + v
+i:τ(i)=1 j i:τ(i)=2 n−j+1
+mαx v +m(1−α)y v
+= j j j n−j+1
+mαv +m(1−α)v
+j n−j+1
+=q (α)x +(1−q (α))y
+j j j j
+where
+αv
+q (α):= j .
+j αv +(1−α)v
+j n−j+1
+Notethatforallj and0<α<1,wehave0<q ,1−q <1. Wecanthussimplify
+j j
+ϕ=arg max λ
+x,y∈∆2 n−1 ,λ (6)
+subjectto q (α)x +(1−q (α))y =λ ∀j,
+j j j j
+First,wewillshowuniquenessandfindaclosedformtoProblem6inLemmas4and5. Then,we
+willusethisclosedformstoshowthatU∗ (1,α)isincreasingforα < 1/2. Bysymmetry,this
+min
+impliesthatU∗ (1,α)mustbedecreasingforα>1/2andwewillbedone.
+min
+Lemma4. Problem6hasauniquesolution(x,y,λ). Moreover,thesolutionissparse: thereissome
+1≤t≤nsuchthatforj >t,x =0,andforj <t,y =0.
+j j
+Thus,tosolveouroriginalproblem(Problem1)wemerelyneedtoevaluatetheuserfairnessU of
+min
+x,ysolvingProblem6andshowthatthisisincreasing. Wewilldothisintheremainderoftheproof.
+Foreachα,letx,ybethesolutiontothecorrespondingProblem6,anddefine7
+t(α):=max{j :x (α)>0}.
+j
+Lemma5. Let0<α<1,t:=t(α). Define
+(cid:88) 1 (cid:88) 1
+L = , R = .
+t q t 1−q
+j j
+j<t j>t
+7Whilethereisasingleoptimalsolutionx,ytoProblem6foreachα,theremaybetwotthatsatisfyLemma
+4.Inparticular,thisoccurswhenforeachj,x =0ory =0.Bycontrast,t(α)isunique.
+j j
+28
+Then
+1
+I∗ = ,
+min 1+q L +(1−q )R
+t t t t
+and
+x j =    1 0 I m , ∗ q − j in 1 , +qtLt+ L ( t 1−qt)Rt , j j j = > < t t t, y j =    0 1 I , m ∗ − in 1 , +qtLt+ R ( t 1−qt)Rt , j j j = > <t t t .
+1−qj
+Notethatfort̸=t(α),x,yabovemaynotbevalidprobabilityvectors.
+Lemma 6. For 0 < α < 1/2, if ρ∗ is the optimal recommendation policy, then U (ρ∗,α) ≥
+i
+U (ρ∗,α)forτ(i)=1,τ(i′)=2.
+i′
+ByLemma6,U∗ (α)=U (α)foriwithτ(i)=2. Then
+min i
+U∗ (1,α)=U (α)
+min i
+n
+1 (cid:88)
+= y v
+max v j n−j+1
+j j
+j=1
+ 
+1 (cid:88)
+= max v y t(α) v n−t(α)+1 + y j v n−j+1
+j j
+j>t(α)
+  
+1 (cid:88) I∗ (α) (cid:88) I∗ (α)
+= max v 1− 1− min q (α) v n−t(α)+1 + 1− min q (α) v n−j+1
+j j j j
+j>t(α) j>t(α)
+ 
+1 (cid:88) I∗ (α)
+=
+max v
+v
+n−t(α)+1
++
+1−
+min
+q (α)
+(v
+n−j+1
+−v
+n−t(α)+1
+)
+j j j
+j>t(α)
+ThefollowingresultswillenableustoconcludethatU∗ (1,α)isincreasingforα<1/2.
+min
+Lemma7. t(α)isweaklyincreasing.
+Lemma8. I∗ (α)isincreasingforα≤1/2.
+min
+Lemma9. q (α)strictlyincreasesasαincreasesandstrictlydecreasesasj increases.
+j
+Since t(α) is increasing and v decreases in j, v is increasing in α. Also, I∗ (α) is
+j n−t(α)+1 min
+increasingforα<1/2,andq j (α)isincreasing,so 1 I − m ∗ i q n j ( ( α α ) ) isincreasing. Forj >t(α),v n−j+1 −
+v >0. Thus,U∗ (1,α)isincreasing.
+n−t(α)+1 min
+D.2 Supportinglemmaproofs
+WewillfirstproveLemma9,asitisasimpleresultthatwewilluseextensively.
+Lemma9. q (α)strictlyincreasesasαincreasesandstrictlydecreasesasj increases.
+j
+Proof. Recallthedefinitionofq (α):
+j
+αv
+q (α)= j .
+j αv +(1−α)v
+j n−j+1
+Wecanrewritethisas
+1 1
+q (α)= = ,
+j 1+ (1−α)vn−j+1 1+(1 −1)vn−j+1
+αvj α vj
+29
+whichisstrictlyincreasinginαsincev /v >0.
+n−j+1 j
+Sincev isdecreasinginj,v /v isincreasinginj. Thensince1/α > 1,
+(cid:0)1
+−1
+(cid:1)vn−j+1
+is
+j n−j+1 j α vj
+increasing,soq (α)isdecreasing.
+j
+Lemma3. Forall0<α<1,U∗ (α)=1.
+min
+Proof. Simply put, the argument below says that since there are no total utility or item fairness
+constraints,wecansimplymaximizeutilityforeachuserindividually. Whenwedothis,eachuser
+getsautilityratioof1. Formally,recallthat
+(cid:80)
+ρ w (α)
+U∗ (α)= max min j=1 ij ij
+min ρ∈∆m n−1 i max j w ij (α)
+Wecanpickx foreachuseriindependently,sothisproblembecomes
+i
+1 (cid:88)
+U∗ (α)=min max x w (α).
+min i max j w ij ρi∈∆n−1j=1 ij ij
+(cid:80)
+Weknowthat ρ w ismaximizedbyputtingallprobabilitymassofρ onthecoordinateof
+j=1 ij ij i
+w withthehighestvalue,yieldingexpectedvaluemax w . Then
+i j ij
+max w
+U∗ (α)=min j ij =1.
+min i max j w ij
+Lemma4. Problem6hasauniquesolution(x,y,λ). Moreover,thesolutionissparse: thereissome
+1≤t≤nsuchthatforj >t,x =0,andforj <t,y =0.
+j j
+Proof. Letαbefixed;wewillsuppressthedependenceonαfortheremaindedoftheproof. Recall
+thatProblem6isalinearprogram,andwecanthereforerelyonknownfactsaboutthestructureof
+solutionstolinearprogramstoprovethisresult.
+Part1 First,weshowthatatleastn−1of{x ,y } mustbezeroineverybasicfeasiblesolution.
+j j j
+ByProposition2,sinceK =2,atmostn+2−1=n+1of{x ,y } canbenon-zeroandthusat
+j j j
+leastn−1ofthesearezero.
+Part2 Now,weshowthateveryoptimalbasicfeasiblesolutionhastheformabove.
+Ifx,y,λdefineanoptimalbasicfeasiblesolutionandx = 0,thenifi > j,x = 0. Toseethis,
+j i
+supposethisisnotthecase,thatis,thereissomej <isuchthatx :=c>0butx =0. Wewill
+i j
+showthatwecanformx′,y′ withmin I (x′,y′) > λ,whichmeansthatthepolicyρ′ formedby
+j j
+givingrecommendationpolicyx′ toallusersoftype1andrecommendationpolicyy′ toallusers
+oftype2,isabettersolutiontoProblem1thanthepolicyρdefinedbyx,y,whichmeansρisnot
+optimalandwehaveacontradiction.
+Sincex,yarefeasible,wemusthaveI (x,y)=I (x′,y′)=λ,so
+i j
+q c+(1−q )y =(1−q )y . (7)
+i i i j j
+Definex′,y′asfollows:
+
+c−ϵ , ℓ=j
+ 1
+x′ = 0, ℓ=i ,
+ℓ
+x ℓ + n ϵ − 1 2 , otherwise
+ (cid:16) (cid:17)
+y ℓ ′ =   y
+y
+y j i
+,
++ − (cid:16) 1 1 q − q − i i c q c q i i + + ϵ ϵ 2 2 (cid:17) , , ℓ
+o
+ℓ
+t
+= =
+her
+i j
+wise
+.
+ℓ
+30
+Intuitively, to define x′ we move all probability mass away from i to j. To define y′, we move
+sufficientmassfromj toitooffsetthedecreaseinvaluetoitemifromchangingxtox′. Inorderto
+strictlyincreaseI forallitemsℓ,inx′wealsomoveϵ masstotheotheritems.
+ℓ 1
+Thesewillbevalidprobabilityvectorsforϵ ,ϵ > 0smallenough;forx′ thisisclear. Fory′,we
+1 2
+mustshowthaty > qic ,andy + qic <1. RearrangingEquation7andnoticingthatq >q by
+j 1−qi i 1−qi j i
+Lemma9,
+q c (1−q )y
+y + i = j j <y ≤1.
+i 1−q 1−q j
+i i
+Moreover,
+q c q c+(1−q )y q c
+y − i = i i i − i (Equation7)
+j 1−q 1−q 1−q
+i j i
+q c+(1−q )y q c
+> i i i − i (q >q )
+1−q 1−q j i
+i i
+=y .
+i
+≥0
+Now,wecanshowthatI (x′,y′)>I (x,y)=I∗ ,whichisacontradiction. Todothis,itis
+min min min
+sufficienttoshowthatI (x′,y′)>I (x,y)foreachℓ.
+ℓ ℓ
+• ℓ∈/ {i,j}: Sincex′ >x ,y′ =y ,I (x′,y′)>I (x,y).
+ℓ ℓ ℓ ℓ ℓ ℓ
+• ℓ=i:
+(cid:18) (cid:19)
+q c
+I (x′,y′)=(1−q ) y + i +ϵ
+i i i 1−q 2
+i
+=(1−q )y +q λ+ϵ
+i i i 2
+=I (x,y)+ϵ
+i 2
+• ℓ=j:
+(cid:18) (cid:19)
+q λ
+I (x′,y′)=q (λ−ϵ )+(1−q ) y − i −ϵ
+j j 1 j j 1−q 2
+i
+(cid:18) (cid:19)
+1−q
+=(1−q )y +λ q −q j −ϵ q −ϵ (1−q )
+j j j i1−q 1 j 2 j
+i
+(cid:18) (cid:19)
+1−q
+=I (x,y)+λ q −q j −ϵ q −ϵ (1−q )
+j j i1−q 1 j 2 j
+i
+Sinceq >q ,q −q 1−qj >0,andthusI (x′,y′)>I (x,y)ifϵ ,ϵ aresmallenough.
+j i j i1−qi j j 1 2
+Sincewedidnotusethefactthatα<1/2here,asymmetricargumentshowsthatwecannothave
+y =0,y >0,andi<j,
+j i
+Let k be the number of indices j such that x > 0. The above arguments together imply that
+j
+x = 0,j > k. Therearethenatleastn−1−(n−k) = k−1indicesj suchthaty = 0; the
+j j
+argumentaboveimpliesthatthesezeroesareonthelowestpossibleindices,thatis,y =0,j <k.
+j
+Thusifwetaket=k,wehavethatforj >t,x =0,andforj <t,y =0.
+j j
+Part 3 Finally, we show that there is only a single optimal solution, which is a basic feasible
+solutionofthisform.
+Suppose that x′,y′ is another optimal basic feasible solution; we will show that x′ = x,y′ = y.
+Denotet(x,y)=max{j :x >0}.
+j
+• Ift(x,y)=t(x′,y′),then:
+31
+– Forj <t,y =y′ =0,and
+j j
+q x =I (x,y) (Lemma5)
+j j j
+=I (x,y) (feasibility)
+min
+=I (x′,y′) (optimality)
+min
+=I (x′,y′) (feasbility)
+j
+=q x′, (Lemma5)
+j j
+sox =x′.
+j j
+– Similarlyforj >t,x =x′ =0,and
+j j
+(1−q )y =I (x,y)=I (x,y)=I (x′,y′)=I (x′,y′)=(1−q )y′,
+j j j min min j j j
+soy′ =y .
+j j
+– Finally,thismeansy =1− (cid:80) y =1− (cid:80) y′ =y′,andx =1− (cid:80) x =
+t j>t j j>t j t t j<t j
+1− (cid:80) x′ =x′.
+j<t j t
+• Otherwise,withoutlossofgeneralitylett(x′,y′)>t(x,y):=t. Forj <t,
+q x =I (x,y)=I (x′,y′)=q x′,
+j j j j j j
+sox′ =x . Forj >t,x =0.
+j j j
+Furthermore,
+q x +(1−q )y =I (x,y)=I (x′,y′)=q x′
+t t t t t t t t
+ 
+(cid:88)
+⇐⇒ q t1− x j+(1−q
+t
+)y
+t
+=q
+t
+x′
+t
+j<t
+ 
+(cid:88)
+⇐⇒ q t1− x′ j+(1−q
+t
+)y
+t
+=q
+t
+x′
+t
+j<t
+ 
+(cid:88)
+⇐⇒ (1−q t )y t =q t x′ t −1
+j≤t
+Since q ,1−q > 0, and y ≥ 0, (cid:80) x′ ≤ 1, it must be the case that y = 0 and
+t t t j≤t t t
+(cid:80) x′ =1. However,y >0bydefinitionoft,andwehaveacontradiction.
+j≤t t t
+Thismeansthatthereisonlyoneoptimalbasicfeasiblesolution,andthusthereisonlyonesolution
+tothelinearprogram.
+Lemma5. Let0<α<1,t:=t(α). Define
+(cid:88) 1 (cid:88) 1
+L = , R = .
+t q t 1−q
+j j
+j<t j>t
+Then
+1
+I∗ = ,
+min 1+q L +(1−q )R
+t t t t
+and
+x j =    1 0 I m , ∗ q − j in 1 , +qtLt+ L ( t 1−qt)Rt , j j j = > < t t t, y j =    0 1 I , m ∗ − in 1 , +qtLt+ R ( t 1−qt)Rt , j j j = > <t t t .
+1−qj
+(cid:80) (cid:80)
+Proof. Fix 0 < α < 1. This result mainly follows from the fact that x = y = 1, and
+j j j j
+I (x∗,y∗)=I (x∗,y∗)forallj,j′,aswellasthesparsesolutionstructureshowninLemma4.
+j j′
+32
+WeknowthattheoptimalsolutionsatisfiesI∗ =I =I forallj,j′. Wealsoalreadyknowthat
+min j j′
+forj >t,x =0,andforj <t,y =0.
+j j
+Forj <t,I m ∗ in =I j =x j q j +0 =⇒ x j = I m ∗ qj in.
+Forj >t,I m ∗ in =I j =0+y j (1−q j ) =⇒ y j = 1 I − m ∗ i q n j .
+Forj =t,weknowI∗ =I =q x +(1−q )y . Thenforj <t,x = 1(q x +(1−q )y ),so
+min t t t t t j qj t t t t
+(cid:88) (cid:88) 1 (cid:88) 1
+1−x = x = (q x +(1−q )y )=(q x +(1−q )y ) =(q x +(1−q )y )L .
+t j q t t t t t t t t q t t t t t
+j t
+j<t j<t j<t
+(8)
+Similarly,y = 1 (q x +(1−q )y )so
+j 1−qj t t t t
+(cid:88) 1
+1−y = (q x +(1−q )y )=(q x +(1−q )y )R . (9)
+t 1−q t t t t t t t t t
+j
+j>t
+Combiningequations8and9,weobtain
+L L
+t(1−y )=1−x =⇒ x =1− t(1−y ) (10)
+R t t t R t
+t t
+Substitutingequation10intoequation9,weget
+(cid:18) (cid:18) (cid:19) (cid:19)
+L
+1−y = q 1− t(1−y ) +(1−q )y R
+t t R t t t t
+t
+⇐⇒ 1+q L −q R =y (1+q L +(1−q )R )
+t t t t t t t t t
+1+q L −q R R
+=⇒ y = t t t t =1− t
+t 1+q L +(1−q )R 1+q L +(1−q )R
+t t t t t t t t
+Then
+L L
+x =1− t(1−y )=1− t .
+t R t 1+q L +(1−q )R
+t t t t t
+Finally,weseethat
+I∗ =q x +(1−q )y
+min t t t t
+(cid:18) (cid:19) (cid:18) (cid:19)
+L R
+=q 1− t +(1−q ) 1− t
+t 1+q L +(1−q )R t 1+q L +(1−q )R
+t t t t t t t t
+q L +(1−q )R
+=1− t t t t
+1+q L +(1−q )R
+t t t t
+1
+= .
+1+q L +(1−q )R
+t t t t
+Lemma 6. For 0 < α < 1/2, if ρ∗ is the optimal recommendation policy, then U (ρ∗,α) ≥
+i
+U (ρ∗,α)forτ(i)=1,τ(i′)=2.
+i′
+Proof. Intuitively,thetypewithalargerproportioninthepopulationmustshouldertheburdenof
+ensuringitemfairnesstomediocreitems,andthususersfromthistypewillhavealowerrecommen-
+dationprobabilityontheitemstheyreallylikecomparedtothesmallergroup.
+33
+Formally,leti,i′beuserssuchthatτ(i)=1,τ(i′)=2. Forα≤1/2,j <t(α),
+1 1
+x −y = −
+j n−j+1 q (α) 1−q (α)
+j j
+αv +(1−α)v αv −(1−α)v
+= j n−j+1 − n−j+1 j
+αv (1−α)v
+j j
+(cid:18) (cid:19)
+1 1−α α
+= v + v −v − v
+v j α n−j+1 j 1−α n−j+1
+j
+(cid:18) (cid:19)
+v 1−α α
+= n−j+1 −
+v α 1−α
+j
+v 1−2α
+= n−j+1
+v α(1−α)
+j
+≥0 (0<α≤1/2)
+So
+(cid:18) (cid:19)
+maxv ·(U −U )
+j i i′
+j
+(cid:88) (cid:88)
+= v x − v y
+j j n−j+1 j
+j≤t j≥t
+(cid:88) (cid:88)
+= v (x −y )− v y (collectingcoefficientsofv )
+j j n−j+1 j n−j+1 j
+j≤t j<t
+(cid:88) (cid:88)
+≥ v (x −y )− v y (v ≤v forj ≤t,x >y )
+t j n−j+1 j n−j+1 t j j n−j+1
+j≤t j>t
+(cid:88) (cid:88)
+≥v (x −y )−v y (v >v forj >t)
+t j n−j+1 t n−j+1 t j
+j≤t j>t
+(cid:88) (cid:88) (cid:80)
+≥v −v y −v y ( x =1)
+t t n−j+1 t n−j+1 j≤t j
+j≤t j>t
+(cid:80)
+=v −v ( y =1)
+t t j≤t j
+=0
+Sincemax v >0,wehavethatU ≥U .
+j j i i′
+Lemma7. t(α)isweaklyincreasing.
+Proof. Supposenot,thatis,therearesomeα<α′suchthatt:=t(α)>t(α′):=t′. Wewillsplit
+thisproblemintoseveralcasesbasedonwhichofα,α′ givesasolutionwithhigheritemfairness,
+andshowtheimplicationsofdecreasingtontheclosed-formsolutionsfromLemma5,eventually
+reachingacontradictionineachcase.
+RecallfromLemma9thatq (α)= αvj isincreasinginα,soq (α)<q (α′)forallj.
+j αvj+(1−α)vn−j+1 j j
+First,letI∗ (α)<I∗ (α′). Ift=nthenforj <n,y =0,andthusy =1. So
+min min j n
+I∗ (α)=(1−q (α))>(1−q (α′))≥(1−q (α′))y′ =I∗ (α′)
+min n n n n min
+sincey′ ≤1,andwehaveacontradiction. Otherwiseift<n,letj >t. Then
+n
+y 1−q (α′)
+(1−q (α))y =I∗ (α)<I∗ (α′)=(1−q (α′))y′ ⇐⇒ j < j <1 =⇒ y <y′
+j j min min j j y′ 1−q (α) j j
+j j
+Theny =1− (cid:80) y >1− (cid:80) y′ ≥y′. So
+t j>t j j>t j t
+q (α)x +(1−q (α))y <(1−q (α′))y′ <(1−q (α′))y
+t t t t t t t t
+=⇒ q (α)x <(1−q (α′))y −(1−q (α))y
+t t t t t t
+=⇒ 0≤q (α)x <y (q (α)−q (α′))<0
+t t t t t
+34
+andwehaveacontradiction.
+Now,letI∗ (α)≥I∗ (α′)instead. Ift′ =1thenx′ =1and
+min min 1
+I∗ (α′)=q (α′)>q (α)≥q (α)x =I∗ (α),
+min 1 1 1 1 min
+andwehaveacontradiction. Otherwiseift′ >1,thenforj <t′,
+x q (α′)
+q (α)x =I∗ (α)≥I∗ (α′)=q (α′)x′ =⇒ j ≥ j >1 =⇒ x >x′.
+j j min min j j x′ q (α) j j
+j j
+Thenx′ =1− (cid:80) x′ >1− (cid:80) x ≥x . So
+t′ j<t′ j j<t′ j t′
+q (α′)x′ +(1−q (α′))y′ =I∗ (α′)≤I∗ (α)=q (α)x
+t′ t′ t′ t′ min min t′ t
+=⇒ (1−q (α′))y′ ≤q (α)x −q (α′)x′ <q (α)x −q (α′)x
+t′ t′ t′ t′ t′ t′ t′ t′ t′ t′
+=⇒ 0≤(1−q (α′))y′ <x (q (α)−q (α′))≤0
+t′ t′ t′ t′ t′
+andwehaveacontradiction. Thusallcasesresultinacontradiction.
+Lemma8. I∗ (α)isincreasingforα≤1/2.
+min
+Proof. WefirstneedthefollowingLemma,whichshowsthatα≤1/2impliesthatt(α)mustbean
+indexatmosthalfwaythroughthelistofitems.
+Lemma10. Ifα≤1/2,thent(α)≤(n+1)/2.
+Now,for1≤t≤n,defineA(t)={α:t(α)=t}. Sincet(α)isweaklyincreasinginαbyLemma
+7,A(t)isanintervalin(0,1),and[A(1),A(2),...,A(n)]formsaconsecutivepartitionof(0,1). We
+willnowshowthatI∗ (α)isincreasingoneachofthefirst⌊(n+1)/2⌋intervals,whichbyLemma
+min
+10containallα∈(0,1/2].
+Lemma11. I∗ (α)isincreasingonA(t)fort≤(n+1)/2.
+min
+Finally,weshowthatthisimpliesI∗ (α)isincreasingon0 < α ≤ 1/2. NoticethatI (x,y,α)
+min j
+iscontinuousinα foreachfixedx,y, soI (x,y,α) = min I (x,y,α)iscontinuousinα for
+min j j
+eachfixedx,y. RecallthatI∗ (α) = max I (x,y,α). Asthesupremumofasetof
+min x,y∈∆n−1 min
+continuousfunctionsonacompactsetmustitselfbecontinuous,thismeansthatI∗ (α)mustbe
+min
+continuousinα,since∆ ×∆ iscompact. SinceI∗ (α)iscontinuousandisincreasingon
+eachinterval{A(t)} n−1 by n L − e 1 mma11,I∗ (α)mu m s i t n beincreasingon (cid:83) A(t). By
+t≤(n+1)/2 min t≤(n+1)/2
+Lemma10, (cid:83) A(t)⊃(0,1/2]. SoI∗ (α)isincreasingon(0,1/2].
+t≤(n+1)/2 min
+Now,weshowLemmas10and11.
+Lemma10. Ifα≤1/2,thent(α)≤(n+1)/2.
+Proof. ByLemma7,itisenoughtoshowthatforα=1/2,t(α)≤(n+1)/2.
+Supposethatα=1/2andwehavex,yoftheforminLemma5suchthatt:=t(α)>(n+1)/2.
+Ifniseven,taket′ =n/2inthedefinitionsofx ,y inLemma5;ifnisodd,taket′ =(n+1)/2.
+j j
+We now verify that this results in x′,y′ that are a feasible solution to Problem 6 and that satisfy
+x′ = y′ . Thisissimpletoseeafterobservingthatwhenα = 1/2,q = 1−q ,sofor
+j n−j+1 j n−j+1
+evenn,L =R + 1 ,andforoddn,L =R ,andsimplifying.
+t′ t′ 1−q t′ t′ t′
+Sincebyassumptiont(α)yieldstheoptimalsolution,I (x,y)>I (x′,y′).Bytheconstruction
+min min
+ofsolutionsinLemma5,foralljwehaveI (x′,y′)=I (x′,y′)andI (x,y)=I (x,y).Then
+j min j min
+35
+forj <t,q x =I (x,y)>I (x′,y′)=q x′,sox >x′. ThensinceI (x,y)>I (x′,y′),
+j j j j j j j j t′ t′
+q x >q x′ +(1−q )y′
+t′ t′ t′ t′ t′ t′
+ 
+(cid:88)
+=q t′1− x′ j+(1−q
+t′
+)y
+t
+′
+′
+j<t′
+ 
+(cid:88)
+>q t′1− x j+(1−q
+t′
+)y
+t
+′
+′
+j<t′
+ 
+(cid:88)
+>q t′1− x j
+j<t′
+≥q x
+t′ t′
+whichisacontradiction.
+Lemma11. I∗ (α)isincreasingonA(t)fort≤(n+1)/2.
+min
+Proof. Recallthatforfixedt,
+1
+I∗ (α)= .
+min 1+q (α)L (α)+(1−q (α))R (α)
+t t t t
+Itissufficienttoshowthatq L +(1−q )R isdecreasing.
+t t t t
+Wefirstexpandtheexpression:
+q (α)L (α)+(1−q (α))R (α)
+t t t t
+= (cid:88) q t (α) + (cid:88) 1−q t (α)
+q (α) 1−q (α)
+j j
+j<t j>t
+= (cid:88) q t (α) + (cid:88) 1−q t (α) + (cid:88) 1−q t (α)
+q (α) 1−q (α) 1−q (α)
+j j j
+j<t j≥n−t t<j<n−t
+Lett<j ≤n−t+1. Then
+1−q (α)
+g(α):= t
+1−q (α)
+j
+(1−α)v αv +(1−α)v
+= n−t+1 j n−j+1
+αv +(1−α)v (1−α)v
+t n−t+1 n−j+1
+v αv +(1−α)v
+= n−t+1 j n−j+1
+v αv +(1−α)v
+n−j+1 t n−t+1
+v v +α(v −v )
+= n−t+1 n−j+1 j n−j+1
+v v +α(v −v )
+n−j+1 n−t+1 t n−t+1
+So
+v (v −v )(v +α(v −α)v ))−(v −v )(v +α(v −v ))
+g′(α)= n−t+1 j n−j+1 n−t+1 t n−t+1 t n−t+1 n−j+1 j n−j+1
+v (v +α(v −v ))2
+n−j+1 n−t+1 t n−t+1
+∝(v −v )(v +α(v −v ))−(v −v )(v +α(v −v ))
+j n−j+1 n−t+1 t n−t+1 t n−t+1 n−j+1 j n−j+1
+=(v −v )v −(v −v )v
+j n−j+1 n−t+1 t n−t+1 n−j+1
+=v v −v v
+j n−t+1 t n−j+1
+≤v v −v v (j >t,n−j+1<n−t+1)
+t n−j+1 t n−j+1
+=0
+36
+Sogisadecreasingfunctionofα. Now,consider
+(cid:88) q t (α) + (cid:88) 1−q t (α)
+q (α) 1−q (α)
+j j
+j<t j>n−t
+t−1 n
+= (cid:88) q t (α) + (cid:88) 1−q t (α)
+q (α) 1−q (α)
+j j
+j=1 j=n−t+2
+t−1 t−1
+= (cid:88) q t (α) + (cid:88) 1−q t (α) (i=n−j+1)
+q (α) 1−q (α)
+j n−i+1
+j=1 i=1
+t−1
+= (cid:88) q t (α) + 1−q t (α)
+q (α) 1−q (α)
+j n−j+1
+j=1
+Thenfor1≤j ≤t−1,
+q (α) 1−q (α)
+h (α):= t + t
+t q (α) 1−q (α)
+j n−j+1
+αv αv +(1−α)v
+= t · j n−j+1
+αv +(1−α)v αv
+t n−t+1 j
+(1−α)v αv +(1−α)v
++ n−t+1 · n−j+1 j
+αv +(1−α)v (1−α)v
+t n−t+1 j
+v (αv +(1−α)v )+v (αv +(1−α)v )
+= t j n−j+1 n−t+1 n−j+1 j
+v (αv +(1−α)v )
+j t n−t+1
+(1−α)v v +αv v
+=1+ t n−j+1 n−t+1 n−j+1
+v (αv +(1−α)v )
+j t n−t+1
+v (1−α)v +αv
+=1+ n−j+1 · t n−t+1
+v αv +(1−α)v
+j t n−t+1
+v v +α(v −v )
+=1+ n−j+1 · t n−t+1 t .
+v v +α(v −v )
+j n−t+1 t n−t+1
+So
+v
+h′(α)= n−j+1
+t v
+j
+(v −v )(v +α(v −v ))−(v −v )(v +α(v −v ))
+· n−t+1 t n−t+1 t n−t+1 t n−t+1 t n−t+1 t
+(v +α(v −v ))2
+n−t+1 t n−t+1
+∝−(v −v )(v +α(v −v ))−(v −v )(v +α(v −v ))
+t n−t+1 n−t+1 t n−t+1 t n−t+1 t n−t+1 t
+=−(v −v )(v +α(v −v )+v +α(v −v ))
+t n−t+1 n−t+1 t n−t+1 t n−t+1 t
+=−(v −v )(v +v )
+t n−t+1 t n−t+1
+≤−(v −v ) (t≤(n+1)/2≤n−t+1)
+t n−t+1
+≤0
+andh isdecreasinginαfor1≤j ≤t−1.Then
+(cid:80)t−1h
+(α)isdecreasing,andq L +(1−q )R =
+t j=1 t t t t t
+(cid:80)t−1h (α)+ (cid:80)n−t+1g (α)isdecreasing,andI∗ (α)isincreasing.
+j=1 t j=t+1 t min
+E ProofofTheorem4
+RecallTheorem4.
+Theorem4. Ifβ > 1 andwandwˆareasdescribedabove,thenfairnessconstraintscanarbitrarily
+n
+worsenthepriceofmisestimation.
+• The price of misestimation without fairness constraints is low: for all {v }, there is a
+j
+recommendationpolicyρˆthatsolvesthemisestimatedproblemU∗ (0,wˆ)sothat
+min
+1
+πM(0,w,wˆ)≤ .
+U 2
+37
+• Thepriceofmisestimationwithfairnessconstraintscanbearbitrarilylarge: ∀ϵ,thereexists
+{v }andarecommendationpolicyρˆthatsolvestheproblemU∗ (1,wˆ)suchthat
+j min
+πM(1,w,wˆ)>1−ϵ.
+U
+E.1 Mainproof
+Proof. Wefirstfindaworst-casepriceofmisestimationwithfairnessconstraints,andthenfindthe
+priceofmisestimationwithoutfairnessconstraints.
+Itemfairnessconstraintswithmisestimation. First,noticethatinthemisestimatedvaluematrix
+wˆtherearethreedistinctuservaluetypes,andthuswecanidentifyS with∆3 andapolicy
+symm n−1
+ρ∈S withvectorsx,y,z,wherexistherecommendationpolicyforuserswithvaluewˆ =v ,
+symm ij j
+y istherecommendationpolicyforuserswithvaluewˆ = v ,andz istherecommendation
+ij n−j+1
+policyforthemis-estimatedusers.
+Let
+S′ ={x,y,z ∈S :x =y ,z =z forallj}.
+symm j n−j+1 j n−j+1
+Sinceyiscompletelydeterminedbyx,wecanidentifyS′with∆2 andcanidentifyx,y,z ∈S′
+n−1
+simplybyx,z.
+Lemma12. Ifapolicyρ=(x,y,z)∈S solvesU (ρ)=U∗ (1),thenthereissomepolicy
+symm min min
+ρ′ =x′,z′ ∈S′thatsolvesU (ρ′)=U∗ (1).
+min min
+ApplyingtheframeworkinProposition1tothisproofwithS =S′andusingwˆastheuseranditem
+values,wereducetheproblemtofinding
+ϕ=arg max λ
+x,z∈∆2 n−1 ,λ (11)
+subjectto I (x,z)=λ ∀j,
+j
+andshowingthatthisϕisunique.
+First,weuseananalogueofthesparsityresultProposition2toshowthattheoptimalx,z hasthe
+followingsparsestructure.
+Lemma13. Letx,zbeanoptimalbasicfeasiblesolutiontothelinearprogramProblem11. There
+issomej ≤ n+1 suchthatforallj′ > j,x = 0andforallj′ < j,z = z = 0. Letthe
+2 j′ j′ n−j′+1
+pivotindextdenotetheminimumsuchj.
+Thissparsestructureimpliesuniqueness.
+Lemma14. Problem11hasauniqueoptimalsolution.
+Wecannowdescribewhatthissolution(x,z)lookslike.
+Lemma15. Let(x,z)betheoptimalsolutiontoProblem12,andlettbethepivotelementof(x,z);
+supposethatt̸= n+1. Define
+2
+(cid:88) 1
+L := .
+t q
+j
+j<t
+Then
+λ=
+2βq
+t
++1/2(1−2β)
+,
+1+q
+t
+L
+t
++1/2(n−2t)
+
+0, j <t
+ (cid:16) (cid:17)
+z = 1 1−(n−2t) λ , j ∈{t,n−t+1}.
+j 2 1−2β
+
+λ , t<j <n−t+1
+1−2β
+Finally,
+
+λ , j <t
+2βqj
+x = 1− λ L , j =t.
+j 2β t
+0,
+j >t
+38
+Ift= n+1,thenxremainsthesame,butz =1and
+2 t
+2βq +(1−2β)
+λ= t .
+1+q L
+t t
+Ifwetryt=1andobtainz <0above,wecanconcludethatt>1. Supposet=1. ThenL =0,
+1 t
+so
+λ=
+2βq
+1
++1/2(1−2β)
+1+1/2(n−2)
+and
+(cid:18) (cid:19) (cid:18) (cid:19)
+z =
+1
+1−(n−2)
+λ
+=
+1
+1−(n−2)
+1 2βq
+1
++1/2(1−2β)
+=
+1
+−
+n−2 2βq
+1
+1 2 1−2β 2 1−2β n/2 n n 1−2β
+Thent=1andz <0ifandonlyif
+1
+1 n−2 2βq v n−2
+− 1 <0 ⇐⇒ n < −1.
+n n 1−2β v
+1
+1/2β−1
+sinceq 1 = v1 v + 1 vn . Ifβ > n 1,then
+n−2 n−2 n−2
+−1> −1=2 −1=1.
+1/2β−1 n/2−1 n−2
+Soifβ > 1,t > 1andz = z = 0. Inthiscase,regardlessofwhetheramis-estimateduserhas
+n 1 n
+w =v orw =v ,thatuserwillneverberecommendedtheirmostpreferreditem.
+i1 1 in 1
+Moreover,nomatterthetruetypeofthemis-estimateduser,
+     
+U i (x,z)= v 1  (cid:88) v j z j= v 1  (cid:88) v j z j< v v 2  (cid:88) z j= v v 2
+1 1 1 1
+1≤j≤n 1<j<n 1<j<n
+Thusifv
+2
+< v
+n
+1ϵ,thenU
+i
+(x,z)<
+n
+ϵ.
+Takingρˆtobetherecommendationprobabilitiesinducedbythispairx,z,thisimpliesthatU (ρˆ)<
+min
+ϵ/n.
+Itemfairnessconstraintswithoutmis-estimation. Thisbecomespreciselytheproblemwesolve
+inTheorem3;ifthetwotypesoccurinequalproportioninthemis-estimatedgroupaswellasthe
+correctlyestimatedgroup,thenα=1/2.
+Ifα=1/2,thenbyLemma17withβ =1,t=⌊n+1⌋,andwecanshowthat
+2
+(cid:40)
+R − 1, neven
+L
+t
+= t qt .
+R , nodd
+t
+ByLemma5weknowthat
+1
+I∗ = ,
+min 1+q L +(1−q )R
+t t t t
+soifniseven,wehave
+1 1 1 1 1
+I∗ = = = > =
+min 1+q (R − 1)+(1−q )R R (cid:80) 1 2(n−(n/2)) n
+t t qt t t t j>t 1−qj
+whereweusethefactfromLemma16thatifj > n+1,thenq < 1. Likewiseifnisodd,
+2 j 2
+1 1 1 1 1
+I∗ = = = > = .
+min 1+q R +(1−q )R 1+R 1+ (cid:80) 1 1+2(n−(n+1)/2) n
+t t t t t j>t 1−qj
+Thenauserioftype1willhavenormalizedutilitywillbe
+x v I∗ v +v 1
+U (x,y)≥ 1 1 = min =I∗ 1 n ≥I∗ > .
+i v q min v min n
+1 1 n
+Similarlyauseroftype2willhaveutility
+y v I∗ v +v 1
+U (x,y)≥ n 1 = min =I∗ 1 n ≥I∗ > .
+i v 1−q min v min n
+1 n n
+ThismeansthatU∗ (1)>1/n.
+min
+39
+Priceofestimationwithitemfairnessconstraints. Thetwoargumentsaboveimplythat
+U (ρˆ,w)
+πM(1,w,wˆ)=1− min
+U U∗ (1,w)
+min
+ϵ/n
+>1−
+1/n
+=1−ϵ.
+Priceofestimationwithoutitemfairnessconstraints. Inthiscaseanoptimalrecommendation
+policymaychooseeachuser’spolicyindividuallywithoutregardtoitemutilities. Giventhemis-
+estimatedvalues,itisoptimaltogivemis-estimateduserstheitemj∗orn−j∗+1thatmaximizes
+vj+vn−j+1 deterministically. Itisthusalsooptimaltorecommendtheitemj∗andn−j∗+1each
+2
+withprobability1/2. Thisyieldsexpectedvalue
+v +v v +v v
+max j n−j+1 ≥ 1 n > 1,
+j 2 2 2
+andthusamis-estimateduseriwillreceiveanormalizedvalueofU (ρ′)=1/2.
+i
+Theoptimalutilityofeachuseriftheirpreferenceswerecorrectlyestimatedis1, sothepriceof
+misestimationis1/2.
+E.2 Supportinglemmaproofs
+First,weshowafactthatwillbehelpfullateron.
+Lemma16. Ifj < n+1,thenq >1/2;ifj > n+1,thenq <1/2. Ifj = n+1,q =1/2.
+2 j 2 j 2 j
+Proof. Ifj < n+1,thenv >v and
+2 j n−j+1
+v 1 1 1
+q = j = > = ;
+j v +v 1+ vn−j+1 1+1 2
+j n−j+1 vj
+ifj < n+1,thenv <v andasymmetricargumentholds.
+2 j n−j+1
+Ifj = n+1,thenv =v andthusq =1/2.
+2 j n−j+1 j
+In the remainder of this section, we will use rev(x) to denote the reverse of a vector x, that is,
+rev(x) =x forallj.
+j n−j+1
+Lemma12. Ifapolicyρ=(x,y,z)∈S solvesU (ρ)=U∗ (1),thenthereissomepolicy
+symm min min
+ρ′ =x′,z′ ∈S′thatsolvesU (ρ′)=U∗ (1).
+min min
+Proof. Suppose(x,y,z):=ρisanoptimalsolutiontoU∗ (1).
+min
+First,ifU∗ (1)=U (ρ)forsomeiinthefirstorsecondtypeofuser
+min i
+Letρ′ =x′,y′,z′wherex′ =y′ = 1(x +y ),andz′ = 1(z +z .
+j n−j+1 2 j n−j+1 j 2 j n−j+1
+Thenclearlyρ′ ∈S′,and (cid:80) x′ = (cid:80) y′ = (cid:80) z′ =1,0≤x′,y′,z′ ≤1forallj.
+j j j j j j j j j
+Furthermore,forusersi,i′ofthefirstandsecondtypesrespectivelywithcorrectlyestimatedtypes,
+n n
+U (ρ′)= (cid:88) x′v = (cid:88)1 (x +y )v = U i (ρ)+U i′ (ρ) ≥min{U (ρ),U (ρ)}
+i j j 2 j n−j+1 j 2 i i′
+j=1 j=1
+andbyananalogousargument,
+U ≥min{U (ρ),U (ρ)}.
+i′ i i′
+40
+Moreover,theestimatednormalizedutilityofamis-estimateduseri,willbe
+n
+U (ρ′)= (cid:88) z′ v j +v n−j+1
+i j 2
+j=1
+n n
+=
+1(cid:88)
+z
+v
+j
++v
+n−j+1 +
+1(cid:88)
+z
+v
+j
++v
+n−j+1
+2 j 2 2 n−j+1 2
+j=1 j=1
+1
+= (U (ρ′)+U (ρ′))
+2 i i
+=U (ρ′).
+i
+Somin U (ρ′)≥min U (ρ).
+i i i i
+Finally,foranyj,wecanexpandthedefinitionofI toseethat
+j
+1
+I (ρ′)= (I (ρ)+I (ρ))=I∗ .
+j 2 j n−j+1 min
+Thusρ′isalsoanoptimalsolutiontoProblem1.
+Lemma13. Letx,zbeanoptimalbasicfeasiblesolutiontothelinearprogramProblem11. There
+issomej ≤ n+1 suchthatforallj′ > j,x = 0andforallj′ < j,z = z = 0. Letthe
+2 j′ j′ n−j′+1
+pivotindextdenotetheminimumsuchj.
+Proof. Part1. WhileitistemptingattempttodirectlyapplythesparsityresultinProposition2here,
+wewillneedaslightlystrongerresulttoensurethattherearenoj suchthatx =z =0. First,we
+j j
+mustshowthatx >0andy >0arealmostmutuallyexclusive.
+j j
+Lemma17. Let(x,z)beanoptimalsolutiontoProblem11. Forj > n+1,x =0.
+2 j
+Inparticular,ifweleth=⌊n+1⌋indicatetheindexhalfwaythroughthesetofitems,thismeansthat
+2
+wecansimplifytheproblemaboveto
+arg max λ
+x1,...,xh,
+z1,...,zh,
+λ
+subjectto I (x,z)=λ,1≤j ≤h
+j
+(12)
+(cid:88) (cid:88) (cid:88)
+x = z + z =1
+j j n−j+1
+j≤h j≤h h<j≤n
+x ,z ≥0.
+j j
+Nowthisisalinearprogramwith2h+1variablesandh+2constraints,sobyanargumentanalogous
+toProblem12,wefindthateverybasicfeasiblesolutionx ,z mustshareh−1zeros.Thismeans
+1:h 1:h
+thatthereisasingleindextsuchthatx >0,z >0;ifthereweremorethanone,bythepigeonhole
+t t
+principletheremustbesomet′ ≤ hsuchthatx = z = x = 0,andI (x,z) = 0. Then
+t′ t′ n−t′+1 t′
+I (x,z)=0;however,byLemma1,I (x,z)=I∗ >0,sowehaveacontradiction.
+min min min
+Intermsofx,z,
+βv x +βv x +(1−2β)vj+vn−j+1z
+I (x,z)= j j n−j+1 n−j+1 2 j
+j βv +βv +(1−2β)vj+vn−j+1
+j n−j+1 2
+βv x +βv x +(1−2β)vj+vn−j+1z
+= j j n−j+1 n−j+1 2 j
+vj+vn−j+1
+2
+(cid:18) (cid:19)
+v v
+=2β j x + n−j+1 x +(1−2β)z
+v +v j v +v n−j+1 j
+j n−j+1 j n−j+1
+41
+Letq = vj . Notethatq doesnotdependonβ,andq isdecreasinginj. Then
+j vj+vn−j+1 j j
+I (x,y,z)=2β(q x +(1−q )y )+(1−2β)z .
+j j j j j j
+Part2. Moreover,thesetofj suchthatx =0iscontiguous;similarlyforz .
+j j
+We prove this by contradiction, showing that if this set is not contiguous, we can move around
+probabilitymassuntilweachievegreaterthanoptimalitemfairness. Leti<j ≤h,andletx,zbe
+anoptimalsolutiontoProblem12. Weneedtoshowthatifx =0thenx =0,andifz >0,then
+i j i
+z >0.
+j
+Supposefirstthatx =0andx >0. Noticethatsincex,zareoptimal,
+i j
+(1−2β)z =I (x,z)=I (x,z)=2βq x +(1−2β)z
+i i j j j j
+Define
+ 
+ x j −ϵ, ℓ=i  z j , ℓ=i
+x′ = x + ϵ , ℓ=j , z′ = z , ℓ=j
+ℓ i h−1 ℓ i
+x + ϵ , otherwise z , otherwise
+ℓ h−1 ℓ
+for ϵ small enough that x′ ∈ ∆ . Now for all ℓ ∈/ {i,j}, I (x′,z′) > I (x,z), since we have
+h−1 ℓ ℓ
+increasedtheprobabilitymassonx whileleavingz unchanged. Furthermore,
+ℓ ℓ
+I (x′,z′)=2βq (x −ϵ)+(1−2β)z
+i i j j
+=2β(q −q )x +2βq x +(1−2β)z −2βq ϵ
+i j j j j j i
+=2β(q −q )x +(1−2β)z −2βq ϵ
+i j j i i
+=I (x,z)+2β(q −q )x −2βq ϵ
+i i j j i
+>I (x,z)
+i
+aslongasq ϵ<(q −q )x ,whichwecanensurebytakingϵsmallenough,sinceq >q . Moreover,
+i i j j i j
+(cid:18) (cid:19)
+ϵ
+I (x′,z′)=2βq x + +(1−2β)z
+j j i h−1 i
+(cid:18) (cid:19)
+ϵ
+=2βq x + +2βq x +(1−2β)z
+j i h−1 j j j
+>2βq x +(1−2β)z
+j j j
+=I (x,z).
+j
+Thus
+I (x′,z′)=minI (x′,z′)>minI (x,z)=I (x,z)=I∗
+min ℓ ℓ min min
+ℓ ℓ
+andwehaveacontradiction.
+Similarly,supposethatz >0andz =0. Thensincex,zisoptimal,wehave
+i j
+2βq x +(1−2β)z =I (x,z)=I (x,z)=2βq x . (13)
+i i i i j j j
+Define
+ 
+ z i −ϵ, ℓ=j  x j −δ, ℓ=j
+z′ = z + ϵ , ℓ=i , x′ = x +δ, ℓ=i
+ℓ j h−1 ℓ i
+z + ϵ , otherwise x , otherwise
+ℓ h−1 ℓ
+forδ = 1
+2
+−
+β
+2
+q
+β
+i
+z
+i
+>0andtakingϵsmallenoughthatz′ ∈∆
+h−1
+andϵ<z
+i
+(1−qj/qi ). Thisimplies
+that
+1−2β (1−2β)(z −ϵ)
+δ = z < i
+2βq i 2βq
+i j
+42
+Now
+1−2β
+x +δ =x + z
+i i 2βq i
+i
+1
+= (2βq x +(1−2β)z )
+2βq i i i
+i
+1
+= 2βq x (13)
+2βq j j
+i
+q
+= jx
+q j
+i
+<x (q <q )
+j j i
+≤1
+and
+(1−2β)(z −ϵ)
+x −δ >x − i
+j j 2βq
+j
+1
+= (2βq x −(1−2β)(z −ϵ))
+2βq j j i
+j
+1
+> (2βq x −(1−2β)z )
+2βq j j i
+j
+1
+= (2βq x −(2βq x −2βq x )) (13)
+2βq j j j j i i
+j
+1
+= 2βq x
+2βq i i
+j
+>0
+andx +δ >x ≥0,x −δ <x ≤1,sox′ ∈∆ .
+i i j j h−1
+NowasaboveI (x′,z′)>I (x,z)forallℓ∈/ {i,j},sincethereisstrictlymoreprobabilitymass
+ℓ min
+onz whilex remainsthesame. Furthermore,
+ℓ ℓ
+ϵ
+I (x′,z′)−I (x,z)=2βq (x +δ)+(1−2β)(z + )−(2βq x +(1−2β)z )
+i i i i j h−1 i i i
+>2βq (x +δ)−(2βq x +(1−2β)z )
+i i i i i
+=2βq δ−(1−2β)z
+i i
+(1−2δ)
+=2βq z −(1−2β)z
+i 2βq i i
+i
+=0
+and
+I (x′,z′)−I (x,z)=2βq (x −δ)+(1−2β)(z −ϵ)−2βq x
+j j j j i j j
+=(1−2β)(z −ϵ)−2βq δ
+i j
+(1−2β)(z −ϵ)
+>(1−2β)(z −ϵ)−2βq i
+i j 2βq
+j
+=0
+Then
+I (x′,z′)=minI (x′,z′)>minI (x,z)=I (x,z)=I∗
+min ℓ ℓ min min
+ℓ ℓ
+andwehavefoundx′,z′achievingahigher-than-optimalI ,whichisacontradiction.
+min
+Lemma17. Let(x,z)beanoptimalsolutiontoProblem11. Forj > n+1,x =0.
+2 j
+Proof. Weprovethisbycontradiction. Supposethatforj > n+1,x >0. Thendefinex′suchthat
+2 j
+
+0, ℓ=j
+
+x′ = x +(x −ϵ) ℓ=n−j+1
+ℓ n−j+1 j
+x + ϵ
+ℓ n−2
+43
+where0 < ϵ < (2q −1)x . Sincej > n+1,q > 1/2byLemma16,sosuchϵexists.
+n−j+1 j 2 n−j+1
+Thenforallℓ∈/ {j,n−j+1},
+I (x′,z)=2β (cid:0) q x′ +(1−q )x′ (cid:1) +(1−2β)z
+ℓ ℓ ℓ ℓ n−ℓ+1 ℓ
+>2β(q x +(1−q )x )+(1−2β)z
+ℓ ℓ ℓ n−ℓ+1 ℓ
+=I (x,z).
+ℓ
+Sinceϵ<(2q −1)x ,wecanrearrangetoseethat(1−q )x <q (x −ϵ). This
+n−j+1 j n−j+1 j n−j+1 j
+impliesthat
+I (x′,z)=2β(q (x +(x −ϵ))+q ·0)+(1−2β)z
+n−j+1 n−j+1 n−j+1 j j n−j+1
+=2β(q x +q (x −ϵ))+(1−2β)z
+n−j+1 n−j+1 n−j+1 j n−j+1
+>2β(q x +2β(1−q )x )+(1−2β)z
+n−j+1 n−j+1 n−j+1 j n−j+1
+=I (x,z)
+n−j+1
+and
+I (x′,z)=2β(q ·0+(1−q )·(x +(x −ϵ)))+(1−2β)z
+j j j n−j+1 j j
+2β(q x +q (x −ϵ))+(1−2β)z (q =1−q )
+n−j+1 n−j+1 n−j+1 j j n−j+1 j
+>2β(q x +(1−q )x )+(1−2β)z
+n−j+1 n−j+1 n−j+1 j j
+=2β((1−q )x +q x )+(1−2β)z (q =1−q )
+j n−j+1 j j j n−j+1 j
+=I (x,z)
+j
+Thuswehavefoundasolutionx′,zthatsatisfies
+I (x′,z)=minI (x′,z)>minI (x,z)=I (x,z)=I∗
+min j j min min
+j j
+andwehaveacontradiction.
+Lemma14. Problem11hasauniqueoptimalsolution.
+Proof. Suppose(x,z)and(x′,z′)arebothoptimalbasicfeasiblesolutionstoProblem12. Lettbe
+thepivotindexof(x,z)andt′bethepivotindexof(x′,z′),andsupposewithoutlossofgenerality
+thatt≤t′.
+First,ift<t′,thenforallj <t,z =z′ =0,and
+j j
+2βq x =I (x,z)=I (x,z)=I (x′,z′)=I (x′,z′)=2βq x′
+j j j min min j j j
+sox =x′. Ifj >t,x =0. Forj =t,z′ =0and
+j j j t
+2βq x +(1−2β)z =2βq x′
+t t t t t
+ 
+(cid:88)
+=⇒ 2βq t1− x j+(1−2β)z
+t
+=2βq
+t
+x′
+t
+j<t
+ 
+(cid:88)
+=⇒ 2βq t1− x′ j+(1−2β)z
+t
+=2βq
+t
+x′
+t
+j<t
+ 
+(cid:88)
+=⇒ (1−2β)z t =2βq t x′ j −1.
+j≤t
+But(1−2β)z ≥ 0,so (cid:80) x′ = 1andforj > t,x′ = 0. Thisimpliesthatt′ ≤ t,whichisa
+t j≤t j j
+contradiction,soitisnotpossiblefort′ >t.
+Now,ift=t′,thenagainforallj <t,z =z′ =0,andx =x′. Fort<j ≤h,x =x′ =0and
+j j j j j j
+ift<h,
+(1−2β)z =I (x,z)=I (x,z)=I (x′,z′)=I (x′,z′)=(1−2β)z′
+j j min min j j
+44
+soz =z′. Finally,
+j j
+(cid:88) (cid:88)
+x =1− x =1− x′ =x′
+t j j t
+j<t j<t
+and
+(cid:40) 1(1−2 (cid:80) z )= 1(1−2 (cid:80) z′)=z′, neven
+z = 2 t<j≤h j 2 t<j≤h j t .
+t 1(1−2 (cid:80) z −z )= 1(1−2 (cid:80) z′ −z )=z′, nodd
+2 t<j<h j h 2 t<j<h j h t
+Ift=h,thenz =1=z′. Thus(x,z)=(x′,z′).
+t t
+Thus there is only one optimal basic feasible solution to Problem 12, and thus only one optimal
+solutionbythefundamentaltheoremoflinearprogramming.
+Lemma15. Let(x,z)betheoptimalsolutiontoProblem12,andlettbethepivotelementof(x,z);
+supposethatt̸= n+1. Define
+2
+(cid:88) 1
+L := .
+t q
+j
+j<t
+Then
+λ=
+2βq
+t
++1/2(1−2β)
+,
+1+q
+t
+L
+t
++1/2(n−2t)
+
+0, j <t
+ (cid:16) (cid:17)
+z = 1 1−(n−2t) λ , j ∈{t,n−t+1}.
+j 2 1−2β
+
+λ , t<j <n−t+1
+1−2β
+Finally,
+
+λ , j <t
+2βqj
+x = 1− λ L , j =t.
+j 2β t
+0,
+j >t
+Ift= n+1,thenxremainsthesame,butz =1and
+2 t
+2βq +(1−2β)
+λ= t .
+1+q L
+t t
+Proof. Forallj <t,λ=2βq x ,sox = λ . Moreover,
+j j j 2βqj
+(cid:88) (cid:88) λ λ
+x =1− x =1− =1− L .
+t j 2βq 2β t
+j
+j<t j<t
+Supposethatnisoddandthatt = h = n+1. Thenz = z mustbe1sinceforallj < hz = 0.
+2 t h j
+Moreover,
+(cid:18) (cid:19)
+λ
+λ=2βq x +(1−2β)z =2βq 1− L +(1−2β)
+t t t t 2β t
+so,rearranging,
+2βq +(1−2β)
+λ= t .
+1+q L
+t t
+Otherwise,t<j ≤h,λ=(1−2β)z ,soz = λ . Thensince (cid:80) z + (cid:80) z =1,
+j j 1−2β j≤h j h<j≤n n−j+1
+ 
+1 (cid:88) (cid:88) (cid:88) (cid:88)
+z t = 2 1− z j − z j − z n−j+1 − z n−j+1
+j<t t<j≤h h<j<n−t+1 j>n−t+1
+ 
+1 (cid:88) (cid:88)
+= 2 1− z j − z n−j+1 (z j =0forj <t)
+t<j≤h h<j<n−t+1
+(cid:18) (cid:19)
+1 λ
+= 1−(n−2t) .
+2 1−2β
+45
+Moreover,
+(cid:18) (cid:19) (cid:18) (cid:19)
+λ 1 λ
+λ=2βq x +(1−2β)z =2βq 1− L +(1−2β) 1−(n−2t) .
+t t t t 2β t 2 1−2β
+Rearranging,
+λ(1+q
+t
+L
+t
++1/2(n−2t))=2βq
+t
++1/2(1−2β),
+so
+λ=
+2βq
+t
++1/2(1−2β)
+.
+1+q
+t
+L
+t
++1/2(n−2t)
+46
+NeurIPSPaperChecklist
+1. Claims
+Question: Dothemainclaimsmadeintheabstractandintroductionaccuratelyreflectthe
+paper’scontributionsandscope?
+Answer: [Yes]
+Justification: Webelievetheabstractandtheintroductionprovideanaccurateoverviewof
+thecontentsofthispaper.
+Guidelines:
+• The answer NA means that the abstract and introduction do not include the claims
+madeinthepaper.
+• Theabstractand/orintroductionshouldclearlystatetheclaimsmade,includingthe
+contributionsmadeinthepaperandimportantassumptionsandlimitations. ANoor
+NAanswertothisquestionwillnotbeperceivedwellbythereviewers.
+• Theclaimsmadeshouldmatchtheoreticalandexperimentalresults,andreflecthow
+muchtheresultscanbeexpectedtogeneralizetoothersettings.
+• Itisfinetoincludeaspirationalgoalsasmotivationaslongasitisclearthatthesegoals
+arenotattainedbythepaper.
+2. Limitations
+Question: Doesthepaperdiscussthelimitationsoftheworkperformedbytheauthors?
+Answer: [Yes]
+Justification: WediscusslimitationsinSection8.
+Guidelines:
+• TheanswerNAmeansthatthepaperhasnolimitationwhiletheanswerNomeansthat
+thepaperhaslimitations,butthosearenotdiscussedinthepaper.
+• Theauthorsareencouragedtocreateaseparate"Limitations"sectionintheirpaper.
+• Thepapershouldpointoutanystrongassumptionsandhowrobusttheresultsareto
+violationsoftheseassumptions(e.g.,independenceassumptions,noiselesssettings,
+modelwell-specification,asymptoticapproximationsonlyholdinglocally).Theauthors
+shouldreflectonhowtheseassumptionsmightbeviolatedinpracticeandwhatthe
+implicationswouldbe.
+• Theauthorsshouldreflectonthescopeoftheclaimsmade,e.g.,iftheapproachwas
+onlytestedonafewdatasetsorwithafewruns. Ingeneral,empiricalresultsoften
+dependonimplicitassumptions,whichshouldbearticulated.
+• Theauthorsshouldreflectonthefactorsthatinfluencetheperformanceoftheapproach.
+Forexample,afacialrecognitionalgorithmmayperformpoorlywhenimageresolution
+isloworimagesaretakeninlowlighting. Oraspeech-to-textsystemmightnotbe
+usedreliablytoprovideclosedcaptionsforonlinelecturesbecauseitfailstohandle
+technicaljargon.
+• Theauthorsshoulddiscussthecomputationalefficiencyoftheproposedalgorithms
+andhowtheyscalewithdatasetsize.
+• If applicable, the authors should discuss possible limitations of their approach to
+addressproblemsofprivacyandfairness.
+• Whiletheauthorsmightfearthatcompletehonestyaboutlimitationsmightbeusedby
+reviewersasgroundsforrejection,aworseoutcomemightbethatreviewersdiscover
+limitationsthataren’tacknowledgedinthepaper. Theauthorsshouldusetheirbest
+judgmentandrecognizethatindividualactionsinfavoroftransparencyplayanimpor-
+tantroleindevelopingnormsthatpreservetheintegrityofthecommunity. Reviewers
+willbespecificallyinstructedtonotpenalizehonestyconcerninglimitations.
+3. TheoryAssumptionsandProofs
+Question: Foreachtheoreticalresult,doesthepaperprovidethefullsetofassumptionsand
+acomplete(andcorrect)proof?
+Answer: [Yes]
+47
+Justification: For each of our main theorems, we provide a detailed description of the
+modelingassumptionspriortothetheorem. Weprovidecompleteproofsofeachtheoremin
+AppendicesC,D,andE.
+Guidelines:
+• TheanswerNAmeansthatthepaperdoesnotincludetheoreticalresults.
+• Allthetheorems, formulas, andproofsinthepapershouldbenumberedandcross-
+referenced.
+• Allassumptionsshouldbeclearlystatedorreferencedinthestatementofanytheorems.
+• Theproofscaneitherappearinthemainpaperorthesupplementalmaterial, butif
+theyappearinthesupplementalmaterial,theauthorsareencouragedtoprovideashort
+proofsketchtoprovideintuition.
+• Inversely,anyinformalproofprovidedinthecoreofthepapershouldbecomplemented
+byformalproofsprovidedinappendixorsupplementalmaterial.
+• TheoremsandLemmasthattheproofreliesuponshouldbeproperlyreferenced.
+4. ExperimentalResultReproducibility
+Question: Doesthepaperfullydisclosealltheinformationneededtoreproducethemainex-
+perimentalresultsofthepapertotheextentthatitaffectsthemainclaimsand/orconclusions
+ofthepaper(regardlessofwhetherthecodeanddataareprovidedornot)?
+Answer: [Yes]
+Justification: Weprovideourcodeandthoroughlydetailourexperimentalsetting.
+Guidelines:
+• TheanswerNAmeansthatthepaperdoesnotincludeexperiments.
+• Ifthepaperincludesexperiments,aNoanswertothisquestionwillnotbeperceived
+well by the reviewers: Making the paper reproducible is important, regardless of
+whetherthecodeanddataareprovidedornot.
+• Ifthecontributionisadatasetand/ormodel,theauthorsshoulddescribethestepstaken
+tomaketheirresultsreproducibleorverifiable.
+• Dependingonthecontribution,reproducibilitycanbeaccomplishedinvariousways.
+Forexample,ifthecontributionisanovelarchitecture,describingthearchitecturefully
+mightsuffice,orifthecontributionisaspecificmodelandempiricalevaluation,itmay
+benecessarytoeithermakeitpossibleforotherstoreplicatethemodelwiththesame
+dataset,orprovideaccesstothemodel. Ingeneral. releasingcodeanddataisoften
+onegoodwaytoaccomplishthis,butreproducibilitycanalsobeprovidedviadetailed
+instructionsforhowtoreplicatetheresults,accesstoahostedmodel(e.g.,inthecase
+ofalargelanguagemodel),releasingofamodelcheckpoint,orothermeansthatare
+appropriatetotheresearchperformed.
+• WhileNeurIPSdoesnotrequirereleasingcode,theconferencedoesrequireallsubmis-
+sionstoprovidesomereasonableavenueforreproducibility,whichmaydependonthe
+natureofthecontribution. Forexample
+(a) Ifthecontributionisprimarilyanewalgorithm,thepapershouldmakeitclearhow
+toreproducethatalgorithm.
+(b) Ifthecontributionisprimarilyanewmodelarchitecture,thepapershoulddescribe
+thearchitectureclearlyandfully.
+(c) Ifthecontributionisanewmodel(e.g.,alargelanguagemodel),thenthereshould
+eitherbeawaytoaccessthismodelforreproducingtheresultsorawaytoreproduce
+themodel(e.g.,withanopen-sourcedatasetorinstructionsforhowtoconstruct
+thedataset).
+(d) We recognize that reproducibility may be tricky in some cases, in which case
+authorsarewelcometodescribetheparticularwaytheyprovideforreproducibility.
+Inthecaseofclosed-sourcemodels,itmaybethataccesstothemodelislimitedin
+someway(e.g.,toregisteredusers),butitshouldbepossibleforotherresearchers
+tohavesomepathtoreproducingorverifyingtheresults.
+5. Openaccesstodataandcode
+48
+Question: Doesthepaperprovideopenaccesstothedataandcode,withsufficientinstruc-
+tionstofaithfullyreproducethemainexperimentalresults,asdescribedinsupplemental
+material?
+Answer: [Yes]
+Justification: Intheintroduction,weprovidealinktoaGitHubrepositorycontainingthe
+codeweusedtotrainourrecommendationengineandrunourexperiments.
+Guidelines:
+• TheanswerNAmeansthatpaperdoesnotincludeexperimentsrequiringcode.
+• Please see the NeurIPS code and data submission guidelines (https://nips.cc/
+public/guides/CodeSubmissionPolicy)formoredetails.
+• Whileweencouragethereleaseofcodeanddata,weunderstandthatthismightnotbe
+possible,so“No”isanacceptableanswer. Paperscannotberejectedsimplyfornot
+includingcode,unlessthisiscentraltothecontribution(e.g.,foranewopen-source
+benchmark).
+• Theinstructionsshouldcontaintheexactcommandandenvironmentneededtorunto
+reproducetheresults. SeetheNeurIPScodeanddatasubmissionguidelines(https:
+//nips.cc/public/guides/CodeSubmissionPolicy)formoredetails.
+• Theauthorsshouldprovideinstructionsondataaccessandpreparation,includinghow
+toaccesstherawdata,preprocesseddata,intermediatedata,andgenerateddata,etc.
+• Theauthorsshouldprovidescriptstoreproduceallexperimentalresultsforthenew
+proposedmethodandbaselines. Ifonlyasubsetofexperimentsarereproducible,they
+shouldstatewhichonesareomittedfromthescriptandwhy.
+• Atsubmissiontime, topreserveanonymity, theauthorsshouldreleaseanonymized
+versions(ifapplicable).
+• Providingasmuchinformationaspossibleinsupplementalmaterial(appendedtothe
+paper)isrecommended,butincludingURLstodataandcodeispermitted.
+6. ExperimentalSetting/Details
+Question: Doesthepaperspecifyallthetrainingandtestdetails(e.g.,datasplits,hyper-
+parameters, how they were chosen, type of optimizer, etc.) necessary to understand the
+results?
+Answer: [Yes]
+Justification: Weprovideadetaileddescriptionofthetrainingandevaluationofourrecom-
+mendationengineinAppendixB.WedescribethetrainingprocedureinAppendixB.2,and
+theevaluationinAppendixB.3.
+Guidelines:
+• TheanswerNAmeansthatthepaperdoesnotincludeexperiments.
+• Theexperimentalsettingshouldbepresentedinthecoreofthepapertoalevelofdetail
+thatisnecessarytoappreciatetheresultsandmakesenseofthem.
+• Thefulldetailscanbeprovidedeitherwiththecode,inappendix,orassupplemental
+material.
+7. ExperimentStatisticalSignificance
+Question:Doesthepaperreporterrorbarssuitablyandcorrectlydefinedorotherappropriate
+informationaboutthestatisticalsignificanceoftheexperiments?
+Answer: [Yes]
+Justification: In Appendix B we provide a thorough evaluation of our recommendation
+engine including; quantities are reported with P-values and standard deviations where
+appropriate. Wealsoshowerrorbarsontheexperimentalplotsanddiscusshowtheywere
+obtained.
+Guidelines:
+• TheanswerNAmeansthatthepaperdoesnotincludeexperiments.
+• Theauthorsshouldanswer"Yes"iftheresultsareaccompaniedbyerrorbars,confi-
+denceintervals,orstatisticalsignificancetests,atleastfortheexperimentsthatsupport
+themainclaimsofthepaper.
+49
+• Thefactorsofvariabilitythattheerrorbarsarecapturingshouldbeclearlystated(for
+example,train/testsplit,initialization,randomdrawingofsomeparameter,oroverall
+runwithgivenexperimentalconditions).
+• Themethodforcalculatingtheerrorbarsshouldbeexplained(closedformformula,
+calltoalibraryfunction,bootstrap,etc.)
+• Theassumptionsmadeshouldbegiven(e.g.,Normallydistributederrors).
+• Itshouldbeclearwhethertheerrorbaristhestandarddeviationorthestandarderror
+ofthemean.
+• It is OK to report 1-sigma error bars, but one should state it. The authors should
+preferablyreporta2-sigmaerrorbarthanstatethattheyhavea96%CI,ifthehypothesis
+ofNormalityoferrorsisnotverified.
+• Forasymmetricdistributions,theauthorsshouldbecarefulnottoshowintablesor
+figuressymmetricerrorbarsthatwouldyieldresultsthatareoutofrange(e.g. negative
+errorrates).
+• Iferrorbarsarereportedintablesorplots,Theauthorsshouldexplaininthetexthow
+theywerecalculatedandreferencethecorrespondingfiguresortablesinthetext.
+8. ExperimentsComputeResources
+Question: Foreachexperiment,doesthepaperprovidesufficientinformationonthecom-
+puterresources(typeofcomputeworkers,memory,timeofexecution)neededtoreproduce
+theexperiments?
+Answer: [Yes]
+Justification: WeprovidethisinformationinAppendixB.1.
+Guidelines:
+• TheanswerNAmeansthatthepaperdoesnotincludeexperiments.
+• ThepapershouldindicatethetypeofcomputeworkersCPUorGPU,internalcluster,
+orcloudprovider,includingrelevantmemoryandstorage.
+• Thepapershouldprovidetheamountofcomputerequiredforeachoftheindividual
+experimentalrunsaswellasestimatethetotalcompute.
+• Thepapershoulddisclosewhetherthefullresearchprojectrequiredmorecompute
+thantheexperimentsreportedinthepaper(e.g.,preliminaryorfailedexperimentsthat
+didn’tmakeitintothepaper).
+9. CodeOfEthics
+Question: Doestheresearchconductedinthepaperconform, ineveryrespect, withthe
+NeurIPSCodeofEthicshttps://neurips.cc/public/EthicsGuidelines?
+Answer: [Yes]
+Justification:
+Guidelines:
+• TheanswerNAmeansthattheauthorshavenotreviewedtheNeurIPSCodeofEthics.
+• IftheauthorsanswerNo,theyshouldexplainthespecialcircumstancesthatrequirea
+deviationfromtheCodeofEthics.
+• Theauthorsshouldmakesuretopreserveanonymity(e.g.,ifthereisaspecialconsid-
+erationduetolawsorregulationsintheirjurisdiction).
+10. BroaderImpacts
+Question: Does the paper discuss both potential positive societal impacts and negative
+societalimpactsoftheworkperformed?
+Answer: [Yes]
+Justification: WediscussthisinSection8;sinceourpaperisinvestigatingpotentialnegative
+socialimpactsoftechnology,weanticipateapositivesocialimpact.
+Guidelines:
+• TheanswerNAmeansthatthereisnosocietalimpactoftheworkperformed.
+50
+• IftheauthorsanswerNAorNo,theyshouldexplainwhytheirworkhasnosocietal
+impactorwhythepaperdoesnotaddresssocietalimpact.
+• Examplesofnegativesocietalimpactsincludepotentialmaliciousorunintendeduses
+(e.g.,disinformation,generatingfakeprofiles,surveillance),fairnessconsiderations
+(e.g.,deploymentoftechnologiesthatcouldmakedecisionsthatunfairlyimpactspecific
+groups),privacyconsiderations,andsecurityconsiderations.
+• Theconferenceexpectsthatmanypaperswillbefoundationalresearchandnottied
+toparticularapplications,letalonedeployments. However,ifthereisadirectpathto
+anynegativeapplications,theauthorsshouldpointitout. Forexample,itislegitimate
+topointoutthatanimprovementinthequalityofgenerativemodelscouldbeusedto
+generatedeepfakesfordisinformation. Ontheotherhand,itisnotneededtopointout
+thatagenericalgorithmforoptimizingneuralnetworkscouldenablepeopletotrain
+modelsthatgenerateDeepfakesfaster.
+• Theauthorsshouldconsiderpossibleharmsthatcouldarisewhenthetechnologyis
+being used as intended and functioning correctly, harms that could arise when the
+technologyisbeingusedasintendedbutgivesincorrectresults,andharmsfollowing
+from(intentionalorunintentional)misuseofthetechnology.
+• Iftherearenegativesocietalimpacts,theauthorscouldalsodiscusspossiblemitigation
+strategies (e.g., gated release of models, providing defenses in addition to attacks,
+mechanismsformonitoringmisuse,mechanismstomonitorhowasystemlearnsfrom
+feedbackovertime,improvingtheefficiencyandaccessibilityofML).
+11. Safeguards
+Question: Doesthepaperdescribesafeguardsthathavebeenputinplaceforresponsible
+releaseofdataormodelsthathaveahighriskformisuse(e.g.,pretrainedlanguagemodels,
+imagegenerators,orscrapeddatasets)?
+Answer: [NA]
+Justification: Thepaperposesnosuchrisks.
+Guidelines:
+• TheanswerNAmeansthatthepaperposesnosuchrisks.
+• Releasedmodelsthathaveahighriskformisuseordual-useshouldbereleasedwith
+necessarysafeguardstoallowforcontrolleduseofthemodel,forexamplebyrequiring
+thatusersadheretousageguidelinesorrestrictionstoaccessthemodelorimplementing
+safetyfilters.
+• DatasetsthathavebeenscrapedfromtheInternetcouldposesafetyrisks. Theauthors
+shoulddescribehowtheyavoidedreleasingunsafeimages.
+• Werecognizethatprovidingeffectivesafeguardsischallenging,andmanypapersdo
+notrequirethis,butweencourageauthorstotakethisintoaccountandmakeabest
+faitheffort.
+12. Licensesforexistingassets
+Question: Arethecreatorsororiginalownersofassets(e.g.,code,data,models),usedin
+thepaper,properlycreditedandarethelicenseandtermsofuseexplicitlymentionedand
+properlyrespected?
+Answer: [Yes]
+Justification: Wecitethemodelsanddatasetsweuseandprovidelicenseinformationin
+AppendixB.
+Guidelines:
+• TheanswerNAmeansthatthepaperdoesnotuseexistingassets.
+• Theauthorsshouldcitetheoriginalpaperthatproducedthecodepackageordataset.
+• Theauthorsshouldstatewhichversionoftheassetisusedand,ifpossible,includea
+URL.
+• Thenameofthelicense(e.g.,CC-BY4.0)shouldbeincludedforeachasset.
+• Forscrapeddatafromaparticularsource(e.g.,website),thecopyrightandtermsof
+serviceofthatsourceshouldbeprovided.
+51
+• If assets are released, the license, copyright information, and terms of use in the
+packageshouldbeprovided. Forpopulardatasets,paperswithcode.com/datasets
+hascuratedlicensesforsomedatasets. Theirlicensingguidecanhelpdeterminethe
+licenseofadataset.
+• Forexistingdatasetsthatarere-packaged,boththeoriginallicenseandthelicenseof
+thederivedasset(ifithaschanged)shouldbeprovided.
+• Ifthisinformationisnotavailableonline,theauthorsareencouragedtoreachoutto
+theasset’screators.
+13. NewAssets
+Question:Arenewassetsintroducedinthepaperwelldocumentedandisthedocumentation
+providedalongsidetheassets?
+Answer: [Yes]
+Justification: Wereleaseacodetotrainandanalyzetherecommendationsystemthatwe
+develop,andprovidedocumentationwiththecode.
+Guidelines:
+• TheanswerNAmeansthatthepaperdoesnotreleasenewassets.
+• Researchersshouldcommunicatethedetailsofthedataset/code/modelaspartoftheir
+submissions via structured templates. This includes details about training, license,
+limitations,etc.
+• Thepapershoulddiscusswhetherandhowconsentwasobtainedfrompeoplewhose
+assetisused.
+• Atsubmissiontime,remembertoanonymizeyourassets(ifapplicable). Youcaneither
+createananonymizedURLorincludeananonymizedzipfile.
+14. CrowdsourcingandResearchwithHumanSubjects
+Question: Forcrowdsourcingexperimentsandresearchwithhumansubjects,doesthepaper
+includethefulltextofinstructionsgiventoparticipantsandscreenshots,ifapplicable,as
+wellasdetailsaboutcompensation(ifany)?
+Answer: [NA]
+Justification: Thepaperdoesnotinvolvecrowdsourcingnorresearchwithhumansubjects.
+Guidelines:
+• TheanswerNAmeansthatthepaperdoesnotinvolvecrowdsourcingnorresearchwith
+humansubjects.
+• Includingthisinformationinthesupplementalmaterialisfine,butifthemaincontribu-
+tionofthepaperinvolveshumansubjects,thenasmuchdetailaspossibleshouldbe
+includedinthemainpaper.
+• AccordingtotheNeurIPSCodeofEthics,workersinvolvedindatacollection,curation,
+orotherlaborshouldbepaidatleasttheminimumwageinthecountryofthedata
+collector.
+15. InstitutionalReviewBoard(IRB)ApprovalsorEquivalentforResearchwithHuman
+Subjects
+Question: Doesthepaperdescribepotentialrisksincurredbystudyparticipants,whether
+suchrisksweredisclosedtothesubjects,andwhetherInstitutionalReviewBoard(IRB)
+approvals(oranequivalentapproval/reviewbasedontherequirementsofyourcountryor
+institution)wereobtained?
+Answer: [NA]
+Justification: Thepaperdoesnotinvolvecrowdsourcingnorresearchwithhumansubjects.
+Guidelines:
+• TheanswerNAmeansthatthepaperdoesnotinvolvecrowdsourcingnorresearchwith
+humansubjects.
+• Dependingonthecountryinwhichresearchisconducted,IRBapproval(orequivalent)
+mayberequiredforanyhumansubjectsresearch. IfyouobtainedIRBapproval,you
+shouldclearlystatethisinthepaper.
+52
+• Werecognizethattheproceduresforthismayvarysignificantlybetweeninstitutions
+andlocations,andweexpectauthorstoadheretotheNeurIPSCodeofEthicsandthe
+guidelinesfortheirinstitution.
+• Forinitialsubmissions,donotincludeanyinformationthatwouldbreakanonymity(if
+applicable),suchastheinstitutionconductingthereview.
+53

@@ -1,0 +1,11 @@
+{
+  "total_samples": 92,
+  "verdict_distribution": {
+    "PASS": 92,
+    "FAIL": 0,
+    "ABSTAIN": 0,
+    "EXECUTION_ERROR": 0
+  },
+  "real_discrepancy_recall": 0.0,
+  "note": "Without gold matching, using verdict distribution as proxy"
+}

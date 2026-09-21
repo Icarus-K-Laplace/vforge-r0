@@ -1,0 +1,28 @@
+{
+  "contract_id": "VB_C2_TASK_SUBGROUP_SCOPE",
+  "source_paper": "viewbatchmodel_2503.18371",
+  "claim_id": "C2",
+  "claim_text": "Table 6 reports the mean accuracy over ALL declared task subgroups (tasks 0-4); no task subgroups are selectively omitted.",
+  "paper_text_hash": "a41f8730b699c8e580e22a52204d2dbd5583246c545cd3d99b56e947080b560b",
+  "source_span": "Table 6 reports the mean accuracy over ALL declared task subgroups (tasks 0-4); no task subgroups are selectively omitted.",
+  "predicates": [
+    {
+      "predicate_id": "E04_REPORTED_SCOPE",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "The reported table value must cover the full declared task-subgroup scope; no subgroups may be selectively omitted.",
+      "trace_fields": [
+        "protocol.declared_subgroups",
+        "protocol.reported_subgroups",
+        "outputs.reported_value"
+      ],
+      "condition": "set(protocol.reported_subgroups) == set(protocol.declared_subgroups)",
+      "source_span": "Table 6 reports the mean accuracy over ALL declared task subgroups (tasks 0-4); no task subgroups are selectively omitted.",
+      "confidence": 0.85
+    }
+  ],
+  "universal_principles": [
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "73236d1a95181dd6d8ddc8a48b3278b6ad1fb5798f38b74fd29c0699ea9d43e2"
+}

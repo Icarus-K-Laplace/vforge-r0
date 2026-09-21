@@ -1,0 +1,9 @@
+contract_id,family,label,note
+CB_E01_BOOTSTRAP_AGG,E01,SUPPORTED_BY_PAPER,"paper_text_hash present, claim derived from methods/tables"
+CB_E04_CATEGORY_INTERACTION,E04,SUPPORTED_BY_PAPER,"paper_text_hash present, claim derived from methods/tables"
+CB_E06_CROSS_MODEL_ASYM,E06,SUPPORTED_BY_PAPER,"paper_text_hash present, claim derived from methods/tables"
+DA_E01_CROSS_METHOD_AGG,E01,SUPPORTED_BY_PAPER,"paper_text_hash present, claim derived from methods/tables"
+DA_E06_BUDGET_SYMMETRY,E06,SUPPORTED_BY_PAPER,"paper_text_hash present, claim derived from methods/tables"
+DS_E01_CROSS_CAT_AGG,E01,SUPPORTED_BY_PAPER,"paper_text_hash present, claim derived from methods/tables"
+DS_E04_CATEGORY_SUBGROUP,E04,SUPPORTED_BY_PAPER,"paper_text_hash present, claim derived from methods/tables"
+DS_E06_RESOURCE_ASYM,E06,SUPPORTED_BY_PAPER,"paper_text_hash present, claim derived from methods/tables"

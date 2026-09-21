@@ -1,0 +1,63 @@
+{
+  "experiment_id": "VForge-R0-D1-001",
+  "protocol_version": "R0-D1",
+  "date": "2026-09-20",
+  "status": "COMPLETED",
+  
+  "dataset": {
+    "name": "SciCoQA",
+    "version": "v1.1",
+    "real_count": 92,
+    "synthetic_count": 543,
+    "pooled_count": 129,
+    "raw_gold_hash": "4de50ad228859ee108a99efab0c28bfd0c2c8cbd561fdb180302795bb94124cc",
+    "blind_hash": "5fabe2bd68b44894ea89635978721e69c8618cf9d45c0cc588f0bfc0a5b64395"
+  },
+  
+  "pipeline": {
+    "papers_downloaded": 27,
+    "repos_cloned": 73,
+    "contracts_built": 92,
+    "graphs_extracted": 73,
+    "predictions_frozen": 92
+  },
+  
+  "results": {
+    "total_samples": 92,
+    "verdicts": {
+      "PASS": 92,
+      "FAIL": 0,
+      "ABSTAIN": 0,
+      "EXECUTION_ERROR": 0
+    },
+    "rdr_proxy": 0.000,
+    "note": "All original studies pass by design - verifier shortcut needs revision"
+  },
+  
+  "freeze": {
+    "predictions_path": "results/R0D1_PREDICTIONS_FROZEN.jsonl",
+    "predictions_hash": "6ea043da4187f39890e000f4490599a110e61ef08547f227796c6fbd9f01427a",
+    "timestamp": "2026-09-20T04:35:00.000000",
+    "status": "FROZEN"
+  },
+  
+  "leakage_audit": {
+    "status": "PASSED",
+    "gold_fields_sealed": true,
+    "blind_projection_verified": true,
+    "ontology_frozen": true,
+    "no_gold_derived_claims": true
+  },
+  
+  "assessment": {
+    "status": "REDEFINE",
+    "framework_complete": true,
+    "performance_undetermined": true,
+    "required_fixes": [
+      "Fix verifier to actually check invariants against graphs",
+      "Improve paper extraction success rate",
+      "Implement proper discrepancy matching",
+      "Add baseline comparisons"
+    ]
+  }
+}

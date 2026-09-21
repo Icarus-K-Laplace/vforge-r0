@@ -1,0 +1,10 @@
+{
+  "paper_id": "f3debb36",
+  "paper_url": "https://proceedings.neurips.cc/paper_files/paper/2023/file/c2eac51b6353a4441e8b7426f8e8db78-Paper-Conference.pdf",
+  "acquisition_status": "SUCCESS",
+  "parser_used": "pdfplumber",
+  "character_count": 51257,
+  "section_count": 65,
+  "extraction_confidence": 0.9,
+  "hash": "ec430d759099abbbcc681a7ce443a4266a3d7e762cadc7cef46834f524c567c1"
+}

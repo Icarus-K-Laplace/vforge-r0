@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E05-02",
+  "source_paper": "E05-02",
+  "family": "E05",
+  "paper_text_hash": "5d5a0936f7e021ec074990328afb56b73eb3cf21de7acc3a4db49130768fe577",
+  "source_span": "Token sequences are masked with a 15% rate before fine-tuning.",
+  "predicates": [
+    {
+      "predicate_id": "P5_PREPROCESS",
+      "principle": "P5_DETERMINISM_OR_SEEDS",
+      "natural_language": "Executed preprocessing must match the paper-declared preprocessing.",
+      "trace_fields": [
+        "protocol",
+        "declared_preprocess",
+        "protocol",
+        "executed_preprocess"
+      ],
+      "condition": "protocol.executed_preprocess == protocol.declared_preprocess",
+      "source_span": "Token sequences are masked with a 15% rate before fine-tuning.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P5_DETERMINISM_OR_SEEDS"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "c275a3b6971090599b664c459420f63656f368dc0048b2d0ed115e19b54091ff"
+}

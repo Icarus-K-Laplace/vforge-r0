@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E03-02",
+  "source_paper": "E03-02",
+  "family": "E03",
+  "paper_text_hash": "db36a90db22ad8a21ff906f2288415bb19b5d0a34027d26e8e38f6b0f7cabdb8",
+  "source_span": "Optimizer is AdamW with weight decay 0.05 and 200 training iterations.",
+  "predicates": [
+    {
+      "predicate_id": "P7_HYPERPARAMS",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "Executed hyperparameters must match the paper-declared values.",
+      "trace_fields": [
+        "protocol",
+        "declared_hyperparameters",
+        "protocol",
+        "executed_hyperparameters"
+      ],
+      "condition": "protocol.executed_hyperparameters == protocol.declared_hyperparameters",
+      "source_span": "Optimizer is AdamW with weight decay 0.05 and 200 training iterations.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "a5d2832116d5b20db5bb649ec40dfe2def77fa65dd8d53f7b7fbfe793f4efc1f"
+}

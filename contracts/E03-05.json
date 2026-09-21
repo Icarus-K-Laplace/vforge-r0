@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E03-05",
+  "source_paper": "E03-05",
+  "family": "E03",
+  "paper_text_hash": "e71f1efa3e2764c3faf599e9ee8d7aa26fb3ffd0290ca2f337b979bbf05f0a63",
+  "source_span": "Dropout of 0.5 and batch size 64 are used throughout, per the method description.",
+  "predicates": [
+    {
+      "predicate_id": "P7_HYPERPARAMS",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "Executed hyperparameters must match the paper-declared values.",
+      "trace_fields": [
+        "protocol",
+        "declared_hyperparameters",
+        "protocol",
+        "executed_hyperparameters"
+      ],
+      "condition": "protocol.executed_hyperparameters == protocol.declared_hyperparameters",
+      "source_span": "Dropout of 0.5 and batch size 64 are used throughout, per the method description.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "40220036681f9168c889f55410a78c85bb26bd46c2292f6ea9d0db47da455546"
+}

@@ -1,0 +1,628 @@
+When to Trust Your Model:
+Model-Based Policy Optimization
+MichaelJanner JustinFu MarvinZhang SergeyLevine
+UniversityofCalifornia,Berkeley
+{janner, justinjfu, marvin, svlevine}@eecs.berkeley.edu
+Abstract
+Designing effective model-based reinforcement learning algorithms is difficult
+becausetheeaseofdatagenerationmustbeweighedagainstthebiasofmodel-
+generated data. In this paper, we study the role of model usage in policy opti-
+mization both theoretically and empirically. We first formulate and analyze a
+model-basedreinforcementlearningalgorithmwithaguaranteeofmonotonicim-
+provementateachstep. Inpractice,thisanalysisisoverlypessimisticandsuggests
+thatrealoff-policydataisalwayspreferabletomodel-generatedon-policydata,
+butweshowthatanempiricalestimateofmodelgeneralizationcanbeincorpo-
+rated into such analysis to justify model usage. Motivated by this analysis, we
+thendemonstratethatasimpleprocedureofusingshortmodel-generatedrollouts
+branchedfromrealdatahasthebenefitsofmorecomplicatedmodel-basedalgo-
+rithmswithouttheusualpitfalls. Inparticular,thisapproachsurpassesthesample
+efficiencyofpriormodel-basedmethods,matchestheasymptoticperformanceof
+thebestmodel-freealgorithms,andscalestohorizonsthatcauseothermodel-based
+methodstofailentirely.
+1 Introduction
+Reinforcementlearningalgorithmsgenerallyfallintooneoftwocategories:model-basedapproaches,
+whichbuildapredictivemodelofanenvironmentandderiveacontrollerfromit,andmodel-free
+techniques,whichlearnadirectmappingfromstatestoactions. Model-freemethodshaveshown
+promiseasageneral-purposetoolforlearningcomplexpoliciesfromrawstateinputs(Mnihetal.,
+2015;Lillicrapetal.,2016;Haarnojaetal.,2018),buttheirgeneralitycomesatthecostofefficiency.
+Whendealingwithreal-worldphysicalsystems,forwhichdatacollectioncanbeanarduousprocess,
+model-basedapproachesareappealingduetotheircomparativelyfastlearning. However,model
+accuracyactsasabottlenecktopolicyquality,oftencausingmodel-basedapproachestoperform
+worseasymptoticallythantheirmodel-freecounterparts.
+In this paper, we study how to most effectively use a predictive model for policy optimization.
+We first formulate and analyze a class of model-based reinforcement learning algorithms with
+improvement guarantees. Although there has been recent interest in monotonic improvement of
+model-basedreinforcementlearningalgorithms(Sunetal.,2018;Luoetal.,2019),mostcommonly
+used model-based approaches lack the improvement guarantees that underpin many model-free
+methods(Schulmanetal.,2015). Whileitispossibletoapplyanalogoustechniquestothestudyof
+model-basedmethodstoachievesimilarguarantees,itismoredifficulttousesuchanalysistojustify
+modelusageinthefirstplaceduetopessimisticboundsonmodelerror. However,weshowthatmore
+realisticmodelerrorratesderivedempiricallyallowustomodifythisanalysistoprovideamore
+reasonabletradeoffonmodelusage.
+Ourmaincontributionisapracticalalgorithmbuiltontheseinsights,whichwecallmodel-based
+policyoptimization(MBPO),thatmakeslimiteduseofapredictivemodeltoachievepronounced
+33rdConferenceonNeuralInformationProcessingSystems(NeurIPS2019),Vancouver,Canada.
+improvementsinperformancecomparedtoothermodel-basedapproaches. Morespecifically,we
+disentanglethetaskhorizonandmodelhorizonbyqueryingthemodelonlyforshortrollouts. We
+empirically demonstrate that a large amount of these short model-generated rollouts can allow a
+policyoptimizationalgorithmtolearnsubstantiallyfasterthanrecentmodel-basedalternativeswhile
+retainingtheasymptoticperformanceofthemostcompetitivemodel-freealgorithms. Wealsoshow
+thatMBPOdoesnotsufferfromthesamepitfallsaspriormodel-basedapproaches,avoidingmodel
+exploitationandfailureonlong-horizontasks. Finally,weempiricallyinvestigatedifferentstrategies
+formodelusage,supportingtheconclusionthatcarefuluseofshortmodel-basedrolloutsprovides
+themostbenefittoareinforcementlearningalgorithm.
+2 Relatedwork
+Model-basedreinforcementlearningmethodsarepromisingcandidatesforreal-worldsequential
+decision-makingproblemsduetotheirdataefficiency(Kaelblingetal.,1996). Gaussianprocesses
+andtime-varyinglineardynamicalsystemsprovideexcellentperformanceinthelow-dataregime
+(Deisenroth & Rasmussen, 2011; Levine & Koltun, 2013; Kumar et al., 2016). Neural network
+predictivemodels(Draegeretal.,1995;Galetal.,2016;Depewegetal.,2016;Nagabandietal.,
+2018), are appealing because they allow for algorithms that combine the sample efficiency of a
+model-basedapproachwiththeasymptoticperformanceofhigh-capacityfunctionapproximators,
+evenindomainswithhigh-dimensionalobservations(Ohetal.,2015;Ebertetal.,2018;Kaiseretal.,
+2019). Ourworkusesanensembleofprobabilisticnetworks,asinChuaetal.(2018),althoughour
+modelisemployedtolearnapolicyratherthaninthecontextofareceding-horizonplanningroutine.
+Learnedmodelsmaybeincorporatedintootherwisemodel-freemethodsforimprovementsindata
+efficiency. Forexample,amodel-freepolicycanbeusedasanactionproposaldistributionwithina
+model-basedplanner(Pichéetal.,2019). Conversely,modelrolloutsmaybeusedtoprovideextra
+trainingexamplesforaQ-function(Sutton,1990),toimprovethetargetvalueestimatesofexisting
+datapoints(Feinbergetal.,2018),ortoprovideadditionalcontexttoapolicy(Du&Narasimhan,
+2019). However,theperformanceofsuchapproachesrapidlydegradeswithincreasingmodelerror
+(Guetal.,2016),motivatingworkthatinterpolatesbetweendifferentrolloutlengths(Buckmanetal.,
+2018),tunestheratioofrealtomodel-generateddata(Kalweit&Boedecker,2017),ordoesnotrely
+onmodelpredictions(Heessetal.,2015). Ourapproachsimilarlytunesmodelusageduringpolicy
+optimization,butweshowthatjustifyingnon-negligiblemodelusageduringmostpointsintraining
+requiresconsiderationofthemodel’sabilitytogeneralizeoutsideofitstrainingdistribution.
+Priormethodshavealsoexploredincorporatingcomputationthatresemblesmodel-basedplanning
+butwithoutconstrainingtheintermediatepredictionsoftheplannertomatchplausibleenvironment
+observations(Tamaretal.,2016;Racanièreetal.,2017;Ohetal.,2017;Silveretal.,2017). While
+suchmethodscanreachasymptoticperformanceonparwithmodel-freeapproaches,theymaynot
+benefitfromthesampleefficiencyofmodel-basedmethodsastheyforgotheextrasupervisionused
+instandardmodel-basedmethods.
+Thebottleneckinscalingmodel-basedapproachestocomplextasksoftenliesinlearningreliable
+predictivemodelsofhigh-dimensionaldynamics(Atkeson&Schaal,1997). Whileground-truth
+modelsaremosteffectivewhenqueriedforlonghorizons(Hollandetal.,2018), inaccuraciesin
+learned models tend to make long rollouts unreliable. Ensembles have shown to be effective in
+preventingapolicyorplanningprocedurefromexploitingsuchinaccuracies(Rajeswaranetal.,2017;
+Kurutachetal.,2018;Claveraetal.,2018;Chuaetal.,2018). Alternatively,amodelmayalsobe
+trainedonitsownoutputstoavoidcompoundingerrorfrommulti-steppredictions(Talvitie,2014,
+2016)orpredictmanytimestepsintothefuture(Whitney&Fergus,2018). Wedemonstratethata
+combinationofmodelensembleswithshortmodelrolloutsissufficienttopreventmodelexploitation.
+Theoreticalanalysisofmodel-basedreinforcementlearningalgorithmshasbeenconsideredbySun
+etal.(2018)andLuoetal.(2019),whoboundthediscrepancybetweenreturnsunderamodeland
+thoseintherealenvironmentofinterest. Theirapproachesenforceatrustregionaroundareference
+policy,whereaswedonotconstrainthepolicybutinsteadconsiderrolloutlengthbasedonestimated
+modelgeneralizationcapacity. Alternateanalyseshavebeencarriedoutbyincorporatingthestructure
+ofthevaluefunctionintothemodellearning(Farahmandetal.,2017)orbyregularizingthemodel
+bycontrollingitsLipschitzconstant(Asadietal.,2018). Priorworkhasalsoconstructedcomplexity
+boundsformodel-basedapproachesinthetabularsetting(Szita&Szepesvari,2010)andforthe
+linearquadraticregulator(Deanetal.,2017),whereasweconsidergeneralnon-linearsystems.
+2
+Algorithm1MonotonicModel-BasedPolicyOptimization
+1: Initializepolicy⇡(as),predictivemodelp ✓ (s 0 ,r s,a),emptydataset .
+| | D
+2: forN epochsdo
+3: Collectdatawith⇡inrealenvironment:
+D
+=
+D[{
+(s i ,a i ,s 0i ,r i )
+}
+i
+4 5 : : T O r p a t i i n m m iz o e d p e o l l p ic ✓ y o u n n d d a e t r a p se re t d D ic v ti i v a e m m a o x d im el u : m ⇡ like a l r i g h m oo a d x : ⇡ ✓ 0 ⌘ˆ [⇡ 0 a ] r   gm C a ( x ✏ ✓ m E ,D✏ ⇡ [l ) ogp ✓ (s 0 ,r | s,a)]
+3 Background
+WeconsideraMarkovdecisionprocess(MDP),definedbythetuple( , ,p,r, ,⇢ ). and
+0
+S A S A
+arethestateandactionspaces,respectively,and  (0,1)isthediscountfactor. Thedynamicsor
+2
+transitiondistributionaredenotedasp(s s,a),theinitialstatedistributionas⇢ (s),andthereward
+0 0
+|
+functionasr(s,a).Thegoalofreinforcementlearningistofindtheoptimalpolicy⇡ thatmaximizes
+⇤
+theexpectedsumofdiscountedrewards,denotedby⌘:
+1
+⇡
+⇤
+=argmax⌘[⇡]=argmax E
+⇡
+ tr(s
+t
+,a
+t
+) .
+⇡ ⇡ " #
+t=0
+X
+Thedynamicsp(s s,a)areassumedtobeunknown. Model-basedreinforcementlearningmethods
+0
+|
+aimtoconstructamodelofthetransitiondistribution,p (s s,a),usingdatacollectedfrominteraction
+✓ 0
+|
+withtheMDP,typicallyusingsupervisedlearning. Weadditionallyassumethattherewardfunction
+hasunknownform,andpredictrasalearnedfunctionofsanda.
+4 Monotonicimprovementwithmodelbias
+Inthissection,wefirstlayoutageneralrecipeforMBPOwithmonotonicimprovement. Thisgeneral
+reciperesemblesorsubsumesseveralprioralgorithmsandprovidesuswithaconcreteframework
+thatisamenabletotheoreticalanalysis. DescribedgenericallyinAlgorithm1,MBPOoptimizesa
+policyunderalearnedmodel,collectsdataundertheupdatedpolicy,andusesthatdatatotrainanew
+model. Whileconceptuallysimple,theperformanceofMBPOcanbedifficulttounderstand;errors
+inthemodelcanbeexploitedduringpolicyoptimization,resultinginlargediscrepanciesbetween
+thepredictedreturnsofthepolicyunderthemodelandunderthetruedynamics.
+4.1 Monotonicmodel-basedimprovement
+Ourgoalistooutlineaprincipledframeworkinwhichwecanprovideperformanceguaranteesfor
+model-basedalgorithms. Toshowmonotonicimprovementforamodel-basedmethod,wewishto
+constructaboundofthefollowingform:
+⌘[⇡] ⌘ˆ[⇡] C.
+   
+⌘[⇡]denotesthereturnsofthepolicyinthetrueMDP,whereas⌘ˆ[⇡]denotesthereturnsofthepolicy
+underourmodel. Suchastatementguaranteesthat,aslongasweimprovebyatleastC underthe
+model,wecanguaranteeimprovementonthetrueMDP.
+The gap between true returns and model returns, C, can be expressed in terms of two er-
+ror quantities of the model: generalization error due to sampling, and distribution shift due
+to the updated policy encountering states not seen during model training. As the model is
+trained with supervised learning, sample error can be quantified by standard PAC generaliza-
+tion bounds, which bound the difference in expected loss and empirical loss by a constant with
+high probability (Shalev-Shwartz & Ben-David, 2014). We denote this generalization error by
+✏ =max E [D (p(s,r s,a) p (s,r s,a))],whichcanbeestimatedinpracticebymea-
+su m ringthev t ali s d⇠at ⇡ i D on ,t los T s V ofthe 0 mo | delo | n | t ✓ he 0 tim | e-dependentstatedistributionofthedata-collecting
+policy⇡ . Forouranalysis,wedenotedistributionshiftbythemaximumtotal-variationdistance,
+D
+max D (⇡ ⇡ ) ✏ ,ofthepolicybetweeniterations. Inpractice,wemeasuretheKLdiver-
+s TV D ⇡
+|| 
+gencebetweenpolicies,whichwecanrelateto✏ byPinsker’sinequality. Withthesetwosourcesof
+⇡
+errorcontrolled(generalizationby✏ ,anddistributionshiftby✏ ),wenowpresentourbound:
+m ⇡
+3
+Theorem4.1. LettheexpectedTV-distancebetweentwotransitiondistributionsbeboundedateach
+timestepby✏ andthepolicydivergencebeboundedby✏ . Thenthetruereturnsandmodelreturns
+m ⇡
+ofthepolicyareboundedas:
+2 r (✏ +2✏ ) 4r ✏
+max m ⇡ max ⇡
+⌘[⇡] ⌘ˆ[⇡] + (1)
+    (1  )2 (1  )
+      
+C(✏m,✏⇡)
+| {z }
+Proof. SeeAppendixA,TheoremA.1.
+This bound implies that as long as we improve the returns under the model ⌘ˆ[⇡] by more than
+C(✏ ,✏ ),wecanguaranteeimprovementunderthetruereturns.
+m ⇡
+4.2 Interpolatingmodel-basedandmodel-freeupdates
+Theorem 4.1 provides a useful relationship between model returns and true returns. However, it
+containsseveralissuesregardingcaseswhenthemodelerror✏ ishigh. First,theremaynotexista
+m
+policysuchthat⌘ˆ[⇡] ⌘[⇡]>C(✏ ,✏ ),inwhichcaseimprovementisnotguaranteed. Second,the
+m ⇡
+ 
+analysisreliesonrunningfullrolloutsthroughthemodel,allowingmodelerrorstocompound. This
+isreflectedintheboundbyafactorscalingquadraticallywiththeeffectivehorizon,1/(1  ). In
+ 
+suchcases,wecanimprovethealgorithmbychoosingtorelylessonthemodelandinsteadmoreon
+realdatacollectedfromthetruedynamicswhenthemodelisinaccurate.
+Inordertoallowfordynamicadjustmentbetweenmodel-basedandmodel-freerollouts,weintroduce
+thenotionofabranchedrollout,inwhichwebeginarolloutfromastateunderthepreviouspolicy’s
+statedistributiond (s)andrunkstepsaccordingto⇡underthelearnedmodelp . Thisbranched
+⇡D ✓
+rolloutstructureresemblestheschemeproposedintheoriginalDynaalgorithm(Sutton,1990),which
+can be viewed as a special case of a length 1 branched rollouts. Formally, we can view this as
+executinganonstationarypolicywhichbeginsarolloutbysamplingactionsfromthepreviouspolicy
+⇡ . Then,atsomespecifiedtime,weswitchtounrollingthetrajectoryunderthemodelpandcurrent
+D
+policy⇡forksteps. Undersuchascheme,thereturnscanbeboundedasfollows:
+Theorem4.2. Givenreturns⌘branch[⇡]fromthek-branchedrolloutmethod,
+ k+1✏  k+2 k
+⌘[⇡] ⌘branch[⇡] 2r ⇡ + ✏ + (✏ +2✏ ) . (2)
+    max (1  )2 (1  ) ⇡ 1   m ⇡
+        
+Proof. SeeAppendixA,TheoremA.3.
+4.3 Modelgeneralizationinpractice
+Theorem4.2wouldbemostusefulforguidingalgorithmdesignifitcouldbeusedtodetermine
+an optimal model rollout length k. While this bound does include two competing factors, one
+exponentially decreasing in k and another scaling linearly with k, the values of the associated
+constants prevent an actual tradeoff; taken literally, this lower bound is maximized when k = 0,
+correspondingtonotusingthemodelatall. Onelimitationoftheanalysisispessimisticscaling
+of model error ✏ with respect to policy shift ✏ , as we do not make any assumptions about the
+m ⇡
+generalizationcapacityorsmoothnesspropertiesofthemodel(Asadietal.,2018).
+To better determine how well we can expect our model to generalize in practice, we empirically
+measurehowthemodelerrorundernewpoliciesincreaseswithpolicychange✏ . Wetrainamodel
+⇡
+onthestatedistributionofadata-collectingpolicy⇡ andthencontinuepolicyoptimizationwhile
+D
+measuringthemodel’slossonallintermediatepolicies⇡duringthisoptimization. Figure1ashows
+that,asexpected,themodelerrorincreaseswiththedivergencebetweenthecurrentpolicy⇡ and
+the data-collecting policy ⇡ . However, the rate of this increase depends on the amount of data
+D
+collectedby⇡
+D
+. Weplotthelocalchangeinmodelerroroverpolicychange, d
+d
+✏
+✏
+m
+⇡
+0,inFigure1b. The
+decreasingdependenceonpolicyshiftshowsthatnotonlydomodelstrainedwithmoredataperform
+betterontheirtrainingdistribution,buttheyalsogeneralizebettertonearbydistributions.
+4
+rorre
+ledom
+ezis
+niart
+train size train size
+rorre
+ledom
+Hopper Walker2d
+a)
+policy shift policy shift
+b)
+Figure1: (a)Wetrainapredictivemodelonthestatedistributionof⇡ andevaluateitonpolicies⇡
+D
+ofvaryingKL-divergencefrom⇡ withoutretraining. Thecolorofeachcurvedenotestheamount
+D
+of data from ⇡ used to train the model corresponding to that curve. The offsets of the curves
+D
+depicttheexpectedtrendofincreasingtrainingdataleadingtodecreasingmodelerroronthetraining
+distribution. However,wealsoseeadecreasinginfluenceofstatedistributionshiftonmodelerror
+withincreasingtrainingdata,signifyingthatthemodelisgeneralizingbetter. (b)Wemeasurethe
+local change in model error versus KL-divergence of the policies at ✏ = 0 as a proxy to model
+⇡
+generalization.
+Thecleartrendinmodelerrorgrowthratesuggestsawaytomodifythepessimisticbounds. Inthe
+previousanalysis,weassumedaccesstoonlymodelerror✏ onthedistributionofthemostrecent
+m
+data-collectingpolicy⇡ andapproximatedtheerroronthecurrentdistributionas✏ +2✏ . Ifwe
+D m ⇡
+caninsteadapproximatethemodelerroronthedistributionofthecurrentpolicy⇡,whichwedenote
+as✏ ,wemayusethisdirectly. Forexample,approximating✏ withalinearfunctionofthepolicy
+m0 m0
+divergenceyields:
+d✏
+✏ˆ (✏ ) ✏ +✏
+m0
+m0 ⇡
+⇡
+m ⇡
+d✏
+⇡
+where d d ✏ ✏ m ⇡ 0 is empirically estimated as in Figure 1. Equipped with an approximation of ✏ m0 , the
+model’serroronthedistributionofthecurrentpolicy⇡,wearriveatthefollowingbound:
+Theorem4.3. Underthek-branchedrolloutmethod,usingmodelerrorundertheupdatedpolicy
+✏ max E [D (p(s s,a) pˆ(s s,a))],wehave
+m0
+ 
+t s
+⇠
+⇡D,t TV 0
+| ||
+0
+|
+ k+1✏  k✏ k
+⌘[⇡] ⌘branch[⇡] 2r ⇡ + ⇡ + (✏ ) . (3)
+    max (1  )2 (1  ) 1   m0
+        
+Proof. SeeAppendixA,TheoremA.2.
+WhilethisboundappearssimilartoTheorem4.2,theimportantdifferenceisthatthisversionactually
+motivates model usage. More specifically, k = argmin  k+1✏⇡ +  k✏⇡ + k (✏ ) > 0 for
+⇤ (1  )2 (1  ) 1   m0
+k      
+sufficientlylow✏ . Whilethisinsightdoesnotimmediatehlysuggestanalgorithmdesignibyitself,
+m0
+wecanbuildonthisideatodevelopamethodthatmakeslimiteduseoftruncated,butnonzero-length,
+modelrollouts.
+5
+Algorithm2Model-BasedPolicyOptimizationwithDeepReinforcementLearning
+1: Initializepolicy⇡   ,predictivemodelp ✓ ,environmentdataset env ,modeldataset model
+D D
+2: forN epochsdo
+3: Trainmodelp ✓ on env viamaximumlikelihood
+D
+4: forE stepsdo
+5: Takeactioninenvironmentaccordingto⇡   ;addto env
+D
+6: forM modelrolloutsdo
+7: Samples t uniformlyfrom env
+D
+8: Performk-stepmodelrolloutstartingfroms t usingpolicy⇡   ;addto model
+D
+9: forGgradientupdatesdo
+10: Updatepolicyparametersonmodeldata:       ⇡ ˆ   J ⇡ ( , model )
+  r D
+5 Model-basedpolicyoptimizationwithdeepreinforcementlearning
+Wenowpresentapracticalmodel-basedreinforcementlearningalgorithmbasedonthederivationin
+theprevioussection. InstantiatingAlgorithm1amountstospecifyingthreedesigndecisions: (1)the
+parametrizationofthemodelp ,(2)howthepolicy⇡isoptimizedgivenmodelsamples,and(3)how
+✓
+toquerythemodelforsamplesforpolicyoptimization.
+Predictive model. In our work, we use a bootstrap ensemble of dynamics models p1,...,pB .
+{ ✓ ✓ }
+EachmemberoftheensembleisaprobabilisticneuralnetworkwhoseoutputsparametrizeaGaussian
+distributionwithdiagonalcovariance: pi(s ,r s ,a ) = (µi(s ,a ),⌃i(s ,a ))). Individual
+✓ t+1 | t t N ✓ t t ✓ t t
+probabilistic models capture aleatoric uncertainty, or the noise in the outputs with respect to the
+inputs. Thebootstrappingprocedureaccountsforepistemicuncertainty,oruncertaintyinthemodel
+parameters,whichiscrucialinregionswhendataisscarceandthemodelcanbyexploitedbypolicy
+optimization. Chuaetal.(2018)demonstratethataproperhandlingofbothoftheseuncertainties
+allows for asymptotically competitive model-based learning. To generate a prediction from the
+ensemble,wesimplyselectamodeluniformlyatrandom,allowingfordifferenttransitionsalonga
+singlemodelrollouttobesampledfromdifferentdynamicsmodels.
+Policy optimization. We adopt soft-actor critic (SAC) (Haarnoja et al., 2018) as our pol-
+icy optimization algorithm. SAC alternates between a policy evaluation step, which estimates
+Q⇡(s,a) = E ⇡ [ 1 t=0  tr(s t ,a t ) | s 0 =s,a 0 =a] using the Bellman backup operator, and a
+policy improvement step, which trains an actor ⇡ by minimizing the expected KL-divergence
+J
+⇡
+( ,
+D
+)=Est⇠D P[D
+KL
+(⇡
+||
+exp
+{
+Q⇡
+ 
+V⇡
+}
+)].
+Modelusage. Manyrecentmodel-basedalgorithmshavefocusedonthesettinginwhichmodel
+rolloutsbeginfromtheinitialstatedistribution(Kurutachetal.,2018;Claveraetal.,2018). While
+thismaybeamorefaithfulinterpretationofAlgorithm1,asitisoptimizingapolicypurelyunder
+thestatedistributionofthemodel,thisapproachentanglesthemodelrolloutlengthwiththetask
+horizon. Becausecompoundingmodelerrorsmakeextendedrolloutsdifficult,theseworksevaluate
+ontruncatedversionsofbenchmarks. ThebranchingstrategydescribedinSection4.2, inwhich
+model rollouts begin from the state distribution of a different policy under the true environment
+dynamics,effectivelyrelievesthislimitation. Inpractice,branchingreplacesfewlongrolloutsfrom
+theinitialstatedistributionwithmanyshortrolloutsstartingfromreplaybufferstates.
+ApracticalimplementationofMBPOisdescribedinAlgorithm2.1 Theprimarydifferencesfrom
+thegeneralformulationinAlgorithm1arek-lengthrolloutsfromreplaybufferstatesintheplaceof
+optimizationunderthemodel’sstatedistributionandafixednumberofpolicyupdatestepsinthe
+placeofanintractableargmax. Evenwhenthehorizonlengthkisshort,wecanperformmanysuch
+shortrolloutstoyieldalargesetofmodelsamplesforpolicyoptimization. Thislargesetallowsusto
+takemanymorepolicygradientstepsperenvironmentsample(between20and40)thanistypically
+stableinmodel-freealgorithms. AfulllistingofthehyperparametersincludedinAlgorithm2forall
+evaluationenvironmentsisgiveninAppendixC.
+1WhenSACisusedasthepolicyoptimizationalgorithm,wemustalsoperformgradientupdatesonthe
+parametersoftheQ-functions,butweomittheseupdatesforclarity.
+6
+Figure2: TrainingcurvesofMBPOandfivebaselinesoncontinuouscontrolbenchmarks. Solid
+curvesdepictthemeanoffivetrialsandshadedregionscorrespondtostandarddeviationamong
+trials. MBPOhasasymptoticperformancesimilartothebestmodel-freealgorithmswhilebeing
+fasterthanthemodel-basedbaselines. Forexample,MBPO’sperformanceontheAnttaskat300
+thousandstepsmatchesthatofSACat3millionsteps. Weevaluatedallalgorithmsonthestandard
+1000-stepversionsofthebenchmarks.
+6 Experiments
+Ourexperimentalevaluationaimstostudytwoprimaryquestions: (1)HowwelldoesMBPOperform
+onbenchmarkreinforcementlearningtasks,comparedtostate-of-the-artmodel-basedandmodel-free
+algorithms? (2)Whatconclusionscanwedrawaboutappropriatemodelusage?
+6.1 Comparativeevaluation
+Inourcomparisons,weaimtounderstandbothhowwellourmethodcomparestostate-of-the-art
+model-basedandmodel-freemethodsandhowourdesignchoicesaffectperformance. Wecompare
+totwostate-of-the-artmodel-freemethods,SAC(Haarnojaetal.,2018)andPPO(Schulmanetal.,
+2017),bothtoestablishabaselineand,inthecaseofSAC,measurethebenefitofincorporatinga
+model,asourmodel-basedmethodusesSACforpolicylearningaswell. Formodel-basedmethods,
+we compare to PETS (Chua et al., 2018), which does not perform explicit policy learning, but
+directlyusesthemodelforplanning;STEVE(Buckmanetal.,2018),whichalsousesshort-horizon
+model-based rollouts, but incorporates data from these rollouts into value estimation rather than
+policylearning;andSLBO(Luoetal.,2019),amodel-basedalgorithmwithperformanceguarantees
+that performs model rollouts from the initial state distribution. These comparisons represent the
+state-of-the-artinbothmodel-freeandmodel-basedreinforcementlearning.
+We evaluate MBPO and these baselines on a set of MuJoCo continuous control tasks (Todorov
+et al., 2012) commonly used to evaluate model-free algorithms. Note that some recent works in
+model-basedreinforcementlearninghaveusedmodifiedversionsofthesebenchmarks,wherethe
+taskhorizonischosentobeshortersoastosimplifythemodelingproblem(Kurutachetal.,2018;
+Claveraetal.,2018). Weusethestandardfull-lengthversionofthesetasks. MBPOalsodoesnot
+assumeaccesstoprivilegedinformationintheformoffullyobservablestatesortherewardfunction
+forofflineevaluation.
+7
+Figure3: Nomodel: SACrunwithoutmodeldatabutwiththesamerangeofgradientupdatesper
+environmentstep(G)asMBPOontheHoppertask. Rolloutlength: Whilewefindthatincreasing
+rolloutlengthkovertimeyieldsthebestperformanceforMBPO(AppendixC),single-steprollouts
+provideabaselinethatisdifficulttobeat. Valueexpansion: WeimplementH-stepmodelvalue
+expansionfromFeinbergetal.(2018)ontopofSACforamoreinformativecomparison. Wealso
+findinthecontextofvalueexpansionthatsingle-stepmodelrolloutsaresurprisinglycompetitive.
+Figure2showsthelearningcurvesforallmethods,alongwithasymptoticperformanceofalgorithms
+which do not converge in the region shown. These results show that MBPO learns substantially
+faster,anorderofmagnitudefasteronsometasks,thanpriormodel-freemethods,whileattaining
+comparablefinalperformance. Forexample,MBPO’sperformanceontheAnttaskat300thousand
+stepsisthesameasthatofSACat3millionsteps. OnHopperandWalker2d,MBPOrequiresthe
+equivalentof14and40minutes,respectively,ofsimulationtimeifthesimulatorwererunninginreal
+time. Morecrucially,MBPOlearnsonsomeofthehigher-dimensionaltasks,suchasAnt,which
+poseproblemsforpurelymodel-basedapproachessuchasPETS.
+6.2 Designevaluation
+WenextmakeablationsandmodificationstoourmethodtobetterunderstandwhyMBPOoutperforms
+priorapproaches. ResultsforthefollowingexperimentsareshowninFigure3.
+No model. The ratio between the number of gradient updates and environment samples, G, is
+muchhigherinMBPOthanincomparablemodel-freealgorithmsbecausethemodel-generateddata
+reducestheriskofoverfitting. WerunstandardSACwithsimilarlyhighratios,butwithoutmodel
+data,toensurethatthemodelisactuallyhelpful. Whileincreasingthenumberofgradientupdates
+persampletakeninSACdoesmarginallyspeeduplearning,wecannotmatchthesample-efficiency
+ofourmethodwithoutusingthemodel. ForhyperparametersettingsofMBPO,seeAppendixC.
+Rollouthorizon. Whilethebest-performingrolloutlengthscheduleontheHoppertasklinearly
+increasesfromk =1to15(AppendixC),wefindthatfixingtherolloutlengthat1fortheduration
+of training retains much of the benefit of our model-based method. We also find that our model
+is accurate enough for 200-step rollouts, although this performs worse than shorter values when
+used for policy optimization. 500-step rollouts are too inaccurate for effective learning. While
+moreprecisefine-tuningisalwayspossible,augmentingpolicytrainingdatawithsingle-stepmodel
+rolloutsprovidesabaselinethatissurprisinglydifficulttobeatandoutperformsrecentmethodswhich
+perform longer rollouts from the initial state distribution. This result agrees with our theoretical
+analysiswhichprescribesshortmodel-basedrolloutstomitigatecompoundingmodelingerrors.
+Valueexpansion. Analternativetousingmodelrolloutsfordirecttrainingofapolicyistoimprove
+thequalityoftargetvaluesofsamplescollectedfromtherealenvironment. Thistechniqueisused
+inmodel-basedvalueexpansion(MVE)(Feinbergetal.,2018)andSTEVE(Buckmanetal.,2018).
+WhileMBPOoutperformsbothoftheseapproaches,thereareotherconfoundingfactorsmaking
+a head-to-head comparison difficult, such as the choice of policy learning algorithm. To better
+determinetherelationshipbetweentrainingonmodel-generateddataandusingmodelpredictionsto
+8
+a) c)
+b)
+Figure4: a)A450-stephoppingsequenceperformedintherealenvironment,withthetrajectory
+ofthebody’sjointstracedthroughspace. b)Thesameactionsequencerolledoutunderthemodel
+1000 times, with shaded regions corresponding to one standard deviation away from the mean
+prediction. Thegrowinguncertaintyanddeteriorationofarecognizablesinusoidalmotionunderscore
+accumulationofmodelerrors. c)Cumulativereturnsofthesamepolicyunderthemodelandactual
+environmentdynamicsrevealthatthepolicyisnotexploitingthelearnedmodel. Thinbluelines
+reflectindividualmodelrolloutsandthethickbluelineistheirmean.
+improvetargetvalues,weaugmentSACwiththeH-stepQ-targetobjective:
+H 1 H 1
+1    
+(Q(sˆ,aˆ (  k trˆ + HQ(sˆ ,aˆ ))2
+t t   k H H
+H  
+t= 1 k=t
+X  X
+inwhichsˆ andrˆ aremodelpredictionsandaˆ ⇡(a sˆ). WereferthereadertoFeinbergetal.
+t t t t t
+⇠ |
+(2018)forfurtherdiscussionofthisapproach. WeverifythatSACalsobenefitsfromimprovedtarget
+values,andsimilartoourconclusionsfromMBPO,single-stepmodelrollouts(H = 1)providea
+surprisinglyeffectivebaseline. Whilemodel-generateddataaugmentationandvalueexpansionarein
+principlecomplementaryapproaches,preliminaryexperimentsdidnotshowimprovementstoMBPO
+byusingimprovedtargetvalueestimates.
+Modelexploitation. Weanalyzetheproblemof“modelexploitation,”whichanumberofrecent
+workshaveraisedasaprimarychallengeinmodel-basedreinforcementlearning(Rajeswaranetal.,
+2017;Claveraetal.,2018;Kurutachetal.,2018). Weplotempiricalreturnsofatrainedpolicyonthe
+HoppertaskunderboththerealenvironmentandthemodelinFigure4(c)andfind,surprisingly,that
+theyarehighlycorrelated,indicatingthatapolicytrainedonmodel-predictedtransitionsmaynot
+exploitthemodelatalliftherolloutsaresufficientlyshort. Thisislikelybecauseshortrolloutsare
+morelikelytoreflecttherealdynamics(Figure4a-b),reducingtheopportunitiesforpoliciestorely
+oninaccuraciesofmodelpredictions. Whilethemodelsforotherenvironmentsarenotnecessarilyas
+accurateasthatforHopper,wefindacrosstheboardthatmodelreturnstendtounderestimatereal
+environmentreturnsinMBPO.
+7 Discussion
+We have investigated the role of model usage in policy optimization procedures through both a
+theoreticalandempiricallens. Wehaveshownthat,whileitispossibletoformulatemodel-based
+reinforcementlearningalgorithmswithmonotonicimprovementguarantees,suchananalysiscannot
+necessarily be used to motivate using a model in the first place. However, an empirical study of
+modelgeneralizationshowsthatpredictivemodelscanindeedperformwelloutsideoftheirtraining
+distribution. Incorporatingalinearapproximationofmodelgeneralizationintotheanalysisgives
+rise to a more reasonable tradeoff that does in fact justify using the model for truncated rollouts.
+Thealgorithmstemmingfromthisinsight, MBPO,hasasymptoticperformancerivalingthebest
+model-freealgorithms, learnssubstantiallyfasterthanpriormodel-freeormodel-basedmethods,
+andscalestolonghorizontasksthatoftencausemodel-basedmethodstofail. Weexperimentally
+investigatethetradeoffsassociatedwithourdesigndecisions,andfindthatmodelrolloutsasshortas
+asinglestepcanprovidepronouncedbenefitstopolicyoptimizationprocedures.
+9
+Acknowledgements
+WethankAnushaNagabandi,MichaelChang,ChelseaFinn,PulkitAgrawal,andJacobSteinhardtfor
+insightfuldiscussions;VitchyrPong,AlexLee,KyleHsu,andAviralKumarforfeedbackonanearly
+draftofthepaper;andKristianHartikainenforhelpwiththeSACbaseline. Thisresearchwaspartly
+supportedbytheNSFviaIIS-1651843,IIS-1700697,andIIS-1700696,theOfficeofNavalResearch,
+ARLDCISTCRAW911NF-17-2-0181,andcomputationalresourcedonationsfromGoogle. M.J.is
+supportedbyfellowshipsfromtheNationalScienceFoundationandtheOpenPhilanthropyProject.
+M.Z.issupportedbyanNDSEGfellowship.
+References
+Asadi,K.,Misra,D.,andLittman,M. Lipschitzcontinuityinmodel-basedreinforcementlearning.
+InInternationalConferenceonMachineLearning,2018.
+Atkeson,C.G.andSchaal,S.Learningtasksfromasingledemonstration.InInternationalConference
+onRoboticsandAutomation,1997.
+Buckman,J.,Hafner,D.,Tucker,G.,Brevdo,E.,andLee,H. Sample-efficientreinforcementlearning
+withstochasticensemblevalueexpansion. InAdvancesinNeuralInformationProcessingSystems,
+2018.
+Chua,K.,Calandra,R.,McAllister,R.,andLevine,S. Deepreinforcementlearninginahandfulof
+trialsusingprobabilisticdynamicsmodels. InAdvancesinNeuralInformationProcessingSystems.
+2018.
+Clavera,I.,Rothfuss,J.,Schulman,J.,Fujita,Y.,Asfour,T.,andAbbeel,P. Model-basedreinforce-
+mentlearningviameta-policyoptimization. InConferenceonRobotLearning,2018.
+Dean,S.,Mania,H.,Matni,N.,Recht,B.,andTu,S.Onthesamplecomplexityofthelinearquadratic
+regulator. arXivpreprintarXiv:1710.01688,2017.
+Deisenroth,M.andRasmussen,C.E. PILCO:Amodel-basedanddata-efficientapproachtopolicy
+search. InInternationalConferenceonMachineLearning,2011.
+Depeweg,S.,Hernández-Lobato,J.M.,Doshi-Velez,F.,andUdluft,S. Learningandpolicysearch
+instochasticdynamicalsystemswithbayesianneuralnetworks. InInternationalConferenceon
+LearningRepresentations,2016.
+Draeger,A.,Engell,S.,andRanke,H. Modelpredictivecontrolusingneuralnetworks. IEEEControl
+SystemsMagazine,1995.
+Du, Y. and Narasimhan, K. Task-agnostic dynamics priors for deep reinforcement learning. In
+InternationalConferenceonMachineLearning,2019.
+Ebert,F.,Finn,C.,Dasari,S.,Xie,A.,Lee,A.X.,andLevine,S. Visualforesight: Model-baseddeep
+reinforcementlearningforvision-basedroboticcontrol. arXivpreprintarXiv:1812.00568,2018.
+Farahmand, A.-M., Barreto, A., and Nikovski, D. Value-aware loss function for model-based
+reinforcementlearning. InInternationalConferenceonArtificialIntelligenceandStatistics,2017.
+Feinberg,V.,Wan,A.,Stoica,I.,Jordan,M.I.,Gonzalez,J.E.,andLevine,S. Model-basedvalue
+estimationforefficientmodel-freereinforcementlearning.InInternationalConferenceonMachine
+Learning,2018.
+Gal, Y., McAllister, R., and Rasmussen, C. E. Improving PILCO with Bayesian neural network
+dynamicsmodels. InICMLWorkshoponData-EfficientMachineLearningWorkshop,2016.
+Gu,S.,Lillicrap,T.,Sutskever,I.,andLevine,S. ContinuousdeepQ-learningwithmodel-based
+acceleration. InInternationalConferenceonMachineLearning,2016.
+Haarnoja,T.,Zhou,A.,Abbeel,P.,andLevine,S. Softactor-critic: Off-policymaximumentropy
+deep reinforcement learning with a stochastic actor. In International Conference on Machine
+Learning,2018.
+Heess,N.,Wayne,G.,Silver,D.,Lillicrap,T.,Tassa,Y.,andErez,T. Learningcontinuouscontrol
+policiesbystochasticvaluegradients. InAdvancesinNeuralInformationProcessingSystems,
+2015.
+Holland,G.Z.,Talvitie,E.J.,andBowling,M. Theeffectofplanningshapeondyna-styleplanning
+inhigh-dimensionalstatespaces. arXivpreprintarXiv:1806.01825,2018.
+10
+Kaelbling,L.P.,Littman,M.L.,andMoore,A.P. Reinforcementlearning: Asurvey. Journalof
+ArtificialIntelligenceResearch,4:237–285,1996.
+Kaiser,L.,Babaeizadeh,M.,Milos,P.,Osinski,B.,Campbell,R.H.,Czechowski,K.,Erhan,D.,
+Finn,C.,Kozakowsi,P.,Levine,S.,Sepassi,R.,Tucker,G.,andMichalewski,H. Model-based
+reinforcementlearningforAtari. arXivpreprintarXiv:1903.00374,2019.
+Kalweit,G.andBoedecker,J. Uncertainty-drivenimaginationforcontinuousdeepreinforcement
+learning. InConferenceonRobotLearning,2017.
+Kumar,V.,Todorov,E.,andLevine,S. Optimalcontrolwithlearnedlocalmodels: Applicationto
+dexterousmanipulation. InInternationalConferenceonRoboticsandAutomation,2016.
+Kurutach,T.,Clavera,I.,Duan,Y.,Tamar,A.,andAbbeel,P. Model-ensembletrust-regionpolicy
+optimization. InInternationalConferenceonLearningRepresentations,2018.
+Levine,S.andKoltun,V. Guidedpolicysearch. InInternationalConferenceonMachineLearning,
+2013.
+Lillicrap, T.P., Hunt, J.J., Pritzel, A., Heess, N., Erez, T., Tassa, Y., Silver, D., andWierstra, D.
+Continuouscontrolwithdeepreinforcementlearning. InInternationalConferenceonLearning
+Representations,2016.
+Luo,Y.,Xu,H.,Li,Y.,Tian,Y.,Darrell,T.,andMa,T. Algorithmicframeworkformodel-based
+deepreinforcementlearningwiththeoreticalguarantees. InInternationalConferenceonLearning
+Representations,2019.
+Mnih, V., Kavukcuoglu, K., Silver, D., Rusu, A. A., Veness, J., Bellemare, M. G., Graves, A.,
+Riedmiller,M.,Fidjeland,A.K.,Ostrovski,G.,Petersen,S.,Beattie,C.,Sadik,A.,Antonoglou,
+I.,King,H.,Kumaran,D.,Wierstra,D.,Legg,S.,andHassabis,D. Human-levelcontrolthrough
+deepreinforcementlearning. Nature,2015.
+Nagabandi,A.,Kahn,G.,S.Fearing,R.,andLevine,S. Neuralnetworkdynamicsformodel-based
+deepreinforcementlearningwithmodel-freefine-tuning. InInternationalConferenceonRobotics
+andAutomation,2018.
+Oh,J.,Guo,X.,Lee,H.,Lewis,R.,andSingh,S. Action-conditionalvideopredictionusingdeep
+networksinAtarigames. InAdvancesinNeuralInformationProcessingSystems,2015.
+Oh, J., Singh, S., and Lee, H. Value prediction network. In Advances in Neural Information
+ProcessingSystems,2017.
+Piché,A.,Thomas,V.,Ibrahim,C.,Bengio,Y.,andPal,C. Probabilisticplanningwithsequential
+MonteCarlomethods. InInternationalConferenceonLearningRepresentations,2019.
+Racanière,S.,Weber,T.,Reichert,D.,Buesing,L.,Guez,A.,JimenezRezende,D.,PuigdomènechBa-
+dia, A., Vinyals, O., Heess, N., Li, Y., Pascanu, R., Battaglia, P., Hassabis, D., Silver, D., and
+Wierstra, D. Imagination-augmented agents for deep reinforcement learning. In Advances in
+NeuralInformationProcessingSystems.2017.
+Rajeswaran,A.,Ghotra,S.,Levine,S.,andRavindran,B. EPOpt: Learningrobustneuralnetwork
+policiesusingmodelensembles. InInternationalConferenceonLearningRepresentations,2017.
+Schulman,J.,Levine,S.,Abbeel,P.,Jordan,M.,andMoritz,P. Trustregionpolicyoptimization. In
+InternationalConferenceonMachineLearning,2015.
+Schulman,J.,Wolski,F.,Dhariwal,P.,Radford,A.,andKlimov,O. Proximalpolicyoptimization
+algorithms. arXivpreprintarXiv:1707.06347,2017.
+Shalev-Shwartz,S.andBen-David,S. Understandingmachinelearning: Fromtheorytoalgorithms.
+Cambridgeuniversitypress,2014.
+Silver,D.,vanHasselt,H.,Hessel,M.,Schaul,T.,Guez,A.,Harley,T.,Dulac-Arnold,G.,Reichert,
+D.,Rabinowitz,N.,Barreto,A.,andDegris,T. Thepredictron: End-to-endlearningandplanning.
+InInternationalConferenceonMachineLearning,2017.
+Sun, W., Gordon, G.J., Boots, B., andBagnell, J. Dualpolicyiteration. InAdvancesinNeural
+InformationProcessingSystems,2018.
+Sutton,R.S. Integratedarchitecturesforlearning,planning,andreactingbasedonapproximating
+dynamicprogramming. InInternationalConferenceonMachineLearning,1990.
+11
+Szita, I. and Szepesvari, C. Model-based reinforcement learning with nearly tight exploration
+complexitybounds. InInternationalConferenceonMachineLearning,2010.
+Talvitie,E.Modelregularizationforstablesamplerollouts.InConferenceonUncertaintyinArtificial
+Intelligence,2014.
+Talvitie,E. Self-correctingmodelsformodel-basedreinforcementlearning. InAAAIConferenceon
+ArtificialIntelligence,2016.
+Tamar,A.,WU,Y.,Thomas,G.,Levine,S.,andAbbeel,P. Valueiterationnetworks. InAdvancesin
+NeuralInformationProcessingSystems.2016.
+Todorov, E., Erez, T., and Tassa, Y. MuJoCo: A physics engine for model-based control. In
+InternationalConferenceonIntelligentRobotsandSystems,2012.
+Whitney,W.andFergus,R. Understandingtheasymptoticperformanceofmodel-basedRLmethods.
+2018.
+12

@@ -1,0 +1,16 @@
+{
+  "trace_id": "CAND-04_post",
+  "protocol": {
+    "metric_formula": "sacrebleu_detok_13a",
+    "implementation_correct": true,
+    "standardized_hash": true
+  },
+  "outputs": {
+    "bleu_score": 26.9,
+    "metric": "BLEU"
+  },
+  "candidate_id": "CAND-04",
+  "paper": "A Call for Clarity in Reporting BLEU Scores",
+  "family": "C6_aggregation_statistical_procedure_error",
+  "self_hash": "07ae7118378b185006e33c5cec030fee96b542635aab6ff7bafe5a22d631df23"
+}

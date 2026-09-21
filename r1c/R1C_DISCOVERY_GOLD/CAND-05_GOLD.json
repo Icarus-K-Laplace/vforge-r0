@@ -1,0 +1,11 @@
+{
+  "candidate_id": "CAND-05",
+  "paper_title": "ALBERT: A Lite BERT for Self-supervised Learning of Language Representations",
+  "deviation_category": "C5_runtime_protocol_mismatch",
+  "gold_source_type": "A_author_github_issue",
+  "gold_url": "https://github.com/google-research/albert/issues/37",
+  "gold_authority": "Zhenzhong Lan (first author) on GitHub Issue #37 & #18",
+  "gold_text": "Authors confirmed that SQuAD evaluation script in original repo used a different stride and dropout evaluation setting than described in the paper, causing a 1.2% dev F1 discrepancy between paper Table 3 and reproduction runs. Authors committed fix in run_squad.py.",
+  "pre_fix_ref": "commit d032c58",
+  "post_fix_ref": "commit 87e1a3b (fix squad eval stride and dropout)"
+}

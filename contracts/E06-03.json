@@ -1,0 +1,25 @@
+{
+  "contract_id": "CONTRACT_E06-03",
+  "source_paper": "E06-03",
+  "family": "E06",
+  "paper_text_hash": "0ef70b071fb3e930762cddb1b072a8cd08efe9aee621b801b3c0109f318ebb3b",
+  "source_span": "Each model receives an equivalent GPU-hour budget.",
+  "predicates": [
+    {
+      "predicate_id": "P3_BUDGET",
+      "principle": "P3_SYMMETRY",
+      "natural_language": "Compared methods must be matched on the declared training/compute budget.",
+      "trace_fields": [
+        "comparator_budgets"
+      ],
+      "condition": "max(budget_value across comparator_budgets) - min(budget_value across comparator_budgets) == 0",
+      "source_span": "Each model receives an equivalent GPU-hour budget.",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P3_SYMMETRY"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "a327811256dd8b350f4a7f39beb265f0652619f5df87ae095da50058a1ed3c91"
+}

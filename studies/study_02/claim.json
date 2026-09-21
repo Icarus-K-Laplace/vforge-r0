@@ -1,0 +1,49 @@
+{
+  "claim_id": "study_02_claim_01",
+  "study_id": "study_02",
+  "natural_language_claim": "A logistic regression model trained on in-distribution data maintains accuracy above 0.50 on out-of-distribution shifted data.",
+  "claim_type": "ood_generalization",
+  "population": "synthetic_high_dimensional",
+  "method": "LogisticRegression on shifted Gaussian",
+  "comparator": "in-distribution accuracy",
+  "outcome_metric": "ood_accuracy",
+  "direction": "degrades",
+  "reported_value": 0.25,
+  "uncertainty_requirement": {
+    "type": "none",
+    "value": null,
+    "level": 0.95
+  },
+  "protocol_constraints": [
+    "same_model_for_id_and_ood",
+    "ood_data_has_different_mean_and_variance",
+    "no_ood_data_in_training"
+  ],
+  "required_artifacts": [
+    "E:\\VForge-R0\\data\\study_02_dataset.json",
+    "E:\\VForge-R0\\data\\study_02_ood.json",
+    "E:\\VForge-R0\\models\\study_02\\model.pkl"
+  ],
+  "evidence_targets": [
+    "in_distribution_accuracy",
+    "out_of_distribution_accuracy"
+  ],
+  "validity_conditions": [
+    "ood_set_is_completely_separate_from_training",
+    "model_not_fine_tuned_on_ood",
+    "accuracy_computed_correctly"
+  ],
+  "abstention_conditions": [
+    "if_ood_dataset_cannot_be_loaded",
+    "if_model_prediction_fails"
+  ],
+  "oracle_definition": {
+    "description": "Reload model and recompute accuracy on OOD data; verify acc_ood < acc_id (degradation expected).",
+    "input_artifacts": [
+      "E:\\VForge-R0\\data\\study_02_dataset.json",
+      "E:\\VForge-R0\\data\\study_02_ood.json",
+      "E:\\VForge-R0\\models\\study_02\\model.pkl"
+    ],
+    "output_format": "boolean"
+  }
+}

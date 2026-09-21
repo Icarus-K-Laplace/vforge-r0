@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E02-01",
+  "source_paper": "E02-01",
+  "family": "E02",
+  "paper_text_hash": "177a867a6b76b064a0feb7d2defcbac487d17b615b01a1bfaa0ffe3e9372b50d",
+  "source_span": "Model selection is performed on a held-out validation set; the test set is used exclusively for final evaluation.",
+  "predicates": [
+    {
+      "predicate_id": "P4_SELECTION",
+      "principle": "P4_SELECTION_SEPARATION",
+      "natural_language": "Model selection must use the validation split, not the test split.",
+      "trace_fields": [
+        "checkpoint",
+        "selection_split",
+        "protocol",
+        "final_test_split"
+      ],
+      "condition": "checkpoint.selection_split != 'test' AND checkpoint.selection_split != protocol.final_test_split",
+      "source_span": "Model selection is performed on a held-out validation set; the test set is used exclusively for final evaluation.",
+      "confidence": 0.9
+    }
+  ],
+  "universal_principles": [
+    "P4_SELECTION_SEPARATION"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "25032624674cefc4370db4c2605640b146df6a011b602536f7f1d1898701f2b2"
+}

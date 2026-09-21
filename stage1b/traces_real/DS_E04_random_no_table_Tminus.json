@@ -1,0 +1,36 @@
+{
+  "trace_id": "DS_E04_random_no_table_Tminus",
+  "paper": "diffusing_synth_2411.10164",
+  "repository": "tlpss/diffusing-synthetic-data",
+  "family": "E04",
+  "experiment": "random-no-table",
+  "protocol": {
+    "declared_categories": [
+      "mug",
+      "shoe",
+      "tshirt"
+    ],
+    "reported_categories": [
+      "shoe",
+      "mug"
+    ],
+    "aggregation_rule": "mean",
+    "metric": "AKD"
+  },
+  "outputs": {
+    "reported_value": {
+      "value": 14.9114,
+      "aggregation_rule": "mean",
+      "upstream_categories": [
+        "shoe",
+        "mug"
+      ]
+    }
+  },
+  "is_counterfactual": true,
+  "contract_id": "DS_E04_CATEGORY_SUBGROUP",
+  "self_hash": "e99dc9e8f1fb64ccfc2286362d2548ca83c9bef850e0c59fc1017d0e7bf3c3e9",
+  "vps": 0.7049,
+  "value_preserving": false,
+  "abs_diff": 9.6523
+}

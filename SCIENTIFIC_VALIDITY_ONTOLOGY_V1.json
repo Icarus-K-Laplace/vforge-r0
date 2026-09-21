@@ -1,0 +1,71 @@
+{
+  "ontology_version": "SCIENTIFIC_VALIDITY_ONTOLOGY_V1",
+  "freeze_date": "2026-09-20",
+  "description": "Domain-independent principles for scientific validity assessment",
+  
+  "principles": [
+    {
+      "id": "P1_INDEPENDENCE",
+      "name": "Data Independence",
+      "description": "Training, validation, and test data must be mutually exclusive",
+      "scope": "data_split",
+      "abstention_conditions": ["no_split_info"]
+    },
+    {
+      "id": "P2_PROVENANCE", 
+      "name": "Data Provenance",
+      "description": "All data sources must be traceable and accessible",
+      "scope": "data_access",
+      "abstention_conditions": ["no_data_manifest"]
+    },
+    {
+      "id": "P3_SYMMETRY",
+      "name": "Comparison Symmetry",
+      "description": "Methods being compared must be evaluated under identical conditions",
+      "scope": "fair_comparison",
+      "abstention_conditions": ["insufficient_method_info"]
+    },
+    {
+      "id": "P4_SELECTION_SEPARATION",
+      "name": "Selection-Evaluation Separation",
+      "description": "Model/hyperparameter selection must use held-out data, not test data",
+      "scope": "selection_protocol",
+      "abstention_conditions": ["no_selection_info"]
+    },
+    {
+      "id": "P5_SCOPE_SUPPORT",
+      "name": "Scope-Evidence Alignment",
+      "description": "Claim scope must match the evidence population",
+      "scope": "population_alignment",
+      "abstention_conditions": ["no_population_spec"]
+    },
+    {
+      "id": "P6_AGGREGATION_FIDELITY",
+      "name": "Aggregation Faithfulness",
+      "description": "Reported aggregated metrics must match underlying computations",
+      "scope": "metric_computation",
+      "abstention_conditions": ["no_raw_metrics"]
+    },
+    {
+      "id": "P7_EVIDENCE_CLOSURE",
+      "name": "Evidence Closure",
+      "description": "All required evidence for claim verification must be available",
+      "scope": "evidence_availability",
+      "abstention_conditions": ["no_artifact_manifest"]
+    },
+    {
+      "id": "P8_STATISTICAL_SUFFICIENCY",
+      "name": "Statistical Evidence Sufficiency",
+      "description": "Claims require appropriate statistical evidence (significance, uncertainty)",
+      "scope": "statistical_evidence",
+      "abstention_conditions": ["no_statistical_info"]
+    }
+  ],
+  
+  "usage_notes": [
+    "These principles are domain-independent",
+    "Do NOT include benchmark-specific rules",
+    "Each principle must be traceable to paper text or pre-registered ontology",
+    "No post-hoc principles allowed after seeing benchmark failures"
+  ]
+}

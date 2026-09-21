@@ -1,0 +1,10 @@
+{
+  "candidate_id": "CAND-05",
+  "paper_title": "ALBERT: A Lite BERT for Self-supervised Learning of Language Representations",
+  "venue_year": "ICLR 2020",
+  "deviation_category": "C5_runtime_protocol_mismatch",
+  "blind_metadata": {
+    "declared_protocol_source": "Paper Methods section of ALBERT: A Lite BERT for Self-supervised Learning of Language Representations",
+    "execution_target_repo": "https://github.com/google-research/albert"
+  }
+}

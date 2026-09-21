@@ -1,0 +1,7 @@
+{
+  "family": "E02",
+  "status": "TRACE_INSUFFICIENT",
+  "TOS": 0.0,
+  "qualifies": false,
+  "reason": "W&B summaryMetrics for both public projects expose per-run task/class accuracy and test discriminative metrics, but do NOT expose checkpoint-selection provenance (selection criterion split, candidate checkpoints, selected checkpoint id). E02 therefore cannot be constructed from these sources without fabricating selection data. Recorded as TRACE_INSUFFICIENT per protocol (document, don't invent)."
+}

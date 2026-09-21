@@ -1,0 +1,26 @@
+{
+  "contract_id": "DS_E06_RESOURCE_ASYM",
+  "source_paper": "diffusing_synth_2411.10164",
+  "family": "E06",
+  "claim_text": "The paper compares texturing methods using asymmetric dataset sizes (diffusion ~5000, random ~300). Any method-comparison claim requires a fairness justification or a symmetric control. Without it, the superiority claim is not supported.",
+  "paper_text_hash": "fb9776a7817afe0cce0e79588f35275df51c81f2a9fad78b8fbaee650d056f29",
+  "predicates": [
+    {
+      "predicate_id": "E06_BUDGET_SYMMETRY",
+      "principle": "P8_COMPARATOR_FAIRNESS",
+      "natural_language": "When comparing method A vs B, both must have the same resource budget (dataset size, epochs, model capacity) OR the asymmetry must be explicitly declared and controlled for.",
+      "trace_fields": [
+        "protocol.declared_budgets",
+        "comparator_budgets"
+      ],
+      "condition": "comparator_budgets_symmetric OR asymmetry_declared",
+      "source_span": "Section IV-B",
+      "confidence": 0.8
+    }
+  ],
+  "universal_principles": [
+    "P8_COMPARATOR_FAIRNESS"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "24914f77d32636f76a0cc23106173c1768bfc7917dc0cf9fdf80845287f21f8f"
+}

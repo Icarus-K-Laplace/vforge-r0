@@ -1,0 +1,384 @@
+{
+  "n_pairs": 48,
+  "e02_attempt": {
+    "family": "E02",
+    "status": "TRACE_INSUFFICIENT",
+    "viewbatchmodel_exposes_checkpoint_provenance": false,
+    "revisitdml_exposes_checkpoint_provenance": false,
+    "vb_summary_metric_keys_sample": [
+      "CPU_memory_usage",
+      "GPU_memory_usage",
+      "RESULT_class_acc_0",
+      "RESULT_class_acc_1",
+      "RESULT_class_acc_2",
+      "RESULT_class_acc_3",
+      "RESULT_class_acc_4",
+      "RESULT_class_mean_accs",
+      "RESULT_task_acc_0",
+      "RESULT_task_acc_1",
+      "RESULT_task_acc_2",
+      "RESULT_task_acc_3",
+      "RESULT_task_acc_4",
+      "RESULT_task_mean_accs",
+      "Task"
+    ],
+    "rdml_summary_metric_keys_sample": [
+      "Model Grad: L2: Grad L2",
+      "Model Grad: Max: Grad Max",
+      "Test: discriminative_LOG-rho_spectrum@0",
+      "Test: discriminative_dists: dists@inter",
+      "Test: discriminative_dists: dists@intra",
+      "Test: discriminative_dists: dists@intra_over_inter",
+      "Test: discriminative_e_recall: e_recall@1",
+      "Test: discriminative_e_recall: e_recall@2",
+      "Test: discriminative_e_recall: e_recall@4",
+      "Test: discriminative_f1: f1",
+      "Test: discriminative_mAP: mAP",
+      "Test: discriminative_nmi: nmi",
+      "Test: discriminative_rho_spectrum: rho_spectrum@-1",
+      "Test: discriminative_rho_spectrum: rho_spectrum@1",
+      "Test: discriminative_rho_spectrum: rho_spectrum@10"
+    ],
+    "reasoning": "W&B summaryMetrics for both public projects expose per-run task/class accuracy and test discriminative metrics, but do NOT expose checkpoint-selection provenance (selection criterion split, candidate checkpoints, selected checkpoint id). E02 therefore cannot be constructed from these sources without fabricating selection data. Recorded as TRACE_INSUFFICIENT per protocol (document, don't invent).",
+    "constructed_pairs": 0
+  },
+  "pairs": [
+    {
+      "pair_id": "VB_E01_r1_hard_aug",
+      "paper": "viewbatchmodel_2503.18371",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.0857
+    },
+    {
+      "pair_id": "VB_E01_r1_none",
+      "paper": "viewbatchmodel_2503.18371",
+      "family": "E01",
+      "value_preserving": false,
+      "vps": 0.2439
+    },
+    {
+      "pair_id": "VB_E01_r4_hard_aug",
+      "paper": "viewbatchmodel_2503.18371",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.0519
+    },
+    {
+      "pair_id": "VB_E01_r4_none",
+      "paper": "viewbatchmodel_2503.18371",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1828
+    },
+    {
+      "pair_id": "VB_E01_r4_ssl",
+      "paper": "viewbatchmodel_2503.18371",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1778
+    },
+    {
+      "pair_id": "RDML_E01_CARS_ArcFace_2",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1832
+    },
+    {
+      "pair_id": "RDML_E01_CARS_Histogram_3",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.2427
+    },
+    {
+      "pair_id": "RDML_E01_CARS_Margin_b12_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": false,
+      "vps": 0.2747
+    },
+    {
+      "pair_id": "RDML_E01_CARS_NPair",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.2165
+    },
+    {
+      "pair_id": "RDML_E01_CARS_Quadruplet_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1599
+    },
+    {
+      "pair_id": "RDML_E01_CARS_SNR_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": false,
+      "vps": 0.4161
+    },
+    {
+      "pair_id": "RDML_E01_CARS_SoftTriple_4",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": false,
+      "vps": 0.2552
+    },
+    {
+      "pair_id": "RDML_E01_CARS_Triplet_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": false,
+      "vps": 0.3956
+    },
+    {
+      "pair_id": "RDML_E01_CARreg_Contrastive",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1537
+    },
+    {
+      "pair_id": "RDML_E01_CARreg_Margin_b06_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.232
+    },
+    {
+      "pair_id": "RDML_E01_CARreg_Margin_b12_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1771
+    },
+    {
+      "pair_id": "RDML_E01_CARreg_SNR_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.206
+    },
+    {
+      "pair_id": "RDML_E01_CARreg_Triplet_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1666
+    },
+    {
+      "pair_id": "RDML_E01_CUB_ArcFace_2",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": false,
+      "vps": 0.4431
+    },
+    {
+      "pair_id": "RDML_E01_CUB_Histogram_3",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1553
+    },
+    {
+      "pair_id": "RDML_E01_CUB_NPair",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.233
+    },
+    {
+      "pair_id": "RDML_E01_CUB_SoftTriple_4",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.2355
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Angular",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1314
+    },
+    {
+      "pair_id": "RDML_E01_SOP_ArcFace",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1664
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Contrastive",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.2276
+    },
+    {
+      "pair_id": "RDML_E01_SOP_GenLifted",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.2015
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Histogram_1",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1542
+    },
+    {
+      "pair_id": "RDML_E01_SOP_MS",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.0917
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Margin_b06_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.2259
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Margin_b12_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.0906
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Npair",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.2463
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Quadruplet_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.223
+    },
+    {
+      "pair_id": "RDML_E01_SOP_SNR_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1793
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Softmax_3",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": false,
+      "vps": 0.2902
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Triplet_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1672
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Triplet_Random_2",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.242
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Triplet_Semihard",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.2088
+    },
+    {
+      "pair_id": "RDML_E01_SOP_Triplet_Softhard",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.2378
+    },
+    {
+      "pair_id": "RDML_E01_SOPreg_Contrastive",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.217
+    },
+    {
+      "pair_id": "RDML_E01_SOPreg_Margin_b06_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.2025
+    },
+    {
+      "pair_id": "RDML_E01_SOPreg_Margin_b12_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.117
+    },
+    {
+      "pair_id": "RDML_E01_SOPreg_SNR_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.1102
+    },
+    {
+      "pair_id": "RDML_E01_SOPreg_Triplet_Distance",
+      "paper": "revisitdml_2002.08473",
+      "family": "E01",
+      "value_preserving": true,
+      "vps": 0.2311
+    },
+    {
+      "pair_id": "VB_E04_r1_hard_aug",
+      "paper": "viewbatchmodel_2503.18371",
+      "family": "E04",
+      "value_preserving": false,
+      "vps": 0.6496
+    },
+    {
+      "pair_id": "VB_E04_r1_none",
+      "paper": "viewbatchmodel_2503.18371",
+      "family": "E04",
+      "value_preserving": false,
+      "vps": 0.6362
+    },
+    {
+      "pair_id": "VB_E04_r4_hard_aug",
+      "paper": "viewbatchmodel_2503.18371",
+      "family": "E04",
+      "value_preserving": false,
+      "vps": 0.6034
+    },
+    {
+      "pair_id": "VB_E04_r4_none",
+      "paper": "viewbatchmodel_2503.18371",
+      "family": "E04",
+      "value_preserving": false,
+      "vps": 0.633
+    },
+    {
+      "pair_id": "VB_E04_r4_ssl",
+      "paper": "viewbatchmodel_2503.18371",
+      "family": "E04",
+      "value_preserving": false,
+      "vps": 0.6514
+    }
+  ],
+  "index_sha256": "4bf788b9a579dd58f808ef0b1da3bb5b5bd7a1ae647a48c5a7d61f8ca785e3cd"
+}

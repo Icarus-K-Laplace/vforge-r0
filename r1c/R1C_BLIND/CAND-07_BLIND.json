@@ -1,0 +1,10 @@
+{
+  "candidate_id": "CAND-07",
+  "paper_title": "RoBERTa: A Robustly Optimized BERT Pretraining Approach",
+  "venue_year": "arXiv 2019",
+  "deviation_category": "C6_aggregation_statistical_procedure_error",
+  "blind_metadata": {
+    "declared_protocol_source": "Paper Methods section of RoBERTa: A Robustly Optimized BERT Pretraining Approach",
+    "execution_target_repo": "https://github.com/facebookresearch/fairseq"
+  }
+}

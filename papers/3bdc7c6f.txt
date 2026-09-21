@@ -1,0 +1,1780 @@
+Label-Free Explainability for Unsupervised Models
+JonathanCrabbe´1 MihaelavanderSchaar123
+Abstract sibleforahumanusertoanalyzeeachoftheseoperations,
+themodelsappearasblack-boxes. Whenthedeployment
+Unsupervisedblack-boxmodelsarechallenging
+of these models impact critical areas, such as healthcare,
+tointerpret. Indeed,mostexistingexplainability
+financeorjustice,theiropacityappearsasamajorobstruc-
+methods require labels to select which compo-
+tion(Lipton,2016;Chingetal.,2018;Tjoa&Guan,2020).
+nent(s)oftheblack-box’soutputtointerpret. In
+theabsenceoflabels,black-boxoutputsoftenare Post-HocExplainability.Asaresponsetothistransparency
+representationvectorswhosecomponentsdonot problem,thefieldofexplainableartificialintelligence(XAI)
+correspond to any meaningful quantity. Hence, receivedanincreasinginterest,see(Adadi&Berrada,2018;
+choosing which component(s) to interpret in a BarredoArrietaetal.,2020;Das&Rad,2020)forreviews.
+label-freeunsupervised/self-supervisedsettingis In order to retain the approximation power of deep mod-
+an important, yet unsolved problem. To bridge els,manypost-hocexplainabilitymethodsweredeveloped.
+thisgapintheliterature,weintroducetwocrucial These methods complement the predictions of black-box
+extensionsofpost-hocexplanationtechniques:(1) modelswithvariousexplanations. Inthisway,modelscan
+label-free feature importance and (2) label-free beunderstoodthroughthelensofexplanationsregardless
+example importance that respectively highlight theircomplexity. Wefocusontwotypesofsuchmethods.
+influential features and training examples for a (1)FeatureImportanceexplanationshighlightcrucialfea-
+black-box to construct representations at infer- tures for the black-box to issue a prediction. Examples
+ence time. We demonstrate that our extensions include Saliency (Simonyan et al., 2013), Lime (Ribeiro
+canbesuccessfullyimplementedassimplewrap- et al., 2016), Integrated Gradients (Sundararajan et al.,
+persaroundmanyexistingfeatureandexample 2017), Shap (Lundberg & Lee, 2017), DeepLift (Shriku-
+importancemethods. Weillustratetheutilityof maretal.,2017)andPerturbationMasks(Fong&Vedaldi,
+ourlabel-freeexplainabilityparadigmthrougha 2017;Crabbe´ &VanDerSchaar,2021). (2)ExampleIm-
+qualitativeandquantitativecomparisonofrepre- portanceexplanationshighlightcrucialtrainingexamples
+sentationspaceslearnedbyvariousautoencoders fortheblack-boxtoissueaprediction. ExamplesincludeIn-
+trainedondistinctunsupervisedtasks. fluenceFunction(Cook&Weisenberg,1982;Koh&Liang,
+2017),DeepK-NearestNeighbours(Papernot&McDaniel,
+2018),TraceIn(Pruthietal.,2020)andSimplEx(Crabbe´
+1.Introduction
+etal.,2021).
+Aremachinelearningmodelsreadytobedeployedinhigh- SupervisedSetting. Thepreviousworksalmostexclusively
+stakes applications? Recent years have witnessed a suc- focusonexplainingmodelsobtainedinasupervisedsetting.
+cessofdeepmodelsonnontrivialtaskssuchascomputer In this setting, the black box f : X → Y connects two
+vision(Voulodimosetal.,2018),naturallanguageprocess- meaningfulspaces: thefeaturespaceX andthelabelspace
+ing(Youngetal.,2018)andscientificdiscovery(Jumper Y. Bymeaningful,wemeanthateachaxisofthesespaces
+etal.,2021;Daviesetal.,2021). Thesuccessofthesemod- correspondstoaquantityknownbythemodel’suser. This
+els comes at the cost of their complexity. Deep models isillustratedatthetopofFigure1withanidealizedprostate
+typicallyinvolvemillionstobillionsoperationsinorderto cancer risk predictor. Each axis of Y corresponds to a
+turntheirinputdataintoaprediction. Sinceitisnotpos- clear label: the probabilityof mortalitywith andwithout
+treatment.Wecanexplainthepredictionsofthismodelwith
+1University of Cambridge 2The Alan Turing Institute
+theimportanceoffeatures/examplestomakeaprediction
+3University of California Los Angeles. Correspondence to:
+oneachindividualaxisy ,y orforacombinationofthose
+JonathanCrabbe´<jc2133@cam.ac.uk>,MihaelavanderSchaar 1 2
+<mv472@cam.ac.uk>. axes(e.ginthiscasey 1 −y 2 isassociatedtothetreatment
+effect). Thekeypointisthat,inthesupervisedsetting,the
+Proceedings of the 39th International Conference on Machine userknowsthemeaningoftheblack-boxoutputtheytryto
+Learning,Baltimore,Maryland,USA,PMLR162,2022. Copy-
+interpret. Thisisnotalwaysthecaseinmachinelearning.
+right2022bytheauthor(s).
+Label-FreeExplainabilityforUnsupervisedModels
+Figure1. SupervisedandLabel-FreeSettings.
+Label-FreeSetting. Inthelabel-freesetting,weareinter- 2018; Sarhan et al., 2019), we discuss them in more de-
+estedinblack-boxesf :X →Hthatconnectameaningful tailsinSection4.3. Whenitcomestopost-hocapproaches
+featurespaceX toalatent(orrepresentation)spaceH. Un- forexplainabilityoflatentspaces,concept-basedexplana-
+like the feature space X and the label space Y, the axes tions(Kimetal.,2017;Brocki&Chung,2019)arecentral.
+ofthelatentspaceHdonotcorrespondtolabelledquanti- Thesemethodsidentifyadictionarybetweenhumancon-
+tiesknownbytheuser. Thisisillustratedatthebottomof cepts(likethepresenceofstripesonanimage)andlatent
+Figure1,wheretheexamplesaremappedinarepresenta- vectors.Thesemethodsareonlypartiallyrelevantheresince
+tionspaceforclusteringpurposes. Unlikeinthesupervised conceptsaretypicallylearnedwithlabelledexamples, al-
+setting,thereisnoobviouswayfortheusertochoosean though early works challenge this assumption (Ghorbani
+axisamongh ,h tointerpret. Thisdistinctiongoeswell et al., 2019). When it comes to label-free feature impor-
+1 2
+beyond the philosophical consideration. As we show in tance, we note that Layer Relevance Propagation (LRP)
+Sections2and3,theaforementionedfeatureandexample permittoassignfeatureimportancescoresintheabsence
+importancemethodsrequirelabelstoselectanaxistointer- oflabels(Bachetal.,2015;Eberleetal.,2022;Holzinger
+pretorevaluatealoss. Theusageofthesemethodsinthe etal.,2022). Thatsaid,theseworkshavebeenrestrictedto
+label-freesettinghencerequiresanon-trivialextension. specificsettings(e.g. clusteringandsimilaritymodels)and
+come with the natural limitations of LRP-based methods
+Motivation. Toillustratethesignificanceofthelabel-free
+(e.g. noimplementationinvariance). Similarly,worksdis-
+extensionofexplainability,weoutline2widespreadsetups
+cussinglabel-freeexampleimportancearealsorestrictedto
+whereitisrequired. Notethatthese2setupsarenotmu-
+specificsettings,likeKong&Chaudhuri(2021)thatadapt
+tuallyexclusive. (1)UnsupervisedLearning: Whenever
+TraceIntoVAEs.
+we solve an unsupervised task such as clustering or den-
+sity estimation, it is common to learn a function like f Contribution. (1)Label-FreeFeatureImportance: We
+thatprojectsthedataontoalowdimensionalrepresentation introduceageneralframeworktoextendlinearfeatureim-
+space. Duetotheunsupervisednatureoftheproblem,any portancemethodstothelabel-freesetting(Section2). Our
+explanationofthelatentspacehastobedonewithoutlabel. extensionisdonebydefininganauxiliaryscalarfunction
+(2)Self-SupervisedLearning: Eveninasupervisedlearn- as a wrapper around the label-free black-box to interpret.
+ingsetting,wehaveoftenmoreunlabelledthanlabelleddata Thispermitstocomputefeatureimportanceinthelabel-free
+available. Whenthisisthecase, self-supervisedlearning settingbyretainingusefulpropertiesoftheoriginalmeth-
+preconisestoleverageunlabelleddatatosolveanunsuper- ods without increasing their complexity. (2) Label-Free
+vised pretext tasks such as predicting the missing part of Example Importance: We extend example importance
+amaskedimage(Jing&Tian,2021). Thisyieldsarepre- methodstothelabel-freesetting(Section3). Inthiswork,
+sentationf ofthedatathatwecanuseaspartofamodel we treat two types of example importance methods that
+tosolvethedownstreamtask. Ifwewanttointerpretthe wecallloss-based andrepresentation-based. Forthefor-
+model’srepresentationsofunlabelledexamples,label-free mer,theextensionrequirestospecifyalabel-freelossand
+explainabilityisamust. Letusnowreviewrelatedwork. asetofrelevantmodelparameterstodifferentiatetheloss
+with. Forthelatter,theextensionisstraightforward. Our
+RelatedWork. Themajorityoftherelevantliteraturefo-
+feature and example importance extensions are validated
+cusesonincreasingtheinterpretabilityofrepresentations
+experimentally (Section 4.1) and their practical utility is
+spaces H. Disentangled-VAEs constitute the best exam-
+demonstratedwithausecasemotivatedbyself-supervised
+ple(Higginsetal.,2017;Burgessetal.,2018;Chenetal.,
+Label-FreeExplainabilityforUnsupervisedModels
+learning(Section4.2). (3)ChallengingInterpretabilityof classesgrows. Thislimitationcaneasilybeavoidedwhen
+DisentangledRepresentations: Intestingthelimitsofour theimportancescoresarelinearwithrespecttotheblack-
+featureimportancehypotheseswithdisentangledVAEs,we box3. Inthiscase, theweightedimportancescorecanbe
+noticedthattheinterpretabilityofsaliencymapsassociated rewrittenasb (f,x) = a ( (cid:80)dY f (x)·f ,x). Withthis
+i i j=1 j j
+toindividuallatentunitsseemsunrelatedtothestrengthof trick, we can compute the weighted importance score by
+disentanglementbetweentheunits(Section4.3). Weana- onlycallingtheauxiliaryfunctiong definedforallx˜ ∈X
+x
+lyzethisphenomenonbothqualitativelyandquantitatively. asg (x˜)= (cid:80)dY f (x)·f (x˜). Wewillnowuseasimilar
+x j=1 j j
+This insight could be the seed of future developments in reasoninginthelabel-freesetting.
+interpretablerepresentationlearning.
+2.2.Label-FreeFeatureImportance
+2.FeatureImportance
+Wenowturnoursettingofinterest. Weconsideralatent
+In this section, we present our approach to extend linear
+(orrepresentation)spaceH⊂RdH,whered
+H
+∈N∗isthe
+feature importance methods to the label-free setting. We dimension of the latent space. We are given a black-box
+startbyreviewingthetypicalsetupwithlabeltograspsome modelf :X →HfromahypothesissetA(HX)mapping
+usefulinsightsforourextension. Withtheseinsights,the eachinputx ∈ X toarepresentationh = f(x) ∈ H. As
+extensiontothelabel-freeregimeisimmediate. aforementioned,thelatentspacedimensionsh j ,j ∈ [d H ]
+arenotrelatedtolabelswithclearinterpretations.Again,we
+wouldliketoattributeanimportancescoreb (f,x)toeach
+2.1.FeatureImportancewithLabels i
+featurex ofxfori∈[d ].Ideally,thisscoreshouldreflect
+i X
+Weconsideraninput(orfeature)spaceX ⊂ RdX andan theimportanceoffeaturex inassigningtherepresentation
+i
+output (or label) space Y ⊂ RdY, where d X ∈ N∗ and h=f(x). Unlikeintheprevioussetting,wedonothave
+d Y ∈ N∗ arerespectivelythedimensionoftheinputand a principled way of choosing a component f j for some
+outputspaces. Wearegivenablack-boxmodelf :X →Y j ∈[d ]. Howcanwecomputeimportancescores?
+H
+fromahypothesisset1A(YX)mappingeachinputx∈X
+We can simply mimic the approach described in the pre-
+toanoutputy =f(x)∈Y. Notethatweuseboldsymbols
+vious section. For a feature importance method, we use
+toemphasizethatthoseelementsaretypicallyvectorswith
+more than one component (d X ,d Y > 1). Feature impor- theweightedimportancescoreb i (f,x)=a i (
+(cid:80)d
+j= H 1 f j (x)·
+tance methods explain the black-box prediction f(x) by f j ,x). Westressthattheindividualcomponentsf j (x)do
+attributinganimportancescorea (f,x)toeachfeaturex not correspond to probabilities in this case. Does it still
+i i
+of x for2 i ∈ [d ]. Note that feature importance meth- make sense to compute a sum weighted by these compo-
+X
+odsrequiretoselectonecomponentf (x) ∈ Rforsome nents? Inmostcases,itdoes. Thecomponentswilltypically
+j
+j ∈ [d ] of the output in order to compute these scores: correspondtoaneuron’sactivationfunction(Glorotetal.,
+Y
+a (f,x)≡a (f ,x). Inaclassificationsetting,j typically 2011). With typical activation functions such as ReLU
+i i j
+corresponds to the ground-truth label (when it is known) orSigmoid,inactiveneuronswillcorrespondtoavanish-
+j
+dic
+=
+ted
+ar
+p
+g
+ro
+m
+b
+a
+a
+x
+b
+k
+il
+∈
+it
+[
+y
+dY
+j
+]
+=
+[y k
+a
+]
+r
+o
+g
+r
+m
+to
+ax
+the labe
+[
+l
+f
+w
+(
+i
+x
+th
+)]
+m
+.
+aximal pre- i
+im
+ng
+pl
+c
+i
+o
+es
+m
+t
+p
+h
+o
+a
+n
+t
+e
+th
+n
+e
+t
+s
+f
+e
+j
+n
+(
+e
+x
+u
+)
+ro
+=
+ns
+0
+w
+.
+i
+F
+ll
+r
+n
+o
+o
+m
+tc
+th
+o
+e
+nt
+a
+ri
+b
+b
+o
+u
+v
+te
+e
+i
+f
+n
+or
+t
+m
+he
+u
+c
+la
+o
+,
+m
+th
+p
+i
+u
+s
+-
+k∈[dY] k
+tationofb (f,x). Neuronsthataremoreactivated,onthe
+i
+We now suggest an alternative approach: combining the
+otherhand,willcontributemoretotheweightedsum. By
+importance scores for each componentof f by weighing
+linearityofthefeatureimportancemethod,thisreasoning
+them with the associated class probability: b (f,x) ≡
+i extendstolinearcombinationsofneurons. Wenotethatthe
+(cid:80)d
+j= y 1 f j (x)·a i (f j ,x). Wenotethat, whenaclassprob- weightedsumisalatentspaceinnerproduct. Thisleadsto
+abilityf j (x) ≈ 1dominates,thisreducestotheprevious thefollowingdefinition.
+definition. However, whentheclassprobabilitiesarebal-
+Definition 2.1 (Label-Free Feature Importance). Let f :
+anced,thisaccountsforthecontributionofeachclass.Inthe
+X → Hbeablack-boxlatentmapandforalli ∈ [d ]a
+imageclassificationcontext,thismightbemoreappropri- X
+a (·,·) : A(RX)×X → Rbeafeatureimportancescore
+atethancherry-pickingthesaliencymapoftheappropriate i
+linear w.r.t. its first argument. We define the label-free
+classwhiledisregardingtheothers(Rudin,2019). Tothe
+featureimportanceasascoreb (·,·):A(HX)×X →R:
+bestofourknowledge,thisapproachhasnotbeenusedin i
+theliterature. Alikelyreasonforthisisthatthisdefinition
+requires to compute d Y ·d X importance scores per sam- b i (f,x)≡a i (g x ,x) (1)
+ple, which quickly becomes expensive as the number of g :X →Rsuchthatforallx˜ ∈X :
+x
+1Typicallyneuralnetworks. g x (x˜)=(cid:104)f(x),f(x˜)(cid:105) H , (2)
+2Wedenoteby[N]thepositiveintegersfrom1toN ∈N∗.
+3Whichisthecaseformostmethods,includingShap.
+Label-FreeExplainabilityforUnsupervisedModels
+where(cid:104)·,·(cid:105) denotesaninnerproductforthespaceH. exampleimportancescorecn(f,x)toeachtrainingexam-
+H
+plexn ∈D fortheblack-boxf tobuildarepresentation
+Remark2.2. Thisdefinitiongivesasimplerecipetoextend train
+f(x) ∈ Hofatestexamplex ∈ X. Notethatweuseup-
+any linear feature importance method a to the label-free
+i
+perindicesforexamplesincontrastwiththelowerindices
+setting. In practice, this is implemented by defining the
+for the features. Hence, xn denotes feature i of training
+auxiliary scalar function g as a simple wrapper around i
+x examplen. Similarly,cndenotesanexampleimportancein
+theblack-boxfunctionf. Wethenfeedg toanyfeature
+x
+contrastwithb thatisusedforfeatureimportance.
+importancemethoda . i
+i
+Arguably one of the most important property shared by 3.1.Loss-BasedExampleImportance
+manyfeatureimportancemethodsiscompleteness. Feature
+SupervisedSetting. Loss-basedexampleimportancemeth-
+importancemethodsendowedwiththispropertyproduce
+ods assign a score to each training example xn by sim-
+importancescoreswhosesumequalstheblack-boxpredic-
+tion up to a constant baseline a ∈ R: (cid:80)dx a (g,x) = ulating the effect of their removal on the loss for a test
+0 i=1 i example. To make this more explicit, we denote by z
+g(x)−a . Thisprovidesameaningfulconnectionbetween
+0 the data of an example that is required to evaluate the
+importancescoresandblack-boxpredictions. Typicalex-
+loss. In a supervised setting, this typically correspond
+amples of baselines are a = 0 for Lime; the expected
+0 to a couple z = (x,y) with an input x ∈ X and a la-
+predictiona =E [g(X)]forShapandabaselinepredic-
+0 X bel y ∈ Y. Similarly, the training set is of the form
+tiona =g(x¯)forIntegratedGradients. Weshowthatour
+0 D = {zn |n∈[N]}. Thistrainingset isusedto fita
+label-freefeatureimportancescoresareendowedwithan train
+black-boxmodelf parametrizedbyθ ∈Θ⊂RP,where
+analogouspropertyinhigherdimension. θ
+P ∈ N∗ is the number of model parameters. Training is
+Proposition2.3(Label-FreeCompleteness). Ifthefeature done by solving θ = argmin (cid:80)N L(zn,θ) with
+importancescoresa i (·,·):A(RX)×X →Rarelinearand thelossL : Z ×Θ ∗ → R. Thisy θ i ∈ e Θ ldsa n m =1 odelf . Ifwe
+satisfycompleteness,thenthelabel-freeimportancescores removeanexamplezn fromD ,theoptimizat θ io ∗ nprob-
+train
+b i (f,x),i ∈ [d X ] sum to the black-box representation’s lem turns into θ−n = argmin (cid:80)N L(zm,θ).
+n b or ∈ m R (cid:107)f fo (x r ) a (cid:107) ll 2 H x = ∈ (cid:104) X f( : x),f(x)(cid:105) H uptoaconstantbaseline This creates a p ∗ arameter shift θ δ ∈ n Θ θ ≡ m= θ 1 − ∗ ,m n (cid:54)= − n θ ∗ . This
+0 parameter shift, in turns, impacts the loss L(z,θ) on a
+test example z. This shift is reflected by the quantity
+(cid:88)
+dX
+b (f,x)=(cid:107)f(x)(cid:107)2 −b . (3) δn θ L(z,θ ∗ ) ≡ L(z,θ− ∗ n)−L(z,θ ∗ ). Thislossshiftper-
+i H 0 mits to draw a distinction between proponents ( zn that
+i=1
+decreasetheloss: δnL(z,θ )>0)andopponents(znthat
+θ ∗
+increasetheloss: δnL(z,θ ) < 0). Hence, itprovidesa
+Proof. TheproofisprovidedinAppendixA. θ ∗
+meaningful measure of example importance. In order to
+estimatethelossshiftwithoutretrainingthemodel,Koh&
+This property is more general than its LRP counterpart
+Liang(2017)proposetoevaluatetheinfluencefunction:
+(Proposition1in(Eberleetal.,2022))thatholdsonlyfor
+neuralnetworkwithbiasessettozero. Furthermore,inAp- δnL(z,θ )≈ 1 (cid:10) ∇ L(z,θ ),H−1∇ L(zn,θ ) (cid:11) ,
+pendixA.2, wedemonstratethatourlabel-freeextension θ ∗ N θ ∗ θ∗ θ ∗ Θ
+offeatureimportanceverifiescrucialinvarianceproperties
+where (cid:104)·,·(cid:105) is an inner product on the parameter space
+withrespecttolatentspacesymmetries. Θ
+Θ and H ≡ (cid:80)N N−1∇2L(zn,θ ) ∈ RP×P is the
+θ∗ n=1 θ ∗
+traininglossHessianmatrix. Similarly,Pruthietal.(2020)
+3.ExampleImportance
+propose to use checkpoints during the model training to
+evaluatethelossshift:
+In this section, we present our approach to extend exam-
+ple importance methods to the label-free setting. Since T
+(cid:88)
+exampleimportancemethodsarehardertounify,thestruc- δnL(z,θ )≈ η (cid:104)∇ L(z,θ ),∇ L(zn,θ )(cid:105) ,
+θ ∗ t θ t θ t Θ
+tureofthissectiondiffersfromthepreviousone. Wesplit t=1
+theexampleimportancemethodsintwofamilies: theloss-
+whereη andθ arerespectivelythelearningrateandthe
+basedandrepresentation-basedmethods. Theextensionto t t
+model’sparametersatcheckpointt ∈ [T], T ∈ N∗ isthe
+thelabel-freesettingworksdifferentlyforthesetwofami-
+totalnumberofcheckpoints. Similarapproachesbuilding
+lies. Hence,wetreatthemintwodistinctsubsections. In
+on the theory of Shapley values exist (Ghorbani & Zou,
+both cases, we work with an input space X and a latent
+2019;Ghorbanietal.,2020).
+spaceH. WearegivenatrainingsetofN ∈N∗examples
+D = {xn |n∈[N]}. Thistrainingsetisusedtofita Label-freeSetting. Wenowturntothelabel-freesetting.
+train
+black-boxlatentmapf : X → H. Wewanttoassignan Inthiscase, wetrainourmodelwithalabel-freelossL :
+Label-FreeExplainabilityforUnsupervisedModels
+X ×Θ→R. Isitenoughtodropthelabelandfixz =x ample x. This is obviously not the case for contrastive
+in all the above expressions? Most of the time, no. It is losses that involve pairs of input examples (Chen et al.,
+important to notice that the latent map f : X → H that 2020). Thereisnotobviousextensionofloss-basedexam-
+wewishtointerpretisnotnecessarilyequaltothemodel pleimportanceinthissetting. Wewillnowpresentanother
+that we use to evaluate the loss L(z,θ). To understand, typeofexampleimportancemethodthatbetterextendsto
+it is instructive to consider a concrete example. Let us contrastivelearning.
+assume that we are in a self-supervised setting and that
+we train an autoencoder f ◦f : X → X that consists 3.2.Representation-BasedExampleImportance
+d e
+in an encoder f : X → H and a decoder f : H →
+e d
+Supervised Setting. Although representation-based ex-
+X on a pretext task such as denoising. At the end of the
+ampleimportancemethodsareintroducedinasupervised
+pretraining,wetypicallykeeptheencoderf anddropthe
+e
+context,theirextensiontothelabel-freesettingisstraight-
+decoderf . Ifwewanttocomputetheloss-basedexample
+d
+forward. These methods assign a score to each training
+importance, we are facing a difficulty. On the one hand,
+examplexn byanalyzingthelatentrepresentationsofthese
+wewouldliketodrawinterpretationsthatrelysolelyonthe
+examples. Tomakethismoreconcrete,westartwithatypi-
+encoderf thatisgoingtobeusedinadownstreamtask.On
+e
+calsupervisedsetting. Consideramodelf ◦f :X →Y,
+theotherhand,loss-basedexampleimportancescoresare l e
+wheref : X → Hmapsinputstolatentrepresentations
+computedwiththeautoencoderf ◦f thatalsoinvolves e
+d e
+and f : H → Y maps representations to labels. In the
+the irrelevant decoder f . Whenever the loss evaluation l
+d
+caseofdeepneuralnetworks,therepresentationspacetypi-
+involves more than the black-box latent map f we wish
+callycorrespondstotheoutputofanintermediatelayer. We
+to interpret, replacing z by x in the above expressions is
+wouldliketoseehowtherepresentationmaprelatesatest
+thereforeinsufficient.
+examplex ∈ X tothetrainingsetexamples. Thiscanbe
+Toprovideamoresatisfactorysolution,wesplittheparame- donebymappingthetrainingsetinputsintotherepresenta-
+terspaceΘ=Θ r ×Θ irr intoarelevantcomponentΘ r ⊆RPr tionspacef e (D train ) = {f e (xn) | n ∈ [N]}. Toquantify
+andanirrelevantcomponentΘ irr ⊆ RPirr. Theblack-box the affinity between x and the training set examples, we
+f tointerpretisparametrizedonlybytherelevantparam- attempt a reconstruction of f (x) with training represen-
+e
+etersθ r andcanbedenotedf θr . Ittypicallycorresponds tationsfromf e (D train ): f e (x) ≈ (cid:80)N n=1 wn(x)·f e (xn).
+toanencoder,asinthepreviousexample. Concretely,we
+Following(Papernot&McDaniel,2018),themostobvious
+areinterestedinisolatingthepartoflossshiftδn θ L(z,θ ∗ ) approachtodefineweightswn(x)istoidentifytheindices
+caused by the variation of these relevant parameters. We
+KNN(x) ⊂ [N]oftheK nearestneighbours(DKNN)of
+notethattheaboveestimatorsforthisquantityinvolvegra-
+f (x)inf (D )andweighthemaccordingtoaKernel
+e e train
+dientswithrespecttotheparametersθ. Wedecomposethe functionκ:H2 →R+:
+overallparametersgradientintermsofrelevantandirrel-
+evantparametersgradients: ∇ θ = ∇ θr +∇ θirr . Ignoring wn(x)=1[n∈KNN(x)]·κ[f e (xn),f e (x)], (5)
+thevariationofirrelevantparametersisequivalenttosetting
+∇ =0intheaboveexpressions. Thisistriviallyequiv- where1denotestheindicatorfunction. Similarly,Crabbe´
+θirr
+alenttothereplacementofδn byδn. Thismotivatesthe etal.(2021)proposetolearntheweightsbysolving
+θ θr
+followingdefinition.
+(cid:13) (cid:13)
+Definition3.1(Label-FreeLoss-BasedImportance). Let w(x)=argmin (cid:13) (cid:13)f (x)− (cid:88) N λnf (xn) (cid:13) (cid:13) (6)
+(cid:13) e e (cid:13)
+f m θ i r nim : i X ze a → los H s L be : a X bla × ck Θ -box → la R ten o t n m a ap tra tr i a n i i n n e g d s t e o t λ∈[0,1]N(cid:13) n=1 (cid:13) H
+D train = {xn |n∈[N]}. To measure the impact of re- suchthat (cid:80)N λn = 1. Similarapproachesbuildingon
+n=1
+moving example xn from D train with n ∈ [N], wedefine therepresentertheoremexist(Yehetal.,2018).
+theLabel-FreeLoss-BasedExampleImportanceasascore
+cn(·,·):A(HX)×X →Rsuchthat Label-freeSetting. Wenowturntothelabel-freesetting.
+The above discussion remains valid if we replace the su-
+cn(f θr ,x)=δn θr L(x,θ ∗ ). (4) pervisedrepresentationmapf e byanunsupervisedrepre-
+sentationmapf. Inshort, wecantakecn = wn without
+Remark3.2. Thisdefinitiongivesasimplerecipetoextend
+anyadditionalworkforrepresentation-basedmethods. A
+anyloss-basedexampleimportancemethodtothelabel-free
+majoradvantageofrepresentation-basedmethodsoverloss-
+setting. Inpractice,thisisimplementedbyusingtheunsu-
+based methods is that they only require latent representa-
+pervisedlossLtrainedtofitthemodelanddifferentiating
+tions. Therefore, they naturally extend to representation
+L with respect to parameters of the encoder we wish to
+spaceslearnedincontrastivelearning. Moreover,weargue
+interpret.
+inAppendixAthatonlyrepresentation-basedmethodsare
+Westressthatthelossdependsonlyonasingleinputex- invarianttolatentspacesymmetries.
+Label-FreeExplainabilityforUnsupervisedModels
+4.Experiments thedata,weexpectthesimilarityrateofthemostimportant
+examples to be higher than for the least important exam-
+Inthissection,weconductquantitativeevaluationsofthe
+ples. We report the distribution of similarity rates across
+label-freeextensionsofvariousexplanationmethods. We
+1,000testexamplesforvariousvaluesofM andexample
+start with simple consistency checks to ensure that these
+importancemethodsinFigure3.
+methods provide sensible explanations for unsupervised
+models. Then,wedemonstratehowourlabel-freeexplana- Results. (cid:73)FeatureImportance: Label-freefeatureimpor-
+tionparadigmmakesitpossibletocomparerepresentations tancemethodsexhibitasimilarbehaviour:thelatentshiftin-
+learnedfromdifferentpretexttasks. Finally,wechallenge creasessharplyasweperturbthefewmostimportantpixels.
+Definition2.1bystudyingsaliencymapsofVAEs. Amore Thisincreasedecelerateswhenwestartperturbingpixels
+detailed description of each experiment can be found in thatarelessrelevant. Furthermore,selectingtheperturbed
+AppendixC.Theimplementationisavailableonline45. pixelsaccordingtothevariousimportancescoresb
+i
+(f
+e
+,x)
+yieldslatentshiftsthataresignificantlylargerthantheshift
+4.1.ConsistencyChecks inducedbyperturbingrandompixels. Label-freeIntegrated
+Gradientsoutperformothermethodsforeachmodel. These
+Wewouldliketoasseswhethertheapproachesdescribedin observationsconfirmthatthelabel-freeimportancescores
+Sections2and3provideasensiblewaytoextendfeature b (f ,x)allowustoidentifythefeaturesthatarethemost
+i e
+andexampleimportancescorestotheunsupervisedsetting. relevantfortheencoderf tobuildalatentrepresentation
+e
+fortheexamplex. (cid:73)ExampleImportance: Forallexam-
+Setup. We fit 3 models on 3 datasets: a denoising au-
+pleimportancemethod,weobservethatthesimilarityrateis
+toencoderCNNontheMNISTimagedataset(LeCunetal.,
+substantiallyhigheramongthemostsimilarexamplesthan
+1998),aLSTMreconstructionautoencoderontheECG5000
+among the least similar examples. This observation con-
+time series dataset (Goldberger et al., 2000) and a Sim-
+firmsthatthelabel-freeimportancescorescn(f ,x)allow
+CLR (Chen et al., 2020) neural network with a ResNet- e
+ustoidentifytrainingexamplesthatarerelatedtothetest
+18 (He et al., 2015) backbone on the CIFAR-10 image
+examplewewishtoexplain. Representation-basedmethods
+dataset (Krizhevsky, 2009). We extractan encoder f to
+e
+interpret from each model. (cid:73) Feature Importance: We usually outperform loss-based methods. In this case, the
+verification also validates our models since no label was
+computethelabel-freefeatureimportanceb (f ,x)ofeach
+i e
+usedduringtraining.
+feature(pixel/timestep)x forbuildingthelatentrepresen-
+i
+tation of the test example x ∈ D . To verify that high-
+test
+scoringfeaturesaresalient,weuseanapproachanalogousto 4.2.UseCase: ComparingtheRepresentationsLearned
+pixel-flipping(Montavonetal.,2018):wemasktheM most withDifferentPretextTasks
+importantfeatureswithamaskm∈{0,1}dX. Wemeasure
+In a self-supervised learning setting, many unsupervised
+the latent shift (cid:107)f (x)−f (m(cid:12)x+(1−m)(cid:12)x¯)(cid:107)
+e e H pretexttaskcanbechosentolearnameaningfulrepresenta-
+induced by replacing the most important features with a
+tionofthedata. Howdotherepresentationsfromdifferent
+baseline x¯, where (cid:12) denotes the Hadamard product. We
+pretexttaskscomparetoeachother? Weshowthatlabel-
+expectthisshifttoincreasewiththeimportanceofmasked
+freeexplainabilitypermitstoanswerthisquestionthrough
+features. We report the average shift over the testing set
+qualitativeandquantitativecomparisonsofrepresentations.
+forseveralvaluesofM andfeatureimportancemethodsin
+Figure2. (cid:73)ExampleImportance: WesampleN =1000 Setup. WeworkwiththeMNISTdenoisingautoencoder
+training examples xn ∈ D ,n ∈ [N] without replace- fromSection4.1. Besidesdenoising,weconsider2addi-
+train
+ment. Wecomputetheimportancescorecn(f ,x)ofeach tional pretext tasks along with their autoencoders: recon-
+e
+trainingexamplexnforpredictingthelatentrepresentation structionandinpainting(Panditetal.,2019). Finally, we
+ofthetestimagesx∈D . Toverifythathighscoringex- usethelabelledtrainingsettofitaMNISTclassifierandex-
+test
+amplesaresalient,weuseanapproachanalogoustoKong& tracttherepresentationsfromthepenultimatelayer. Weare
+Chaudhuri(2021). WeselecttheM mostimportanttraining interestedincomparingtherepresentationspaceslearned
+examples xn1,...,xnM. We compare their ground truth bytheencoderf
+e
+forthevarioustasks. (cid:73)FeatureImpor-
+label yn1,...,ynM to the label y of x. We compute the tance: Foreachencoderf
+e
+,weuseourlabel-freeGradient
+similarityrates(cid:80)M m=1 δy,ynm/M, whereδ denotestheKro- Shaptoproducesaliencymapsb i (f e ,x)forthetestimages
+neckerdelta. WereproducetheabovestepsfortheM least x∈D test . Tocomparethesaliencymapsobtainedbydiffer-
+importantexamples. Iftheencodermeaningfullyrepresents entmodels,acommonapproachistocomputetheirPearson
+correlationcoefficient(LeMeur&Baccino,2013). Were-
+4https://github.com/JonathanCrabbe/
+porttheaveragePearsoncoefficientsbetweentheencoders
+Label-Free-XAI
+across5runsinTable1.(cid:73)ExampleImportance:Foreach
+5https://github.com/vanderschaarlab/
+encoderf ,weuseourlabel-freeDeep-KNNtoproduce
+Label-Free-XAI e
+Label-FreeExplainabilityforUnsupervisedModels
+1.75
+1.50
+1.25
+1.00
+0.75
+0.50
+0.25
+0.00
+0 20 40 60 80 100
+% Perturbed Pixels
+tfihS
+noitatneserpeR
+16
+14
+12
+10
+8
+Method 6
+Gradient Shap 4
+Integrated Gradients
+Saliency 2
+Random
+0
+0 20 40 60 80 100
+% Perturbed Time Steps
+(a) MNIST
+tfihS
+noitatneserpeR
+800
+700
+600
+500
+400
+Method 300
+Gradient Shap 200
+Integrated Gradients
+Saliency 100
+Random
+0
+0 20 40 60 80 100
+% Perturbed Pixels
+(b) ECG5000
+tfihS
+noitatneserpeR
+Method
+Gradient Shap
+Integrated Gradients
+Saliency
+Random
+(c) CIFAR-10
+Figure2. Consistencycheckforlabel-freefeatureimportance(averageand95%confidenceinterval).
+0.7
+0.6
+0.5
+0.4
+0.3
+0.2
+0.1
+0.0
+20 40 60 80 100
+% Examples Selected
+etaR
+ytiralimiS
+Explainer 1.0
+Influence Functions TracIn
+SimplEx 0.8 DKNN
+Type of Examples Most Important
+Least Important 0.6
+0.4
+0.2
+20 40 60 80 100
+% Examples Selected
+(a) MNIST
+etaR
+ytiralimiS
+Explainer 0.17
+I T n ra fl c u I e n nce Functions 0.16
+S D i K m N p N lEx 0.15
+Type M o o f s E t x Im am po p r le ta s nt 0.14
+Least Important 0.13
+0.12
+0.11
+0.10
+0.09
+20 40 60 80 100
+% Examples Selected
+(b) ECG5000
+etaR
+ytiralimiS
+Explainer
+SimplEx DKNN
+Type of Examples Most Important
+Least Important
+(c) CIFAR-10
+Figure3. Consistencycheckforlabel-freeexampleimportance(onlyrepresentation-basedmethodsapplytoSimCLR).
+exampleimportancecn(f ,x)of1,000trainingexamples classifiergroupsexamplestogetheraccordingtoanexternal
+e
+xn ∈D for1,000testimagesx∈D . Again,weuse labelthatisunknowntotheautoencoders.
+train test
+thePearsoncorrelationcoefficienttocomparedifferenten-
+coders. WereporttheaveragePearsoncoefficientsbetween Table1.Pearsoncorrelationforsaliencymaps(avg+/-std).
+theencodersacross5runsinTable2.
+PEARSON RECON. DENOIS. INPAINT. CLASSIF.
+Results. (cid:73)Notallrepresentationsarecreatedequal. For RECON.
+saliency maps, the Pearson correlation coefficients range
+DENOIS. .39±.01
+INPAINT. .31±.02 .32±.01
+from .31 to .44. This corresponds to moderate positive
+CLASSIF. .44±.02 .40±.00 .32±.02
+correlations. A good baseline to interpret these results is
+providedby Ouerhanietal.(2003):thecorrelationbetween
+Table2.Pearsoncorrelationforexampleimportance(avg+/-std).
+thefixationoftwohumansubjects(humansaliencymaps)
+aretypicallyinthesamerange.Hence,twoencoderstrained
+PEARSON RECON. DENOIS. INPAINT. CLASSIF.
+ondistinctpretexttaskspayattentiontodifferentpartsofthe
+RECON.
+imageliketwoseparatehumansubjectstypicallydo. For DENOIS. .10±.04
+exampleimportancescores,thePearsoncorrelationcoeffi- INPAINT. .11±.03 .12±.03
+cientsrangefrom.06to.12,whichcorrespondtoweakcor-
+CLASSIF. .07±.03 .06±.02 .07±.01
+relations. Forbothexplanationtypes,thesequantitativere-
+sultsstronglysuggestthatdistinctpretexttasksdonotyield
+QualitativeAnalysis. Beyondquantitativeanalysis,label-
+interchangeablerepresentations. (cid:73)Whatmakesclassifica-
+free explainability allows us to appreciate qualitative dif-
+tionspecial? Forsaliencymaps,theautoencoder-classifier
+ferencesbetweendifferentencoders. Toillustrate,weplot
+correlations are comparable to those of the autoencoder-
+themostimportantDKNNand thesaliencymapsforthe
+autoencoder. This shows that using labels creates a shift
+variousencodersinFigure4. (cid:73)FeatureImportance: In
+inthesaliencymapscomparabletochangingtheunsuper-
+accordancewithourquantitativeanalysis,thesaliencymaps
+visedpretexttask. Hence,classificationdoesnotappearas
+betweendifferenttaskslookdifferent. Forinstance,thede-
+a privileged task in terms of feature importance. Things
+noisingencoderseemstofocusonsmallcontiguouspartsof
+are different for example importance: the autoencoder-
+theimages.Incontrast,theclassifierseemstofocusonafew
+classifiercorrelationsaresubstantiallylowerthanthoseof
+isolatedpixels.(cid:73)ExampleImportance:Thetopexamples
+theautoencoder-autoencoder. Onelikelyreasonisthatthe
+arerarelysimilaracrossvariouspretexttasks,assuggested
+Label-FreeExplainabilityforUnsupervisedModels
+(a) TopExamples (b) SaliencyMaps
+Figure4. Explanationsfordifferentpretexttasks.
+bythequantitativeanalysis. Theclassifieristheonlyone units for MNIST and d = 6 for dSprites. We train 20
+H
+thatassociatesanexampleofthesameclassgivenanam- disentangledVAEsofeachtypeforβ ∈{1,5,10}.
+biguous image like Image 3. (cid:73) Synergies: Sometimes,
+QualitativeAnalysis. WeuseGradientShaptoevaluate
+saliencymapspermittobetterunderstandexampleimpor-
+theimportance6a (µ ,x)ofeachpixelx fromtheimage
+tance. Forinstance,letusconsiderImage3. Incomparison i j i
+xtopredicteachlatentunitj ∈ [d ]. Again,weusethe
+totheotherencoders,thereconstructionencoderpaysless H
+Pearsoncorrelationtocomparethesaliencymapsforeach
+attentiontothecrucialloopattheimagebottom. Hence,it
+pairoflatentunit7. Inthiscase,alowPearsoncorrelation
+isnotsurprisingthatthecorrespondingtopexampleisless
+correspondstolatentunitspayingattentiontodistinctparts
+relevantthanthoseselectedbytheotherencoders.
+oftheimages. Clearly,thisisdesirableifwewanttoeasily
+identify the specialization of each latent unit. Therefore,
+4.3.ChallengingourAssumptionswithDisentangled
+usethiscriteriontoselectaVAEtoanalyseamongthe120
+VAEs
+VAEs we trained on each dataset. This corresponds to a
+InDefinition2.1,theinnerproductappearinginthelabel- β-VAEwithβ =10forMNISTandaTC-VAEwithβ =1
+freeimportanceexpressioncorrespondstoasumoverthe fordSprites. Weshowthevarioussaliencymapsfor4test
+latentspacedimensions. Inpractice,thishastheeffectof images on Figure 5. The saliency maps appear to follow
+mixingthefeatureimportanceforeachlatentunit(neuron) patterns that make the interpretation difficult. Here are a
+to compute an overall feature importance. While this is coupleofexamplesthatwecanobserve: (1)Alatentunit
+reasonablewhennoparticularmeaningisattachedtoeach issensitivetoagivenimagewhileinsensitivetoasimilar
+latentunit,itmightbeinappropriatewhentheunitsarede- image(e.g. LatentUnit1oftheMNISTVAEissensitive
+signedtobeinterpretable. DisantangledVAEs,forinstance, toImage1butnottoImage2). (2)Thefocusofalatent
+involvelatentunitsthataresensitivetochangeinsingledata unitchangescompletelybetweentwosimilarimages(e.g.
+generative factors, while invariants to other factors. This LatentUnit4ofthedSpritesVAEfocusesontheinteriorof
+selective sensitivity permits to assign a meaning to each thesquarefromImage1butonlyontheedgesofthesquare
+unit. An important question ensues: can we identify the fromImage2). (3)Severallatentunitsfocusonthesame
+generative factor associated to each latent unit by using partoftheimage(e.g. Image4ofMNISTandImage3of
+theirsaliencymaps? Toanswer,weproposeaqualitative dSprites). AdditionalexamplescanbefoundinAppendixC.
+andquantitativeanalysisofthesaliencymapsfromdisen-
+QuantitativeAnalysis. Ifweincreasethedisentanglement
+tangledlatentunits. Weshowthat, evenfordisentangled
+ofaVAE,doesitimplythatdistinctlatentunitsaregoingto
+β-VAEs, the saliency maps of individual latent units are
+focusonmoredistinctfeatures? ForthedisantangledVAEs
+hardtointerpretontheirown.
+weconsider,thestrengthofdisentanglementincreaseswith
+Setup. WestudytwopopulardisentangledVAEs: theβ- β. Hence,theabovequestioncanbeformulatedmorepre-
+VAE(Higginsetal.,2017)andtheTC-VAE(Chenetal., cisely:doesthecorrelationbetweenthelatentunitssaliency
+2018). ThosetwoVAEsinvolveavariationalencodercom- mapdecreasewithβ? Toanswerthisquestion, wemake
+putingtheexpectedrepresentationµ:X →Haswellasits box-plots of the Pearson correlation coefficients for both
+standarddeviationσ :X →Handadecoderf :H→X. VAEtypes(BetaandTC)andvariousvaluesofβ. Results
+d
+Latent samples are obtained with the reparametrization canbeobservedinFigure6. ForMNIST,thePearsoncorre-
+trick(Kingma&Welling,2013): h = µ(x)+σ(x)(cid:12)(cid:15), lationslightlydecreaseswithβ (Spearmanρ=−.15). For
+(cid:15) ∼ N(0,I). TheseVAEsaretrainedontheMNISTand dSprites,thePearsoncorrelationmoderatelyincreaseswith
+dSpritesdatasets(Mattheyetal.,2017)(90%−10%train-
+6Inthiscase,wedon’tuselabel-freefeatureimportanceb .
+testsplit)tominimizetheirobjective. Weused =3latent i
+H 7Weaveragethecorrelationoverpairsoflatentunits.
+Label-FreeExplainabilityforUnsupervisedModels
+(a) MNIST (b) dSprites
+Figure5. SaliencymapsforeachunitofthedisentangledVAEs.Thescaleisconstantforeachimage.
+(a) MNIST (b) dSprites
+Figure6. Pearsoncorrelationbetweensaliencymapsfordifferentvaluesofβ.
+β (Spearmanρ=.43). Thisanalysisshowsthatincreasing 5.Discussion
+β doesnotimplythatlatentunitsaregoingtopayattention
+Weintroducedlabel-freeexplainability,anewframeworkto
+todistinctpartoftheimages. Infact,theoppositeistrue
+extendlinearfeatureimportanceandexampleimportance
+for dSprites. If this results is surprising at first, it can be
+methodstotheunsupervisedsetting. Weshowedthatour
+understoodbythinkingaboutdisentanglement. Asafore-
+frameworkguaranteescrucialproperties,suchascomplete-
+mentioned,increasingdisentanglementencouragesdistinct
+nessandinvariancewithrespecttolatentsymmetries. We
+latent units to pay attention to distinct generative factors.
+validated the framework on several datasets and verified
+There is no guarantee that distinct generative factors are
+thatitpermitstocomparedifferentrepresentationspaces,
+associatedtodistinctfeatures. Toillustrate,letusconsider
+bothqualitativelyandquantitatively. Finally,wechallenged
+twogenerativefactorsofthedSpritesdataset: theposition
+somecommonbeliefsabouttheinterpretabilityofβ-VAEs.
+ofashapeanditsscale. Clearly,thesetwogenerativefac-
+tors can be identified by paying attention to the edges of Label-freeexplainabilityopensupmanyinterestingavenues
+the shape appearing on the image, as various latent units forfuturework. Afirstoneistheextensionofloss-based
+doinFigure5(b). Whenevergenerativefactorsarenotun- exampleimportancemethodstocontrastivelosses,hence
+ambiguouslyassociatedtoasubsetoffeatures,latentunits completingSection3. Anotheroneistocomparetherepre-
+canidentifydistinctgenerativefactorsbylookingatsimilar sentationlearnedbydifferentstateoftheartencoderswith
+features. Inthiscase,increasingdisentanglementoflatent theapproachfromSection4.2. Athirdone,assuggested
+unitsdoesnotnecessarilymaketheirsaliencymapsmore in Section 4.3, is to regularize latent units to make their
+decorrelated. We conclude two things: (1) If we want to individualsaliencymapsmoreinterpretable. Finally,amore
+identifytheroleofeachlatentunitwiththeirsaliencymaps, radicalwaytointerpretrepresentationspacesistousesym-
+disentanglementmightnotbetherightapproach. Perhapsit bolicregression(Crabbeetal.,2020)toexpresslatentunits
+ispossibletointroducepriorsonthesaliencymaptocontrol asclosedformexpressionsoftheinputfeatures.
+thefeaturesthemodelpaysattentionto,likeitwasdoneby
+Erionetal.(2021)inasupervisedsetting. Weleavethisfor
+Acknowledgements
+futureworks. (2)Takingaweightedsumofthesesaliency
+maps(asdonebyourlabel-freewrappers)doesnotsacrifice TheauthorsaregratefultoZhaozhiQian,AliciaCurthand
+anyinterpretableinformationspecifictoeachunit. the3anonymousICMLreviewersfortheirusefulcomments
+onanearlierversionofthemanuscript. JonathanCrabbe´ is
+fundedbyAvivaandMihaelavanderSchaarbytheOffice
+ofNavalResearch(ONR),NSF172251.
+Label-FreeExplainabilityforUnsupervisedModels
+References C. S. Opportunities and obstacles for deep learning in
+biologyandmedicine. JournalofTheRoyalSocietyIn-
+Adadi,A.andBerrada,M. PeekingInsidetheBlack-Box:
+terface,15(141):20170387,2018. ISSN1742-5689. doi:
+A Survey on Explainable Artificial Intelligence (XAI).
+10.1098/rsif.2017.0387.
+IEEE Access, 6:52138–52160, 2018. ISSN 21693536.
+doi: 10.1109/ACCESS.2018.2870052.
+Cook,R.D.andWeisenberg,S. Residualsandinfluencein
+regression. ChapmanandHall,NewYork,1982.
+Agarwal, N., Bullins, B., and Hazan, E. Second-Order
+StochasticOptimizationforMachineLearninginLinear
+Cover,T.M.andThomas,J.A. ElementsofInformation
+Time. JournalofMachineLearningResearch,18:1–40,
+Theory. Wiley, 2005. ISBN9780471241959. doi: 10.
+2016. ISSN15337928.
+1002/047174882X.
+Bach,S.,Binder,A.,Montavon,G.,Klauschen,F.,Mu¨ller,
+K.R.,andSamek,W. OnPixel-WiseExplanationsfor Crabbe´,J.andVanDerSchaar,M. Explainingtimeseries
+Non-Linear Classifier Decisions by Layer-Wise Rele- predictionswithdynamicmasks.InMeila,M.andZhang,
+vancePropagation. PLOSONE,10(7):e0130140,2015. T.(eds.),Proceedingsofthe38thInternationalConfer-
+ISSN 1932-6203. doi: 10.1371/JOURNAL.PONE. enceonMachineLearning,volume139ofProceedings
+0130140. ofMachineLearningResearch,pp.2166–2177.PMLR,
+2021.
+BarredoArrieta,A.,D´ıaz-Rodr´ıguez,N.,DelSer,J.,Ben-
+netot,A.,Tabik,S.,Barbado,A.,Garcia,S.,Gil-Lopez, Crabbe, J., Zhang, Y., Zame, W. R., and van der Schaar,
+S.,Molina,D.,Benjamins,R.,Chatila,R.,andHerrera, M. Learningoutsidetheblack-box: Thepursuitofinter-
+F. ExplainableArtificialIntelligence(XAI):Concepts, pretablemodels. InProceedingsofthe34thInternational
+taxonomies,opportunitiesandchallengestowardrespon- ConferenceonNeuralInformationProcessingSystems,
+sibleAI. InformationFusion,58:82–115,2020. ISSN NIPS’20,RedHook,NY,USA,2020.CurranAssociates
+15662535. doi: 10.1016/j.inffus.2019.12.012. Inc. ISBN9781713829546.
+Brocki, L. and Chung, N. C. Concept saliency maps to Crabbe´,J.,Qian,Z.,Imrie,F.,andvanderSchaar,M. Ex-
+visualize relevant features in deep generative models. plaining Latent Representations with a Corpus of Ex-
+Proceedings - 18th IEEE International Conference on amples. InAdvancesinNeuralInformationProcessing
+Machine Learning and Applications, ICMLA 2019, pp. Systems,2021.
+1771–1778,2019. doi: 10.1109/ICMLA.2019.00287.
+Das, A.andRad, P. OpportunitiesandChallengesinEx-
+Burgess, C. P., Higgins, I., Pal, A., Matthey, L., Watters,
+plainableArtificialIntelligence(XAI):ASurvey. arXiv,
+N.,Desjardins,G.,Lerchner,A.,andLondon,D. Under-
+2020.
+standingdisentanglinginβ-VAE. arXiv,2018.
+Davies, A., Velicˇkovic´, P., Buesing, L., Blackwell, S.,
+Chen, T., Kornblith, S., Norouzi, M., and Hinton, G. A
+Zheng, D., Tomasˇev, N., Tanburn, R., Battaglia, P.,
+Simple Framework for Contrastive Learning of Visual
+Blundell, C., Juha´sz, A., Lackenby, M., Williamson,
+Representations. 37thInternationalConferenceonMa-
+G., Hassabis, D., and Kohli, P. Advancing mathemat-
+chineLearning,ICML2020,pp.1575–1585,2020. doi:
+ics by guiding human intuition with AI. Nature 2021
+10.48550/arxiv.2002.05709.
+600:7887, 600(7887):70–74, 2021. ISSN 1476-4687.
+Chen,T.Q.,Li,X.,Grosse,R.,andDuvenaud,D. Isolating doi: 10.1038/s41586-021-04086-x.
+SourcesofDisentanglementinVariationalAutoencoders.
+6th International Conference on Learning Representa- Eberle,O.,Buttner,J.,Krautli,F.,Muller,K.R.,Valleriani,
+tions,ICLR2018-WorkshopTrackProceedings,2018. M.,andMontavon,G. BuildingandInterpretingDeep
+SimilarityModels. IEEETransactionsonPatternAnal-
+Ching, T., Himmelstein, D. S., Beaulieu-Jones, B. K., ysisandMachineIntelligence,44(3):1149–1161,2022.
+Kalinin,A.A.,Do,B.T.,Way,G.P.,Ferrero,E.,Agapow, ISSN19393539. doi: 10.1109/TPAMI.2020.3020738.
+P.-M.,Zietz,M.,Hoffman,M.M.,Xie,W.,Rosen,G.L.,
+Lengerich,B.J.,Israeli,J.,Lanchantin,J.,Woloszynek, Erion, G., Janizek, J. D., Sturmfels, P., Lundberg, S. M.,
+S.,Carpenter,A.E.,Shrikumar,A.,Xu,J.,Cofer,E.M., andLee,S.-I. Improvingperformanceofdeeplearning
+Lavender, C.A., Turaga, S.C., Alexandari, A.M., Lu, models with axiomatic attribution priors and expected
+Z., Harris, D. J., DeCaprio, D., Qi, Y., Kundaje, A., gradients. Nature Machine Intelligence 2021 3:7, 3
+Peng, Y., Wiley, L. K., Segler, M. H. S., Boca, S. M., (7):620–631, 2021. ISSN 2522-5839. doi: 10.1038/
+Swamidass, S. J., Huang, A., Gitter, A., and Greene, s42256-021-00343-w.
+Label-FreeExplainabilityforUnsupervisedModels
+Fong,R.C.andVedaldi,A. InterpretableExplanationsof Jumper,J.,Evans,R.,Pritzel,A.,Green,T.,Figurnov,M.,
+BlackBoxesbyMeaningfulPerturbation. Proceedingsof Ronneberger,O.,Tunyasuvunakool,K.,Bates,R.,Zˇ´ıdek,
+theIEEEInternationalConferenceonComputerVision, A., Potapenko, A., Bridgland, A., Meyer, C., Kohl, S.
+pp. 3449–3457, 2017. ISSN 15505499. doi: 10.1109/ A. A., Ballard, A. J., Cowie, A., Romera-Paredes, B.,
+ICCV.2017.371. Nikolov, S., Jain, R., Adler, J., Back, T., Petersen, S.,
+Reiman, D., Clancy, E., Zielinski, M., Steinegger, M.,
+Ghorbani,A.andZou,J. DataShapley:EquitableValuation
+Pacholska,M.,Berghammer,T.,Bodenstein,S.,Silver,
+ofDataforMachineLearning. 36thInternationalCon-
+D.,Vinyals,O.,Senior,A.W.,Kavukcuoglu,K.,Kohli,
+ference on Machine Learning, ICML 2019, 2019-June:
+P., and Hassabis, D. Highly accurate protein structure
+4053–4065,2019.
+predictionwithAlphaFold. Nature2021596:7873,596
+(7873):583–589,2021. ISSN1476-4687. doi: 10.1038/
+Ghorbani, A., Wexler, J., Zou, J., and Kim, B. Towards
+s41586-021-03819-2.
+Automatic Concept-based Explanations. Advances in
+NeuralInformationProcessingSystems,32,2019. ISSN
+Khosla, P., Teterwak, P., Wang, C., Sarna, A., Tian, Y.,
+10495258.
+Isola,P.,Maschinot,A.,Liu,C.,andKrishnan,D. Super-
+visedContrastiveLearning. AdvancesinNeuralInforma-
+Ghorbani, A., Kim, M. P., and Zou, J. A Distributional
+tionProcessingSystems,2020-December,2020. ISSN
+FrameworkforDataValuation. arXiv,2020.
+10495258.
+Glorot,X.,Bordes,A.,andBengio,Y.DeepSparseRectifier
+Kim, B., Wattenberg, M., Gilmer, J., Cai, C., Wexler, J.,
+NeuralNetworks,2011. ISSN1938-7228.
+Viegas,F.,andSayres,R. InterpretabilityBeyondFeature
+Goldberger, A. L., Amaral, L. A., Glass, L., Hausdorff, Attribution: Quantitative Testing with Concept Activa-
+J.M.,Ivanov,P.C.,Mark,R.G.,Mietus,J.E.,Moody, tionVectors(TCAV). 35thInternationalConferenceon
+G.B.,Peng,C.K.,andStanley,H.E. PhysioBank,Phys- MachineLearning,6:4186–4195,2017.
+ioToolkit,andPhysioNet: componentsofanewresearch
+Kingma,D.P.andBa,J.L. Adam:AMethodforStochastic
+resourceforcomplexphysiologicsignals. Circulation,
+Optimization. 3rdInternationalConferenceonLearning
+101(23),2000. doi: 10.1161/01.CIR.101.23.E215.
+Representations,ICLR2015-ConferenceTrackProceed-
+He, K., Zhang, X., Ren, S., and Sun, J. Deep Residual ings,2014.
+Learning for Image Recognition. Proceedings of the
+Kingma,D.P.andWelling,M. Auto-EncodingVariational
+IEEEComputerSocietyConferenceonComputerVision
+Bayes. 2ndInternationalConferenceonLearningRepre-
+andPatternRecognition,2016-December:770–778,2015.
+sentations,ICLR2014-ConferenceTrackProceedings,
+ISSN10636919. doi: 10.48550/arxiv.1512.03385.
+2013.
+Higgins, I., Matthey, L., Pal, A., Burgess, C., Glorot, X.,
+Koh,P.W.andLiang,P. UnderstandingBlack-boxPredic-
+Botvinick, M., Mohamed, S., Lerchner, A., and Deep-
+tionsviaInfluenceFunctions. InInternationalConfer-
+mind,G.beta-VAE:LearningBasicVisualConceptswith
+enceonMachineLearning,volume34,pp.2976–2987.
+aConstrainedVariationalFramework. InInternational
+PMLR,2017.
+ConferenceonLearningRepresentations,2017.
+Kokhlikyan, N., Miglani, V., Martin, M., Wang, E., Al-
+Holzinger, A., Goebel, R., Fong, R., Moon, T., Mu¨ller,
+sallakh,B.,Reynolds,J.,Melnikov,A.,Kliushkina,N.,
+K.-R., and Samek, W. xxAI - Beyond Explainable Ar-
+Araya,C.,Yan,S.,andReblitz-Richardson,O. Captum:
+tificial Intelligence, pp. 3–10. Springer International
+Aunifiedandgenericmodelinterpretabilitylibraryfor
+Publishing, 2022. ISBN 978-3-031-04083-2. doi:
+PyTorch. arXiv,2020.
+10.1007/978-3-031-04083-2 1.
+Kong,Z.andChaudhuri,K. UnderstandingInstance-based
+Hooker,S.,Erhan,D.,Kindermans,P.J.,andKim,B. A
+Interpretability of Variational Auto-Encoders. In Ad-
+benchmark for interpretability methods in deep neural
+vancesinNeuralInformationProcessingSystems,2021.
+networks. InAdvancesinNeuralInformationProcess-
+ingSystems,volume32.Neuralinformationprocessing Krizhevsky,A. Learningmultiplelayersoffeaturesfrom
+systemsfoundation,2019. tinyimages. Technicalreport,2009.
+Jing,L.andTian,Y. Self-SupervisedVisualFeatureLearn- LeMeur,O.andBaccino,T. Methodsforcomparingscan-
+ingwithDeepNeuralNetworks: ASurvey. IEEETrans- pathsandsaliencymaps: Strengthsandweaknesses. Be-
+actions on Pattern Analysis and Machine Intelligence, haviorResearchMethods,45(1):251–266,2013. ISSN
+43(11):4037–4058, 2021. doi: 10.1109/TPAMI.2020. 1554351X. doi: 10.3758/S13428-012-0226-9/TABLES/
+2992393. 2.
+Label-FreeExplainabilityforUnsupervisedModels
+LeCun,Y.,Bottou,L.,Bengio,Y.,andHaffner,P. Gradient- LectureNotesinArtificialIntelligenceandLectureNotes
+based learning applied to document recognition. Pro- inBioinformatics),3176:63–71,2003. ISSN16113349.
+ceedings of the IEEE, 86(11):2278–2323, 1998. ISSN doi: 10.1007/978-3-540-28650-9 4.
+00189219. doi: 10.1109/5.726791.
+Ribeiro, M.T., Singh, S., andGuestrin, C. ”Whyshould
+Lipton,Z.C. TheMythosofModelInterpretability. Com- i trust you?” Explaining the predictions of any classi-
+municationsoftheACM,61(10):35–43,2016. fier. InProceedingsoftheACMSIGKDDInternational
+ConferenceonKnowledgeDiscoveryandDataMining,
+Lundberg,S.andLee,S.-I.AUnifiedApproachtoInterpret-
+volume 13-17, pp. 1135–1144. Association for Com-
+ingModelPredictions. AdvancesinNeuralInformation
+puting Machinery, 2016. ISBN 9781450342322. doi:
+ProcessingSystems,pp.4766–4775,2017.
+10.1145/2939672.2939778.
+Matthey, L., Higgins, I., Hassabis, D., and Lerchner,
+Rudin, C. Stop explaining black box machine learning
+A. dSprites: Disentanglement testing Sprites dataset.
+models for high stakes decisions and use interpretable
+https://github.com/deepmind/dsprites-dataset/,2017.
+modelsinstead. NatureMachineIntelligence20191:5,
+Montavon, G., Samek, W., and Mu¨ller, K. R. Methods 1(5):206–215, 2019. ISSN 2522-5839. doi: 10.1038/
+forinterpretingandunderstandingdeepneuralnetworks. s42256-019-0048-x.
+DigitalSignalProcessing,73:1–15,2018. ISSN1051-
+Sarhan, M. H., Eslami, A., Navab, N., and Albarqouni,
+2004. doi: 10.1016/J.DSP.2017.10.011.
+S. LearningInterpretableDisentangledRepresentations
+Ouerhani, N., Hu¨gli, H., Mu¨ri, R., and Von Wartburg, R. Using Adversarial VAEs. Lecture Notes in Computer
+EmpiricalValidationoftheSaliency-basedModelofVi- Science(includingsubseriesLectureNotesinArtificial
+sual Attention. Electronic Letters on Computer Vision IntelligenceandLectureNotesinBioinformatics),11795
+andImageAnalysis,3(1):13–23,2003. LNCS:37–44,2019. doi: 10.1007/978-3-030-33391-1 5.
+Pandit,P.,Sahraee-Ardakan,M.,Rangan,S.,Schniter,P., Shannon, C. E. A Mathematical Theory of Communi-
+Fletcher, A. K., Pandit, P., Sahraee-Ardakan, M., and cation. Bell System Technical Journal, 27(4):623–656,
+Fletcher, A.K. InferencewithDeepGenerativePriors 1948. ISSN00058580. doi: 10.1002/j.1538-7305.1948.
+inHighDimensions. IEEEJournalonSelectedAreasin tb00917.x.
+InformationTheory,1(1):336–347,2019. doi: 10.1109/
+jsait.2020.2986321. Shrikumar, A., Greenside, P., and Kundaje, A. Learning
+ImportantFeaturesThroughPropagatingActivationDif-
+Papernot,N.andMcDaniel,P. Deepk-NearestNeighbors: ferences. 34th International Conference on Machine
+TowardsConfident,InterpretableandRobustDeepLearn- Learning,ICML2017,7:4844–4866,2017.
+ing. arXiv,2018.
+Simonyan, K., Vedaldi, A., and Zisserman, A. Deep In-
+Pearlmutter,B.A. FastExactMultiplicationbytheHessian.
+sideConvolutionalNetworks: VisualisingImageClassi-
+NeuralComputation,6:160,1994.
+ficationModelsandSaliencyMaps. 2ndInternational
+Conference on Learning Representations, ICLR 2014 -
+Pruthi,G.,Liu,F.,Sundararajan,M.,andKale,S. Estimat-
+WorkshopTrackProceedings,2013.
+ingTrainingDataInfluencebyTracingGradientDescent.
+InAdvancesinNeuralInformationProcessingSystems,
+Sundararajan,M.,Taly,A.,andYan,Q. AxiomaticAttribu-
+pp.19920–19930.CurranAssociates,Inc.,2020.
+tionforDeepNetworks. 34thInternationalConference
+Rai, A. Explainable AI: from black box to glass box.
+onMachineLearning,ICML2017,7:5109–5118,2017.
+Journal of the Academy of Marketing Science 2019
+Tjoa,E.andGuan,C. ASurveyonExplainableArtificial
+48:1, 48(1):137–141, 2019. ISSN 1552-7824. doi:
+Intelligence(XAI):TowardMedicalXAI. IEEETrans-
+10.1007/S11747-019-00710-5.
+actionsonNeuralNetworksandLearningSystems,pp.
+Rajkomar, A., Dean, J., and Kohane, I. Machine 1–21,2020. ISSN2162-237X. doi: 10.1109/tnnls.2020.
+Learning in Medicine. New England Journal of 3027314.
+Medicine, 380(14):1347–1358, 2019. ISSN 0028-
+Voulodimos,A.,Doulamis,N.,Doulamis,A.,andProtopa-
+4793. doi: 10.1056/NEJMRA1814259/SUPPL FILE/
+padakis, E. Deep Learning for Computer Vision: A
+NEJMRA1814259 DISCLOSURES.PDF.
+Brief Review. Computational Intelligence and Neuro-
+Rasmussen,C.E. GaussianProcessesinMachineLearning. science, 2018, 2018. ISSN 16875273. doi: 10.1155/
+LectureNotesinComputerScience(includingsubseries 2018/7068349.
+Label-FreeExplainabilityforUnsupervisedModels
+Wachter,S.,Mittelstadt,B.,andRussell,C. Counterfactual
+ExplanationswithoutOpeningtheBlackBox:Automated
+DecisionsandtheGDPR.SSRNElectronicJournal,2017.
+ISSN1556-5068. doi: 10.2139/ssrn.3063289.
+Yeh, C.-K., Kim, J. S., Yen, I. E. H., and Ravikumar, P.
+RepresenterPointSelectionforExplainingDeepNeural
+Networks. AdvancesinNeuralInformationProcessing
+Systems,31:9291–9301,2018.
+Young,T.,Hazarika,D.,Poria,S.,andCambria,E. Recent
+trendsindeeplearningbasednaturallanguageprocessing.
+IEEEComputationalIntelligenceMagazine,13(3):55–75,
+2018. ISSN15566048. doi: 10.1109/MCI.2018.2840738.
+Label-FreeExplainabilityforUnsupervisedModels
+A.PropertiesoftheLabel-FreeExtensions
+In this appendix, we prove the completeness property. Next, we motivate and prove the orthogonal invariance of our
+label-freeextensions.
+A.1.Completeness
+LetusproveProposition2.3.
+Proof. TheproofisanimmediateconsequenceofDefinition2.1andthecompletenesspropertyofthefeatureimportance
+scorea :
+i
+(cid:88)
+dX
+(1)(cid:88)
+dX
+b (f,x)= a (g ,x)
+i i x
+i=1 i=1
+=g (x)−a ,
+x 0
+where we used the completeness property to obtain the second equality and a ∈ R is the baseline for the importance
+0
+scorea . Bynotingthatg (x) = (cid:104)f(x),f(x)(cid:105) = (cid:107)f(x)(cid:107)2 ,weobtainthedesiredequality(3)withtheidentification
+i x H H
+b =a .
+0 0
+A.2.Invariancewithrespecttolatentsymmetries
+In Section 1, we described the ambiguity associated to the axes of the latent space H. This line of reasoning can be
+mademoreformalwithsymmetries. Duetothefactthateachaxisofthelatentspaceisnotassociatedwithafixedand
+predeterminedlabel,thereexistsmanylatentspacesthatareequivalenttoeachother. Forinstance,ifweswaptwoaxes
+ofthelatentspacebyrelabellingh (cid:55)→ h andh (cid:55)→ h , wedonotchangethelatentspacestructure. Moregenerally,
+1 2 2 1
+givenaninnerproduct(cid:104)·,·(cid:105) ,thesetoftransformationsthatleavethegeometryofthelatentspaceHinvariantisthesetof
+H
+orthogonaltransformations.
+DefinitionA.1(OrthogonalTransformations). LetHbearealvectorspaceequippedwithaninnerproduct(cid:104)·,·(cid:105) :H2 →R.
+H
+AnorthogonaltransformationisalinearmapT :H→Hsuchthatforallh ,h ∈H,wehave:
+1 2
+(cid:104)T(h ),T(h )(cid:105) =(cid:104)h ,h (cid:105) .
+1 2 H 1 2 H
+(cid:124)
+Remark A.2. In the case where (cid:104)·,·(cid:105) is the standard euclidean inner product (cid:104)h ,h (cid:105) = h h , the orthogonal
+H 1 2 H 1 2
+transformationsarerepresentedbyorthogonalmatricesinO(d
+H
+) = {M ∈ RdH×dH | M (cid:124) M}. Thesetransformations
+includerotations,axespermutationsandmirrorsymmetries.
+Ofcourse,sincethesetransformationsleavethegeometryofthelatentspaceinvariant,wewouldexpectthesameforthe
+explanations. Weverifythatthisisindeedthecaseforourlabel-freeextensionoffeatureimportance.
+Proposition A.3 (Label-Free Feature Importance Invariance). The label-free importance scores b (·,·),i ∈ [d ] are
+i X
+invariantwithrespecttoorthogonaltransformationsinthelatentspaceH,(cid:104)·,·(cid:105) . Moreformally,forallf ∈ A(HX),
+H
+x∈X andi∈[d ]:
+X
+b (T ◦f,x)=b (f,x),
+i i
+whereT isanyorthogonaltransformationofthelatentspaceH,(cid:104)·,·(cid:105) .
+H
+RemarkA.4. ThispropertyisafurthermotivationfortheusageofaninnerproductinDefinition2.1.
+Proof. ThispropositionisatrivialconsequenceoftheinnerproductappearinginDefinition2.1. LetgT betheauxiliary
+x
+functionassociatedtoT ◦f forsomex∈X. Wenotethatforallx˜ ∈X:
+gT(x˜) ( = 2) (cid:104)T ◦f(x),T ◦f(x˜)(cid:105)
+x H
+=(cid:104)f(x),f(x˜)(cid:105)
+H
+(2)
+=g (x˜),
+x
+Label-FreeExplainabilityforUnsupervisedModels
+whereweusedthefactthatT isorthogonalinthesecondequalityandg (x˜)istheauxiliaryfunctionassociatedtof. Since
+x
+thisholdsforanyx˜ ∈X,wehavethatgT =g forallx∈X. Thisallowsustowrite:
+x x
+b (T ◦f,x) ( = 1) a (gT,x)
+i i x
+=a (g ,x)
+i x
+(1)
+=b (f,x)
+i
+forallx∈X andi∈[d ]. Thisisthedesiredidentity.
+X
+Whenitcomestoexampleimportancemethods,thesameguaranteeholdsforrepresentation-basedmethods:
+PropositionA.5(Representation-BasedExampleImportanceInvariance). LetH,(cid:104)·,·(cid:105) bealatentspace. Thelabel-free
+H
+importancescorescn(·,·),n∈[N]outputtedbyDKNN (5)areinvariantwithrespecttoorthogonaltransformationsofHif
+theyaredefinedwithakernelκ:H2 →R+thatisinvariantwithrespecttoorthogonaltransformations:
+κ(T(h ),T(h ))=κ(h ,h )
+1 2 1 2
+for all orthogonal transformation T and h ,h ∈ H. Similarly, the importance scores outputted by SimplEx (6) are
+1 2
+invariantwithrespecttoorthogonaltransformationsofH. Inbothcases, theinvariancepropertycanbewrittenmore
+formally: forallf ∈A(HX),x∈X andn∈[N]:
+cn(T ◦f,x)=cn(f,x)
+RemarkA.6. Theinvariancepropertyforthekernelfunctionisverifiedforkernelsthatinvolvetheinner-product(cid:104)·,·(cid:105)
+H
+intheirdefinition. ThisincludesRBF,MaternandPolynomialKernels(Rasmussen,2003). Notethatconstantkernels
+triviallyverifythisproperty. Finally,replacingthekernelfunctionbytheinverse-distanceinlatentspace(asitisdoneinour
+implementation)κ(h ,h )=(cid:107)h −h (cid:107)−1alsopreservestheinvarianceproperty.
+1 2 1 2 H
+Proof. Westartbynotingthatthelatentspacedistanceisinvariantunderorthogonaltransformations. forallh ,h ∈H:
+1 2
+(cid:107)T(h )−T(h )(cid:107)2 =(cid:107)T(h −h )(cid:107)2
+1 2 H 1 2 H
+=(cid:104)T(h −h ),T(h −h )(cid:105)
+1 2 1 2 H
+=(cid:104)h −h ,h −h (cid:105)
+1 2 1 2 H
+=(cid:107)h −h (cid:107)2 ,
+1 2 H
+where we successively used the linearity and orthogonality of T. Note that this equation is equivalent to
+(cid:107)T(h )−T(h )(cid:107) =(cid:107)h −h (cid:107) asbothnormsarepositive. SincethelatentKNNsin(5)arecomputedwiththislatent
+1 2 H 1 2 H
+spacedistance,wededucetheirinvarianceunderorthogonaltransformations. Bycombiningthistotheinvarianceofthe
+kernel,weobtainthedesiredinvariancefortheDKNNimportancescores(5). Forallx∈X,f ∈A(HX)andorthogonal
+transformationT:
+cn (T ◦f,x) ( = 5) 1[n∈KNN(x)]·κ[T ◦f(xn),T ◦f(x)]
+DKNN
+=1[n∈KNN(x)]·κ[f(xn),f(x)]
+( = 5) cn (f,x),
+DKNN
+wherewehaveusedtheinvariancepropertytoobtainthesecondequality. WecanproceedsimilarlyforSimplEx(6):
+(cid:13) (cid:13)
+cn (T ◦f,x) ( = 6) argmin (cid:13) (cid:13)T ◦f(x)− (cid:88) N λnT ◦f(xn) (cid:13) (cid:13)
+SimplEx (cid:13) (cid:13)
+λ∈[0,1]N(cid:13)
+n=1
+(cid:13)
+H
+(cid:13) (cid:13) (cid:34) (cid:88) N (cid:35)(cid:13) (cid:13)
+=argmin(cid:13)T f(x)− λnf(xn) (cid:13)
+(cid:13) (cid:13)
+λ∈[0,1]N(cid:13)
+n=1
+(cid:13)
+H
+(cid:13) (cid:13)
+(cid:13) (cid:88) N (cid:13)
+=argmin(cid:13)f(x)− λnf(xn)(cid:13)
+(cid:13) (cid:13)
+λ∈[0,1]N(cid:13)
+n=1
+(cid:13)
+H
+( = 6) cn (f,x),
+SimplEx
+Label-FreeExplainabilityforUnsupervisedModels
+wherewehavesuccessivelyusedthelinearityandorthogonalityofT. Thosearethedesiredidentities.
+Theonlylabel-freeextensionthatwehavenotyetdiscussedaretheloss-basedexampleimportancemethodsfromSection3.1.
+Unfortunately,duetothefactthattheblack-boxf isonlyacomponentrequiredintheevaluationofthelossL,itisnot
+possibletoprovideageneralguaranteelikeinthepreviousexamples. Ifwetaketheexampleoftheautoencoderf ◦f ,
+d e
+wenotethatapplyinganorthogonaltransformationf (cid:55)→ T ◦f totheencoderleavestheautoencoderinvariantonly
+e e
+ifthistransformationisundonebythedecoderf (cid:55)→f ◦T−1. Unliketheothermethods,theinvarianceofloss-based
+d d
+exampleimportancescoresthereforerequiresrestrictiveassumptions. Ifinvarianceoftheexplanationsunderorthogonal
+transformationsisrequired,thismightbeanargumentinfavourofrepresentation-basedmethods.
+B.ImplementationDetails
+Inthisappendix,wedetailtheimplementationofourlabel-freeextensions.
+B.1.Label-FreeFeatureImportance
+Thelabel-freefeatureimportancemethodsusedinourexperimentsaredescribedinTable3:
+Table3. FeatureImportanceMethods.
+Method Ref. Linearity Completeness Label-FreeExpression
+Saliency (Simonyanetal.,2013) (cid:51) (cid:55) b i (f,x)= ∂ ∂ g x x i (x)
+IntegratedGradients (Sundararajanetal.,2017) (cid:51) (cid:51) b i (f,x)=(x i −x¯ i ) (cid:82) 0 1∂ ∂ g x (cid:104) x i (x+τ(x−x¯))dτ (cid:105)
+GradientShap (Lundberg&Lee,2017) (cid:51) (cid:51) b i (f,x)=(x i −x¯ i )E (cid:15),U ∂ ∂ g x x i (x+(cid:15)+U(x−x¯))
+DeepLift (Shrikumaretal.,2017) (cid:51) (cid:51) b(f,x)=C
+i ∆xi∆gx
+where x¯ ∈ X is a baseline input, (cid:15) ∼ N(0,I), U ∼ Uniform(0,1) and C is used by propagating the Deeplift
+∆xi∆gx
+rulesalongthecomputationalgraphofg . Notethat,ineachcase,partialderivativesarecomputedwithrespecttothe
+x
+argumentofg only(hencewedonotconsiderderivativesoftheformg ). WeusetheCaptum(Kokhlikyanetal.,2020)
+x ∂x
+∂xi
+implementationofeachmethod.
+Toextendthisimplementationtothelabel-freesetting,itisnecessarytodefineanauxiliaryfunctiong associatedtothe
+x
+vectorialblack-boxfunctionf foreachtestingexamplex∈D . WithlibrariessuchasPytorch,itispossibletodefinean
+test
+auxiliaryfunctionasawrapperaroundthemodulethatrepresentsf. Thisallowsustocomputetheimportancescoreswith
+asinglebatchcalloftheoriginalfeatureimportancemethod,asdescribedinAlgorithm1.
+Algorithm1Label-FreeFeatureImportance
+Input: BatchX ∈XB ofsizeB,Black-boxf :X →H,Featureimportancemethoda (·,·):A(HX)×XB →RB
+i
+Output: Batchlabel-freefeatureimportanceb (f,X).
+i
+Definebatchauxiliaryfunctiong asawrapperaroundf accordingto(2).
+X
+Computethelabel-freeimportancescoresforthebatchb (f,X)←a (g ,X).
+i i X
+B.2.Label-FreeExampleImportance
+Wedetailthelabel-freeexampleimportancemethodsusedinourexperimentsinTable4:
+Label-FreeExplainabilityforUnsupervisedModels
+Table4. ExampleImportanceMethods.
+MethodType Method Ref. Label-FreeExpression
+InfluenceFunctions (Koh&Liang,2017) cn(f,x)= N 1 (cid:10) ∇ θr L(x,θ ∗ ),H− θr 1∇ θr L(xn,θ ∗ ) (cid:11) Θr
+Loss-Based
+TracIn (Pruthietal.,2020) cn(f,x)=(cid:80)T t=1 η t (cid:104)∇ θr L(x,θ t ),∇ θr L(xn,θ t )(cid:105) Θr
+DeepK-NearestNeighbours (Papernot&McDaniel,2018) cn(f,x)=1[n∈KNN(x)]·κ[f(xn),f(x)]
+(cid:13) (cid:13)
+Representation-Based cn(f,x)=argmin (cid:13)f(x)−(cid:80)N λnf(xn)(cid:13)
+λ∈[0,1]N(cid:13) n=1 (cid:13)
+SimplEx (Crabbe´etal.,2021) H
+s.t. (cid:80)N λn=1
+n=1
+where θ are the parameters of the black-box f. Our implementation closely follows the above references with some
+r
+subtledifferences. Forcompleteness,wedetailthealgorithmusedforeachmethod. WestartwithInfluenceFunctionsin
+Algorithm2.
+Algorithm2Label-FreeInfluenceFunctions
+Input: Test input x ∈ X, Black-box f : X → H, Optimized parameters θ ∈ Θ, Relevant black-box parameters
+∗
+θ ∈Θ,LossfunctionL:X ×Θ→Rusedtotraintheblack-box,TrainingsetD ={xn |n∈[N]},Numberof
+r r train
+samplesS ∈N∗,NumberofrecursionsR∈N∗.
+Output: Label-freeinfluencefunctionscn(f,x).
+Initializev ←∇ L(x,θ ).
+0 θr ∗
+Initializev ←v .
+0
+forrecursionin[R]do
+SampleS trainingpointsxn1,...,xnS fromthetrainingsetD
+train
+.
+MakeaMonte-CarloestimationofthetraininglossHessianH ←
+S
+1∇2
+θr
+(cid:80)S
+s=1
+L(xns,θ
+∗
+).
+UpdatetheestimatefortheinverseHessian-vectorproductv ←v +(I−H)v.
+0
+endfor
+Computetheinfluencefunctioncn(f,x)←v(cid:124)∇ L(xn,θ )
+θr ∗
+ThisimplementationfollowstheoriginalimplementationbyKoh&Liang(2017)thatleveragestheliteratureonsecond-order
+approximationtechniques(Pearlmutter,1994;Agarwaletal.,2016). NotethatMonte-CarloestimationsoftheHessian
+quicklybecomeexpensivewhenthenumberofmodelparametersgrows. Duetoourlimitedcomputinginfrastructure,we
+limitthenumberofrecursionstoR=100. Furthermore,weonlycomputeinfluencefunctionsforsmallersubsetsofthe
+trainingandtestingset. Thelabel-freeversionofTracInisdescribedinAlgorithm3. Inourimplementation,wecreatea
+checkpointaftereachintervalof10epochsduringtraining.
+WhenitcomestoDKNN,theformula(5)canbecomputedexplicitlywithoutfollowingaparticularprocedure. Inour
+implementation,wereplacedthekernelfunctionbyaninversedistanceκ(h ,h ) = (cid:107)h −h (cid:107)−1. Further,tomakeit
+1 2 1 2 H
+morefairwithotherbaselinesthatassignascoretoeachexamples(andnotonlytoK ∈N∗examples),weremovedthe
+indicatorin(5): 1[n ∈ KNN(x)] (cid:55)→ 1. Inthisway,theK mostimportantexamplesalwayscorrespondtotheK nearest
+neighbours. Finally,thelabel-freeversionofSimplExisdescribedinAlgorithm4.
+NotethatourimplementationofSimplExisidenticaltotheoriginalone. ItreliesonanAdam(Kingma&Ba,2014)with
+thedefaultPytorchparameters(learningrate=.001,β =.9,β =.999,(cid:15)=10−8,weightdecay=0).
+1 2
+Label-FreeExplainabilityforUnsupervisedModels
+Algorithm3Label-FreeTracIn
+Input: Testinputx ∈ X, Black-boxf : X → H, Checkpointparameters{θ ∈ Θ | t ∈ [T]}, Relevantblack-box
+t
+parametersθ ∈Θ,LossfunctionL:X ×Θ→Rusedtotraintheblack-box,TrainingsetD ={xn |n∈[N]},
+r r train
+Checkpointlearningrates{η ∈R|t∈[T]}.
+t
+Output: Label-freeTraceInscorescn(f,x).
+Initializec←0.
+fortin[T]do
+Updatetheestimatec←c+η ∇ (cid:124) L(xn,θ )∇ L(x,θ ).
+t θr t θr t
+endfor
+Returnthescorecn(f,x)←c
+Algorithm4SimplEx
+Input: Testinputx∈X,Black-boxf :X →H,TrainingsetD ={xn |n∈[N]},NumberofepochsE ∈N∗.
+train
+Output: SimplExscorescn(f,x).
+Initializeweights(wn)N ←0.
+n=1
+forepochin[E]do
+Normalizeweights(λn)N ←Softmax (cid:2) (wn)N (cid:3)
+n=1 n=1
+(cid:13) (cid:13)
+EstimateErrorL=(cid:13)f(x)− (cid:80)N λnf(xn)(cid:13) .
+(cid:13) n=1 (cid:13)
+H
+UpdateweightswithAdam(wn)N ←AdamStep(L).
+n=1
+endfor
+Returnthescorecn(f,x)←λn
+Inthissection,wehavepresentedmanylabel-freeimplementationsoffeatureandexampleimportancemethods. Forsome
+typesofexplanations,likecounterfactualexplanations(Wachteretal.,2017),thelabelplaysanessentialrole. Hence,it
+doesnotalwaysmakesensetoextendanexplanationtothelabel-freesetting.
+C.ExperimentsDetails
+Inthisappendix,weprovidefurtherdetailstosupporttheexperimentsdescribedinSection4. Allourexperimentshave
+beenperformedonamachinewithIntel(R)Core(TM)i5-8600KCPU@3.60GHz[6cores]andNvidiaGeForceRTX2080
+TiGPU.OurimplementationisdonewithPython3.8andPytorch1.10.0.
+C.1.ConsistencyChecks
+WeprovidesomedetailsfortheexperimentsinSection4.1.
+ECG5000 dataset. The dataset D contains 5000 univariate time series8 (x )T ∈ XT describing the heartbeat of a
+t t=1
+patient. EachtimeseriesdescribesasingleheartbeatwitharesolutionofT =140timesteps. Forthesakeofnotation,we
+willrepresentunivariatetimeseriesbyvectors: x=(x )T . Eachtimeseriescomeswithalabely ∈{0,1}indicatingif
+t t=1
+theheartbeatisnormal(y = 0)orabnormal(y = 1). Sinceitislaborioustomanuallyannotate5000timeseries,those
+labelsweregeneratedautomatically. Ofcourse,thoselabelsarenotgoingtobeusedintrainingourmodel. Weonlyusethe
+labelstoperformconsistencychecksoncethemodelhasbeentrained.
+8Notethattisusedtoindexthetimeseriessteps,asopposedtomodelcheckpointsinSection3.1.
+Label-FreeExplainabilityforUnsupervisedModels
+MNISTautoencoder. Weuseadenoisingautoencoderf ◦f :X →X thatconsistsinanencoderf :X →Handa
+d e e
+decoderf :H→X withd =282,d =4.ThearchitecturefortheautoencoderisdescribedinTable5.Wecorrupteach
+d X H
+trainingimagex∈D
+train
+withrandomnoise(cid:15)∼N(0,I/3)whereIistheidentitymatrixonX.Theautoencoderistrainedto
+minimizethedenoisinglossL (x)=E [x−f ◦f (x+(cid:15))]2.Theautoencoderistrainedfor100epochswithpatience10
+den (cid:15) d e
+byusingPytorch’sAdamwithhyperparameters:learningrate=.001,β =.9,β =.999,(cid:15)=10−8,weightdecay=10−5.
+1 2
+Thetestingsetissometimesusedforearlystopping. Thisisacceptablebecauseassessingthegeneralizationofthelearned
+modelisnotthefocusofourpaper. Rather,weonlyusethetestsettostudytheexplanationsofthelearnedmodel.
+ECG5000 autoencoder. (cid:73) Feature importance: We train a reconstruction autoencoder f ◦f : XT → XT that
+d e
+consists in an encoder f : XT → H and a decoder f : H → XT with d = 64. This model is trained with a
+e d H
+trainingsetD of2919timeseriesfromD thatcorrespondtonormalheartbeats: y = 0. Inthisway, thetestingset
+train
+D = D\D containsonlyabnormalheartbeats: y = 1. Themodelistrainedtominimizethereconstructionloss
+test train
+L (x)=
+(cid:80)T
+|x −[f ◦f (x)] |.Theautoencoderistrainedfor150epochswithpatience10byusingPytorch’sAdam
+rec t=1 t d e t
+withhyperparameters: learningrate=.001,β =.9,β =.999,(cid:15)=10−8,weightdecay=0. Itsdetailedarchitectureis
+1 2
+presentedinTable6. (cid:73)Exampleimportance: WeusetheautoencoderdescribedinTable6withd =32. Thewhole
+H
+trainingprocessisidenticaltotheoneforfeatureimportancewithonedifference: D andD arenowobtainedwitha
+train test
+randomsplitofD(80%−20%). Thismeansthatbothsubsetscontainnormalandabnormalheartbeats.
+CIFAR-10SimCLR. WeuseaSimCLRnetworkf ◦f :X →P thatconsistsinaResnet-18encoderf :X →H
+p e e
+andamultilayerperceptronprojectionheadf :H→P withd =3·322,d =512. ThearchitecturefortheSimCLR
+p X H
+networkisdescribedinTable7.WeuseSimCLR’scontrastivelosstotrainthemodel(Chenetal.,2020).Themodelistrained
+for100epochsbyusingPytorch’sSGDwithhyperparameters: learningrate=.6,momentum=.9,weightdecay=10−6.
+Table5. MNISTAutoencoderArchitecture.
+Component LayerType Hyperparameters ActivationFunction
+Conv2d InputChannels:1;OutputChannels:8;KernelSize:3;Stride:2;Padding:1 ReLU
+Conv2d InputChannels:8;OutputChannels:16;KernelSize:3;Stride:2;Padding:1 ReLU
+BatchNorm InputChannels:16 ReLU
+Encoder Conv2d InputChannels:16;OutputChannels:32;KernelSize:3;Stride:2;Padding:0 ReLU
+Flatten StartDimension:1
+Linear InputDimension:288;OutputDimension:128 ReLU
+Linear InputDimension:128;OutputDimension:4
+Linear InputDimension:4;OutputDimension:128 ReLU
+Linear InputDimension:128;OutputDimension:288 ReLU
+Unflatten Dimension:1;UnflattenSize:(32,3,3)
+ConvTranspose2d InputChannels:32;OutputChannels:16;KernelSize:3;Stride:2;OutputPadding:0
+Decoder
+BatchNorm InputChannels:16 ReLU
+ConvTranspose2d InputChannels:16;OutputChannels:8;KernelSize:3;Stride:2;OutputPadding:1
+BatchNorm InputChannels:8 ReLU
+ConvTranspose2d InputChannels:8;OutputChannels:1;KernelSize:3;Stride:2;OutputPadding:1 Sigmoid
+FeatureImportance. AsabaselineforMNISTfeatureimportance,weuseablackimagex¯ =0. ForECG5000,weuse
+theaveragenormalheartbeatasabaseline: x¯ =(cid:80)
+x∈Dtrain
+x/|Dtrain|. ForCIFAR-10,weuseablurredversionoftheimagex
+wewishtoexplainasabaseline: x¯ =G ⊗x,whereG isaGaussianblurwithkernelofsize21withwidthσ =5and⊗
+σ σ
+denotestheconvolutionoperator.
+Label-FreeExplainabilityforUnsupervisedModels
+Table6. ECG5000AutoencoderArchitecture.
+Component LayerType Hyperparameters ActivationFunction
+LSTM InputSize:1;HiddenSize:2·d
+H
+Encoder
+LSTM InputSize:2·d ;HiddenSize:d
+H H
+ThelatentrepresentationhisgivenbytheoutputofthesecondLSTMatthelasttimestep.
+Representation
+ThisrepresentationiscopiedateachtimesteptobeavalidinputforthefirstdecoderLSTM.
+LSTM InputSize:d ;HiddenSize:d
+H H
+Decoder LSTM InputSize:d ;HiddenSize:2·d
+H H
+Linear InputDimension:2·d ;OutputDimension:1
+H
+Table7. CIFAR-10ResNet-18Architecture.
+Component LayerType Hyperparameters ActivationFunction
+Encoder ResNet-18 SimilartoAppendixB.9in(Chenetal.,2020).
+Linear InputDimension:512;OutputDimension:2048 ReLU
+ProjectionHead
+Linear InputDimension:2048;OutputDimension:128
+ROARTest. WeperformtheROARtest(Hookeretal.,2019)forourlabel-freefeatureimportancemethods. Thesetup
+issimilartoSection4.1exceptthatthemostimportantpixelsareremovedandanewautoencoderisfittedontheablated
+dataset. WereporttheresultsinFigure7. Again,thelabel-freefeatureimportancemethodsdiscoverpixelsthatincreasethe
+testlossmoresubstantiallythanrandompixelswhenremoved,whichsupportstheresultsfromthemainpaper.
+0.10
+0.09
+0.08
+0.07
+0.06
+0.05
+0.04
+0.03
+0 20 40 60 80 100
+% of features removed
+ssoL
+tseT
+Method
+Gradient Shap
+Integrated Gradients
+Random
+Figure7. ROARtestforMNISTdenoisingautoencoder.
+C.2.PretextTaskSensitivity
+WeprovidesomedetailsfortheexperimentsinSection4.2.
+Models. All the autoencoders have the architecture described in Table 5. The classifier has all the layers from the
+encoder in Table 5 with an extra linear layer (Input Dimension:4 ; Output Dimension:10 ; Activation:Softmax) that
+converts the latent representations to class probabilities. Hence, it can be written as f ◦ f , where f : X → Y
+l e l
+is an extra linear layer followed by a softmax activation. The reconstruction autoencoder is trained to minimize the
+reconstructionlossL (x) = [x−f ◦f (x)]2. Theinpaintingautoencoderistrainedtominimizetheinptaitingloss
+rec d e
+Label-FreeExplainabilityforUnsupervisedModels
+L (x)=E [x−f ◦f (M(cid:12)x)]2,whereM isarandommaskwithM ∼Bernoulli(0.8)foralli∈[d ].Theclassifier
+in M d e i X
+istrainedtominimizethecross-entropylossL (x,y)=−y(cid:12)log[f ◦f (x)],whereyistheone-hotencodedlabel
+CE l e
+associatedtothetrainingexamplex.Allthemodelsaretrainedtominimizetheirobjectivefor100epochswithpatience10by
+usingPytorch’sAdamwithhyperparameters: learningrate=.001,β =.9,β =.999,(cid:15)=10−8,weightdecay=10−5.
+1 2
+FeatureImportance. Asabaselineforthefeatureimportancemethods,weuseablackimagex¯ =0.
+Metrics. WeusethePearsoncoefficienttomeasurethecorrelationbetweentwoimportancescoresgivenarandomtest
+example and a random feature/training example. In our experiment, we compute the Pearson correlation between the
+label-freefeatureimportancescoresb outputtedbytwodifferentencoderf ,f :X →H:
+i e1 e2
+cov [b (f ,X),b (f ,X)]
+r (f ,f )= X,I I e1 I e2
+feat. e1 e2 σ [b (f ,X)]σ [b (f ,X)]
+X,I I e1 X,I I e2
+X ∼EmpiricalDistribution(D ),I ∼Uniform([d ]),
+test X
+wherecovdenotesthecovariancebetweentworandomvariablesandandσ denotesthestandarddeviationofarandom
+variable. Similarly,forlabel-freeexampleimportancescorescn:
+cov (cid:2) cI(f ,X),cI(f ,X) (cid:3)
+r (f ,f )= X,I e1 e2
+ex. e1 e2 σ [cI(f ,X)]σ [cI(f ,X)]
+X,I e1 X,I e2
+X ∼EmpiricalDistribution(D ),I ∼Uniform(J),
+test
+whereJ ⊂[N]istheindicesofthesampledtrainingexamplesforwhichtheexampleimportanceiscomputed. Thosetwo
+PearsoncorrelationcoefficientsaretheonethatwereportinTables1and2.
+SupplementaryExamples. TocheckthatthequalitativeanalysisfromSection4.2extendsbeyondtheexamplesshowed
+inthemainpaper,thereadercanrefertoFigures9and10.
+C.3.ChallengingourassumptionswithdisentangledVAEs
+WeprovidesomedetailsfortheexperimentsinSection4.3.
+Model. The architecture of the MNIST VAE is described in Table 8 and those of the dSprites VAE is described in
+Table 9. Both of these architectures are reproductions of the VAEs from Burgess et al. (2018). The β-VAE is trained
+to minimize the objective L (x,θ,φ) = E [logp (x|h)]−βD [q (h|x)||p(h)], where q (h | x) is the
+β qφ(h|x) θ KL φ φ
+distributionunderlyingthereparametrizedencoderoutput,p (x|h)isthedistributionunderlyingthedecoderoutput,p(h)
+θ
+isthedensityassociatedtoisotropicunitGaussianN(0,I)underlying(cid:15)andD istheKL-divergence. Theobjectiveof
+KL
+theTC-VAEisthsameasin(Chenetal.,2018). Wereferthereadertotheoriginalpaperforthedetails. AlltheVAEs
+aretrainedtominimizetheirobjectivefor100epochswithpatience10byusingPytorch’sAdamwithhyperparameters:
+learningrate=.001,β =.9,β =.999,(cid:15)=10−8,weightdecay=10−5.
+1 2
+FeatureImportance. Asabaselineforthefeatureimportancemethods,weuseablackimagex¯ =0.
+Metrics. WeusethePearsoncoefficienttomeasurethecorrelationbetweentwoimportancescoresgivenarandomtest
+exampleandarandomfeature. Inthiscase,onecorrelationcoefficientcanbecomputedforeachcouple(i,j)∈[d ]2of
+H
+latentunits:
+cov [a (µ ,X),a (µ ,X)]
+r = X,I I i I j
+ij σ [a (µ ,X)]σ [a (µ ,X)]
+X,I I i X,I I j
+X ∼EmpiricalDistribution(D ),I ∼Uniform([d ]),
+test X
+whereµ isthei-thcomponentoftheexpectedrepresentationcomputedbytheencoderforalli∈[d ]. Tohaveanoverall
+i H
+measureofcorrelationbetweentheVAEunits,wesumoverallpairsofdistinctlatentunits:
+1 (cid:88)
+dH
+(cid:88)
+dH
+r = r
+d (d −1) ij
+H H
+i=1,i(cid:54)=jj=1
+Label-FreeExplainabilityforUnsupervisedModels
+Table8. MNISTVariationalAutoencoderArchitecture.
+Component LayerType Hyperparameters ActivationFunction
+Conv2d InputChannels:1;OutputChannels:32;KernelSize:4;Stride:2;Padding:1 ReLU
+Conv2d InputChannels:32;OutputChannels:32;KernelSize:4;Stride:2;Padding:1 ReLU
+Conv2d InputChannels:32;OutputChannels:32;KernelSize:4;Stride:2;Padding:1 ReLU
+Encoder Flatten StartDimension:1
+Linear InputDimension:512;OutputDimension:256 ReLU
+Linear InputDimension:256;OutputDimension:256 ReLU
+Linear InputDimension:256;OutputDimension:6 ReLU
+Theoutputoftheencodercontainsµandlogσ.
+ReparametrizationTrick
+Thelatentrepresentationisthengeneratedviah=µ(x)+σ(x)(cid:12)(cid:15),(cid:15)∼N(0,I)
+Linear InputDimension:3;OutputDimension:256 ReLU
+Linear InputDimension:256;OutputDimension:256 ReLU
+Linear InputDimension:256;OutputDimension:512 ReLU
+Unflatten Dimension:1;UnflattenSize:(32,4,4)
+Decoder
+ConvTranspose2d InputChannels:32;OutputChannels:32;KernelSize:4;Stride:2;OutputPadding:1 ReLU
+ConvTranspose2d InputChannels:32;OutputChannels:32;KernelSize:4;Stride:2;OutputPadding:1 ReLU
+ConvTranspose2d InputChannels:32;OutputChannels:1;KernelSize:4;Stride:2;OutputPadding:1 Sigmoid
+ThisaveragedcorrelationcoefficientistheonethatwereportinFigure6. Inourquantitativeanalysis,wealsoreportthe
+Spearmanrankcorrelationbetweenβ andr. Concretely,thisisdonebyperformingtheexperimentM ∈ N∗ timesfor
+differentvaluesβ ,...,β ofβ. Wethenmeasurethecorrelationcoefficientsr ,...,r associatedtoeachexperiment.
+1 M 1 M
+TheSpearmanrankcorrelationcoefficientcanbecomputedformthisdata:
+cov [rank(r ),rank(β )]
+ρ= M1,M2 M1 M2
+σ [rank(r )]σ [rank(β )]
+M1 M1 M2 M2
+M ,M ∼Uniform([M]).
+1 2
+Thiscoefficientρrangesfrom−1to1,whereρ=−1correspondstoaperfectmonotonicallydecreasingrelation,ρ=0
+correspondstotheabsenceofmonotonicrelationandρ=1correspondstoaperfectmonotonicallyincreasingrelation.
+Entropy. TocompleteourquantitativeanalysisoftheVAEs,weintroduceanewmetriccalledentropy. Thepurposeof
+thismetricistomeasurehowthesaliencyforeachfeatureisdistributedacrossthedifferentlatentunits. Inparticular,we
+wouldliketobeabletodistinguishthecasewherealllatentunitsaresensitivetoafeatureandthecasewhereonlyone
+latentunitissensitivetoafeature. Aswehavedonepreviously,wecancomputetheimportancescorea (µ ,x)ofeach
+i j
+featurex fromx∈X foralatentunitj ∈[d ]. Foreachlatentunitj ∈[d ],wedefinetheproportionofattributionas
+i H H
+|a (µ ,x)|
+p (i,x)= i j .
+j (cid:80)dH
+|a (µ ,x)|
+k=1 i k
+Thiscorrespondstothefractionoftheimportancescoreattributedtojforfeatureiandexamplex. Notethatthisquantityis
+welldefinedifatleastoneofthea (µ ,x),k ∈[d ]isnon-vanishing. Hence,weonlyconsiderthefeaturesi∈[d ]that
+i k H X
+aresalientforatleastonelatentunit. Wecaneasilycheckthat
+(cid:80)dH
+p (i,x) = 1byconstruction. Thismeansthatthe
+j=1 j
+proportionsofattributionscanbeinterpretedasprobabilitiesofsaliency. Thisallowsustodefineanentropythatsummarizes
+thedistributionoverthelatentunits:
+(cid:88)
+dH
+S(i,x)=− p (i,x)lnp (i,x).
+j j
+j=1
+Label-FreeExplainabilityforUnsupervisedModels
+Table9. dSpritesVariationalAutoencoderArchitecture.
+Component LayerType Hyperparameters ActivationFunction
+Conv2d InputChannels:1;OutputChannels:32;KernelSize:4;Stride:2;Padding:1 ReLU
+Conv2d InputChannels:32;OutputChannels:32;KernelSize:4;Stride:2;Padding:1 ReLU
+Conv2d InputChannels:32;OutputChannels:32;KernelSize:4;Stride:2;Padding:1 ReLU
+Encoder Conv2d InputChannels:32;OutputChannels:32;KernelSize:4;Stride:2;Padding:1 ReLU
+Flatten StartDimension:1
+Linear InputDimension:512;OutputDimension:256 ReLU
+Linear InputDimension:256;OutputDimension:256 ReLU
+Linear InputDimension:256;OutputDimension:12 ReLU
+Theoutputoftheencodercontainsµandlogσ.
+ReparametrizationTrick
+Thelatentrepresentationisthengeneratedviah=µ(x)+σ(x)(cid:12)(cid:15),(cid:15)∼N(0,I)
+Linear InputDimension:6;OutputDimension:256 ReLU
+Linear InputDimension:256;OutputDimension:256 ReLU
+Linear InputDimension:256;OutputDimension:512 ReLU
+Unflatten Dimension:1;UnflattenSize:(32,4,4)
+Decoder
+Conv2d InputChannels:32;OutputChannels:32;KernelSize:4;Stride:2;Padding:1 ReLU
+ConvTranspose2d InputChannels:32;OutputChannels:32;KernelSize:4;Stride:2;OutputPadding:1 ReLU
+ConvTranspose2d InputChannels:32;OutputChannels:32;KernelSize:4;Stride:2;OutputPadding:1 ReLU
+ConvTranspose2d InputChannels:32;OutputChannels:1;KernelSize:4;Stride:2;OutputPadding:1 Sigmoid
+ThisentropyisanalogoustoShannon’sentropy(Shannon,1948). Itcanbecheckedeasilythatthisentropyisminimal
+(Smin =0)wheneveronlyonelatentunitj ∈[d ]issensitivetofeaturei:p (i,x)=1. Conversely,itiswellknown(Cover
+H j
+&Thomas,2005)thattheentropyismaximal(Smax =lnd )wheneverthedistributionisuniformoverthelatentunits:
+H
+p
+j
+(i,x)=1/dH forallj ∈[d
+H
+]. Inshort:theentropyislowwhenmostlyonelatentunitissensitivetothefeatureofinterest
+andhighwhenseverallatentunitsaresensitivetothefeatureofinterest. Clearly,theformersituationismoredesirableifwe
+wanttodistinguishthedifferentlatentunits. ForeachVAE,weevaluatetheaverageentropy
+S =E [S(I,X)]
+X,I
+X ∼EmpiricalDistribution(D ),I ∼Uniform[I(X)],
+test
+whereI(x) = {i ∈ [d ] | a (µ ,x) (cid:54)= 0foratleastonek ∈ [d ]}isthesetoffeaturesthataresalientforatleastone
+X i k H
+latentunit. WemeasuretheaverageentropyforeachVAEandreporttheresultsasafunctionofβ inFigure8.
+WeclearlyseethattheentropydecreasesasthedisentanglementstrengthβincreasesforbothMNIST(Spearmanρ=−.56)
+andSprites(Spearmanρ=−.76). Thismeansthatdisentanglinghastheeffectofdistributingthesaliencyoverfewerunits.
+ThisbringsanicecomplementtothequantitativeanalysisthatwehaveconductedinSection4.3: althoughincreasing
+disentanglementdoesnotmakethelatentunitsfocusondifferentpartsoftheimage(sincethecorrelationdoesnotdecrease
+significantly),itdoesdecreasethenumberoflatentunitsthataresimultaneouslysensitivetoagivenpartoftheimage(since
+theentropydecreasessubstantially). Thesetwophenomenaarenotincompatiblewitheachother. Forinstance,wesee
+thatthe6-thlatentunitseemsinactiveincomparisonwiththeotherlatentunitsinFigure12. Infact,thislatentunitmight
+perfectlypayattentiontothesamepartsoftheimageastheotherunitsand,hence,becorrelated. Whatdistinguishesthis
+unitfromtheothersisthatthefeatureimportancescoresonitssaliencymaparesignificantlysmaller(wecannotappreciate
+itbyplottingthesaliencymapsonthesamescale)and,hence,reducestheentropy. Finally,wenotethattheentropiesfrom
+Figure8remainfairlyclosetotheirmaximalvalue(Smax =ln3≈1.1forMNISTandSmax =ln6≈1.8fordSprites).
+ThismeansthattheVAEshaveseveralactiveunitsforeachpixel.
+SupplementaryExamples. TocheckthatthequalitativeanalysisfromSection4.3extendsbeyondtheexamplesshowed
+inthemainpaper,thereadercanrefertoFigures11and12. Thesesaliencymapsareproducedwiththemainpaper’sVAEs.
+Label-FreeExplainabilityforUnsupervisedModels
+(a) MNIST (b) dSprites
+Figure8. Entropyofsaliencymapsfordifferentvaluesofβ.
+Wealsoplotsaliencymapsforvanilla(β =1)VAEsinFigures13and14. TheissuesmentionedinSection4.3arestill
+presentinthiscase.
+Label-FreeExplainabilityforUnsupervisedModels
+Saliency Reconstruction Saliency Denoising Saliency Inpainting Saliency Classification
+Saliency Reconstruction Saliency Denoising Saliency Inpainting Saliency Classification
+Saliency Reconstruction Saliency Denoising Saliency Inpainting Saliency Classification
+Saliency Reconstruction Saliency Denoising Saliency Inpainting Saliency Classification
+Saliency Reconstruction Saliency Denoising Saliency Inpainting Saliency Classification
+Saliency Reconstruction Saliency Denoising Saliency Inpainting Saliency Classification
+Saliency Reconstruction Saliency Denoising Saliency Inpainting Saliency Classification
+Saliency Reconstruction Saliency Denoising Saliency Inpainting Saliency Classification
+Saliency Reconstruction Saliency Denoising Saliency Inpainting Saliency Classification
+Saliency Reconstruction Saliency Denoising Saliency Inpainting Saliency Classification
+Figure9. Label-freesaliencyforvariouspretexttasks.
+Label-FreeExplainabilityforUnsupervisedModels
+Test Image Top Image Reconstruction Top Image Denoising Top Image Inpainting Top Image Classification
+Test Image Top Image Reconstruction Top Image Denoising Top Image Inpainting Top Image Classification
+Test Image Top Image Reconstruction Top Image Denoising Top Image Inpainting Top Image Classification
+Test Image Top Image Reconstruction Top Image Denoising Top Image Inpainting Top Image Classification
+Test Image Top Image Reconstruction Top Image Denoising Top Image Inpainting Top Image Classification
+Test Image Top Image Reconstruction Top Image Denoising Top Image Inpainting Top Image Classification
+Test Image Top Image Reconstruction Top Image Denoising Top Image Inpainting Top Image Classification
+Test Image Top Image Reconstruction Top Image Denoising Top Image Inpainting Top Image Classification
+Test Image Top Image Reconstruction Top Image Denoising Top Image Inpainting Top Image Classification
+Test Image Top Image Reconstruction Top Image Denoising Top Image Inpainting Top Image Classification
+Figure10. Label-freetopexampleforvariouspretexttasks.
+Label-FreeExplainabilityforUnsupervisedModels
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Figure11. SaliencymapsforthelatentunitsofaMNISTVAE.
+Label-FreeExplainabilityforUnsupervisedModels
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Figure12. SaliencymapsforthelatentunitsofadSpritesVAE.
+Label-FreeExplainabilityforUnsupervisedModels
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3
+Figure13. Saliencymapsforthelatentunitsofavanilla(β =1)MNISTVAE.
+Label-FreeExplainabilityforUnsupervisedModels
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Original Image Saliency Dimension 1 Saliency Dimension 2 Saliency Dimension 3 Saliency Dimension 4 Saliency Dimension 5 Saliency Dimension 6
+Figure14. Saliencymapsforthelatentunitsofavanilla(β =1)dSpritesVAE.

@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E04-01",
+  "source_paper": "E04-01",
+  "family": "E04",
+  "paper_text_hash": "8f797e73db670128b6d9d2bd25e3b2e82367387026459704615513c179044e6f",
+  "source_span": "We report per-subgroup accuracy for all four demographic groups (A, B, C, D).",
+  "predicates": [
+    {
+      "predicate_id": "P7_SUBGROUPS",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "All declared subgroups must appear in the reported outputs.",
+      "trace_fields": [
+        "protocol",
+        "declared_subgroups",
+        "protocol",
+        "reported_subgroups"
+      ],
+      "condition": "set(protocol.reported_subgroups) == set(protocol.declared_subgroups)",
+      "source_span": "We report per-subgroup accuracy for all four demographic groups (A, B, C, D).",
+      "confidence": 0.85
+    }
+  ],
+  "universal_principles": [
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "523883d6d9242b4acbc25ca7dc885b529282438febb9e209357b6e17d0bc57c9"
+}

@@ -1,0 +1,103 @@
+{
+  "n_papers": 4,
+  "papers": {
+    "viewbatchmodel_2503.18371": {
+      "families": {
+        "E01": {
+          "n": 5,
+          "sec_psd": 1.0,
+          "stable": true,
+          "clean_acc": 1.0,
+          "vpvd": 1.0
+        },
+        "E04": {
+          "n": 5,
+          "sec_psd": 1.0,
+          "stable": true,
+          "clean_acc": 1.0,
+          "vpvd": null
+        }
+      },
+      "n_stable_classes": 2
+    },
+    "revisitdml_2002.08473": {
+      "families": {
+        "E01": {
+          "n": 38,
+          "sec_psd": 1.0,
+          "stable": true,
+          "clean_acc": 1.0,
+          "vpvd": 1.0
+        }
+      },
+      "n_stable_classes": 1
+    },
+    "diffusing_synth_2411.10164": {
+      "families": {
+        "E01": {
+          "n": 13,
+          "sec_psd": 1.0,
+          "stable": true,
+          "clean_acc": 1.0,
+          "vpvd": 1.0
+        },
+        "E04": {
+          "n": 13,
+          "sec_psd": 1.0,
+          "stable": true,
+          "clean_acc": 1.0,
+          "vpvd": null
+        },
+        "E06": {
+          "n": 1,
+          "sec_psd": 1.0,
+          "stable": true,
+          "clean_acc": 1.0,
+          "vpvd": 1.0
+        }
+      },
+      "n_stable_classes": 3
+    },
+    "delta_attention_2605.18855": {
+      "families": {
+        "E06": {
+          "n": 5,
+          "sec_psd": 1.0,
+          "stable": true,
+          "clean_acc": 1.0,
+          "vpvd": 1.0
+        }
+      },
+      "n_stable_classes": 1
+    }
+  },
+  "n_papers_with_stable_class": 4,
+  "stable_classes": {
+    "E01": 3,
+    "E04": 2,
+    "E06": 2
+  },
+  "n_stable_class_papers": {
+    "E01": 3,
+    "E04": 2,
+    "E06": 2
+  },
+  "global": {
+    "sec_psd": 1.0,
+    "b3_psd": 0.0,
+    "clean_acc": 1.0,
+    "vpvd_overall": 1.0,
+    "witness_acc_overall": 1.0,
+    "b3_gap": 1.0
+  },
+  "strong_go_checks": {
+    "4_papers": true,
+    "3_classes_stable_across_2papers": true,
+    "psd_ge_080": true,
+    "b3_gap_ge_015": true,
+    "vpvd_ge_075": true,
+    "clean_ge_085": true,
+    "witness_ge_080": true
+  },
+  "strong_go": true
+}

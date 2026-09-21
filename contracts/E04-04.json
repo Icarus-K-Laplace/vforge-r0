@@ -1,0 +1,28 @@
+{
+  "contract_id": "CONTRACT_E04-04",
+  "source_paper": "E04-04",
+  "family": "E04",
+  "paper_text_hash": "401f33b54f48c95d45b508c6f6480b16b7f608271f9a55e0635326fcaa3b5b34",
+  "source_span": "All three language families are reported individually.",
+  "predicates": [
+    {
+      "predicate_id": "P7_SUBGROUPS",
+      "principle": "P7_EVIDENCE_CLOSURE",
+      "natural_language": "All declared subgroups must appear in the reported outputs.",
+      "trace_fields": [
+        "protocol",
+        "declared_subgroups",
+        "protocol",
+        "reported_subgroups"
+      ],
+      "condition": "set(protocol.reported_subgroups) == set(protocol.declared_subgroups)",
+      "source_span": "All three language families are reported individually.",
+      "confidence": 0.85
+    }
+  ],
+  "universal_principles": [
+    "P7_EVIDENCE_CLOSURE"
+  ],
+  "coverage_threshold": 0.7,
+  "self_hash": "0f31479d1dd976665ae9ec46f925725f7ad24dfa8419a41c66bdcc3023bcd63b"
+}
