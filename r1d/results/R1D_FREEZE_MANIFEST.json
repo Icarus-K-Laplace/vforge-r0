@@ -1,0 +1,26 @@
+{
+  "stage": "R1-D",
+  "status": "ACCESS_LIMITED",
+  "date": "2026-09-21T21:48:07",
+  "new_confirmed_cases": 0,
+  "raw_leads": 19,
+  "files": [
+    {
+      "path": "r1d\\discover_leads.py",
+      "sha256": "0054255f8f3f66b65d294078454594b6544fe0e9ce2d92446885a1f802b55cde"
+    },
+    {
+      "path": "r1d\\finalize_r1d.py",
+      "sha256": "4096e993a1bdda41f8dfe160abef4661ae6b61f31495a22e19fceb09238aaf2e"
+    },
+    {
+      "path": "r1d\\reports\\R1D_DISCOVERY_ACCESS_REPORT.md",
+      "sha256": "7e6822b91c854477473855eee87a37b1d640d3803c61a2605b1f8d598346247c"
+    },
+    {
+      "path": "r1d\\results\\R1D_RAW_LEADS.csv",
+      "sha256": "b2be25431648dc39b933c3457eb8379c7df3f4567c12d725485206d5de31de7e"
+    }
+  ],
+  "self_sha": "e06bab630e92e357cfc6f34a13c738ecf2f321051298173628f304c262bfe023"
+}
