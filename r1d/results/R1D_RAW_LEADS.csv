@@ -1,20 +1,477 @@
-lead_type,repo,family,title,state,url,body_snippet
-repo_issue,google-research/albert,C5,how to do inference for SQuAD style QA task using ALBERT?,open,https://github.com/google-research/albert/issues/212,
-repo_issue,google-research/albert,C5,torch.nn.modules.module.ModuleAttributeError: 'AlbertEmbeddings' object has no attribute 'bias',open,https://github.com/google-research/albert/issues/241,
-repo_issue,google-research/albert,C5,albert base fine-tuned on squad2.0 gets stuck in loop when predicting on new file,open,https://github.com/google-research/albert/issues/243,
-repo_issue,google-research/albert,C5,race score using run_race.py with albert base v2 is so much higher than score in table(66.8),open,https://github.com/google-research/albert/issues/67,
-repo_issue,google-research/albert,C5,"[Problem/ Squad V2] the result is too low compare with the F1 score in paper, Is something wrong? ",open,https://github.com/google-research/albert/issues/230,
-repo_issue,google-research/albert,C5,Wrong evaluate result on Squad2.0,closed,https://github.com/google-research/albert/issues/267,
-repo_issue,google-research/albert,C5,"when training in Race , The eval_accuracy is flat , it only has three numbers which are 0.0, 0.33334, 0.66667, 1.0 ",open,https://github.com/google-research/albert/issues/264,
-repo_issue,huggingface/evaluate,C6,TypeError: got an unexpected keyword argument 'squared',open,https://github.com/huggingface/evaluate/issues/669,
-repo_issue,openai/gym,C2,[bug] EOF error with gym.vector.AsyncVectorEnv() when calling the step method.,open,https://github.com/openai/gym/issues/3281,
-repo_issue,openai/gym,C2,gym import error ,closed,https://github.com/openai/gym/issues/2863,
-repo_issue,WongKinYiu/yolov7,C5,ONNX export for single-class YOLOv7: confidences not normalized (Frigate/OpenVINO integration issue),open,https://github.com/WongKinYiu/yolov7/issues/2138,
-repo_issue,WongKinYiu/yolov7,C5,YOLOv7-Seg报错AttributeError:  list  object has no attribute  shape,open,https://github.com/WongKinYiu/yolov7/issues/2113,
-repo_issue,WongKinYiu/yolov7,C5,Multi GPU Training Not Working,open,https://github.com/WongKinYiu/yolov7/issues/1696,
-repo_issue,WongKinYiu/yolov7,C5,end2end vs --include-nms,open,https://github.com/WongKinYiu/yolov7/issues/1560,
-repo_issue,WongKinYiu/yolov7,C5, How to train a mask on my own processed dataset?,closed,https://github.com/WongKinYiu/yolov7/issues/2104,
-repo_issue,facebookresearch/deit,C5,Will you be releasing the accuracy of the official deit III framework trained tiny version on IN1k?,open,https://github.com/facebookresearch/deit/issues/241,
-repo_issue,facebookresearch/deit,C5,DeiT depth 24 (CaiT - TABLE 1),closed,https://github.com/facebookresearch/deit/issues/218,
-repo_issue,facebookresearch/deit,C5,ImageNet21K data preparation for pre-training,open,https://github.com/facebookresearch/deit/issues/219,
-repo_issue,facebookresearch/deit,C5,Can I use timm==0.4.12 instead of timm==0.3.2 ?,closed,https://github.com/facebookresearch/deit/issues/206,
+repo,expected_family,kind,number,title,state,html_url,keyword_hits
+google-research/albert,C5,ISSUE,276,Load in Browser Tensorflow,open,https://github.com/google-research/albert/issues/276,"['conf', 'config']"
+google-research/albert,C5,PR,275,Made README.md more Readable,open,https://github.com/google-research/albert/pull/275,['table']
+google-research/albert,C5,PR,274,Replace deprecated `tf.contrib.data.map_and_batch(...)` with `tf.data.experimental.map_and_batch(...)`.,closed,https://github.com/google-research/albert/pull/274,['ap']
+google-research/albert,C5,PR,272,Bump tensorflow from 1.15.2 to 2.11.1,open,https://github.com/google-research/albert/pull/272,"['ap', 'checkpoint', 'conf', 'fix', 'ratio', 'split', 'table']"
+google-research/albert,C5,PR,271,Bump tensorflow from 1.15.2 to 2.9.3,closed,https://github.com/google-research/albert/pull/271,"['ap', 'conf', 'fix', 'validation']"
+google-research/albert,C5,ISSUE,270,"Improvement to how the `app` and `pages` files conflict is shown. Especially the last log line `""pages/"" - ""app/""` made it seem like you should remove the `pages` folder altogether. This was a bug in how the `''` case was displayed. After having a look at this I went further and added exactly which file caused the conflict given that `app` allows you to create `app/(home)/page.js` and such it saves some digging for what the actual conflicting file is. Similarly in `pages` both `pages/dashboard/index.js` and `pages/dashboard.js` are possible.",closed,https://github.com/google-research/albert/issues/270,"['ap', 'conf', 'fix', 'ratio']"
+google-research/albert,C5,ISSUE,269,The results can't be reproduced,open,https://github.com/google-research/albert/issues/269,['reproduce']
+google-research/albert,C5,PR,268,tokenization: log spm usage only in debug mode to avoid console spamming,open,https://github.com/google-research/albert/pull/268,"['detok', 'token']"
+google-research/albert,C5,ISSUE,267,Wrong evaluate result on Squad2.0,closed,https://github.com/google-research/albert/issues/267,"['figure', 'squad', 'subset', 'tuning']"
+google-research/albert,C5,ISSUE,266,Difference between v1 and v2 for xxlarge,open,https://github.com/google-research/albert/issues/266,"['ap', 'average', 'conf', 'hyperparameter', 'paper']"
+google-research/albert,C5,PR,265,Bump tensorflow from 1.15.2 to 2.7.2,closed,https://github.com/google-research/albert/pull/265,"['ap', 'conf', 'fix', 'validation']"
+google-research/albert,C5,PR,263,Bump tensorflow from 1.15.2 to 2.6.4,closed,https://github.com/google-research/albert/pull/263,"['ap', 'conf', 'fix', 'ratio', 'validation']"
+google-research/albert,C5,ISSUE,260,How to get the test embeddings from output of fine-tuned model (tutorial),open,https://github.com/google-research/albert/issues/260,"['ap', 'checkpoint', 'glue', 'token']"
+google-research/albert,C5,ISSUE,259,Prediction Fails on default Colab,closed,https://github.com/google-research/albert/issues/259,"['ap', 'conf', 'config', 'report', 'stride']"
+google-research/albert,C5,PR,258,Bump tensorflow from 1.15.2 to 2.5.3,closed,https://github.com/google-research/albert/pull/258,"['ap', 'conf', 'fix', 'leak', 'ratio', 'split', 'validation']"
+google-research/albert,C5,ISSUE,257,Default Tutorial Not Working - Can't download MRPC data,open,https://github.com/google-research/albert/issues/257,"['glue', 'tuning']"
+google-research/albert,C5,ISSUE,256,Probable error on line 306 in `create_pretraining_data.py` for albert,open,https://github.com/google-research/albert/issues/256,"['ap', 'ratio']"
+google-research/albert,C5,PR,252,Minor bug fix,closed,https://github.com/google-research/albert/pull/252,['fix']
+google-research/albert,C5,ISSUE,249,Discrepancy in tokenization results using albert's tokenizer and sentencepiece library,open,https://github.com/google-research/albert/issues/249,"['discrepan', 'token']"
+google-research/albert,C5,ISSUE,247,Wrong pieces for control symbols after loading SentencepieceProcessor from official model,closed,https://github.com/google-research/albert/issues/247,['ap']
+google-research/albert,C5,PR,246,Bump tensorflow from 1.15.2 to 2.5.1,closed,https://github.com/google-research/albert/pull/246,"['ap', 'conf', 'fix', 'nms', 'ratio', 'validation']"
+google-research/albert,C5,PR,245,Bump tensorflow from 1.15.2 to 2.4.0,closed,https://github.com/google-research/albert/pull/245,"['ap', 'conf', 'config', 'fix', 'leak', 'ratio', 'table']"
+google-research/albert,C5,ISSUE,243,albert base fine-tuned on squad2.0 gets stuck in loop when predicting on new file,open,https://github.com/google-research/albert/issues/243,"['ap', 'checkpoint', 'conf', 'config', 'dropout', 'evaluation', 'ratio', 'seed', 'split', 'squad', 'token', 'tuning']"
+google-research/albert,C5,ISSUE,242,The exact English pretraining data and Chinese pretraining data that are exact same to the BERT paper's pretraining data. ,open,https://github.com/google-research/albert/issues/242,"['ap', 'paper']"
+google-research/albert,C5,ISSUE,241,torch.nn.modules.module.ModuleAttributeError: 'AlbertEmbeddings' object has no attribute 'bias',open,https://github.com/google-research/albert/issues/241,"['ap', 'checkpoint', 'conf', 'config', 'dropout', 'token']"
+google-research/albert,C5,ISSUE,240,The output of the features of a given text  consists of two tensor.  Are they both the deep features?,open,https://github.com/google-research/albert/issues/240,"['figure', 'token']"
+google-research/albert,C5,ISSUE,239,train albert on custom dataset,closed,https://github.com/google-research/albert/issues/239,['token']
+google-research/albert,C5,PR,236,Bump tensorflow from 1.15.2 to 2.3.1,closed,https://github.com/google-research/albert/pull/236,"['ap', 'conf', 'config', 'fix', 'leak', 'mismatch', 'ratio', 'table', 'validation']"
+google-research/albert,C5,ISSUE,235,Could you provide the training hyper paras ,open,https://github.com/google-research/albert/issues/235,['squad']
+google-research/albert,C5,ISSUE,234,[Implementation] Sentence order prediction (SOP) label for a single-chunk-document in create_pretraining_data.py,open,https://github.com/google-research/albert/issues/234,"['ap', 'mean', 'paper', 'report', 'table']"
+google-research/albert,C5,ISSUE,232,ValueError: Expected input batch_size (864) to match target batch_size (32).,open,https://github.com/google-research/albert/issues/232,"['ap', 'average', 'figure', 'token', 'validation']"
+google-research/albert,C5,PR,231,Bump tensorflow from 1.15.2 to 1.15.4,closed,https://github.com/google-research/albert/pull/231,"['ap', 'conf', 'config', 'fix', 'leak', 'mismatch', 'validation']"
+google-research/albert,C5,ISSUE,230,"[Problem/ Squad V2] the result is too low compare with the F1 score in paper, Is something wrong? ",open,https://github.com/google-research/albert/issues/230,"['ap', 'paper', 'squad', 'threshold']"
+google-research/albert,C5,ISSUE,229,Can ALBERT's parameter sharing concept be used in image-GPT paper implementation?,open,https://github.com/google-research/albert/issues/229,"['ap', 'paper']"
+google-research/albert,C5,ISSUE,227,Error creating and exporting TFLite after fine-tuning (using run_squad_v1.py/run_squad_v2.py),open,https://github.com/google-research/albert/issues/227,"['ap', 'checkpoint', 'conf', 'config', 'squad', 'stride', 'tuning']"
+google-research/albert,C5,ISSUE,226,is it support fine tuning with tf2.x?,open,https://github.com/google-research/albert/issues/226,['tuning']
+google-research/albert,C5,ISSUE,225,Albert-base-v2 training data,open,https://github.com/google-research/albert/issues/225,"['ap', 'dropout']"
+google-research/albert,C5,ISSUE,224,tensorflow.python.framework.errors_impl.NotFoundError: Restoring from checkpoint failed. ,closed,https://github.com/google-research/albert/issues/224,"['ap', 'checkpoint', 'conf', 'config', 'glue']"
+google-research/albert,C5,PR,223,ensure str for the case of bytes type.,open,https://github.com/google-research/albert/pull/223,"['fix', 'token']"
+google-research/albert,C5,PR,222,Add the ability to bake threshold into the exported SavedModel.,closed,https://github.com/google-research/albert/pull/222,['threshold']
+google-research/albert,C5,ISSUE,221,"TypeError: '<' not supported between instances of 'int' and 'NoneType'   while only predicting, try to fix it, but not sure is it make sense",open,https://github.com/google-research/albert/issues/221,"['ap', 'checkpoint', 'fix', 'squad']"
+google-research/albert,C5,ISSUE,220,why running run_squad_v2.py in prediction mode with dev-v2.0.json gets zero neg example,open,https://github.com/google-research/albert/issues/220,['squad']
+google-research/albert,C5,ISSUE,218,Is it possible to load pretrained model's checkpoint and pretrain other corpus with that checkpoint?,open,https://github.com/google-research/albert/issues/218,"['checkpoint', 'tuning']"
+google-research/albert,C5,ISSUE,217,"invalid load key, '\x12'",open,https://github.com/google-research/albert/issues/217,"['squad', 'tuning']"
+google-research/albert,C5,ISSUE,216,How to prepare for the environment/data for fine-tuning? ,closed,https://github.com/google-research/albert/issues/216,"['glue', 'tuning']"
+google-research/albert,C5,ISSUE,214,use custom vocab.txt,open,https://github.com/google-research/albert/issues/214,['tuning']
+google-research/albert,C5,ISSUE,212,how to do inference for SQuAD style QA task using ALBERT?,open,https://github.com/google-research/albert/issues/212,['squad']
+google-research/albert,C5,ISSUE,210,Where is the function of Factorized Embedding Parameterization?,open,https://github.com/google-research/albert/issues/210,"['ap', 'paper', 'table']"
+google-research/albert,C5,PR,209,fix the attention mask description error and a cola evaluation calculation error.,closed,https://github.com/google-research/albert/pull/209,"['evaluation', 'fix']"
+google-research/albert,C5,ISSUE,208,Description problem of attention_mask.,open,https://github.com/google-research/albert/issues/208,['ap']
+google-research/albert,C5,ISSUE,207,model isn't learning ,open,https://github.com/google-research/albert/issues/207,"['ap', 'token', 'tuning']"
+google-research/albert,C5,ISSUE,206,different parameter position with api doc,open,https://github.com/google-research/albert/issues/206,"['ap', 'metric']"
+google-research/albert,C5,ISSUE,205,get Matthew_corr = 0 in eval on CoLA ,open,https://github.com/google-research/albert/issues/205,"['ap', 'evaluation', 'tuning']"
+google-research/albert,C5,PR,203,Modify default value of the max_seq_length at the stage of fine-tuning on GLUE,closed,https://github.com/google-research/albert/pull/203,"['glue', 'tuning']"
+google-research/albert,C5,ISSUE,202,Training without SOP Loss,open,https://github.com/google-research/albert/issues/202,['ratio']
+google-research/albert,C5,ISSUE,201,ValueError: Signature 'serving_default' is missing from meta graph.,open,https://github.com/google-research/albert/issues/201,['ap']
+google-research/albert,C5,ISSUE,200,[question] Cross-layer parameter sharing,open,https://github.com/google-research/albert/issues/200,['ap']
+google-research/albert,C5,ISSUE,199,ModuleNotFoundError: No module named 'albert',closed,https://github.com/google-research/albert/issues/199,"['squad', 'tuning']"
+google-research/albert,C5,ISSUE,198,ALBERT-xxlarge V2 training on TPU V3-512 extremely slow,closed,https://github.com/google-research/albert/issues/198,"['ap', 'checkpoint', 'conf', 'config', 'mean', 'paper', 'ratio', 'reproduce', 'token']"
+google-research/albert,C5,ISSUE,196,"tokenization.py - WordpieceTokenizer uses ""##"", but Sentencepiece vocab generates ""▁""",open,https://github.com/google-research/albert/issues/196,"['ap', 'split', 'token']"
+google-research/albert,C5,PR,195,Fix instructions on running spm_train.,closed,https://github.com/google-research/albert/pull/195,['fix']
+google-research/albert,C5,ISSUE,194,GPU not used when fine-tuning on SQuAD 2.0,open,https://github.com/google-research/albert/issues/194,"['checkpoint', 'conf', 'config', 'squad', 'stride', 'tuning']"
+google-research/albert,C5,PR,192,fix an error on the max_seq_length. Here we should set it to 512 instead of 128.,closed,https://github.com/google-research/albert/pull/192,['fix']
+google-research/albert,C5,PR,191,ALBERT GLUE fine-tuning colab tutorial.,closed,https://github.com/google-research/albert/pull/191,"['glue', 'tuning']"
+google-research/albert,C5,ISSUE,189,"run_pretraining.py doesn't read all input files while training on desktop, global step doesn't work like epoch logic",open,https://github.com/google-research/albert/issues/189,"['mean', 'split']"
+google-research/albert,C5,ISSUE,188,TPU training problem,closed,https://github.com/google-research/albert/issues/188,"['ap', 'checkpoint', 'ratio', 'split', 'token']"
+google-research/albert,C5,PR,187,remove an info log from the tokenzier as it flushes the screen,closed,https://github.com/google-research/albert/pull/187,['token']
+google-research/albert,C5,PR,186,Fix error experiments on RACE because of no all.txt,closed,https://github.com/google-research/albert/pull/186,['fix']
+google-research/albert,C5,PR,185,Fix running experiments on RACE (no all.txt),closed,https://github.com/google-research/albert/pull/185,"['ap', 'fix']"
+google-research/albert,C5,PR,183,remove validate_case_matches_checkpoint from the finetuning scripts,closed,https://github.com/google-research/albert/pull/183,"['checkpoint', 'tuning']"
+google-research/albert,C5,ISSUE,180,Wrong configuration of albert xlarge,open,https://github.com/google-research/albert/issues/180,"['conf', 'config', 'ratio']"
+google-research/albert,C5,ISSUE,179,Pretraining iterations_per_loop and batch_size,open,https://github.com/google-research/albert/issues/179,['ratio']
+google-research/albert,C5,ISSUE,177,Uneven sampling if number of tfrecords > cycle_length,open,https://github.com/google-research/albert/issues/177,"['ap', 'conf', 'figure', 'reproduce']"
+google-research/albert,C5,PR,275,Made README.md more Readable,open,https://github.com/google-research/albert/pull/275,['table']
+google-research/albert,C5,PR,274,Replace deprecated `tf.contrib.data.map_and_batch(...)` with `tf.data.experimental.map_and_batch(...)`.,closed,https://github.com/google-research/albert/pull/274,['ap']
+google-research/albert,C5,PR,272,Bump tensorflow from 1.15.2 to 2.11.1,open,https://github.com/google-research/albert/pull/272,"['ap', 'checkpoint', 'conf', 'fix', 'ratio', 'split', 'table']"
+google-research/albert,C5,PR,271,Bump tensorflow from 1.15.2 to 2.9.3,closed,https://github.com/google-research/albert/pull/271,"['ap', 'conf', 'fix', 'validation']"
+google-research/albert,C5,PR,268,tokenization: log spm usage only in debug mode to avoid console spamming,open,https://github.com/google-research/albert/pull/268,"['detok', 'token']"
+google-research/albert,C5,PR,265,Bump tensorflow from 1.15.2 to 2.7.2,closed,https://github.com/google-research/albert/pull/265,"['ap', 'conf', 'fix', 'validation']"
+google-research/albert,C5,PR,263,Bump tensorflow from 1.15.2 to 2.6.4,closed,https://github.com/google-research/albert/pull/263,"['ap', 'conf', 'fix', 'ratio', 'validation']"
+google-research/albert,C5,PR,258,Bump tensorflow from 1.15.2 to 2.5.3,closed,https://github.com/google-research/albert/pull/258,"['ap', 'conf', 'fix', 'leak', 'ratio', 'split', 'validation']"
+google-research/albert,C5,PR,252,Minor bug fix,closed,https://github.com/google-research/albert/pull/252,['fix']
+google-research/albert,C5,PR,246,Bump tensorflow from 1.15.2 to 2.5.1,closed,https://github.com/google-research/albert/pull/246,"['ap', 'conf', 'fix', 'nms', 'ratio', 'validation']"
+google-research/albert,C5,PR,245,Bump tensorflow from 1.15.2 to 2.4.0,closed,https://github.com/google-research/albert/pull/245,"['ap', 'conf', 'config', 'fix', 'leak', 'ratio', 'table']"
+google-research/albert,C5,PR,236,Bump tensorflow from 1.15.2 to 2.3.1,closed,https://github.com/google-research/albert/pull/236,"['ap', 'conf', 'config', 'fix', 'leak', 'mismatch', 'ratio', 'table', 'validation']"
+google-research/albert,C5,PR,231,Bump tensorflow from 1.15.2 to 1.15.4,closed,https://github.com/google-research/albert/pull/231,"['ap', 'conf', 'config', 'fix', 'leak', 'mismatch', 'validation']"
+google-research/albert,C5,PR,223,ensure str for the case of bytes type.,open,https://github.com/google-research/albert/pull/223,"['fix', 'token']"
+google-research/albert,C5,PR,222,Add the ability to bake threshold into the exported SavedModel.,closed,https://github.com/google-research/albert/pull/222,['threshold']
+google-research/albert,C5,PR,209,fix the attention mask description error and a cola evaluation calculation error.,closed,https://github.com/google-research/albert/pull/209,"['evaluation', 'fix']"
+google-research/albert,C5,PR,203,Modify default value of the max_seq_length at the stage of fine-tuning on GLUE,closed,https://github.com/google-research/albert/pull/203,"['glue', 'tuning']"
+google-research/albert,C5,PR,195,Fix instructions on running spm_train.,closed,https://github.com/google-research/albert/pull/195,['fix']
+google-research/albert,C5,PR,192,fix an error on the max_seq_length. Here we should set it to 512 instead of 128.,closed,https://github.com/google-research/albert/pull/192,['fix']
+google-research/albert,C5,PR,191,ALBERT GLUE fine-tuning colab tutorial.,closed,https://github.com/google-research/albert/pull/191,"['glue', 'tuning']"
+google-research/albert,C5,PR,187,remove an info log from the tokenzier as it flushes the screen,closed,https://github.com/google-research/albert/pull/187,['token']
+google-research/albert,C5,PR,186,Fix error experiments on RACE because of no all.txt,closed,https://github.com/google-research/albert/pull/186,['fix']
+google-research/albert,C5,PR,185,Fix running experiments on RACE (no all.txt),closed,https://github.com/google-research/albert/pull/185,"['ap', 'fix']"
+google-research/albert,C5,PR,183,remove validate_case_matches_checkpoint from the finetuning scripts,closed,https://github.com/google-research/albert/pull/183,"['checkpoint', 'tuning']"
+google-research/albert,C5,PR,176,Add option to create_optimizer for colocate_gradients_with_ops,closed,https://github.com/google-research/albert/pull/176,"['ap', 'conf', 'config']"
+google-research/albert,C5,PR,163,create_pretraining_data with multiple files ,closed,https://github.com/google-research/albert/pull/163,['token']
+google-research/albert,C5,PR,160,Support ALBERT squad_v1 for tflite.,closed,https://github.com/google-research/albert/pull/160,['squad']
+google-research/albert,C5,PR,157,Integration test.,closed,https://github.com/google-research/albert/pull/157,['ratio']
+google-research/albert,C5,PR,148,More flag validation and documentation,closed,https://github.com/google-research/albert/pull/148,['validation']
+google-research/albert,C5,PR,147,"Explicitly replace ""import tensorflow"" with ""tensorflow.compat.v1"" for TF2.x migration",closed,https://github.com/google-research/albert/pull/147,['ratio']
+google-research/albert,C5,PR,143,Fix date in the last update.,closed,https://github.com/google-research/albert/pull/143,['fix']
+google-research/albert,C5,PR,139,Bump tensorflow from 1.15 to 1.15.2,closed,https://github.com/google-research/albert/pull/139,"['ap', 'conf', 'config', 'figure', 'fix', 'ratio', 'seed', 'table', 'token']"
+google-research/albert,C5,PR,134,Fix the error in invoking preprocess_text(),closed,https://github.com/google-research/albert/pull/134,['fix']
+google-research/albert,C5,PR,124,Happy new year!,closed,https://github.com/google-research/albert/pull/124,['ap']
+google-research/albert,C5,PR,121,Fix run_glue.sh script evaluation. See #120,closed,https://github.com/google-research/albert/pull/121,"['evaluation', 'fix', 'glue']"
+google-research/albert,C5,PR,118,Update tokenization.py,closed,https://github.com/google-research/albert/pull/118,['token']
+google-research/albert,C5,PR,109,Add a note to the readme about the fixed v2 TF-Hub modules.,closed,https://github.com/google-research/albert/pull/109,['fix']
+google-research/albert,C5,PR,69,Support for TF-Hub in fine-tuning scripts,closed,https://github.com/google-research/albert/pull/69,['tuning']
+google-research/albert,C5,PR,48,run_glue.sh script and documentation improvements,closed,https://github.com/google-research/albert/pull/48,['glue']
+google-research/albert,C5,PR,46,Preventing estimator from deleting checkpoints,closed,https://github.com/google-research/albert/pull/46,['checkpoint']
+google-research/albert,C5,PR,41,Fix comments in requirements.txt,closed,https://github.com/google-research/albert/pull/41,['fix']
+google-research/albert,C5,PR,38,"Optimize how best checkpoint is preserved during evaluation. Instead of copying the best checkpoint, track the progress of the eval (best trial step, best trial value and global step of the last evaluated checkpoint) in best_trial.txt.  best_trial.txt is also used to prevent garbage collection of the best checkpoint. At the end of the eval,  best_trial.txt is used to copy final best checkpoint to model.ckpt-best.",closed,https://github.com/google-research/albert/pull/38,"['checkpoint', 'evaluation']"
+google-research/albert,C5,PR,33,fix import error,closed,https://github.com/google-research/albert/pull/33,"['fix', 'squad']"
+google-research/albert,C5,PR,32,google_type_annotations not found error,closed,https://github.com/google-research/albert/pull/32,['squad']
+google-research/albert,C5,PR,26,add support to ALBERT finetuning on SQUAD tasks with early stopping,closed,https://github.com/google-research/albert/pull/26,"['early stop', 'squad', 'tuning']"
+google-research/albert,C5,PR,16,Fix typo in README,closed,https://github.com/google-research/albert/pull/16,['fix']
+google-research/albert,C5,PR,12,Correction at line 398,closed,https://github.com/google-research/albert/pull/12,['correction']
+google-research/albert,C5,PR,1,Small comment on the integration test script.,closed,https://github.com/google-research/albert/pull/1,['ratio']
+WongKinYiu/yolov7,C5,PR,2152,Fix #2145: fix: add missing .sigmoid() in SigmoidBin inference path,open,https://github.com/WongKinYiu/yolov7/pull/2152,['fix']
+WongKinYiu/yolov7,C5,PR,2150,"feat(seg): DLA ONNX export, SPPCSPC_DLA, checker, and docs",open,https://github.com/WongKinYiu/yolov7/pull/2150,"['ap', 'checkpoint', 'nms']"
+WongKinYiu/yolov7,C5,PR,2147,fix: OTA target scaling uses height for both dimensions,closed,https://github.com/WongKinYiu/yolov7/pull/2147,"['ap', 'fix']"
+WongKinYiu/yolov7,C5,PR,2146,fix: remove hardcoded cuda:0 in OTA loss for multi-GPU support,closed,https://github.com/WongKinYiu/yolov7/pull/2146,"['ap', 'fix', 'mismatch']"
+WongKinYiu/yolov7,C5,PR,2145,fix: add missing .sigmoid() in SigmoidBin inference path,closed,https://github.com/WongKinYiu/yolov7/pull/2145,"['ap', 'fix']"
+WongKinYiu/yolov7,C5,ISSUE,2143,"Trying to install pygame but get the messages below: ""Getting requirements to build wheel ... error"". How can I solve it?",open,https://github.com/WongKinYiu/yolov7/issues/2143,"['ap', 'conf', 'config', 'figure', 'ratio']"
+WongKinYiu/yolov7,C5,PR,2141,Bugfix: Device alocation under loss when training yolov7-w6,open,https://github.com/WongKinYiu/yolov7/pull/2141,['fix']
+WongKinYiu/yolov7,C5,ISSUE,2138,ONNX export for single-class YOLOv7: confidences not normalized (Frigate/OpenVINO integration issue),open,https://github.com/WongKinYiu/yolov7/issues/2138,"['ap', 'conf', 'nms', 'ratio']"
+WongKinYiu/yolov7,C5,PR,2136,fixed utils to handle pytorch > 2.6 which changed to default block un…,closed,https://github.com/WongKinYiu/yolov7/pull/2136,['fix']
+WongKinYiu/yolov7,C5,ISSUE,2134,How to decode output results from EfficientNMS_TRT,open,https://github.com/WongKinYiu/yolov7/issues/2134,"['conf', 'nms']"
+WongKinYiu/yolov7,C5,ISSUE,2133,test.py logs zero labels in test set when no predictions are successfully made,open,https://github.com/WongKinYiu/yolov7/issues/2133,"['ap', 'conf', 'mean', 'report', 'test set']"
+WongKinYiu/yolov7,C5,ISSUE,2131,Clarification on GPLv3 License When Using Quantized YOLOv7 Weights Without Source Code,open,https://github.com/WongKinYiu/yolov7/issues/2131,"['ap', 'table']"
+WongKinYiu/yolov7,C5,ISSUE,2128,File runs\train\switch\weights\last.pt cannot be opened.,open,https://github.com/WongKinYiu/yolov7/issues/2128,"['ap', 'coco', 'token']"
+WongKinYiu/yolov7,C5,ISSUE,2125,"mAP, detect.py/ test.py  Inconsistency in number of images,labels,ground truth",closed,https://github.com/WongKinYiu/yolov7/issues/2125,"['ap', 'conf']"
+WongKinYiu/yolov7,C5,ISSUE,2124,mAP different between YOLO and COCO,open,https://github.com/WongKinYiu/yolov7/issues/2124,"['ap', 'average', 'coco', 'evaluation', 'metric', 'nms']"
+WongKinYiu/yolov7,C5,ISSUE,2120,YOLOV7,open,https://github.com/WongKinYiu/yolov7/issues/2120,"['ap', 'mean', 'ratio']"
+WongKinYiu/yolov7,C5,ISSUE,2119,WeightsUnpickler error in segment/predict.py,open,https://github.com/WongKinYiu/yolov7/issues/2119,"['ap', 'checkpoint', 'coco']"
+WongKinYiu/yolov7,C5,PR,2118,fix:touch load required weight only false,open,https://github.com/WongKinYiu/yolov7/pull/2118,['fix']
+WongKinYiu/yolov7,C5,PR,2117,fix: torch.load requires weights_only,open,https://github.com/WongKinYiu/yolov7/pull/2117,['fix']
+WongKinYiu/yolov7,C5,PR,2115,Fix for torch 2.6,open,https://github.com/WongKinYiu/yolov7/pull/2115,['fix']
+WongKinYiu/yolov7,C5,ISSUE,2113,YOLOv7-Seg报错AttributeError:  list  object has no attribute  shape,open,https://github.com/WongKinYiu/yolov7/issues/2113,['ap']
+WongKinYiu/yolov7,C5,ISSUE,2112,Incremental Learning Coco Dataset,open,https://github.com/WongKinYiu/yolov7/issues/2112,['coco']
+WongKinYiu/yolov7,C5,PR,2108,Fixed import path issue in experimental.py,open,https://github.com/WongKinYiu/yolov7/pull/2108,['fix']
+WongKinYiu/yolov7,C5,ISSUE,2104, How to train a mask on my own processed dataset?,closed,https://github.com/WongKinYiu/yolov7/issues/2104,"['conf', 'config', 'figure', 'ratio']"
+WongKinYiu/yolov7,C5,ISSUE,2103,为什么u7 的seg任务，使用coco8-seg数据集训练，在训练时所有loss都是NaN,open,https://github.com/WongKinYiu/yolov7/issues/2103,['coco']
+WongKinYiu/yolov7,C5,ISSUE,2100,Statistic validation results,open,https://github.com/WongKinYiu/yolov7/issues/2100,"['mean', 'ratio', 'validation']"
+WongKinYiu/yolov7,C5,ISSUE,2099,trained model export to trt error,open,https://github.com/WongKinYiu/yolov7/issues/2099,"['ap', 'validation']"
+WongKinYiu/yolov7,C5,ISSUE,2098,How should I interpret the Precision curve? ,open,https://github.com/WongKinYiu/yolov7/issues/2098,"['ap', 'conf']"
+WongKinYiu/yolov7,C5,ISSUE,2095,to coco,open,https://github.com/WongKinYiu/yolov7/issues/2095,"['ap', 'coco', 'conf', 'split']"
+WongKinYiu/yolov7,C5,ISSUE,2092,Question about ELAN,open,https://github.com/WongKinYiu/yolov7/issues/2092,"['ap', 'figure', 'mean', 'paper']"
+WongKinYiu/yolov7,C5,ISSUE,2091,Dynamic Image size ONNX conversion,open,https://github.com/WongKinYiu/yolov7/issues/2091,"['ap', 'conf']"
+WongKinYiu/yolov7,C5,ISSUE,2085,Do all the bits of the image used for learning have to be the same?,open,https://github.com/WongKinYiu/yolov7/issues/2085,['ap']
+WongKinYiu/yolov7,C5,ISSUE,2084,pytorch AdamW instead of Adam,open,https://github.com/WongKinYiu/yolov7/issues/2084,['fix']
+WongKinYiu/yolov7,C5,ISSUE,2083,Train Yolov7 with non square images without padding and resizing,open,https://github.com/WongKinYiu/yolov7/issues/2083,['augment']
+WongKinYiu/yolov7,C5,PR,2081,fixed the plot.py and dataloader.py files,open,https://github.com/WongKinYiu/yolov7/pull/2081,['fix']
+WongKinYiu/yolov7,C5,PR,2080,Fixed np.int issue in u7 branch and under the seg/utils/dataloader.py,open,https://github.com/WongKinYiu/yolov7/pull/2080,['fix']
+WongKinYiu/yolov7,C5,ISSUE,2076,paper,closed,https://github.com/WongKinYiu/yolov7/issues/2076,"['ap', 'paper']"
+WongKinYiu/yolov7,C5,ISSUE,2075,No Detection of images even after training 1200 images with 100 epochs.,open,https://github.com/WongKinYiu/yolov7/issues/2075,"['conf', 'split']"
+WongKinYiu/yolov7,C5,ISSUE,2074,No Detection of images even after training 1200 images with 100 epochs.,closed,https://github.com/WongKinYiu/yolov7/issues/2074,"['conf', 'split']"
+WongKinYiu/yolov7,C5,PR,2070,fix: don't download file if already exists,open,https://github.com/WongKinYiu/yolov7/pull/2070,['fix']
+WongKinYiu/yolov7,C5,ISSUE,2065,clearml.backend_api.session.defs.MissingConfigError: It seems ClearML is not configured on this machine!,open,https://github.com/WongKinYiu/yolov7/issues/2065,"['ap', 'conf', 'config', 'figure']"
+WongKinYiu/yolov7,C5,ISSUE,2064,During the tranining dataloader problem ,open,https://github.com/WongKinYiu/yolov7/issues/2064,"['fix', 'ratio', 'validation']"
+WongKinYiu/yolov7,C5,ISSUE,2063,Explaining this model with grad-CAM,open,https://github.com/WongKinYiu/yolov7/issues/2063,"['ap', 'conf', 'fix', 'mean', 'ratio']"
+WongKinYiu/yolov7,C5,ISSUE,2062,"Using the train_aux.py training script, single gpu training fails, but multiple gpu training succeeds.",open,https://github.com/WongKinYiu/yolov7/issues/2062,"['ap', 'report']"
+WongKinYiu/yolov7,C5,ISSUE,2061,Memory Leak with PyTorch 2.3.1 and torchvision 0.18.1,closed,https://github.com/WongKinYiu/yolov7/issues/2061,['leak']
+WongKinYiu/yolov7,C5,ISSUE,2059,What exactly does image size do in test.py and detect.py?,open,https://github.com/WongKinYiu/yolov7/issues/2059,['ap']
+WongKinYiu/yolov7,C5,ISSUE,2058,Problem wher run learning on 32 batch-size,open,https://github.com/WongKinYiu/yolov7/issues/2058,['ap']
+WongKinYiu/yolov7,C5,ISSUE,2057,onnx non end2end,open,https://github.com/WongKinYiu/yolov7/issues/2057,['conf']
+WongKinYiu/yolov7,C5,PR,2152,Fix #2145: fix: add missing .sigmoid() in SigmoidBin inference path,open,https://github.com/WongKinYiu/yolov7/pull/2152,['fix']
+WongKinYiu/yolov7,C5,PR,2150,"feat(seg): DLA ONNX export, SPPCSPC_DLA, checker, and docs",open,https://github.com/WongKinYiu/yolov7/pull/2150,"['ap', 'checkpoint', 'nms']"
+WongKinYiu/yolov7,C5,PR,2147,fix: OTA target scaling uses height for both dimensions,closed,https://github.com/WongKinYiu/yolov7/pull/2147,"['ap', 'fix']"
+WongKinYiu/yolov7,C5,PR,2146,fix: remove hardcoded cuda:0 in OTA loss for multi-GPU support,closed,https://github.com/WongKinYiu/yolov7/pull/2146,"['ap', 'fix', 'mismatch']"
+WongKinYiu/yolov7,C5,PR,2145,fix: add missing .sigmoid() in SigmoidBin inference path,closed,https://github.com/WongKinYiu/yolov7/pull/2145,"['ap', 'fix']"
+WongKinYiu/yolov7,C5,PR,2141,Bugfix: Device alocation under loss when training yolov7-w6,open,https://github.com/WongKinYiu/yolov7/pull/2141,['fix']
+WongKinYiu/yolov7,C5,PR,2136,fixed utils to handle pytorch > 2.6 which changed to default block un…,closed,https://github.com/WongKinYiu/yolov7/pull/2136,['fix']
+WongKinYiu/yolov7,C5,PR,2118,fix:touch load required weight only false,open,https://github.com/WongKinYiu/yolov7/pull/2118,['fix']
+WongKinYiu/yolov7,C5,PR,2117,fix: torch.load requires weights_only,open,https://github.com/WongKinYiu/yolov7/pull/2117,['fix']
+WongKinYiu/yolov7,C5,PR,2115,Fix for torch 2.6,open,https://github.com/WongKinYiu/yolov7/pull/2115,['fix']
+WongKinYiu/yolov7,C5,PR,2108,Fixed import path issue in experimental.py,open,https://github.com/WongKinYiu/yolov7/pull/2108,['fix']
+WongKinYiu/yolov7,C5,PR,2081,fixed the plot.py and dataloader.py files,open,https://github.com/WongKinYiu/yolov7/pull/2081,['fix']
+WongKinYiu/yolov7,C5,PR,2080,Fixed np.int issue in u7 branch and under the seg/utils/dataloader.py,open,https://github.com/WongKinYiu/yolov7/pull/2080,['fix']
+WongKinYiu/yolov7,C5,PR,2070,fix: don't download file if already exists,open,https://github.com/WongKinYiu/yolov7/pull/2070,['fix']
+WongKinYiu/yolov7,C5,PR,2029,Avoid massive memory leak,open,https://github.com/WongKinYiu/yolov7/pull/2029,['leak']
+WongKinYiu/yolov7,C5,PR,2027,Hotfix/missing yaml files,closed,https://github.com/WongKinYiu/yolov7/pull/2027,['fix']
+WongKinYiu/yolov7,C5,PR,2019,Fix quantized rtm inference,closed,https://github.com/WongKinYiu/yolov7/pull/2019,['fix']
+WongKinYiu/yolov7,C5,PR,2008,Sahilbirje4551 patch deprication fix for segmentation tasks,open,https://github.com/WongKinYiu/yolov7/pull/2008,['fix']
+WongKinYiu/yolov7,C5,PR,1968,Add support for TFLite INT8 detection export,open,https://github.com/WongKinYiu/yolov7/pull/1968,"['ap', 'fix', 'nms']"
+WongKinYiu/yolov7,C5,PR,1939,Add overlap threshold,closed,https://github.com/WongKinYiu/yolov7/pull/1939,"['ap', 'threshold']"
+WongKinYiu/yolov7,C5,PR,1928,Fix error when image mixup hyperparam is non-zero for instance segmentation training on u7,open,https://github.com/WongKinYiu/yolov7/pull/1928,['fix']
+WongKinYiu/yolov7,C5,PR,1925,Nms flags broken,closed,https://github.com/WongKinYiu/yolov7/pull/1925,['nms']
+WongKinYiu/yolov7,C5,PR,1919,use .mlpackage format,open,https://github.com/WongKinYiu/yolov7/pull/1919,['fix']
+WongKinYiu/yolov7,C5,PR,1914,Demo fix,closed,https://github.com/WongKinYiu/yolov7/pull/1914,['fix']
+WongKinYiu/yolov7,C5,PR,1908,fix bugs,closed,https://github.com/WongKinYiu/yolov7/pull/1908,['fix']
+WongKinYiu/yolov7,C5,PR,1887,oatmeal configs,closed,https://github.com/WongKinYiu/yolov7/pull/1887,"['conf', 'config']"
+WongKinYiu/yolov7,C5,PR,1872,fix numerical stability issues in half-precision,open,https://github.com/WongKinYiu/yolov7/pull/1872,"['ap', 'fix']"
+WongKinYiu/yolov7,C5,PR,1858,Fixed indices device bug for W6 models (train_aux.py),open,https://github.com/WongKinYiu/yolov7/pull/1858,['fix']
+WongKinYiu/yolov7,C5,PR,1795,Bugfix,closed,https://github.com/WongKinYiu/yolov7/pull/1795,['fix']
+WongKinYiu/yolov7,C5,PR,1724, coco.yaml,open,https://github.com/WongKinYiu/yolov7/pull/1724,['coco']
+WongKinYiu/yolov7,C5,PR,1718,107,closed,https://github.com/WongKinYiu/yolov7/pull/1718,['fix']
+WongKinYiu/yolov7,C5,PR,1698,fix for multiple bugs in evolve operation mentioned in issue 1611,open,https://github.com/WongKinYiu/yolov7/pull/1698,"['fix', 'hyperparameter', 'ratio', 'report']"
+WongKinYiu/yolov7,C5,PR,1683,Mlflow intergration,closed,https://github.com/WongKinYiu/yolov7/pull/1683,['ratio']
+WongKinYiu/yolov7,C5,PR,1662,94,closed,https://github.com/WongKinYiu/yolov7/pull/1662,['ap']
+WongKinYiu/yolov7,C5,PR,1643,Feature/for custom,closed,https://github.com/WongKinYiu/yolov7/pull/1643,"['conf', 'config', 'figure', 'ratio']"
+WongKinYiu/yolov7,C5,PR,1613,Correctly pass NMS conf and IoU thresholds to TensorRT NMS Plugin,open,https://github.com/WongKinYiu/yolov7/pull/1613,"['conf', 'nms', 'threshold']"
+WongKinYiu/yolov7,C5,PR,1594,Update keypoint.ipynb,open,https://github.com/WongKinYiu/yolov7/pull/1594,['fix']
+WongKinYiu/yolov7,C5,PR,1565,fix #1418 ,closed,https://github.com/WongKinYiu/yolov7/pull/1565,['fix']
+WongKinYiu/yolov7,C5,PR,1522,Fix: Endpoint error,closed,https://github.com/WongKinYiu/yolov7/pull/1522,"['ap', 'fix']"
+WongKinYiu/yolov7,C5,PR,1505,U7: feature map visualisation ,open,https://github.com/WongKinYiu/yolov7/pull/1505,"['ap', 'augment', 'conf', 'fix', 'flip', 'leak', 'mean', 'nms', 'split', 'stride', 'threshold']"
+facebookresearch/deit,C5,ISSUE,241,Will you be releasing the accuracy of the official deit III framework trained tiny version on IN1k?,open,https://github.com/facebookresearch/deit/issues/241,['table']
+facebookresearch/deit,C5,ISSUE,240,Gradient accumulation code,open,https://github.com/facebookresearch/deit/issues/240,"['ap', 'paper']"
+facebookresearch/deit,C5,ISSUE,239,Question about different seeds per gpu with DDP,open,https://github.com/facebookresearch/deit/issues/239,"['augment', 'seed']"
+facebookresearch/deit,C5,ISSUE,237,Inclusion of Transformers Need Registers,open,https://github.com/facebookresearch/deit/issues/237,"['ap', 'checkpoint', 'paper']"
+facebookresearch/deit,C5,ISSUE,236,random.seed(seed) in line 205 is commented,open,https://github.com/facebookresearch/deit/issues/236,"['fix', 'seed']"
+facebookresearch/deit,C5,ISSUE,234,Slow Training,closed,https://github.com/facebookresearch/deit/issues/234,"['ap', 'augment', 'crop', 'paper', 'ratio', 'report', 'reproduce', 'seed']"
+facebookresearch/deit,C5,ISSUE,233,ViT-B Training for DeiT,closed,https://github.com/facebookresearch/deit/issues/233,['reproduce']
+facebookresearch/deit,C5,ISSUE,232,Checkpoints of IN21K pretrained deit III,open,https://github.com/facebookresearch/deit/issues/232,"['checkpoint', 'tuning']"
+facebookresearch/deit,C5,ISSUE,231,Hi，Why can't I find deit_tiny_distilled_patch16_224 in hubconf,open,https://github.com/facebookresearch/deit/issues/231,"['conf', 'leak']"
+facebookresearch/deit,C5,ISSUE,230,TracerWarning,open,https://github.com/facebookresearch/deit/issues/230,['mean']
+facebookresearch/deit,C5,PR,229,cosub bugfix,closed,https://github.com/facebookresearch/deit/pull/229,['fix']
+facebookresearch/deit,C5,PR,228,Bump torch from 1.7.0 to 1.13.1,closed,https://github.com/facebookresearch/deit/pull/228,"['ap', 'conf', 'config', 'fix', 'mean', 'ratio', 'stride', 'table', 'validation']"
+facebookresearch/deit,C5,PR,227,Fix/forget to guard the nas correlated function,closed,https://github.com/facebookresearch/deit/pull/227,['fix']
+facebookresearch/deit,C5,ISSUE,226,How to launch a training of CAIT models ?,open,https://github.com/facebookresearch/deit/issues/226,"['dropout', 'reproduce']"
+facebookresearch/deit,C5,PR,223,"Fix Spelling Error: Correct ""defaul"" to ""default""",closed,https://github.com/facebookresearch/deit/pull/223,"['ap', 'fix']"
+facebookresearch/deit,C5,PR,222,fix argument bug,closed,https://github.com/facebookresearch/deit/pull/222,['fix']
+facebookresearch/deit,C5,PR,221,fix argument bug,closed,https://github.com/facebookresearch/deit/pull/221,['fix']
+facebookresearch/deit,C5,ISSUE,220,batch_size flag,open,https://github.com/facebookresearch/deit/issues/220,"['mean', 'reproduce']"
+facebookresearch/deit,C5,ISSUE,219,ImageNet21K data preparation for pre-training,open,https://github.com/facebookresearch/deit/issues/219,['ratio']
+facebookresearch/deit,C5,ISSUE,218,DeiT depth 24 (CaiT - TABLE 1),closed,https://github.com/facebookresearch/deit/issues/218,"['ap', 'paper', 'ratio', 'table']"
+facebookresearch/deit,C5,ISSUE,215,The ablation experiment of DeiT,open,https://github.com/facebookresearch/deit/issues/215,"['ap', 'conf', 'paper']"
+facebookresearch/deit,C5,ISSUE,214,What are the hyperparameters for DeiT-III (epoch 400 or 600)?,closed,https://github.com/facebookresearch/deit/issues/214,"['ap', 'hyperparameter', 'paper', 'table']"
+facebookresearch/deit,C5,ISSUE,212,unexpected keyword argument 'pretrained_cfg',closed,https://github.com/facebookresearch/deit/issues/212,"['augment', 'crop', 'ratio', 'seed']"
+facebookresearch/deit,C5,ISSUE,207,Meaning of the model name ( ResMLP),closed,https://github.com/facebookresearch/deit/issues/207,"['ap', 'mean', 'paper']"
+facebookresearch/deit,C5,ISSUE,206,Can I use timm==0.4.12 instead of timm==0.3.2 ?,closed,https://github.com/facebookresearch/deit/issues/206,"['evaluation', 'fix']"
+facebookresearch/deit,C5,ISSUE,205,What batch size number other than 1024 have been tried when training a DeiT model?,open,https://github.com/facebookresearch/deit/issues/205,"['ap', 'paper']"
+facebookresearch/deit,C5,ISSUE,203,Does the EMA is used in DeiT-III?,closed,https://github.com/facebookresearch/deit/issues/203,['evaluation']
+facebookresearch/deit,C5,ISSUE,201,Are the hyperparameters for DeiT-T and for DeiT-S any different than DeiT-B?,closed,https://github.com/facebookresearch/deit/issues/201,['hyperparameter']
+facebookresearch/deit,C5,PR,200,"Fix error ""TypeError: type object got multiple values for keyword argument""",closed,https://github.com/facebookresearch/deit/pull/200,['fix']
+facebookresearch/deit,C5,ISSUE,199,What is the ImageNet-1K Top-1 accuracy of Training from 0 to 400 epochs (Fig. 5 of Deit III paper),open,https://github.com/facebookresearch/deit/issues/199,"['ap', 'paper']"
+facebookresearch/deit,C5,ISSUE,196,What is the difference between class attention in the paper CaiT and traditional multi-headed self-attention？,closed,https://github.com/facebookresearch/deit/issues/196,"['ap', 'paper']"
+facebookresearch/deit,C5,ISSUE,195,Config file of ViT-B/16,open,https://github.com/facebookresearch/deit/issues/195,"['ap', 'conf', 'config', 'paper', 'report']"
+facebookresearch/deit,C5,ISSUE,194,Uneven memory usage among GPUs with DistributedDataParallel,closed,https://github.com/facebookresearch/deit/issues/194,['ap']
+facebookresearch/deit,C5,ISSUE,193,Is it possible if I can see how the validation accuracy changes over the number of epochs for DeiT?,closed,https://github.com/facebookresearch/deit/issues/193,['validation']
+facebookresearch/deit,C5,PR,190,Add eval-crop-ratio to args,closed,https://github.com/facebookresearch/deit/pull/190,"['crop', 'ratio']"
+facebookresearch/deit,C5,ISSUE,188,The concatenation of 'cls_tokens' and 'patch_embedding' is not necceassay.,closed,https://github.com/facebookresearch/deit/issues/188,"['ap', 'mean', 'ratio', 'token']"
+facebookresearch/deit,C5,ISSUE,187,Object detection from the DeiT III pretrained model,closed,https://github.com/facebookresearch/deit/issues/187,['crop']
+facebookresearch/deit,C5,ISSUE,185,Reproduce PatchConvnet,closed,https://github.com/facebookresearch/deit/issues/185,['reproduce']
+facebookresearch/deit,C5,ISSUE,181,ImageNet21k pretrained model without finetuning on 1k,closed,https://github.com/facebookresearch/deit/issues/181,"['reproduce', 'tuning']"
+facebookresearch/deit,C5,ISSUE,180,Confusion about fine-tuning,closed,https://github.com/facebookresearch/deit/issues/180,"['conf', 'tuning']"
+facebookresearch/deit,C5,ISSUE,179,Are the transforms in ThreeAugment suppose to replace the transforms in line 204 in main.py?,closed,https://github.com/facebookresearch/deit/issues/179,['augment']
+facebookresearch/deit,C5,ISSUE,178,Is ThreeAugment used when training DeiT on ImageNet?,closed,https://github.com/facebookresearch/deit/issues/178,"['augment', 'hyperparameter']"
+facebookresearch/deit,C5,ISSUE,176,`drop-path` rate for ImageNet-21k 90 epochs training.,closed,https://github.com/facebookresearch/deit/issues/176,"['ap', 'conf', 'paper', 'table']"
+facebookresearch/deit,C5,ISSUE,175,"What are the hyperparameters for finetuning on cifar10/100, and other small datasets",open,https://github.com/facebookresearch/deit/issues/175,"['ap', 'hyperparameter', 'paper', 'tuning']"
+facebookresearch/deit,C5,ISSUE,174,why set a separate distillation token?,closed,https://github.com/facebookresearch/deit/issues/174,['token']
+facebookresearch/deit,C5,ISSUE,173,Resume Broken,closed,https://github.com/facebookresearch/deit/issues/173,['checkpoint']
+facebookresearch/deit,C5,ISSUE,172,Soft Distillation Checkpoint,closed,https://github.com/facebookresearch/deit/issues/172,"['ap', 'checkpoint', 'paper', 'table']"
+facebookresearch/deit,C5,PR,171,Fix img_size for DeiT-III,closed,https://github.com/facebookresearch/deit/pull/171,['fix']
+facebookresearch/deit,C5,ISSUE,170,How to reproduce DeitIII for semantic segmentaion,closed,https://github.com/facebookresearch/deit/issues/170,"['ap', 'conf', 'config', 'paper', 'reproduce']"
+facebookresearch/deit,C5,PR,169,fixed typo in path for 2nd validation class,closed,https://github.com/facebookresearch/deit/pull/169,"['fix', 'validation']"
+facebookresearch/deit,C5,ISSUE,168,Question about the hard-label distillation and mixup,closed,https://github.com/facebookresearch/deit/issues/168,"['augment', 'conf']"
+facebookresearch/deit,C5,ISSUE,167,I need some help to reproduce DeiT-III finetuning result,closed,https://github.com/facebookresearch/deit/issues/167,"['augment', 'checkpoint', 'reproduce', 'seed', 'split', 'tuning']"
+facebookresearch/deit,C5,ISSUE,165,Training details on CIFAR-10,closed,https://github.com/facebookresearch/deit/issues/165,"['ap', 'paper']"
+facebookresearch/deit,C5,ISSUE,164,Data structure and GPU problem?,closed,https://github.com/facebookresearch/deit/issues/164,['reproduce']
+facebookresearch/deit,C5,ISSUE,163,I want to know when is the distillation token used?,closed,https://github.com/facebookresearch/deit/issues/163,['token']
+facebookresearch/deit,C5,ISSUE,162,Finetune setting for DeiT-III at IN1k,closed,https://github.com/facebookresearch/deit/issues/162,"['ap', 'paper', 'reproduce', 'tuning']"
+facebookresearch/deit,C5,ISSUE,160,The training log of DeiT III,closed,https://github.com/facebookresearch/deit/issues/160,"['augment', 'reproduce', 'seed']"
+facebookresearch/deit,C5,ISSUE,159,DeiT III code release,closed,https://github.com/facebookresearch/deit/issues/159,"['ap', 'reproduce']"
+facebookresearch/deit,C5,ISSUE,157,Training is stuck when using multi GPUs.,closed,https://github.com/facebookresearch/deit/issues/157,"['ap', 'ratio']"
+facebookresearch/deit,C5,ISSUE,156,Question about the results on CIFAR10/CIFAR100 datasets.,closed,https://github.com/facebookresearch/deit/issues/156,"['ap', 'conf', 'paper']"
+facebookresearch/deit,C5,ISSUE,153,why does the distilled model outperform its teacher?,closed,https://github.com/facebookresearch/deit/issues/153,"['ap', 'paper']"
+facebookresearch/deit,C5,ISSUE,152,Questions about hyper-parameters in the finetuning stage,open,https://github.com/facebookresearch/deit/issues/152,"['ap', 'paper', 'table', 'tuning']"
+facebookresearch/deit,C5,ISSUE,151,Questions about PatchConvNet's stem,closed,https://github.com/facebookresearch/deit/issues/151,"['ap', 'conf', 'figure', 'paper']"
+facebookresearch/deit,C5,ISSUE,150,Why should we set different seed per gpu with DDP?,closed,https://github.com/facebookresearch/deit/issues/150,"['reproduce', 'seed']"
+facebookresearch/deit,C5,ISSUE,149,Reason for timm==0.3.2?,closed,https://github.com/facebookresearch/deit/issues/149,['augment']
+facebookresearch/deit,C5,ISSUE,145,Regarding how the step method of the learning rate scheduler is used,closed,https://github.com/facebookresearch/deit/issues/145,"['ap', 'average', 'conf', 'config', 'figure', 'mean', 'ratio', 'tuning']"
+facebookresearch/deit,C5,ISSUE,144,Adjusting min-lr in cosine schedule to batch and world size,closed,https://github.com/facebookresearch/deit/issues/144,"['ap', 'fix']"
+facebookresearch/deit,C5,ISSUE,143,RuntimeError: Cannot find callable,closed,https://github.com/facebookresearch/deit/issues/143,['conf']
+facebookresearch/deit,C5,ISSUE,142,Question about attention based pooling,closed,https://github.com/facebookresearch/deit/issues/142,"['ap', 'conf', 'paper', 'token']"
+facebookresearch/deit,C5,PR,229,cosub bugfix,closed,https://github.com/facebookresearch/deit/pull/229,['fix']
+facebookresearch/deit,C5,PR,228,Bump torch from 1.7.0 to 1.13.1,closed,https://github.com/facebookresearch/deit/pull/228,"['ap', 'conf', 'config', 'fix', 'mean', 'ratio', 'stride', 'table', 'validation']"
+facebookresearch/deit,C5,PR,227,Fix/forget to guard the nas correlated function,closed,https://github.com/facebookresearch/deit/pull/227,['fix']
+facebookresearch/deit,C5,PR,223,"Fix Spelling Error: Correct ""defaul"" to ""default""",closed,https://github.com/facebookresearch/deit/pull/223,"['ap', 'fix']"
+facebookresearch/deit,C5,PR,222,fix argument bug,closed,https://github.com/facebookresearch/deit/pull/222,['fix']
+facebookresearch/deit,C5,PR,221,fix argument bug,closed,https://github.com/facebookresearch/deit/pull/221,['fix']
+facebookresearch/deit,C5,PR,200,"Fix error ""TypeError: type object got multiple values for keyword argument""",closed,https://github.com/facebookresearch/deit/pull/200,['fix']
+facebookresearch/deit,C5,PR,190,Add eval-crop-ratio to args,closed,https://github.com/facebookresearch/deit/pull/190,"['crop', 'ratio']"
+facebookresearch/deit,C5,PR,171,Fix img_size for DeiT-III,closed,https://github.com/facebookresearch/deit/pull/171,['fix']
+facebookresearch/deit,C5,PR,169,fixed typo in path for 2nd validation class,closed,https://github.com/facebookresearch/deit/pull/169,"['fix', 'validation']"
+facebookresearch/deit,C5,PR,140,Use torch.repeat_interleave() to generate the repeated indices faster,closed,https://github.com/facebookresearch/deit/pull/140,"['ap', 'mean']"
+facebookresearch/deit,C5,PR,123,fix bug -  add droppath in cait,closed,https://github.com/facebookresearch/deit/pull/123,['fix']
+facebookresearch/deit,C5,PR,118,save best checkpoint,closed,https://github.com/facebookresearch/deit/pull/118,['checkpoint']
+facebookresearch/deit,C5,PR,91,BUG Fix: ensure the right loss function is selected when mixtup or cu…,closed,https://github.com/facebookresearch/deit/pull/91,['fix']
+facebookresearch/deit,C5,PR,84,Delete Unused Args dpr_constant In cait_S36,closed,https://github.com/facebookresearch/deit/pull/84,['ratio']
+facebookresearch/deit,C5,PR,83,gradio web app,closed,https://github.com/facebookresearch/deit/pull/83,['ap']
+facebookresearch/deit,C5,PR,55,Add deit_base_distilled_patch16_384,closed,https://github.com/facebookresearch/deit/pull/55,['tuning']
+facebookresearch/deit,C5,PR,54,Add Colab for inference,closed,https://github.com/facebookresearch/deit/pull/54,['fix']
+facebookresearch/deit,C5,PR,53,Update figure with newer models,closed,https://github.com/facebookresearch/deit/pull/53,['figure']
+facebookresearch/deit,C5,PR,52,Fix no-weight-decay in optimizer,closed,https://github.com/facebookresearch/deit/pull/52,['fix']
+facebookresearch/deit,C5,PR,49,Add loss_scaler to checkpoints,closed,https://github.com/facebookresearch/deit/pull/49,"['checkpoint', 'reproducibility']"
+facebookresearch/deit,C5,PR,43,Add option to finetune on larger resolution,closed,https://github.com/facebookresearch/deit/pull/43,['tuning']
+facebookresearch/deit,C5,PR,42,Add Knowledge-Distillation,closed,https://github.com/facebookresearch/deit/pull/42,"['ap', 'average', 'paper', 'token']"
+facebookresearch/deit,C5,PR,27,Change LICENSE to Apache 2.0,closed,https://github.com/facebookresearch/deit/pull/27,['ap']
+facebookresearch/deit,C5,PR,24,Support parallelized evaluation,closed,https://github.com/facebookresearch/deit/pull/24,['evaluation']
+openai/gym,C2,PR,3328,[codex] Pin GitHub Actions workflow references,closed,https://github.com/openai/gym/pull/3328,"['ratio', 'table']"
+openai/gym,C2,ISSUE,3327,[Question] Training Error increasing for blackjack-v1,open,https://github.com/openai/gym/issues/3327,"['ap', 'average']"
+openai/gym,C2,ISSUE,3325,[Proposal] Proposal title,open,https://github.com/openai/gym/issues/3325,['ap']
+openai/gym,C2,PR,3324,Cd 7642 lunar lander analysis,closed,https://github.com/openai/gym/pull/3324,"['ap', 'fix']"
+openai/gym,C2,ISSUE,3323,[Bug Report] Bug title,open,https://github.com/openai/gym/issues/3323,"['report', 'reproduce']"
+openai/gym,C2,PR,3321,docs: minor formatting fix,closed,https://github.com/openai/gym/pull/3321,"['ap', 'fix']"
+openai/gym,C2,PR,3319,Learning purpose,closed,https://github.com/openai/gym/pull/3319,"['ap', 'fix']"
+openai/gym,C2,PR,3318,Update README.md,open,https://github.com/openai/gym/pull/3318,"['ap', 'fix']"
+openai/gym,C2,PR,3317,Add default parameters for self.masscart and self.masspole to the constructor in CartPoleEnv,open,https://github.com/openai/gym/pull/3317,['fix']
+openai/gym,C2,PR,3316,"Add a test for **kwargs, for the modifications I made to the construc…",open,https://github.com/openai/gym/pull/3316,['fix']
+openai/gym,C2,PR,3315,Add default parameters,closed,https://github.com/openai/gym/pull/3315,['fix']
+openai/gym,C2,PR,3314,gym_m,open,https://github.com/openai/gym/pull/3314,"['ap', 'fix']"
+openai/gym,C2,ISSUE,3313,Mac Mini M4,open,https://github.com/openai/gym/issues/3313,"['conf', 'config', 'ratio', 'token']"
+openai/gym,C2,PR,3312,Update passive_env_checker.py,open,https://github.com/openai/gym/pull/3312,"['ap', 'fix']"
+openai/gym,C2,PR,3310,"Update passive_env_checker.py to fix ""bool8 error""",open,https://github.com/openai/gym/pull/3310,"['ap', 'fix', 'mean', 'seed']"
+openai/gym,C2,ISSUE,3309,nan or inf in step(),closed,https://github.com/openai/gym/issues/3309,"['baseline', 'table']"
+openai/gym,C2,ISSUE,3308,reset() showing NotImplementedError for ObservationWrapper,open,https://github.com/openai/gym/issues/3308,"['ap', 'fix']"
+openai/gym,C2,ISSUE,3306,Couldn't find lunar Lander v3,open,https://github.com/openai/gym/issues/3306,['ratio']
+openai/gym,C2,ISSUE,3305,[Bug Report] cv2.error: OpenCV(4.9.0) :-1: error: (-5:Bad argument) in function 'cvtColor',closed,https://github.com/openai/gym/issues/3305,"['ap', 'report']"
+openai/gym,C2,ISSUE,3304,[Bug Report] Bug title,closed,https://github.com/openai/gym/issues/3304,"['baseline', 'conf', 'config', 'report', 'table']"
+openai/gym,C2,PR,3302,Correct spelling core.py L90,open,https://github.com/openai/gym/pull/3302,"['ap', 'fix']"
+openai/gym,C2,ISSUE,3300,AttributeError: partially initialized module 'gym' has no attribute 'Wrapper' (most likely due to a circular import),open,https://github.com/openai/gym/issues/3300,['ap']
+openai/gym,C2,ISSUE,3299,[Question] Too many values to unpack issue,open,https://github.com/openai/gym/issues/3299,['ratio']
+openai/gym,C2,PR,3298,updated readme file,open,https://github.com/openai/gym/pull/3298,['fix']
+openai/gym,C2,ISSUE,3297,[Question] Are the action for Mujoco envs normalized ?,open,https://github.com/openai/gym/issues/3297,['ap']
+openai/gym,C2,PR,3296,Simplify type check in `is_float_integer` function,closed,https://github.com/openai/gym/pull/3296,"['ap', 'fix']"
+openai/gym,C2,PR,3295,bug fix :numpy has no attribute 'bool8',open,https://github.com/openai/gym/pull/3295,['fix']
+openai/gym,C2,ISSUE,3294,[Bug Report] module 'numpy' has no attribute 'bool8',open,https://github.com/openai/gym/issues/3294,"['ap', 'dropout', 'mean', 'report', 'seed']"
+openai/gym,C2,ISSUE,3289,[bug] NormalizeReward is wrong?,closed,https://github.com/openai/gym/issues/3289,"['ap', 'average', 'fix', 'mean', 'reproducibility']"
+openai/gym,C2,ISSUE,3286,[Proposal] AsyncVectorEnv with Graph observation spaces,open,https://github.com/openai/gym/issues/3286,"['ap', 'ratio']"
+openai/gym,C2,ISSUE,3285,[Question] Gym and stable baselines compatible issue,open,https://github.com/openai/gym/issues/3285,"['ap', 'baseline', 'table']"
+openai/gym,C2,ISSUE,3284,[Question] Changing action space with time/episode ,open,https://github.com/openai/gym/issues/3284,['ap']
+openai/gym,C2,ISSUE,3282,trying to use mujoco env,open,https://github.com/openai/gym/issues/3282,['ap']
+openai/gym,C2,ISSUE,3281,[bug] EOF error with gym.vector.AsyncVectorEnv() when calling the step method.,open,https://github.com/openai/gym/issues/3281,"['ap', 'seed']"
+openai/gym,C2,ISSUE,3279,Problem in render_mode,open,https://github.com/openai/gym/issues/3279,"['fix', 'ratio']"
+openai/gym,C2,ISSUE,3278,"[Bug Report] When call a base64.b64encode() on a Box observation_space, the programme shut down without Error",open,https://github.com/openai/gym/issues/3278,"['ap', 'baseline', 'conf', 'leak', 'report', 'reproduce', 'table']"
+openai/gym,C2,ISSUE,3276,AttributeError: attempted to get missing private attribute '_domain_file',open,https://github.com/openai/gym/issues/3276,['ap']
+openai/gym,C2,ISSUE,3275,gym.error.UnregisteredEnv: No registered env with id: meme-v0,open,https://github.com/openai/gym/issues/3275,"['report', 'seed']"
+openai/gym,C2,ISSUE,3273,[Question] AsyncVectorEnv getting hung up as `pip.recv()` not returning anything for `_check_observation_spaces`,open,https://github.com/openai/gym/issues/3273,"['ap', 'seed']"
+openai/gym,C2,PR,3271,Update passive_env_checker.py with np.bool_ instead of np.bool8,closed,https://github.com/openai/gym/pull/3271,"['ap', 'fix']"
+openai/gym,C2,ISSUE,3270,[Question] MUJOCO environment info ERROR in the gym documentation website,open,https://github.com/openai/gym/issues/3270,"['ap', 'fix', 'mean', 'table']"
+openai/gym,C2,ISSUE,3269,[Question] I am implementing a DQN on Atari. I have some shape related problems.,closed,https://github.com/openai/gym/issues/3269,"['ap', 'baseline', 'mean', 'stride', 'table']"
+openai/gym,C2,ISSUE,3268,"[Bug Report] Humanoidv4 doesnt include contact_cost in code, but still present in documentation",closed,https://github.com/openai/gym/issues/3268,['report']
+openai/gym,C2,PR,3266,Fix for the collision problem in the pusher environment,closed,https://github.com/openai/gym/pull/3266,['fix']
+openai/gym,C2,ISSUE,3265,[Question] How to verify who is the winner of a game?,open,https://github.com/openai/gym/issues/3265,"['conf', 'mean']"
+openai/gym,C2,ISSUE,3264,[Bug Report] pusher-v4 in the environment doesn't collide the object for the fork  ,open,https://github.com/openai/gym/issues/3264,['report']
+openai/gym,C2,ISSUE,3263,[Question] Custom dtype in observation space,closed,https://github.com/openai/gym/issues/3263,"['ap', 'ratio']"
+openai/gym,C2,ISSUE,3262,"[Bug Report] Getting Error from ""D:\PongDQN_RL\venv\lib\site-packages\gym\wrappers\compatibility.py""",closed,https://github.com/openai/gym/issues/3262,"['ap', 'fix', 'report']"
+openai/gym,C2,ISSUE,3261,Env.reset () is error,open,https://github.com/openai/gym/issues/3261,"['ap', 'split']"
+openai/gym,C2,ISSUE,3260,Could not find platform dependent libraries and kernel always busy. Im waiting and kernel still busy but my energyplus was completed succesfully.,open,https://github.com/openai/gym/issues/3260,['fix']
+openai/gym,C2,ISSUE,3259,installing gym[toy_text] bug,open,https://github.com/openai/gym/issues/3259,"['ap', 'conf', 'config', 'figure', 'ratio']"
+openai/gym,C2,PR,3258,Updating deprecated alias 'np.bool8' -> 'np.bool_',open,https://github.com/openai/gym/pull/3258,['ap']
+openai/gym,C2,ISSUE,3257,[Question] Modifying and Analyzing mujoco's qpos and qvel ,open,https://github.com/openai/gym/issues/3257,"['ap', 'figure']"
+openai/gym,C2,ISSUE,3256,Is there any tools for changing the hyperparameter of the mujoco environment?,open,https://github.com/openai/gym/issues/3256,['hyperparameter']
+openai/gym,C2,ISSUE,3255,Segmentation Fault while trying to run Rviz in a wsl enviorment using VcXsrv ,closed,https://github.com/openai/gym/issues/3255,"['ap', 'conf', 'config', 'ratio']"
+openai/gym,C2,ISSUE,3254,Deepcopy env not working as expected,open,https://github.com/openai/gym/issues/3254,"['ap', 'mean']"
+openai/gym,C2,ISSUE,3253,[Bug Report] Vector env return value ,open,https://github.com/openai/gym/issues/3253,"['ap', 'report']"
+openai/gym,C2,ISSUE,3252,Juputer notebook Kernel Dead After running any gym method,open,https://github.com/openai/gym/issues/3252,"['baseline', 'evaluation', 'table', 'validation']"
+openai/gym,C2,ISSUE,3251,[Question] Open source code for Montezuma Revenge,open,https://github.com/openai/gym/issues/3251,['ap']
+openai/gym,C2,ISSUE,3250,setup.py in https://www.gymlibrary.dev/content/environment_creation/#make-your-own-custom-environment,open,https://github.com/openai/gym/issues/3250,"['ap', 'conf', 'config', 'fix', 'ratio']"
+openai/gym,C2,ISSUE,3248,"I am using DDPG. I trained the agent successfully. Now, I need to specify all action using all_actions = np.array(history.history['action']). But, it looks like there is no action recorded in history object. Any help and advice would be much appreciated.",open,https://github.com/openai/gym/issues/3248,['ap']
+openai/gym,C2,PR,3247,Update py.Dockerfile,closed,https://github.com/openai/gym/pull/3247,"['ap', 'fix']"
+openai/gym,C2,ISSUE,3246,[Bug Report] Env force_mag can not be changed in cartpole,closed,https://github.com/openai/gym/issues/3246,"['ap', 'ratio', 'report', 'reproducibility', 'seed', 'threshold']"
+openai/gym,C2,ISSUE,3244,[Proposal] Initial State Tracking - Bipedal Walker Hardcore,open,https://github.com/openai/gym/issues/3244,"['ap', 'paper']"
+openai/gym,C2,ISSUE,3243,[Question] How can I install gym[classic_control] on Windows 11 pipenv?,open,https://github.com/openai/gym/issues/3243,"['ap', 'conf', 'config', 'figure', 'ratio', 'report']"
+openai/gym,C2,ISSUE,3242,[Bug Report] mujoco rendering is not deterministic,open,https://github.com/openai/gym/issues/3242,"['report', 'seed']"
+openai/gym,C2,ISSUE,3241,[Question] Question title,open,https://github.com/openai/gym/issues/3241,['ap']
+openai/gym,C2,ISSUE,3240,[Bug Report] Dependency error - box2D,open,https://github.com/openai/gym/issues/3240,"['fix', 'report']"
+openai/gym,C2,PR,3239,modified:   setup.py in v0.21.0,closed,https://github.com/openai/gym/pull/3239,['fix']
+openai/gym,C2,ISSUE,3238,[Proposal] Proposal title,open,https://github.com/openai/gym/issues/3238,['ap']
+openai/gym,C2,ISSUE,3237,[Question] How do games with movement limited to cardinal directions handle diagonal actions?,open,https://github.com/openai/gym/issues/3237,"['ap', 'mean', 'subset']"
+openai/gym,C2,ISSUE,3236,[Question] reset() missing 1 required positional argument: 'seed',open,https://github.com/openai/gym/issues/3236,"['ap', 'baseline', 'seed', 'table']"
+openai/gym,C2,PR,3235,Create README.md,open,https://github.com/openai/gym/pull/3235,"['ap', 'fix']"
+openai/gym,C2,ISSUE,3234,[Bug Report] SyncVectorEnv has an unremoved but deprecated method seed(),closed,https://github.com/openai/gym/issues/3234,"['report', 'seed']"
+openai/gym,C2,PR,3232,Update multi_binary.py,closed,https://github.com/openai/gym/pull/3232,"['ap', 'fix']"
+openai/gym,C2,PR,3231,Made some changes,closed,https://github.com/openai/gym/pull/3231,"['ap', 'fix']"
+openai/gym,C2,ISSUE,3230,Why the initial state of breakout environment is the same with different seed?,open,https://github.com/openai/gym/issues/3230,['seed']
+openai/gym,C2,ISSUE,3229,[Bug Report] Vectorized Environments,open,https://github.com/openai/gym/issues/3229,"['ap', 'report']"
+openai/gym,C2,ISSUE,3228,[Question] Querying xpos (and other fields) from env after initialization produces all zeros?,closed,https://github.com/openai/gym/issues/3228,['conf']
+openai/gym,C2,PR,3227,Create assignment.py,open,https://github.com/openai/gym/pull/3227,"['ap', 'fix']"
+openai/gym,C2,ISSUE,3226,Unable to install stablebaselines3[extra],open,https://github.com/openai/gym/issues/3226,"['ap', 'baseline', 'conf', 'config', 'ratio', 'table']"
+openai/gym,C2,ISSUE,3225,V1 and V2 are which velocities?,open,https://github.com/openai/gym/issues/3225,['ap']
+openai/gym,C2,PR,3224,Update inverted_pendulum_v4.py,open,https://github.com/openai/gym/pull/3224,"['ap', 'fix']"
+openai/gym,C2,ISSUE,3223,AttributeError: 'NoneType' object has no attribute 'register_gym_envs',open,https://github.com/openai/gym/issues/3223,['ratio']
+openai/gym,C2,ISSUE,3222,[Bug Report] Bug title,open,https://github.com/openai/gym/issues/3222,"['report', 'reproduce']"
+openai/gym,C2,PR,3328,[codex] Pin GitHub Actions workflow references,closed,https://github.com/openai/gym/pull/3328,"['ratio', 'table']"
+openai/gym,C2,PR,3324,Cd 7642 lunar lander analysis,closed,https://github.com/openai/gym/pull/3324,"['ap', 'fix']"
+openai/gym,C2,PR,3321,docs: minor formatting fix,closed,https://github.com/openai/gym/pull/3321,"['ap', 'fix']"
+openai/gym,C2,PR,3319,Learning purpose,closed,https://github.com/openai/gym/pull/3319,"['ap', 'fix']"
+openai/gym,C2,PR,3318,Update README.md,open,https://github.com/openai/gym/pull/3318,"['ap', 'fix']"
+openai/gym,C2,PR,3317,Add default parameters for self.masscart and self.masspole to the constructor in CartPoleEnv,open,https://github.com/openai/gym/pull/3317,['fix']
+openai/gym,C2,PR,3316,"Add a test for **kwargs, for the modifications I made to the construc…",open,https://github.com/openai/gym/pull/3316,['fix']
+openai/gym,C2,PR,3315,Add default parameters,closed,https://github.com/openai/gym/pull/3315,['fix']
+openai/gym,C2,PR,3314,gym_m,open,https://github.com/openai/gym/pull/3314,"['ap', 'fix']"
+openai/gym,C2,PR,3312,Update passive_env_checker.py,open,https://github.com/openai/gym/pull/3312,"['ap', 'fix']"
+openai/gym,C2,PR,3310,"Update passive_env_checker.py to fix ""bool8 error""",open,https://github.com/openai/gym/pull/3310,"['ap', 'fix', 'mean', 'seed']"
+openai/gym,C2,PR,3302,Correct spelling core.py L90,open,https://github.com/openai/gym/pull/3302,"['ap', 'fix']"
+openai/gym,C2,PR,3298,updated readme file,open,https://github.com/openai/gym/pull/3298,['fix']
+openai/gym,C2,PR,3296,Simplify type check in `is_float_integer` function,closed,https://github.com/openai/gym/pull/3296,"['ap', 'fix']"
+openai/gym,C2,PR,3295,bug fix :numpy has no attribute 'bool8',open,https://github.com/openai/gym/pull/3295,['fix']
+openai/gym,C2,PR,3271,Update passive_env_checker.py with np.bool_ instead of np.bool8,closed,https://github.com/openai/gym/pull/3271,"['ap', 'fix']"
+openai/gym,C2,PR,3266,Fix for the collision problem in the pusher environment,closed,https://github.com/openai/gym/pull/3266,['fix']
+openai/gym,C2,PR,3258,Updating deprecated alias 'np.bool8' -> 'np.bool_',open,https://github.com/openai/gym/pull/3258,['ap']
+openai/gym,C2,PR,3247,Update py.Dockerfile,closed,https://github.com/openai/gym/pull/3247,"['ap', 'fix']"
+openai/gym,C2,PR,3239,modified:   setup.py in v0.21.0,closed,https://github.com/openai/gym/pull/3239,['fix']
+openai/gym,C2,PR,3235,Create README.md,open,https://github.com/openai/gym/pull/3235,"['ap', 'fix']"
+openai/gym,C2,PR,3232,Update multi_binary.py,closed,https://github.com/openai/gym/pull/3232,"['ap', 'fix']"
+openai/gym,C2,PR,3231,Made some changes,closed,https://github.com/openai/gym/pull/3231,"['ap', 'fix']"
+openai/gym,C2,PR,3227,Create assignment.py,open,https://github.com/openai/gym/pull/3227,"['ap', 'fix']"
+openai/gym,C2,PR,3224,Update inverted_pendulum_v4.py,open,https://github.com/openai/gym/pull/3224,"['ap', 'fix']"
+openai/gym,C2,PR,3216,Create FUNDING.yml,open,https://github.com/openai/gym/pull/3216,"['ap', 'fix']"
+openai/gym,C2,PR,3213,Feature2,closed,https://github.com/openai/gym/pull/3213,"['ap', 'fix']"
+openai/gym,C2,PR,3212,Update setup.py,closed,https://github.com/openai/gym/pull/3212,"['ap', 'fix']"
+openai/gym,C2,PR,3194,change np.bool8 to np.bool_,closed,https://github.com/openai/gym/pull/3194,"['ap', 'fix']"
+openai/gym,C2,PR,3184,Update frozen_lake.py,closed,https://github.com/openai/gym/pull/3184,"['ap', 'fix']"
+openai/gym,C2,PR,3183,My change for ML,closed,https://github.com/openai/gym/pull/3183,"['ap', 'fix']"
+openai/gym,C2,PR,3178,specified render_mode for standalone running,closed,https://github.com/openai/gym/pull/3178,"['ap', 'fix']"
+openai/gym,C2,PR,3175,Update error.py,closed,https://github.com/openai/gym/pull/3175,"['ap', 'fix', 'ratio', 'seed']"
+openai/gym,C2,PR,3152,Fixed forward discounted return estimation.,closed,https://github.com/openai/gym/pull/3152,"['ap', 'fix']"
+openai/gym,C2,PR,3147,docs(montain_car): fix docstring,closed,https://github.com/openai/gym/pull/3147,"['ap', 'fix']"
+openai/gym,C2,PR,3128,Change seeding error message to report seed type,closed,https://github.com/openai/gym/pull/3128,"['fix', 'report', 'seed']"
+openai/gym,C2,PR,3126,adding specific syntax for 'pip install' in README to work more gener…,closed,https://github.com/openai/gym/pull/3126,['fix']
+openai/gym,C2,PR,3118,Fixed Issue #3093,closed,https://github.com/openai/gym/pull/3118,"['ap', 'fix']"
+openai/gym,C2,PR,3116,Bump to V26.2,closed,https://github.com/openai/gym/pull/3116,"['ap', 'fix']"
+openai/gym,C2,PR,3114,Fix `render_modes` Assertion to be compatible with new mujoco,closed,https://github.com/openai/gym/pull/3114,['fix']
+openai/gym,C2,PR,3111,Fix reset info being lost in vector environments,closed,https://github.com/openai/gym/pull/3111,"['ap', 'baseline', 'fix', 'report', 'table']"
+openai/gym,C2,PR,3105,Update atari_preprocessing.py,closed,https://github.com/openai/gym/pull/3105,['fix']
+openai/gym,C2,PR,3101,Feature/faster episode recorder,closed,https://github.com/openai/gym/pull/3101,"['ap', 'fix']"
+openai/gym,C2,PR,3100,Clarified and fixed typo in GraphInstance docstring,closed,https://github.com/openai/gym/pull/3100,"['ap', 'fix']"
+openai/gym,C2,PR,3094,GitHub Workflows security hardening,closed,https://github.com/openai/gym/pull/3094,['token']
+openai/gym,C2,PR,3090,Bump version to v26.1,closed,https://github.com/openai/gym/pull/3090,"['ap', 'fix']"
+openai/gym,C2,PR,3089,Update blackjack.py,closed,https://github.com/openai/gym/pull/3089,"['ap', 'fix']"
+openai/gym,C2,PR,3085,Update the CarRacing main method to the new rendering API.,closed,https://github.com/openai/gym/pull/3085,"['ap', 'fix']"
+openai/gym,C2,PR,3083,fix: bipedal rgb_array shape,closed,https://github.com/openai/gym/pull/3083,"['ap', 'fix', 'report', 'reproduce']"
+openai/gym,C2,PR,3081,Correctly change color of visited road tiles in CarRacing,closed,https://github.com/openai/gym/pull/3081,['fix']
+openai/gym,C2,PR,3080,fix truncarted typo in readme API example,closed,https://github.com/openai/gym/pull/3080,"['ap', 'fix']"
+openai/gym,C2,PR,3076,[BugFix] Raise exception in PixelObservationWrapper if env.render_mode is not specified,closed,https://github.com/openai/gym/pull/3076,"['ap', 'fix']"
+openai/gym,C2,PR,3072,Fix mujoco_py only installation,closed,https://github.com/openai/gym/pull/3072,"['ap', 'fix']"
+openai/gym,C2,PR,3066,Add a complete compatibility wrapper,closed,https://github.com/openai/gym/pull/3066,['ap']
+openai/gym,C2,PR,3064,Fix lunar lander reward doc,closed,https://github.com/openai/gym/pull/3064,['fix']
+openai/gym,C2,PR,3063,fix: restore auto human rendering,closed,https://github.com/openai/gym/pull/3063,['fix']
+openai/gym,C2,PR,3062,fix: restore auto human rendering,closed,https://github.com/openai/gym/pull/3062,['fix']
+openai/gym,C2,PR,3061,Fix pyright errors in envs and spaces folders,closed,https://github.com/openai/gym/pull/3061,"['ap', 'fix']"
+openai/gym,C2,PR,3060,environment agnostic {mode}_list render mode,closed,https://github.com/openai/gym/pull/3060,['ap']
+openai/gym,C2,PR,3059,Correct the module scope of DeprecationWarning warning filter,closed,https://github.com/openai/gym/pull/3059,"['ap', 'fix']"
+openai/gym,C2,PR,3056,Release notes for v0.26.0,closed,https://github.com/openai/gym/pull/3056,"['ap', 'fix', 'mean', 'seed', 'table']"
+openai/gym,C2,PR,3055,fix: test_record_video_within_vector,closed,https://github.com/openai/gym/pull/3055,['fix']
+openai/gym,C2,PR,3053,Replace all references to gymlibrary.ml domain with new .dev address,closed,https://github.com/openai/gym/pull/3053,"['ap', 'fix']"
+openai/gym,C2,PR,3048,Add testing for Fundamental spaces with full coverage,closed,https://github.com/openai/gym/pull/3048,"['fix', 'split']"
+openai/gym,C2,PR,3047,Update Composite spaces with full coverage,closed,https://github.com/openai/gym/pull/3047,"['ap', 'conf', 'seed', 'split']"
+openai/gym,C2,PR,3046,Make moviepy an optional dependancy,closed,https://github.com/openai/gym/pull/3046,['ap']
+openai/gym,C2,PR,3044,Set offwidth and offheight properly before make MjrContext to support width > 640 or height > 480 in offscreen rendering,closed,https://github.com/openai/gym/pull/3044,['fix']
+openai/gym,C2,PR,3041,Updates the make and registration functions with better parameters and hints,closed,https://github.com/openai/gym/pull/3041,"['fix', 'ratio']"
+openai/gym,C2,PR,3037,Fix toy_text rendering on headless machines,closed,https://github.com/openai/gym/pull/3037,['fix']
+openai/gym,C2,PR,3036,Rename rotors in mujoco swimmer env,closed,https://github.com/openai/gym/pull/3036,['fix']
+openai/gym,C2,PR,3035,Fixed typo in the contributing guidelines,closed,https://github.com/openai/gym/pull/3035,"['ap', 'fix']"
+openai/gym,C2,PR,3033,Updates to v0.25.2,closed,https://github.com/openai/gym/pull/3033,"['ap', 'fix', 'seed']"
+openai/gym,C2,PR,3029,Corrected episode end description for mujoco/ant,closed,https://github.com/openai/gym/pull/3029,['correction']
+openai/gym,C2,PR,3028,Add testing for step api compatibility functions and wrapper,closed,https://github.com/openai/gym/pull/3028,['ap']
+openai/gym,C2,PR,3027,Remove old Render API,closed,https://github.com/openai/gym/pull/3027,['ap']
+openai/gym,C2,PR,3026,Fix envpool bug with missing mask key,closed,https://github.com/openai/gym/pull/3026,"['ap', 'fix']"
+openai/gym,C2,PR,3025,Fix unpickling Box2D and MuJoCo envs,closed,https://github.com/openai/gym/pull/3025,['fix']
+openai/gym,C2,PR,3024,Consider key order in `spaces.Dict.__eq__`,closed,https://github.com/openai/gym/pull/3024,['fix']
+openai/gym,C2,PR,3022,removed inline RandomNumberGenerator implementation ,closed,https://github.com/openai/gym/pull/3022,['fix']
+openai/gym,C2,PR,3019,Support only new step API (while retaining compatibility functions) ,closed,https://github.com/openai/gym/pull/3019,"['ap', 'fix']"
+openai/gym,C2,PR,3013,TimeAwareObservationV0 Wrapper,closed,https://github.com/openai/gym/pull/3013,['ap']
+openai/gym,C2,PR,3011,Reduce memory consumption and hanging for Dict and Tuple spaces,closed,https://github.com/openai/gym/pull/3011,"['fix', 'seed']"
+openai/gym,C2,PR,3009,Add swig as a Box2D dependency,closed,https://github.com/openai/gym/pull/3009,['fix']
+openai/gym,C2,PR,3008,Update Code of Conduct,closed,https://github.com/openai/gym/pull/3008,['fix']
+openai/gym,C2,PR,3007,Add type annotations for metadata and render_mode,closed,https://github.com/openai/gym/pull/3007,['fix']
+openai/gym,C2,PR,3006,Fix for pickling environments,closed,https://github.com/openai/gym/pull/3006,['fix']
+openai/gym,C2,PR,3002,Lambda action and Lambda observation wrappers,closed,https://github.com/openai/gym/pull/3002,['ap']
+openai/gym,C2,PR,3001,Avoid metaclass conflicts when inheriting from `gym.Env`,closed,https://github.com/openai/gym/pull/3001,"['conf', 'fix']"

@@ -1,0 +1,104 @@
+{
+  "probe_repo": "google-research/albert",
+  "probe_issue": 37,
+  "probe_commit": "d032c58",
+  "probe_pr": 37,
+  "auth_modes_available": {
+    "anonymous": true,
+    "GITHUB_TOKEN_env": false,
+    "gh_auth": false
+  },
+  "results": [
+    {
+      "mode": "anonymous",
+      "endpoint": "repository_metadata",
+      "http_status": 0,
+      "error_class": "HTTP_0",
+      "note": null,
+      "rate_limit_remaining": null,
+      "rate_limit_reset": null,
+      "x_accepted_github_permissions": null,
+      "x_oauth_scopes": null
+    },
+    {
+      "mode": "anonymous",
+      "endpoint": "list_issues",
+      "http_status": 0,
+      "error_class": "HTTP_0",
+      "note": null,
+      "rate_limit_remaining": null,
+      "rate_limit_reset": null,
+      "x_accepted_github_permissions": null,
+      "x_oauth_scopes": null
+    },
+    {
+      "mode": "anonymous",
+      "endpoint": "get_one_issue",
+      "http_status": 200,
+      "error_class": "OK",
+      "note": null,
+      "rate_limit_remaining": "52",
+      "rate_limit_reset": "1790004618",
+      "x_accepted_github_permissions": null,
+      "x_oauth_scopes": null
+    },
+    {
+      "mode": "anonymous",
+      "endpoint": "list_issue_comments",
+      "http_status": 200,
+      "error_class": "OK",
+      "note": null,
+      "rate_limit_remaining": "51",
+      "rate_limit_reset": "1790004618",
+      "x_accepted_github_permissions": null,
+      "x_oauth_scopes": null
+    },
+    {
+      "mode": "anonymous",
+      "endpoint": "list_issue_events",
+      "http_status": 200,
+      "error_class": "OK",
+      "note": null,
+      "rate_limit_remaining": "50",
+      "rate_limit_reset": "1790004618",
+      "x_accepted_github_permissions": null,
+      "x_oauth_scopes": null
+    },
+    {
+      "mode": "anonymous",
+      "endpoint": "commit_lookup",
+      "http_status": 200,
+      "error_class": "OK",
+      "note": null,
+      "rate_limit_remaining": "49",
+      "rate_limit_reset": "1790004618",
+      "x_accepted_github_permissions": null,
+      "x_oauth_scopes": null
+    },
+    {
+      "mode": "anonymous",
+      "endpoint": "pull_request_lookup",
+      "http_status": 404,
+      "error_class": "NOT_FOUND",
+      "note": null,
+      "rate_limit_remaining": "48",
+      "rate_limit_reset": "1790004618",
+      "x_accepted_github_permissions": null,
+      "x_oauth_scopes": null
+    },
+    {
+      "mode": "GITHUB_TOKEN_env",
+      "endpoint": "skipped",
+      "error_class": "NOT_SET",
+      "note": "GITHUB_TOKEN env var not set"
+    },
+    {
+      "mode": "gh_auth",
+      "endpoint": "skipped",
+      "error_class": "NOT_AUTHENTICATED",
+      "note": "gh CLI not logged in"
+    }
+  ],
+  "access_status": "PARTIAL",
+  "note": "No compromised token was used. Only anonymous / GITHUB_TOKEN env / gh auth."
+}
