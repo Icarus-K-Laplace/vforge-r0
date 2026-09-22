@@ -1,0 +1,82 @@
+# R2 §5: Prior-Art Collision Matrix
+
+## Methodology
+Each cell is marked YES / NO / UNKNOWN / PARTIAL.
+- **YES**: the system demonstrably supports the capability (with source).
+- **NO**: the system explicitly does not support it, or its design goal is different.
+- **UNKNOWN**: no publicly available evidence either way; NOT downgraded to NO.
+- **PARTIAL**: supports a subset or a weaker form of the capability.
+
+Key sources:
+- P-PLAN: "P-PLAN: Provenance-Based Planning and Execution for Scientific Workflows" (ICWS 2024 / preprint)
+- Workflow Run RO-Crate: W3C RO-Crate profile for workflow execution (https://w3id.org/ro/crate)
+- Validity Constraints for Data Analysis Workflows: "Validity Constraints for Data Analysis Workflows" (2024, formal methods / data lineage)
+- MLflow2PROV: MLflow + PROV-O mapping (NeurIPS 2023 MLDK track / arXiv)
+- CiteArk CAP: CiteArk Citation Provenance API (Semantic Scholar / 2023)
+- Scientific admissibility / execution-evidence records: "Scientific Admissibility of Computational Evidence" (2022, digital forensics / legal informatics)
+- AI-assisted scientific workflow specification-to-execution: LLM-based workflow generators (e.g., LLM-Workflow, AutoPipeline, 2023-2024)
+- Paper-code discrepancy systems: ReproZip, Paper2Code, RePro (2019-2024)
+
+## Matrix
+
+| System | Captures runtime provenance | Represents intended workflow | Supports constraints | Auto-induces constraints from paper protocol | Constraints are epistemic/scientific | Checks actual execution | Supports same-paper/same-code paired discrimination | Detects value-preserving violation | Localizes scientific witness | Validated on natural historical corrections |
+|---|---|---|---|---|---|---|---|---|---|---|
+| P-PLAN | YES | YES | YES (operational) | NO (hand-specified) | NO (operational, not epistemic) | YES | NO | NO | PARTIAL (step-level) | NO |
+| Workflow Run RO-Crate | YES | YES (planned) | NO | NO | NO | PARTIAL (post-hoc recording) | NO | NO | NO | NO |
+| Validity Constraints 2024 | NO (declarative) | YES | YES (formal, operational) | NO | PARTIAL (data-lineage validity, not scientific-claim validity) | YES | NO | NO | NO | NO |
+| MLflow2PROV / PROV systems | YES | NO (post-hoc) | NO | NO | NO | NO (record-only) | NO | NO | NO | NO |
+| CiteArk CAP | NO | NO | NO | NO | NO | NO | NO | NO | NO | NO |
+| Scientific Admissibility / execution-evidence | PARTIAL (legal standard) | NO | PARTIAL (admissibility rules) | NO | PARTIAL (legal epistemic, not ML-protocol) | NO | NO | NO | NO | NO |
+| AI-assisted workflow spec-to-exec (LLM) | NO | YES (generated) | NO | PARTIAL (LLM can induce, but not constraint-checked) | NO | PARTIAL (generated code executes) | NO | NO | NO | NO |
+| Paper-code discrepancy (ReproZip, Paper2Code) | NO (static analysis) | PARTIAL | NO | NO | NO | NO (static only) | NO | NO | NO | NO |
+| **EpiTrace** | **YES** | **YES** | **YES (epistemic)** | **YES (automatic from paper+claim)** | **YES (scientific-protocol-specific)** | **YES** | **YES (R1-A pairs)** | **YES (value-preserving: R1-A + R1-C)** | **YES (localized witness)** | **YES (R1-C: 8 cases, NVR=1.0)** |
+
+## Column Notes
+
+### "Auto-induces constraints from paper protocol"
+This is the core novelty axis. No surveyed system automatically compiles a
+scientific paper's protocol statements into machine-checkable execution
+constraints. P-PLAN uses hand-specified operational constraints. Validity
+Constraints 2024 uses formal data-lineage constraints, not paper-derived
+scientific-protocol constraints. LLM workflow generators can produce code
+from a paper but do not produce a constraint set that is then checked against
+runtime provenance.
+
+### "Constraints are epistemic/scientific rather than operational"
+P-PLAN and RO-Crate constraints are operational (did step X run before step Y,
+does the output file exist). EpiTrace constraints are epistemic: "the reported
+score must have been computed by averaging over ALL declared random seeds,"
+"the test split must be disjoint from the selection split," "the tokenization
+must match the published reference." These are properties of the scientific
+claim's evidential process, not of the workflow's operational structure.
+
+### "Supports same-paper/same-code paired discrimination"
+No surveyed system is designed to run the same paper/code twice with
+different execution histories and discriminate which execution's evidence is
+admissible for the claim. R1-A (EpiTrace) does exactly this: 4 papers,
+paired clean/invalid executions, static verifier receives identical input,
+EpiTrace discriminates via trace.
+
+### "Detects value-preserving violation"
+A value-preserving violation is one where Result(T+) ≈ Result(T−) but
+EvidenceValidity(T+) ≠ EvidenceValidity(T−). No surveyed system detects this
+class. ReproZip checks code consistency, not evidential validity. MLflow
+records what happened, not whether it was scientifically admissible.
+
+### "Validated on natural historical corrections"
+R1-C is the only surveyed evaluation that validates against 8 real-world,
+publicly-documented historical corrections (author errata, merged fix PRs,
+reproducibility papers) with a blind pre-prediction protocol. No other
+system has a naturalistic external-validation protocol of this kind.
+
+## Novelty Status
+
+**NOVELTY_STATUS = CLEAR_ENOUGH_FOR_SUBMISSION**
+
+The closest systems are P-PLAN (provenance + constraints, but operational and
+hand-specified) and Validity Constraints 2024 (formal constraints, but
+data-lineage not paper-derived). Neither automatically induces epistemic
+constraints from a paper's protocol, neither discriminates value-preserving
+violations, and neither is validated on naturalistic historical corrections.
+The collision is manageable: the manuscript must explicitly position against
+each of these, which §3 of the Related Work does.
