@@ -1,0 +1,74 @@
+{
+  "r1a_psd_27of30": {
+    "k": 27,
+    "n": 30,
+    "point": 0.9,
+    "lo95": 0.7347,
+    "hi95": 0.9936,
+    "note": "EpiTrace PSD (controlled); frozen R1A_FINAL_REPORT.md says 0.900"
+  },
+  "r1a_baselines_0of30": {
+    "k": 0,
+    "n": 30,
+    "point": 0.0,
+    "lo95": 0.0,
+    "hi95": 0.116,
+    "note": "B0-B3 each 0/30"
+  },
+  "r1b1_48of48": {
+    "k": 48,
+    "n": 48,
+    "point": 1.0,
+    "lo95": 0.926,
+    "hi95": 1.0,
+    "note": "EpiTrace PSD on all 48 claim-level pairs"
+  },
+  "r1b1_vps_36of36": {
+    "k": 36,
+    "n": 36,
+    "point": 1.0,
+    "lo95": 0.9026,
+    "hi95": 1.0,
+    "note": "strict value-preserving subset (VPS<=0.25)"
+  },
+  "r1c_nvr_8of8": {
+    "k": 8,
+    "n": 8,
+    "point": 1.0,
+    "lo95": 0.6306,
+    "hi95": 1.0,
+    "note": "naturalistic violation recall"
+  },
+  "r1c_npcr_8of8": {
+    "k": 8,
+    "n": 8,
+    "point": 1.0,
+    "lo95": 0.6306,
+    "hi95": 1.0,
+    "note": "naturalistic paired correction rate"
+  },
+  "r1c_witness_8of8": {
+    "k": 8,
+    "n": 8,
+    "point": 1.0,
+    "lo95": 0.6306,
+    "hi95": 1.0,
+    "note": "witness accuracy (semantic + localization)"
+  },
+  "r1c_cia_8of8": {
+    "k": 8,
+    "n": 8,
+    "point": 1.0,
+    "lo95": 0.6306,
+    "hi95": 1.0,
+    "note": "contract induction accuracy (audited)"
+  },
+  "r1d2_0of476": {
+    "k": 0,
+    "n": 476,
+    "point": 0.0,
+    "lo95": 0.0,
+    "hi95": 0.00772,
+    "note": "search-negative specificity; 95% upper bound on false-confirm"
+  }
+}

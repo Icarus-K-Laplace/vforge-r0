@@ -21,24 +21,31 @@ explicitly excluded from the novelty claim and cited as prior art.
 7. **Not** novel reported-value vs observed-value matching (any reproducibility harness).
 
 ## What Is Novel
-The specific composition that no surveyed system performs:
-- **A: Automatic induction.** Given a paper P and a claim C, a compiler F(P,C) → Φ_C
-  produces a set of epistemic constraints without hand-specification. The constraint
-  set is derived from the paper's *protocol statements* (seed declaration, split
-  description, aggregation procedure, evaluation tool version, checkpoint-selection
-  rule), not from the paper's narrative or code.
+The specific composition for which, in our survey, we did not find evidence
+in any single published system:
+- **A: Protocol-grounded constraint specification (calibrated claim).**
+  Given a paper P and a claim C, a procedure F(P,C) → Φ_C produces a set of
+  epistemic constraints by *matching the paper's protocol statements*
+  (seed declaration, split description, aggregation procedure, evaluation
+  tool version, checkpoint-selection rule) to a fixed library of principle
+  templates (P1–P6), without access to the eventual bug. We claim
+  *protocol-grounded* specification — not unbounded free-form induction.
+  The template library is fixed and small; a new constraint *class* would
+  require a new template. This calibration (reviewer A5) is the single most
+  important framing decision in the paper.
 - **B: Epistemic character.** The constraints are properties of the *evidential
   process* ("did this execution produce admissible evidence for this claim?"),
   not operational properties ("did step X run?"). This is the axis on which
   P-PLAN and Validity Constraints 2024 differ.
 - **C: Value-preserving discrimination.** The system detects the case where
   two executions of the same code produce (nearly) the same reported scalar
-  but only one constitutes valid evidence. No surveyed system targets this
-  failure mode.
+  but only one constitutes valid evidence. In our survey, we did not find
+  evidence that any published system targets this failure mode.
 - **D: Naturalistic external validation.** Blind pre-prediction against 8 real,
   publicly-documented historical corrections (author errata, merged fix PRs,
   reproducibility papers), with physical isolation of gold evidence from blind
-  inputs. No surveyed system has a naturalistic external-validation protocol.
+  inputs. In our survey, we did not find evidence that any published system
+  carries a naturalistic external-validation protocol of this kind.
 
 ## Nearest Neighbors and How They Differ
 
@@ -106,4 +113,5 @@ workflow conformance monitor, not a scientific-evidence validator.
 
 **Status: CLEAR_ENOUGH_FOR_SUBMISSION.** No fatal collision. The manuscript
 must cite all of the above and position EpiTrace on the epistemic/value-
-preserving axis, which no surveyed system occupies.
+preserving axis for which, in our survey, we did not find evidence that any
+published system provides a complete solution.

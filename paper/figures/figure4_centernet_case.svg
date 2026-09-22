@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 720" font-family="Helvetica,Arial,sans-serif">
+  <rect width="1000" height="720" fill="#ffffff"/>
+  <text x="500" y="34" text-anchor="middle" font-size="22" font-weight="700" fill="#1a202c">Figure 4. CAND-08 (CenterNet): A Complete Forensic Chain</text>
+
+  <!-- Step 1: Paper statement -->
+  <rect x="40" y="60" width="920" height="60" rx="8" fill="#e6f0fa" stroke="#3b82f6" stroke-width="2"/>
+  <text x="60" y="84" font-size="14" font-weight="700" fill="#1e40af">1. Paper protocol statement</text>
+  <text x="60" y="104" font-size="12" fill="#4a5568">"Table 1 reports single-scale test AP on COCO. No test-time augmentation (TTA) is used for the comparison."</text>
+
+  <!-- Step 2: Pre-fix trace -->
+  <rect x="40" y="140" width="920" height="80" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+  <text x="60" y="166" font-size="14" font-weight="700" fill="#b91c1c">2. Pre-fix execution trace (documented reconstruction)</text>
+  <text x="60" y="188" font-size="12" fill="#4a5568">commit 1e920d3 (pre-fix). The evaluation script sets flip_test=True, enabling TTA. The reported AP in Table 1 was produced</text>
+  <text x="60" y="206" font-size="12" fill="#4a5568">under TTA-enabled conditions, contradicting the paper's stated single-scale protocol.</text>
+  <text x="700" y="170" font-size="11" fill="#b91c1c" font-weight="600">Trace basis: documented_protocol_reconstruction</text>
+
+  <!-- Step 3: Induced contract -->
+  <rect x="40" y="240" width="920" height="80" rx="8" fill="#e8f5e9" stroke="#16a34a" stroke-width="2"/>
+  <text x="60" y="266" font-size="14" font-weight="700" fill="#15803d">3. Induced epistemic contract (from paper protocol, no bug access)</text>
+  <text x="60" y="288" font-size="12" fill="#4a5568">Contract class: RUNTIME_PROTOCOL_FIDELITY  |  Constraint: DISJOINT_TEST_SELECTION</text>
+  <text x="60" y="306" font-size="12" fill="#4a5568">Predicate: "The test-time protocol used to produce the reported value must match the paper's declared single-scale (no-TTA) protocol."</text>
+  <text x="60" y="320" font-size="11" fill="#718096">Contract frozen (T0) before gold reveal. SHA-verified.</text>
+
+  <!-- Step 4: EpiTrace prediction (blind) -->
+  <rect x="40" y="340" width="920" height="80" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="60" y="366" font-size="14" font-weight="700" fill="#92400e">4. EpiTrace blind prediction (T1, before gold reveal)</text>
+  <text x="60" y="388" font-size="12" fill="#4a5568">Input: pre-fix trace + contract (no gold evidence).  Output: FAIL.  Predicted violated constraint: DISJOINT_TEST_SELECTION.</text>
+  <text x="60" y="406" font-size="12" fill="#4a5568">Predicted witness: protocol.test_time_augmentation = True (flip_test flag).  Semantic match to gold locus: PREDICTED.</text>
+
+  <!-- Step 5: Gold evidence -->
+  <rect x="40" y="440" width="920" height="80" rx="8" fill="#f8fafc" stroke="#64748b" stroke-width="2"/>
+  <text x="60" y="466" font-size="14" font-weight="700" fill="#1a202c">5. Independent gold evidence (T2, revealed after prediction)</text>
+  <text x="60" y="488" font-size="12" fill="#4a5568">Gold authority tier: A_author_github_issue  |  Zhou et al. confirm on Issues #7 / #53 that flip_test=True inflated Table 1 AP.</text>
+  <text x="60" y="506" font-size="12" fill="#4a5568">Fix commit: 4a3f120 (post-fix) removes / documents the TTA flag.  Post-fix trace re-checked under the same frozen contract: PASS.</text>
+
+  <!-- Step 6: Post-fix verdict -->
+  <rect x="40" y="540" width="920" height="60" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="60" y="564" font-size="14" font-weight="700" fill="#15803d">6. Post-fix verdict</text>
+  <text x="60" y="584" font-size="12" fill="#4a5568">Post-fix trace: PASS under the same frozen contract.  Paired correction: FAIL &#8594; PASS.  Semantic match: TRUE.  Localization match: TRUE.</text>
+
+  <!-- Timestamps bar -->
+  <rect x="40" y="620" width="920" height="70" rx="8" fill="#1a202c"/>
+  <text x="500" y="644" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Chronology (leakage-free)</text>
+  <text x="180" y="670" text-anchor="middle" font-size="12" fill="#86efac">T0: contract frozen</text>
+  <line x1="280" y1="665" x2="380" y2="665" stroke="#475569" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="430" y="670" text-anchor="middle" font-size="12" fill="#fbbf24">T1: blind prediction</text>
+  <line x1="530" y1="665" x2="630" y2="665" stroke="#475569" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="700" y="670" text-anchor="middle" font-size="12" fill="#f87171">T2: gold reveal</text>
+  <text x="880" y="670" text-anchor="middle" font-size="11" fill="#94a3b8">T0 &lt; T1 &lt; T2 &#10003;</text>
+
+  <text x="500" y="708" text-anchor="middle" font-size="12" fill="#4a5568">Forensic grade: A  |  Gold tier: A_author_github_issue  |  Trace basis: documented-protocol</text>
+
+  <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5 z" fill="#475569"/></marker></defs>
+</svg>

@@ -16,9 +16,9 @@ made?"
 Method: EpiTrace compiles a paper's protocol statements into epistemic
 execution constraints and checks them against runtime provenance.
 Controlled result: Same-paper/same-code paired discrimination (R1-A: 30
-pairs, 100% correct, 0% for all 4 baselines).
-Real-trace result: 48 value-preserving pairs across 4 independent public
-repositories (R1-B1).
+pairs, PSD = 0.900 (27/30), 0% for all 4 baselines).
+Real-trace result: 48 claim-level pairs from 2 public repositories, 36
+strict value-preserving, EpiTrace PSD = 48/48 (R1-B1).
 Naturalistic result: 8 real historical corrections, NVR=NPCR=1.0,
 blind pre-prediction, 0 leakage.
 Main implication: Numerical agreement does not imply evidential validity.
@@ -37,8 +37,9 @@ Main implication: Numerical agreement does not imply evidential validity.
 - Six contributions (≤6, per §7):
   1. Formulate scientific execution conformance and value-preserving
      epistemic violations.
-  2. Automatic paper-to-epistemic-contract compiler (protocol-grounded
-     constraint specification — see A5 framing decision).
+  2. Protocol-grounded constraint specification (paper protocol statements
+     matched to a fixed principle-template library — see A5 framing
+     decision; do NOT claim unbounded free-form automatic induction).
   3. Runtime provenance verifier with localized scientific witnesses.
   4. Controlled identifiability evaluation (R1-A).
   5. Real-public-trace cross-paper evaluation (R1-B1).
@@ -69,8 +70,10 @@ Main implication: Numerical agreement does not imply evidential validity.
 - Cite and distinguish: P-PLAN/PROV, Workflow Run RO-Crate, Validity
   Constraints for Data Analysis Workflows (2024), MLflow2PROV, CiteArk/CAP,
   AI-assisted spec-to-execution, execution-evidence/claim-boundary work.
-- Position EpiTrace on the epistemic / value-preserving axis that no surveyed
-  system occupies.
+- Position EpiTrace on the epistemic / value-preserving axis for which,
+  in our survey, we did not find a published system occupying the full
+  composition (specification + runtime checking + localization +
+  naturalistic validation).
 - Include Table 1 (prior-art capability matrix, from R2_PRIOR_ART_MATRIX).
 
 ## 4. EpiTrace (method)
@@ -137,8 +140,9 @@ Main implication: Numerical agreement does not imply evidential validity.
 - Numerical agreement ≠ evidential validity.
 - EpiTrace closes the gap: paper → epistemic contract → provenance check →
   conformance verdict → localized witness.
-- Future: fully automatic induction, broader constraint families, runtime
-  provenance infrastructure.
+- Future: broader constraint-template library, more automatic paper-to-
+  protocol matching (beyond the current template-based specification),
+  runtime provenance infrastructure.
 
 ## Appendices
 - A: All 8 naturalistic forensic chains (one page each).

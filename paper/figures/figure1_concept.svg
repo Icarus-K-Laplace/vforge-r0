@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 520" font-family="Helvetica,Arial,sans-serif">
+  <rect width="1000" height="520" fill="#ffffff"/>
+  <!-- Title -->
+  <text x="500" y="34" text-anchor="middle" font-size="22" font-weight="700" fill="#1a202c">Figure 1. Value-Preserving Epistemic Violation: Same Result, Different Evidential Validity</text>
+
+  <!-- Left: Paper block -->
+  <rect x="40" y="80" width="200" height="90" rx="10" fill="#e6f0fa" stroke="#3b82f6" stroke-width="2"/>
+  <text x="140" y="112" text-anchor="middle" font-size="15" font-weight="600" fill="#1a202c">Scientific Paper P</text>
+  <text x="140" y="134" text-anchor="middle" font-size="12" fill="#4a5568">+ Claim C</text>
+  <text x="140" y="152" text-anchor="middle" font-size="11" fill="#718096">protocol statements</text>
+
+  <!-- Contract block -->
+  <rect x="310" y="80" width="210" height="90" rx="10" fill="#e8f5e9" stroke="#16a34a" stroke-width="2"/>
+  <text x="415" y="110" text-anchor="middle" font-size="15" font-weight="600" fill="#1a202c">Epistemic Contract &#8496;</text>
+  <text x="415" y="132" text-anchor="middle" font-size="12" fill="#4a5568">typed predicates &#966;</text>
+  <text x="415" y="150" text-anchor="middle" font-size="11" fill="#718096">(matched from protocol)</text>
+
+  <!-- Arrow P -> Contract -->
+  <line x1="240" y1="125" x2="305" y2="125" stroke="#4a5568" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="272" y="115" text-anchor="middle" font-size="11" fill="#4a5568">F(P,C)</text>
+
+  <!-- Two execution lanes -->
+  <!-- T+ lane (valid) -->
+  <rect x="590" y="70" width="210" height="80" rx="10" fill="#e8f5e9" stroke="#16a34a" stroke-width="2"/>
+  <text x="695" y="98" text-anchor="middle" font-size="14" font-weight="600" fill="#15803d">Execution T+</text>
+  <text x="695" y="118" text-anchor="middle" font-size="11" fill="#4a5568">mean over ALL 5 declared seeds</text>
+  <text x="695" y="134" text-anchor="middle" font-size="11" fill="#4a5568">admissible process</text>
+
+  <!-- T- lane (invalid) -->
+  <rect x="590" y="180" width="210" height="80" rx="10" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+  <text x="695" y="208" text-anchor="middle" font-size="14" font-weight="600" fill="#b91c1c">Execution T&#8722;</text>
+  <text x="695" y="228" text-anchor="middle" font-size="11" fill="#4a5568">mean over 3 BEST-performing seeds</text>
+  <text x="695" y="244" text-anchor="middle" font-size="11" fill="#4a5568">outcome-conditioned subset</text>
+
+  <!-- Contract -> T+ -->
+  <line x1="520" y1="120" x2="585" y2="105" stroke="#4a5568" stroke-width="2" marker-end="url(#arrow)"/>
+  <!-- Contract -> T- -->
+  <line x1="520" y1="130" x2="585" y2="215" stroke="#4a5568" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Same scalar output -->
+  <rect x="830" y="150" width="140" height="80" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="2"/>
+  <text x="900" y="178" text-anchor="middle" font-size="13" font-weight="600" fill="#92400e">Same scalar y</text>
+  <text x="900" y="196" text-anchor="middle" font-size="12" fill="#4a5568">|y(T+) &#8722; y(T&#8722;)| &#8804; &#949;</text>
+  <text x="900" y="214" text-anchor="middle" font-size="11" fill="#718096">value check is blind</text>
+
+  <line x1="800" y1="110" x2="825" y2="170" stroke="#16a34a" stroke-width="2" marker-end="url(#arrowG)"/>
+  <line x1="800" y1="220" x2="825" y2="205" stroke="#dc2626" stroke-width="2" marker-end="url(#arrowR)"/>
+
+  <!-- Verdict row -->
+  <rect x="310" y="330" width="210" height="70" rx="10" fill="#e8f5e9" stroke="#16a34a" stroke-width="2"/>
+  <text x="415" y="356" text-anchor="middle" font-size="14" font-weight="700" fill="#15803d">T+: PASS</text>
+  <text x="415" y="376" text-anchor="middle" font-size="12" fill="#4a5568">G(T+) &#8872; &#8496;</text>
+  <text x="415" y="392" text-anchor="middle" font-size="11" fill="#15803d">&#10003; valid evidence for C</text>
+
+  <rect x="590" y="330" width="210" height="70" rx="10" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+  <text x="695" y="356" text-anchor="middle" font-size="14" font-weight="700" fill="#b91c1c">T&#8722;: FAIL</text>
+  <text x="695" y="376" text-anchor="middle" font-size="12" fill="#4a5568">G(T&#8722;) &#8860; &#8496;</text>
+  <text x="695" y="392" text-anchor="middle" font-size="11" fill="#b91c1c">&#10007; witness: protocol.selection_target</text>
+
+  <!-- Connector from T+ to PASS, T- to FAIL -->
+  <line x1="695" y1="150" x2="470" y2="330" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="695" y1="260" x2="660" y2="330" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5,4"/>
+
+  <!-- Bottom thesis -->
+  <rect x="40" y="430" width="920" height="60" rx="10" fill="#1a202c"/>
+  <text x="500" y="456" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">Same result &#8800; same evidential validity.</text>
+  <text x="500" y="478" text-anchor="middle" font-size="13" fill="#cbd5e1">A value check sees one scalar. EpiTrace checks the process against the protocol.</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#4a5568"/></marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#16a34a"/></marker>
+    <marker id="arrowR" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#dc2626"/></marker>
+  </defs>
+</svg>

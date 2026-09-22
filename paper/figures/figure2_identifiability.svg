@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" font-family="Helvetica,Arial,sans-serif">
+  <rect width="1000" height="560" fill="#ffffff"/>
+  <text x="500" y="34" text-anchor="middle" font-size="22" font-weight="700" fill="#1a202c">Figure 2. Identifiability: Why the Execution Trace Matters</text>
+
+  <!-- Top: paper + repo -->
+  <rect x="40" y="70" width="180" height="80" rx="8" fill="#e6f0fa" stroke="#3b82f6" stroke-width="2"/>
+  <text x="130" y="100" text-anchor="middle" font-size="14" font-weight="600" fill="#1a202c">Paper P + Repo</text>
+  <text x="130" y="120" text-anchor="middle" font-size="11" fill="#4a5568">same code, same data</text>
+
+  <!-- Two executions -->
+  <rect x="290" y="60" width="170" height="60" rx="8" fill="#e8f5e9" stroke="#16a34a" stroke-width="2"/>
+  <text x="375" y="85" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">Execution T+</text>
+  <text x="375" y="103" text-anchor="middle" font-size="11" fill="#4a5568">clean process</text>
+
+  <rect x="290" y="140" width="170" height="60" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+  <text x="375" y="165" text-anchor="middle" font-size="13" font-weight="600" fill="#b91c1c">Execution T&#8722;</text>
+  <text x="375" y="183" text-anchor="middle" font-size="11" fill="#4a5568">violating process</text>
+
+  <line x1="220" y1="100" x2="285" y2="90" stroke="#4a5568" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="220" y1="120" x2="285" y2="170" stroke="#4a5568" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- Info inputs -->
+  <rect x="520" y="60" width="230" height="140" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="635" y="84" text-anchor="middle" font-size="13" font-weight="600" fill="#1a202c">Shared non-trace information</text>
+  <text x="540" y="108" font-size="12" fill="#4a5568">&#8226; paper text (protocol)</text>
+  <text x="540" y="126" font-size="12" fill="#4a5568">&#8226; repository code</text>
+  <text x="540" y="144" font-size="12" fill="#4a5568">&#8226; declared settings</text>
+  <text x="540" y="162" font-size="12" fill="#4a5568">&#8226; reported value y</text>
+  <text x="540" y="184" font-size="11" fill="#718096" font-style="italic">(identical for T+ and T&#8722;)</text>
+
+  <!-- The delta input -->
+  <rect x="520" y="220" width="230" height="60" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="635" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#92400e">Typed execution trace G(T)</text>
+  <text x="635" y="264" text-anchor="middle" font-size="11" fill="#4a5568">protocol.split, selection, aggregation...</text>
+  <text x="635" y="278" text-anchor="middle" font-size="11" fill="#92400e" font-style="italic">&#9660; this differs between T+ and T&#8722;</text>
+
+  <!-- Two verifier boxes -->
+  <rect x="60" y="330" width="400" height="110" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="260" y="358" text-anchor="middle" font-size="15" font-weight="700" fill="#1a202c">Static Auditor B2</text>
+  <text x="260" y="380" text-anchor="middle" font-size="12" fill="#4a5568">Inputs: shared non-trace info only</text>
+  <text x="260" y="400" text-anchor="middle" font-size="12" fill="#4a5568">(no execution trace)</text>
+  <rect x="110" y="408" width="120" height="24" rx="6" fill="#cbd5e1"/>
+  <text x="170" y="425" text-anchor="middle" font-size="12" font-weight="600" fill="#1a202c">Both &#8594; PASS</text>
+  <text x="260" y="434" text-anchor="middle" font-size="11" fill="#718096">PSD = 0.0 (cannot separate)</text>
+
+  <rect x="520" y="330" width="400" height="110" rx="10" fill="#e8f5e9" stroke="#16a34a" stroke-width="2"/>
+  <text x="720" y="358" text-anchor="middle" font-size="15" font-weight="700" fill="#15803d">EpiTrace</text>
+  <text x="720" y="380" text-anchor="middle" font-size="12" fill="#4a5568">Inputs: shared info + trace G(T)</text>
+  <text x="720" y="400" text-anchor="middle" font-size="12" fill="#4a5568">checks &#966; against G(T)</text>
+  <rect x="545" y="408" width="90" height="24" rx="6" fill="#16a34a"/>
+  <text x="590" y="425" text-anchor="middle" font-size="12" font-weight="600" fill="#ffffff">T+ &#8594; PASS</text>
+  <rect x="645" y="408" width="120" height="24" rx="6" fill="#dc2626"/>
+  <text x="705" y="425" text-anchor="middle" font-size="12" font-weight="600" fill="#ffffff">T&#8722; &#8594; FAIL</text>
+  <text x="860" y="434" text-anchor="middle" font-size="11" fill="#15803d">PSD = 1.0</text>
+
+  <!-- Arrows from info boxes to verifiers -->
+  <line x1="635" y1="200" x2="350" y2="325" stroke="#cbd5e1" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="635" y1="280" x2="650" y2="325" stroke="#f59e0b" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- Bottom insight -->
+  <rect x="40" y="480" width="920" height="50" rx="8" fill="#1a202c"/>
+  <text x="500" y="502" text-anchor="middle" font-size="14" font-weight="600" fill="#ffffff">The information delta is the trace. Without it, valid and invalid executions are indistinguishable.</text>
+  <text x="500" y="520" text-anchor="middle" font-size="12" fill="#cbd5e1">EpiTrace exploits trace information; a static verifier, given the same non-trace inputs, cannot.</text>
+
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#4a5568"/></marker></defs>
+</svg>

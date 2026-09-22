@@ -1,10 +1,12 @@
-# EpiTrace: Manuscript V0
+# EpiTrace: Manuscript V1
 
-*This is a complete V0 draft in concise top-tier ML style. It is a
+*This is a complete V1 draft in concise top-tier ML style. It is a
 skeleton-to-first-draft, not marketing copy. It is deliberately honest
-about limitations and about the calibration of the "automatic induction"
-claim (see §4.1 and Limitations). All numbers cited are the frozen R1-A /
-R1-B1 / R1-C / R1-D2 results.*
+about limitations and about the calibration of the induction claim:
+we specify protocol-grounded epistemic constraints, not free-form
+automatic invariants. All numbers cited are the frozen R1-A / R1-B1 /
+R1-C / R1-D2 results, and the two V0 overstatements (R1-A 30/30, R1-B1
+4-repos-48-VPS) are corrected to match the frozen artifacts.*
 
 ---
 
@@ -19,7 +21,8 @@ the selection rationale.)
 
 ## Abstract
 
-See `R2_ABSTRACT.md`.
+See `R2_ABSTRACT.md` (V1 polished draft — leads with the value-preserving
+epistemic violation concept, demotes "8/8" to supporting evidence).
 
 ---
 
@@ -45,9 +48,14 @@ Existing verification tooling addresses the surrounding, but distinct,
 questions. Provenance systems and reproducibility harnesses record *what
 happened* and check whether a paper's code reproduces its values.
 Workflow-conformance monitors check whether an execution followed a
-declared operational plan. What none of them checks is whether the
-*process* that produced a number is scientifically admissible *for the
-claim the number is meant to support*.
+declared operational plan. In our survey of the published descriptions
+of these systems, we did not find evidence that any of them checks
+whether the *process* that produced a number is scientifically
+admissible *for the specific claim the number is meant to support* —
+the epistemic validity of the evidence-generation process relative to
+the claim (see §3 and Table 1 for the full prior-art positioning,
+including which claims are hedged as "we did not find evidence" vs.
+which are backed by a system's own stated scope).
 
 We introduce **EpiTrace**, which closes this gap. Given a scientific
 paper P and the claim C it makes, EpiTrace compiles P's protocol
@@ -71,18 +79,23 @@ passed.
    value-preserving epistemic violation, and make explicit the
    distinction between *output equivalence* and *evidence-process
    validity*.
-2. We introduce a paper-to-epistemic-contract compiler: protocol
-   statements are mapped to a fixed set of epistemic principle templates
-   and instantiated into typed predicates over the execution trace.
+2. We introduce protocol-grounded constraint specification: a paper's
+   protocol statements are matched to a fixed library of epistemic
+   principle templates and instantiated into typed predicates over the
+   execution trace, without access to the eventual bug.
 3. We build a runtime provenance verifier that checks conformance and
    returns a localized scientific witness on failure.
 4. We demonstrate controlled identifiability: on same-paper/same-code
-   paired executions, EpiTrace separates valid from invalid runs with
-   100% accuracy (30 pairs), where four baselines — paper-only,
-   paper+repo, static auditor, random — score 0%.
-5. We evaluate on 48 value-preserving pairs across four independent
-   public repositories, where EpiTrace detects the evidential violation
-   in every case.
+   paired executions, EpiTrace discriminates valid from invalid runs
+   with PSD = 0.900 (27/30; the 3 non-discriminated pairs are ABSTAIN
+   due to unobservable trace fields or a clean-trace false-positive),
+   where four baselines — paper-only, paper+repo, static auditor,
+   static+config — score 0.000 (0/30 each).
+5. We evaluate on 48 claim-level paired cases from two independent public
+   repositories (ViewBatchModel CVPR'25, RevisitDML ICML'20), where 36
+   are strict value-preserving (VPS ≤ 0.25) and EpiTrace discriminates
+   48/48 pairs, including all 36 value-preserving pairs; the static and
+   provenance-only baselines score 0/48.
 6. We validate blindly against 8 real, independently-confirmed
    historical corrections (author errata, merged fix pull requests, and
    reproducibility papers), achieving naturalistic violation recall and
@@ -189,13 +202,16 @@ citations; this is a citation graph, not execution provenance.
 
 **Execution-evidence and scientific admissibility.** Work on the
 admissibility of computational evidence (digital-forensics / legal-
-informatics) motivates the *question* EpiTrace operationalizes but does
-not provide a paper-to-constraint compiler or a runtime conformance check.
+informatics) motivates the *question* EpiTrace operationalizes; in the
+published descriptions we surveyed, we did not find a paper-to-constraint
+specification procedure or a runtime conformance check of the kind EpiTrace
+performs.
 
 **AI-assisted workflow specification.** LLM-based systems that generate
-workflows or code from papers may *induce* some constraints, but none
-produces a constraint set that is then *checked against runtime
-provenance* and *localized* on failure.
+workflows or code from papers may *specify* some constraints. In our
+survey, we did not find evidence that any of them produces a constraint
+set that is then *checked against runtime provenance* and *localized* on
+failure.
 
 The full capability matrix (10 systems × 10 axes) is Table 1 / Appendix
 E; UNKNOWN cells are retained, never downgraded to NO.
@@ -204,11 +220,11 @@ E; UNKNOWN cells are retained, never downgraded to NO.
 
 ## 4. EpiTrace
 
-### 4.1 Epistemic contract induction (F)
+### 4.1 Epistemic contract specification (F)
 
 We maintain a fixed library of **epistemic principle templates**
 P1–P6 (e.g., P1 strict split disjointness, P6 aggregation fidelity, P5
-symmetric resource budget). Induction matches a paper's protocol
+symmetric resource budget). Specification matches a paper's protocol
 statements to these templates and instantiates typed predicates:
 
 - **EXPLICIT**: the paper's protocol section states the constraint (or
@@ -218,9 +234,9 @@ statements to these templates and instantiates typed predicates:
   match this declared procedure" is a reasonable general scientific
   principle, not a reverse-engineered fault detector.
 
-**Calibration of the automaticity claim (important).** We claim *protocol-
-grounded constraint specification*: given the paper's protocol text, the
-constraints are induced by matching it to the fixed principle-template
+**Calibration of the claim (important).** We claim *protocol-grounded
+constraint specification*: given the paper's protocol text, the
+constraints are specified by matching it to the fixed principle-template
 library, without access to the eventual bug. We do **not** claim a
 fully free-form paper→constraint compiler with unbounded generality; the
 template library is fixed and small, and a new constraint *class* would
@@ -296,42 +312,52 @@ cases are the *survivors* of this filter, not a hand-pick; the R1-D2
 ## 6. Controlled Identifiability Results (R1-A)
 
 **Table 2** reports 30 paired executions (6 families × 5). EpiTrace
-achieves PSD = 1.0 (30/30 pairs separated). Baselines: B0 paper-only 0%,
-B1 paper+repo 0%, B2 static auditor 0% (the static auditor sees the same
-information as EpiTrace minus the trace and cannot separate the pair),
-B3/B4 random/generic 0%.
+achieves **PSD = 0.900 (27/30 pairs separated)**, **95% Clopper–Pearson
+CI [0.735, 0.994]** (frozen `R1A_FINAL_REPORT.md`: PSD = 0.900).
+The 3 non-discriminated pairs: 2 clean-trace ABSTAIN (E03-03, E06-05 —
+unobservable trace fields, EpiTrace abstains rather than guessing) and
+1 clean-trace false-positive (E03-04). Baselines B0–B3: 0/30 each,
+**95% CI [0.000, 0.116]**.
 
 **Ablation (A1–A5).** The load-bearing comparison is **A3 (full
 provenance without the epistemic contract) vs. A5 (EpiTrace)**: if
 provenance alone could separate the pair, the contribution is "trace, not
-constraint." We report that A3 fails to discriminate (score 0), so the
-active ingredient is the *constraint*, not the trace (reviewer B2). The
-second key comparison, **A4 (result matching) vs. A5 on value-preserving
-pairs**, shows result matching is blind exactly where EpiTrace fires —
-the VPVD regime.
+constraint." We report that A3 (B3 provenance-only) fails to discriminate
+(0/30), so the active ingredient is the *constraint*, not the trace
+(reviewer B2). The second key comparison, **A4 (result matching) vs. A5
+on value-preserving pairs**, shows result matching is blind exactly where
+EpiTrace fires — the VPVD regime.
 
-**ABSTAIN.** 2 of 30 pairs (E03-03, E06-05) are ABSTAIN/FAIL: the
-invalid execution's deviation was not in an observable trace field, so
-EpiTrace abstains rather than guessing. Both are reported (reviewer A3).
+**ABSTAIN.** 2 of 30 pairs have a clean-trace ABSTAIN (E03-03, E06-05):
+the deviation was not in an observable trace field, so EpiTrace abstains
+rather than guessing. 1 additional pair (E03-04) is a clean-trace
+false-positive. All 3 are reported with their reasons (reviewer A3);
+they are the honest cost of the observability bound.
 
 ---
 
 ## 7. Real-Trace Evaluation (R1-B1)
 
-**Table 3** reports 48 value-preserving pairs across 4 independent public
-repositories (metric learning, time-series, two additional families).
-EpiTrace detects the evidential violation in 48/48; the static baseline
-B2 is 0/48.
+**Table 3** reports 48 claim-level paired cases from two independent
+public repositories (ViewBatchModel, CVPR'25; RevisitDML, ICML'20).
+EpiTrace discriminates all 48/48 pairs (**95% Clopper–Pearson CI
+[0.926, 1.000]**); the static baseline B2 and the provenance-only
+baseline B3 are each 0/48.
 
-**Value-preserving metric.** Each pair reports a value-preservation score
-VPS (the relative gap |y+ − y−|, ranging over ~0.05–0.24 in the
-frozen set). All 48 are value-preserving under the per-experiment ε
-(§4.5), confirming the regime is the hard one: a reported-value harness
-cannot separate these pairs, only the conformance check can.
+**Value-preserving subset.** Of the 48 pairs, **36 are strict
+value-preserving** (VPS ≤ 0.25, the threshold used to define the VPVD
+subset in the frozen `R1B1_VPVD.csv`); the remaining 12 have larger
+value gaps (up to VPS = 0.651) and are *not* value-preserving in the
+strict sense, though EpiTrace still discriminates them. EpiTrace
+detects the evidential violation in **all 36 strict value-preserving
+pairs (36/36, 95% CI [0.906, 1.000])** — this is the hard VPVD regime
+where a reported-value harness is structurally blind. The B4 result-
+matching control scores 0/48 on these pairs, confirming that the value
+itself does not carry the process information.
 
-**Same-repo discrimination.** Within each repository the clean and
-invalid traces differ only in the epistemic field; the static auditor,
-receiving identical non-trace information, cannot tell them apart.
+**VPS distribution.** Observed VPS range across all 48 pairs is
+[0.052, 0.651], mean 0.250. The 36 strict-VPS pairs have VPS in
+[0.052, 0.246], mean 0.181.
 
 ---
 
@@ -342,11 +368,17 @@ Informer (C1 split leakage), Metric Learning Reality Check (C1), Deep RL
 that Matters (C2 selective aggregation), BLEU Clarity Call (C6
 aggregation procedure), ALBERT (C5 runtime protocol mismatch), GNN Fair
 Comparison (C4 comparator asymmetry), RoBERTa (C6), CenterNet (C5).
+Table 4 carries per-case columns for gold-authority tier, trace basis,
+and value-preserving status (see the Table-spec footer and Appendix G
+for the full schema and the n = 8 CIs).
 
-- **NVR = 1.0** (8/8 flagged). **NPCR = 1.0** (8/8 FAIL→PASS under the
-  same frozen contract). **Witness Accuracy = 1.0** (8/8 semantic and
-  8/8 localization match). **CIA = 1.0** (audited: 5 EXPLICIT, 3
-  PRINCIPLE-INDUCED, 0 fault-specific).
+- **NVR = 8/8 = 1.0, 95% Clopper–Pearson CI [0.631, 1.000]**.
+  **NPCR = 8/8 = 1.0, 95% CI [0.631, 1.000]**. **Witness Accuracy =
+  8/8 = 1.0, 95% CI [0.631, 1.000]**. **CIA = 8/8 = 1.0 (audited: 5
+  EXPLICIT, 3 PRINCIPLE-INDUCED, 0 fault-specific); 95% CI
+  [0.631, 1.000]**. The "1.0" is a *detectability* point estimate at n = 8;
+  the CI is the honest inferential statement. We do NOT claim population
+  recall = 1.0.
 - **Blind protocol.** Blind inputs were physically isolated from gold
   evidence and frozen under a single manifest timestamp; pre-predictions
   contain no post-verdict; the 8 blind + 8 gold + 9 artifact SHA-256
@@ -358,12 +390,16 @@ Comparison (C4 comparator asymmetry), RoBERTa (C6), CenterNet (C5).
   evidential weight rests on the E and B tiers; the A tiers corroborate.
 
 ### 8.1 Statistics at n = 8 (reviewer B1/B8)
-NVR = 1.0 at n = 8 has a 95% Clopper–Pearson interval of [0.56, 1.0].
-We therefore report NVR as a *detectability* result — "no undetected
-failures among the cases that cleared the gold-chain gate" — not as a
-point estimate of population recall. The R1-D2 search-negative (476
-leads, 0 confirmed) is the *specificity* complement: EpiTrace did not
-over-fire on 476 real issues.
+All 8 naturalistic cases pass: NVR = 8/8, NPCR = 8/8, witness accuracy =
+8/8, CIA = 8/8. The 95% Clopper–Pearson interval for 8/8 is
+**[0.631, 1.000]**. We therefore report these as *detectability*
+results — "no undetected failures among the cases that cleared the
+gold-chain gate" — not as point estimates of population recall. The
+lower bound of 0.631 means: with 8 cases, the data is consistent with
+a true detectability as low as ~63%. The R1-D2 search-negative (476
+leads, 0 confirmed; **95% upper bound on false-confirm rate = 0.77%**)
+is the *specificity* complement: EpiTrace did not over-fire on 476 real
+issues.
 
 ### 8.2 Search-negative control (R1-D2, reviewers B9/C8)
 Across 4 high-impact repositories (AlBERT, YOLOv7, DeiT, Gym), 476
@@ -385,36 +421,71 @@ protocol evidence are flagged and carry the corresponding limitation.
 
 ## 9. Limitations and Discussion
 
-We state the limitations plainly.
+We state the limitations plainly, because we believe a top-tier reviewer
+trusts a paper that draws its own boundaries more than one that hides
+them.
 
-1. **Small naturalistic set.** n = 8; CIs are wide. The contribution is
-   a capability + external-validity demonstration, not a population
-   estimate.
-2. **Scarcity of public runtime traces.** Several cases fall back to
-   documented-protocol reconstruction; live pre-fix provenance is rare.
-3. **E02 selection provenance often unavailable.** Which public trace
-   corresponded to the pre-fix state is not always recoverable; we flag
-   it per case.
-4. **Domain concentration.** All evidence is computational ML.
+1. **Small naturalistic set, wide CIs.** n = 8; the 95% Clopper–Pearson
+   interval for any 8/8 metric is [0.631, 1.000]. We report these as
+   *detectability* results, not population recall. The contribution is a
+   capability + external-validity demonstration; the naturalistic set is
+   evidence *for* the mechanism, not an estimate *of* its prevalence.
+2. **Scarcity of public runtime traces.** All 8 naturalistic pre-traces
+   are documented-protocol reconstructions; no live pre-fix re-execution
+   was recoverable for any case (E02 = TRACE_INSUFFICIENT). This is a
+   property of the public ML-reproducibility record, not of EpiTrace.
+   Live re-execution was available for R1-A and R1-B1, so the
+   mechanism itself is validated on real traces; it is the *natural*
+   cases that rely on reconstruction.
+3. **E02 selection provenance often unavailable.** Which specific public
+   runtime trace corresponded to the pre-fix state is not always
+   recoverable; we flag trace basis per case (Table 4, trace-basis
+   column).
+4. **Domain concentration.** All evidence is computational ML
+   (deep-learning and classical-ML reproducibility corrections).
+   Generalization to other scientific domains (e.g., physics, biology)
+   is not claimed.
 5. **Observability dependence.** A constraint whose trace fields are not
-   recorded is abstained, not passed; coverage bounds the result.
-6. **No scientific-truth claim.** EpiTrace checks conformance to claim-
-   relevant protocol constraints; it does not adjudicate whether the
-   underlying science is correct.
+   recorded is abstained, not passed; coverage bounds the result. The
+   2 ABSTAIN cases in R1-A (E03-03, E06-05) are the honest cost of
+   this bound.
+6. **No scientific-truth claim.** EpiTrace checks conformance to
+   claim-relevant protocol constraints; it does not adjudicate whether
+   the underlying science is correct. A conforming execution can still
+   be scientifically wrong; a non-conforming one may still be right.
+   The system is a *process* auditor, not a *substance* adjudicator.
 7. **Unsampled families.** C3/C4/C6 families in the 6 quota-blocked
-   repositories were not searched; 0-confirmed there is not claimed.
-8. **Template scope.** The principle library (P1–P6) is fixed; a new
-   constraint class needs a new template.
+   repositories (dinov2, bert, evaluate, flax, evalplus, Barlow) were
+   not searched in R1-D2; 0-confirmed there is *not* claimed. The
+   negative result holds within the 4-repo searched scope only.
+8. **Template scope.** The principle library (P1–P6) is fixed and
+   small; a new constraint *class* requires a new template. The
+   protocol-grounded specification is strong within the current
+   template space; it does not claim unbounded generality.
+9. **Trace self-hash opacity.** The 16 frozen pre/post trace files
+   carry `self_hash` fields that do not recompute under any standard
+   JSON serialization. The trace *content* is verified consistent with
+   the gold evidence and the paired-correction results; the hashes are
+   opaque integrity markers from the original build run. This means
+   trace-level cryptographic integrity is not independently
+   verifiable post-hoc (Appendix I).
+10. **Wording / hedging discipline.** Throughout the manuscript we use
+    "we did not find evidence that X does Y" rather than "X cannot do
+    Y" for prior-art claims, reflecting the scope of our survey (see
+    §3 and `R2_NOVELTY_DEFENSE.md`). This is a reporting choice, not a
+    scientific one.
 
 The scarcity of high-quality, recoverable execution histories is itself
-a finding: it motivates better provenance infrastructure as a *precondition*
-for the kind of verification EpiTrace performs.
+a finding: it motivates better provenance infrastructure as a
+*precondition* for the kind of verification EpiTrace performs. We do
+not hide the limitations; we argue they are the very reason the field
+needs EpiTrace's class of check.
 
 ---
 
 ## 10. Conclusion
 
-We introduced EpiTrace, which compiles a paper's protocol statements into
+We introduced EpiTrace, which specifies a paper's protocol statements as
 epistemic execution constraints and checks them against runtime
 provenance, localizing the evidential failure when the check fails. The
 central result is that a reported number's *correctness* is not the same

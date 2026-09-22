@@ -28,22 +28,48 @@ ABSTAIN count.
 
 ## Table 3 — R1-B1 Real-Trace Cross-Paper
 
-Source: `results/R1B1_REAL_TRACE_PAIRS.jsonl` (48 pairs) + `R1B1_VPVD.csv`.
-Columns: paper/repo, family, n_vps_pairs, value_preserving_fraction,
-ε used, EpiTrace detection, static baseline B2.
-- Headline: 48/48 value-preserving pairs detected; VPS range ~0.05–0.24.
+Source: `results/R1B1_REAL_TRACE_PAIRS.jsonl` (48 claim-level pairs) +
+`R1B1_VPVD.csv` (36 strict value-preserving pairs).
+Columns: paper/repo, family, n_pairs, strict-VPS subset (VPS ≤ 0.25),
+EpiTrace PSD, B2 static, B3 provenance-only, B4 result-matching.
+- Sources: 2 public-trace repositories (ViewBatchModel CVPR'25,
+  RevisitDML ICML'20); 48 claim-level pairs total.
+- **Headline: EpiTrace PSD = 48/48 = 1.0 (95% CI [0.926, 1.000]);
+  strict value-preserving subset = 36/36 (95% CI [0.903, 1.000]);
+  B2/B3/B4 all = 0/48.** VPS range [0.052, 0.651]; strict-VPS
+  range [0.052, 0.246], mean 0.181.
 
-## Table 4 — R1-C Naturalistic Cases
+## Table 4 — R1-C Naturalistic Cases (polished)
 
-Source: `results/R1C_*` + `results/R2_R1C_CASE_FORENSICS.csv`.
-One row per case (8). Columns:
-- Case ID, paper, venue, deviation family (C1/C2/C4/C5/C6),
-- predicted constraint, pre_verdict, post_verdict, paired_correct,
-- semantic_match, localization_match, witness,
-- **gold authority tier** (E_reproducibility_paper / B_fix_pr / A_author_issue),
-- **trace basis** (live re-execution / documented-protocol),
-- forensic grade (A).
-- Footer: NVR, NPCR, witness accuracy, CIA (audited), 95% CI on NVR.
+Source: `results/R1C_*` + `results/R2_R1C_CASE_FORENSICS.csv` +
+`paper/R2_CI_VALUES.json` + `paper/R2_EPS_DEFINITION.md`.
+
+One row per case (8). Columns (in order):
+
+| Column | Notes |
+|---|---|
+| Case ID | CAND-01 … CAND-08 |
+| Paper | title (short form) |
+| Venue | e.g., AAAI 2021 |
+| Family | C1 / C2 / C4 / C5 / C6 |
+| Predicted constraint | e.g., DISJOINT_TEST_SELECTION |
+| Pre / Post verdict | FAIL / PASS |
+| Paired correct | True/False |
+| Semantic / Loc match | both TRUE for all 8 |
+| **Gold tier** | E_reproducibility_paper (5) / B_explicit_fix_pr (1) / A_author_github_issue (2). Primary evidential weight on E and B; A corroborates. |
+| **Trace basis** | All 8 = documented_protocol_reconstruction (no live pre-fix re-execution available; E02=TRACE_INSUFFICIENT). Flagged per case, not hidden. |
+| **Value-preserving?** | 2 of 8 flagged VP (from `R1C_NATURALISTIC_METRICS.json`). The remaining 6 are process-violating but not value-preserving. |
+| Forensic grade | All A |
+
+**Footer (statistics at n = 8 — do NOT report only "8/8 = 100%"):**
+- NVR = 8/8 = 1.0; **95% Clopper–Pearson CI = [0.631, 1.000]**
+- NPCR = 8/8 = 1.0; **95% CI = [0.631, 1.000]**
+- Witness Accuracy = 8/8 = 1.0; **95% CI = [0.631, 1.000]**
+- CIA = 8/8 = 1.0 (audited: 5 EXPLICIT, 3 PRINCIPLE-INDUCED, 0 fault-specific); **95% CI = [0.631, 1.000]**
+- ε / value-preserving threshold: see Appendix G (`R2_EPS_DEFINITION.md`).
+- Note: "1.0" is a *detectability* point estimate at n = 8; the CI
+  [0.631, 1.000] is the honest inferential statement. We do NOT claim
+  population recall = 1.0.
 
 ## Table 5 — Ablations (consolidated, §10)
 
@@ -58,6 +84,8 @@ Rows = ablation conditions, Columns = PSD / detection on VP pairs:
 Key comparisons called out in the body: **A3 vs A5** (is the contribution
 the trace or the constraint?) and **A4 vs A5 on VP cases** (can result
 matching see process invalidity?).
+- Report PSD with 95% CI: EpiTrace PSD = 30/30 = 1.0, **95% CI =
+  [0.884, 1.000]**; baselines B0–B4 = 0/30 = 0.0, **95% CI = [0.000, 0.116]**.
 
 ## Appendix Tables
 - A: All 8 forensic chains (one page each; from R2_R1C_CASE_FORENSICS.csv
@@ -67,8 +95,20 @@ matching see process invalidity?).
 - C: All witness outputs (from r1c/results/R1C_WITNESS_AUDIT.csv +
   R1C_GOLD_MATCH.jsonl).
 - D: R1-D2 search-negative (476-lead adjudication summary; from
-  r1d/results/R1D_LEAD_ADJUDICATION.csv).
+  r1d/results/R1D_LEAD_ADJUDICATION.csv). Report 0/476 confirmed with
+  **95% CI on the upper bound = [0.000, 0.008]** (specificity).
 - E: Full prior-art matrix (Table 1 source + per-cell citations).
 - F: Witness semantic-match rubric + witness→gold-locus mapping.
-- G: ε definition and per-experiment values (R1-B1_VPVD.csv vps column).
+- G: ε definition and per-experiment values (`R2_EPS_DEFINITION.md` +
+  R1B1_VPVD.csv vps column, range [0.052, 0.246]).
 - H: Gold authority tiering + per-case independent sources.
+- I: Trace self-hash verification note: the 16 frozen pre/post trace
+  files carry `self_hash` fields that do NOT recompute under any
+  standard JSON serialization (insertion-order compact, sorted-key
+  compact, or sorted-key pretty). This is recorded as a forensic
+  finding: the trace hashes are opaque integrity markers from the
+  original build run; the trace *content* itself is verified consistent
+  with the gold evidence and the paired-correction results. This is a
+  limitation, not a failure — it means trace-level cryptographic
+  integrity is not independently verifiable post-hoc, which §9
+  (Limitations) states explicitly.
